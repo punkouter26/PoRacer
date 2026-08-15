@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace PoRacer.Models
@@ -31,10 +30,6 @@ namespace PoRacer.Models
         public bool RaceActive;
         public int RaceNumber;
         public string TrackName = "Flat";
-
-        public event Action Changed;
-
-        public void NotifyChanged() => Changed?.Invoke();
 
         public void SetRacers(IReadOnlyList<RacerState> racers)
         {

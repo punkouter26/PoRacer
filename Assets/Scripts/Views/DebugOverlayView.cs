@@ -33,6 +33,12 @@ namespace PoRacer.Views
 
         private void Start()
         {
+            // Diagnostic surface: editor and development builds only, never release.
+            if (!Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
             VisualElement root = GetComponent<UIDocument>().rootVisualElement;
             root.pickingMode = PickingMode.Ignore;
 

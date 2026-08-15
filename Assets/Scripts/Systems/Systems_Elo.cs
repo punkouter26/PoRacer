@@ -69,9 +69,7 @@ namespace PoRacer.Systems
                     _model.SetRating(first.CreatureId, firstRating + delta);
                     _model.SetRating(second.CreatureId, secondRating - delta);
                 }
-            }
-            _model.NotifyChanged();
-        }
+            }        }
 
         private static float ScoreAgainst(RaceResultEntry first, RaceResultEntry second)
         {

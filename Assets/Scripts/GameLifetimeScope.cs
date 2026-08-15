@@ -19,9 +19,11 @@ namespace PoRacer
             builder.Register<RaceModel>(Lifetime.Singleton);
             builder.Register<EloModel>(Lifetime.Singleton);
             builder.Register<RaceConfigModel>(Lifetime.Singleton);
+            builder.Register<CommentaryModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
             builder.RegisterEntryPoint<Systems_Race>().AsSelf();
+            builder.RegisterEntryPoint<Systems_Commentary>();
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);

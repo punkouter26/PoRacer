@@ -119,7 +119,7 @@ report() {
     echo "    ${CYAN}Fix: ${fix}${RESET}"
     echo ""
     COUNTS["$category"]=$(( ${COUNTS["$category"]} + 1 ))
-    ((total_issues++))
+    total_issues=$((total_issues+1))
 }
 
 # ---------------------------------------------------------------------------
@@ -169,7 +169,7 @@ is_editor_file() {
 # ---------------------------------------------------------------------------
 file_count=0
 while IFS= read -r -d '' csfile; do
-    ((file_count++))
+    file_count=$((file_count+1))
     rel_path="${csfile#"$SCAN_DIR/"}"
 
     # --- 1. GetComponent in Update ---

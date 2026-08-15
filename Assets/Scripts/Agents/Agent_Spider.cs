@@ -19,13 +19,12 @@ namespace PoRacer.Agents
     public sealed class Agent_Spider : Agent, ICreatureAgent
     {
         public const int JOINT_COUNT = 8;
-        public const int OBSERVATION_COUNT = JOINT_COUNT * 2 + 11;
         public const float JOINT_LIMIT_DEGREES = 40f;
         private const float MAX_JOINT_VELOCITY = 12f;
         private const float MAX_ROOT_SPEED = 3f;
         private const float GOAL_DISTANCE_NORM = 20f;
         private const float MAX_ANGULAR_VELOCITY = 20f;
-        private const float MAX_JOINT_TORQUE = 60f; // N*m, matches the prefab's xDrive forceLimit; reward normalization only
+        private const float MAX_JOINT_TORQUE = 600f; // N*m, matches the prefab's xDrive forceLimit; reward normalization only
 
         [SerializeField] private ArticulationBody _root;
         [SerializeField] private ArticulationBody[] _joints = new ArticulationBody[JOINT_COUNT];
@@ -100,7 +99,9 @@ namespace PoRacer.Agents
             }
 
             Vector3 rootPosition = _root.transform.position;
-            if (float.IsNaN(rootPosition.x) || float.IsNaN(rootPosition.y) || float.IsNaN(rootPosition.z))
+            Vector3 rootUp = _root.transform.up;
+            if (float.IsNaN(rootPosition.x) || float.IsNaN(rootPosition.y) || float.IsNaN(rootPosition.z)
+                || float.IsNaN(rootUp.x))
             {
                 _failed = true;
                 SetReward(Reward_WormLoco.OUT_OF_BOUNDS_REWARD);

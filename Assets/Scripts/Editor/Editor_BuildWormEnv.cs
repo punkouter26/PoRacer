@@ -15,17 +15,16 @@ namespace PoRacer.Editor
             BuildEnv("Assets/Scenes/SCN_TRAIN_WORM.unity", "Builds/WormEnv/WormEnv.exe");
         }
 
+        [MenuItem("PoRacer/Build Worm Rough Training Env")]
+        public static void BuildRough()
+        {
+            BuildEnv("Assets/Scenes/SCN_TRAIN_WORM_ROUGH.unity", "Builds/WormRoughEnv/WormRoughEnv.exe");
+        }
+
         [MenuItem("PoRacer/Build Spider Training Env")]
         public static void BuildSpider()
         {
             BuildEnv("Assets/Scenes/SCN_TRAIN_SPIDER.unity", "Builds/SpiderEnv/SpiderEnv.exe");
-        }
-
-        // Secondary output path so a terrain env can build while SpiderEnv.exe is training.
-        [MenuItem("PoRacer/Build Spider Training Env (alt path)")]
-        public static void BuildSpiderAlt()
-        {
-            BuildEnv("Assets/Scenes/SCN_TRAIN_SPIDER.unity", "Builds/SpiderEnv2/SpiderEnv.exe");
         }
 
         private static void BuildEnv(string scenePath, string outputPath)

@@ -95,8 +95,8 @@ echo ""
 error_count=0
 warning_count=0
 
-err()  { echo "  ${RED}[ERROR]${RESET} $*"; ((error_count++)); }
-warn_msg() { echo "  ${YELLOW}[WARN]${RESET}  $*"; ((warning_count++)); }
+err()  { echo "  ${RED}[ERROR]${RESET} $*"; error_count=$((error_count+1)); }
+warn_msg() { echo "  ${YELLOW}[WARN]${RESET}  $*"; warning_count=$((warning_count+1)); }
 info() { echo "  ${CYAN}[INFO]${RESET}  $*"; }
 
 # ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ declare -A ASMDEF_TEST_ONLY       # name -> true/false (from JSON)
 asmdef_count=0
 
 while IFS= read -r -d '' asmdef_file; do
-    ((asmdef_count++))
+    asmdef_count=$((asmdef_count+1))
 
     # Parse JSON
     name=$(jq -r '.name // empty' "$asmdef_file" 2>/dev/null || true)
@@ -310,7 +310,7 @@ while IFS= read -r -d '' csfile; do
         if (( uncovered_count < 20 )); then
             warn_msg "No .asmdef coverage: $rel"
         fi
-        ((uncovered_count++))
+        uncovered_count=$((uncovered_count+1))
     fi
 done < <(find "$ASSETS_DIR" -name '*.cs' -not -path '*/Editor/*' -print0 2>/dev/null)
 

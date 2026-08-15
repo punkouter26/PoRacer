@@ -251,7 +251,7 @@ ArticulationBody:
   m_GameObject: {fileID: 2008265692840570716}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 2
+  m_Mass: 20
   m_ParentAnchorPosition: {x: 0, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
@@ -448,7 +448,7 @@ ArticulationBody:
   m_GameObject: {fileID: 2167097968543331271}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.25
+  m_Mass: 2.5
   m_ParentAnchorPosition: {x: -0.2, y: 0, z: -0.25}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
   m_AnchorPosition: {x: 0.17, y: 0, z: 0}
@@ -464,9 +464,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -661,7 +661,7 @@ ArticulationBody:
   m_GameObject: {fileID: 3013433217131433662}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.2
+  m_Mass: 2
   m_ParentAnchorPosition: {x: 0.17000002, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: -0.70710677, z: 0, w: 0.70710677}
   m_AnchorPosition: {x: 0, y: 0.19, z: 0}
@@ -677,9 +677,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -875,7 +875,7 @@ ArticulationBody:
   m_GameObject: {fileID: 4328511530287935996}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.25
+  m_Mass: 2.5
   m_ParentAnchorPosition: {x: 0.2, y: 0, z: 0.25}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
   m_AnchorPosition: {x: -0.17, y: 0, z: 0}
@@ -891,9 +891,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -999,7 +999,7 @@ ArticulationBody:
   m_GameObject: {fileID: 4393622321878119970}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.25
+  m_Mass: 2.5
   m_ParentAnchorPosition: {x: -0.2, y: 0, z: 0.25}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
   m_AnchorPosition: {x: 0.17, y: 0, z: 0}
@@ -1015,9 +1015,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -1302,7 +1302,7 @@ ArticulationBody:
   m_GameObject: {fileID: 5358839556189149313}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.2
+  m_Mass: 2
   m_ParentAnchorPosition: {x: -0.17000002, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: -0.70710677, z: 0, w: 0.70710677}
   m_AnchorPosition: {x: 0, y: 0.19, z: 0}
@@ -1318,9 +1318,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -1515,7 +1515,7 @@ ArticulationBody:
   m_GameObject: {fileID: 6123123731699727918}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.2
+  m_Mass: 2
   m_ParentAnchorPosition: {x: 0.17000002, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: -0.70710677, z: 0, w: 0.70710677}
   m_AnchorPosition: {x: 0, y: 0.19, z: 0}
@@ -1531,9 +1531,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -1729,7 +1729,7 @@ ArticulationBody:
   m_GameObject: {fileID: 6932134898352256237}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.25
+  m_Mass: 2.5
   m_ParentAnchorPosition: {x: 0.2, y: 0, z: -0.25}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.70710677, w: 0.70710677}
   m_AnchorPosition: {x: -0.17, y: 0, z: 0}
@@ -1745,9 +1745,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0
@@ -1852,7 +1852,7 @@ ArticulationBody:
   m_GameObject: {fileID: 8458874370447924219}
   m_Enabled: 1
   serializedVersion: 6
-  m_Mass: 0.2
+  m_Mass: 2
   m_ParentAnchorPosition: {x: -0.17000002, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: -0.70710677, z: 0, w: 0.70710677}
   m_AnchorPosition: {x: 0, y: 0.19, z: 0}
@@ -1868,9 +1868,9 @@ ArticulationBody:
   m_XDrive:
     lowerLimit: -40
     upperLimit: 40
-    stiffness: 300
-    damping: 20
-    forceLimit: 60
+    stiffness: 3000
+    damping: 200
+    forceLimit: 600
     target: 0
     targetVelocity: 0
     driveType: 0

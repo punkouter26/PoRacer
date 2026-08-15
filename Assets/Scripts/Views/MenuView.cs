@@ -19,6 +19,7 @@ namespace PoRacer.Views
         private Systems_Spawn _spawn;
         private VisualElement _root;
         private Label _totalLabel;
+        private Button[] _mapButtons;
 
         [Inject]
         public void Construct(CreatureCatalog catalog, RaceConfigModel config, Systems_Spawn spawn)
@@ -61,6 +62,14 @@ namespace PoRacer.Views
             _root.style.paddingLeft = 16;
             _root.style.paddingRight = 16;
 
+            var versionLabel = new Label($"v{Application.version}") { pickingMode = PickingMode.Ignore };
+            versionLabel.style.position = Position.Absolute;
+            versionLabel.style.top = 4;
+            versionLabel.style.left = 6;
+            versionLabel.style.fontSize = 12;
+            versionLabel.style.color = UiTheme.TextDim;
+            _root.Add(versionLabel);
+
             var title = new Label("PoRacer");
             title.style.fontSize = 30;
             title.style.color = UiTheme.Accent;
@@ -71,12 +80,42 @@ namespace PoRacer.Views
             var subtitle = new Label("Race Setup");
             subtitle.style.fontSize = 14;
             subtitle.style.color = UiTheme.TextDim;
-            subtitle.style.marginBottom = 14;
+            subtitle.style.marginBottom = 8;
             _root.Add(subtitle);
 
+            var brainToggle = new Button(ToggleBrains)
+            {
+                text = _config.UseScriptedBrains ? "Brains: Scripted gaits" : "Brains: RL (trained)"
+            };
+            brainToggle.style.height = 28;
+            brainToggle.style.fontSize = 13;
+            brainToggle.style.marginBottom = 12;
+            UiTheme.StyleButton(brainToggle);
+            _root.Add(brainToggle);
+
+            BuildMapPicker();
+
+            int comingSoonCount = 0;
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
-                _root.Add(BuildRow(_catalog.Entries[entryIndex]));
+                CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
+                // Scripted mode races the coded gait, so a missing brain is fine.
+                if (entry.prefab != null && (entry.model != null || _config.UseScriptedBrains))
+                {
+                    _root.Add(BuildRow(entry));
+                }
+                else
+                {
+                    comingSoonCount++;
+                }
+            }
+            if (comingSoonCount > 0)
+            {
+                var comingSoon = new Label($"+{comingSoonCount} more creatures coming soon");
+                comingSoon.style.color = UiTheme.TextDim;
+                comingSoon.style.fontSize = 12;
+                comingSoon.style.marginTop = 4;
+                _root.Add(comingSoon);
             }
 
             _totalLabel = new Label();
@@ -93,44 +132,104 @@ namespace PoRacer.Views
             _root.Add(startButton);
         }
 
+        private void BuildMapPicker()
+        {
+            var mapLabel = new Label("Map");
+            mapLabel.style.fontSize = 14;
+            mapLabel.style.color = UiTheme.TextDim;
+            mapLabel.style.marginBottom = 4;
+            _root.Add(mapLabel);
+
+            int mapCount = Systems_MapCatalog.Entries.Count;
+            _mapButtons = new Button[mapCount];
+            const int mapsPerRow = 4;
+            VisualElement row = null;
+            for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
+            {
+                if (mapIndex % mapsPerRow == 0)
+                {
+                    row = new VisualElement();
+                    row.style.flexDirection = FlexDirection.Row;
+                    row.style.marginBottom = 4;
+                    _root.Add(row);
+                }
+                Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Entries[mapIndex];
+                int capturedIndex = mapIndex;
+                var button = new Button(() =>
+                {
+                    _config.SetMap(capturedIndex);
+                    RefreshMapButtons();
+                })
+                {
+                    text = map.Available ? map.DisplayName : "Soon"
+                };
+                button.style.height = 30;
+                button.style.fontSize = 12;
+                button.style.marginRight = 4;
+                button.style.flexGrow = 1f;
+                button.style.flexBasis = 0f;
+                UiTheme.StyleButton(button);
+                if (!map.Available)
+                {
+                    button.SetEnabled(false);
+                    button.style.color = UiTheme.TextDim;
+                }
+                _mapButtons[mapIndex] = button;
+                row.Add(button);
+            }
+            RefreshMapButtons();
+        }
+
+        private void RefreshMapButtons()
+        {
+            for (int mapIndex = 0; mapIndex < _mapButtons.Length; mapIndex++)
+            {
+                bool isSelected = mapIndex == _config.SelectedMapIndex;
+                _mapButtons[mapIndex].style.backgroundColor = isSelected ? UiTheme.Accent : UiTheme.ButtonBg;
+            }
+        }
+
+        private void ToggleBrains()
+        {
+            _config.UseScriptedBrains = !_config.UseScriptedBrains;
+            // Availability changes with the mode, so rebuild the whole menu.
+            _root.Clear();
+            BuildMenu();
+            _config.NotifyChanged();
+        }
+
         private VisualElement BuildRow(CreatureCatalog.CreatureEntry entry)
         {
-            bool available = entry.prefab != null && entry.model != null;
-
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = Align.Center;
             row.style.marginBottom = 6;
-            row.style.opacity = available ? 1f : 0.4f;
             UiTheme.StyleRow(row);
 
-            var name = new Label(available ? entry.displayName : $"{entry.displayName} (coming soon)");
+            var name = new Label(entry.displayName);
             name.style.color = UiTheme.Text;
             name.style.fontSize = 14;
             name.style.width = new Length(38f, LengthUnit.Percent);
             row.Add(name);
 
-            if (available)
+            int[] options = RaceConfigModel.COUNT_OPTIONS;
+            var countButtons = new Button[options.Length];
+            for (int optionIndex = 0; optionIndex < options.Length; optionIndex++)
             {
-                int[] options = RaceConfigModel.COUNT_OPTIONS;
-                var countButtons = new Button[options.Length];
-                for (int optionIndex = 0; optionIndex < options.Length; optionIndex++)
+                int count = options[optionIndex];
+                var button = new Button(() =>
                 {
-                    int count = options[optionIndex];
-                    var button = new Button(() =>
-                    {
-                        _config.SetCount(entry.id, count);
-                        RefreshRowButtons(countButtons, options, entry.id);
-                    }) { text = count.ToString() };
-                    button.style.width = 40;
-                    button.style.height = 28;
-                    button.style.marginLeft = 4;
-                    UiTheme.StyleButton(button);
-                    countButtons[optionIndex] = button;
-                    row.Add(button);
-                }
-                RefreshRowButtons(countButtons, options, entry.id);
+                    _config.SetCount(entry.id, count);
+                    RefreshRowButtons(countButtons, options, entry.id);
+                }) { text = count.ToString() };
+                button.style.width = 40;
+                button.style.height = 28;
+                button.style.marginLeft = 4;
+                UiTheme.StyleButton(button);
+                countButtons[optionIndex] = button;
+                row.Add(button);
             }
+            RefreshRowButtons(countButtons, options, entry.id);
             return row;
         }
 

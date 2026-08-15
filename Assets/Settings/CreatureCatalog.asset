@@ -25,9 +25,9 @@ MonoBehaviour:
     spawnHeight: 0.5
   - id: Quad_v01
     displayName: Quadruped
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
+    prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}
+    model: {fileID: 5022602860645237092, guid: 124878cf78be94f4ab8d2214668bef9c, type: 3}
+    spawnHeight: 0.85
   - id: HalfBiped_v01
     displayName: Half-Biped
     prefab: {fileID: 0}
@@ -40,16 +40,31 @@ MonoBehaviour:
     spawnHeight: 0.15
   - id: Snake_v01
     displayName: Snake
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
+    prefab: {fileID: 3283885459884916767, guid: 5bf92e641629e1d498c76dd37e977eae, type: 3}
+    model: {fileID: 5022602860645237092, guid: f5732cd6fb8bc3f4faf9480dce4cb9ba, type: 3}
+    spawnHeight: 0.2
   - id: Hexapod_v01
     displayName: Hexapod
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
+    prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
+    model: {fileID: 5022602860645237092, guid: e201d9a2974be304f8b4fdbb9db60ec7, type: 3}
+    spawnHeight: 0.75
   - id: Blob_v01
     displayName: Blob
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
+    prefab: {fileID: 2147714030585187011, guid: 035385e54ebde4949948a137b5470304, type: 3}
+    model: {fileID: 5022602860645237092, guid: 03f6a88b1c12dad4690c78cad2a5f136, type: 3}
+    spawnHeight: 0.4
+  - id: Centipede_v01
+    displayName: Centipede
+    prefab: {fileID: 2521974577969091722, guid: 8a2c392fa95349348997b69b7bd62395, type: 3}
+    model: {fileID: 5022602860645237092, guid: 15ff0125eec1baf4e898d84bd3c192a2, type: 3}
+    spawnHeight: 0.25
+  - id: Crab_v01
+    displayName: Crab
+    prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
+    model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
+    spawnHeight: 0.75
+  - id: Kangaroo_v01
+    displayName: Kangaroo
+    prefab: {fileID: 620226553648130849, guid: 9d39baa9567176e448e88c85f7f729bd, type: 3}
+    model: {fileID: 5022602860645237092, guid: dd26ba802c2731b4eaab78645c2aaeb4, type: 3}
+    spawnHeight: 1.05

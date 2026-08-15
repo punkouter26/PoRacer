@@ -1,0 +1,5 @@
+quality-gate: LINQ in gameplay code
+quality-gate: LINQ in gameplay code
+quality-gate: LINQ in gameplay code
+quality-gate: LINQ in gameplay code
+quality-gate: Debug.Log without conditional compilation

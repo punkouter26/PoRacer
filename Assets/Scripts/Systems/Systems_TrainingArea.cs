@@ -43,12 +43,22 @@ namespace PoRacer.Systems
 
         private void ResetArea()
         {
-            // Obstacle tracks reshuffle every episode so the policy generalizes.
-            if (_trackBuilder != null && (_trackKind == TrackKind.Bumps || _trackKind == TrackKind.Walls))
+            // Curriculum knobs from the trainer (defaults keep gameplay behavior):
+            // goal_distance_max grows the task, rough_amplitude grows the terrain.
+            float maxGoalDistance = MAX_GOAL_DISTANCE;
+            if (Unity.MLAgents.Academy.IsInitialized)
+            {
+                var envParams = Unity.MLAgents.Academy.Instance.EnvironmentParameters;
+                maxGoalDistance = envParams.GetWithDefault("goal_distance_max", MAX_GOAL_DISTANCE);
+                Systems_TrackBuilder.RoughAmplitudeScale = envParams.GetWithDefault("rough_amplitude", 1f);
+            }
+            // Obstacle and rough tracks rebuild every episode: obstacles reshuffle so
+            // the policy generalizes, rough terrain follows the curriculum amplitude.
+            if (_trackBuilder != null && _trackKind != TrackKind.Flat && _trackKind != TrackKind.Hills)
             {
                 _trackBuilder.Build(_trackKind, _trackRoot, width: 12f, length: 24f, _rng);
             }
-            float distance = Random.Range(MIN_GOAL_DISTANCE, MAX_GOAL_DISTANCE);
+            float distance = Random.Range(MIN_GOAL_DISTANCE, maxGoalDistance);
             _goal.position = _spawnPoint.position + Vector3.forward * distance
                 + Vector3.up * Systems_TrackBuilder.SurfaceHeight(_trackKind, distance);
 

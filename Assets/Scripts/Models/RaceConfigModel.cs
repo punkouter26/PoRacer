@@ -15,6 +15,12 @@ namespace PoRacer.Models
 
         public bool MenuVisible = true;
 
+        // Scripted mode races the coded gaits (no .onnx needed) instead of RL brains.
+        public bool UseScriptedBrains;
+
+        // Index into Systems_MapCatalog.Entries; the menu writes it, spawn reads it.
+        public int SelectedMapIndex;
+
         public event Action Changed;
 
         public int GetCount(string creatureId)
@@ -36,6 +42,12 @@ namespace PoRacer.Models
                 total += pair.Value;
             }
             return total;
+        }
+
+        public void SetMap(int mapIndex)
+        {
+            SelectedMapIndex = mapIndex;
+            Changed?.Invoke();
         }
 
         public void NotifyChanged() => Changed?.Invoke();

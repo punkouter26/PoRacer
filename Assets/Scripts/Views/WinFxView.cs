@@ -77,7 +77,12 @@ namespace PoRacer.Views
             shape.angle = 40f;
             shape.rotation = new Vector3(-90f, 0f, 0f);
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
-            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            // Headless builds have no shaders; the default particle material is fine there.
+            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (particleShader != null)
+            {
+                renderer.material = new Material(particleShader);
+            }
             return ps;
         }
 

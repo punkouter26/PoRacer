@@ -35,6 +35,12 @@ namespace PoRacer.Rewards
 
         public void Reset(float initialDistance)
         {
+            // A NaN initial distance (agent reset while its articulation was still
+            // corrupt) would poison every later delta even with sane inputs.
+            if (float.IsNaN(initialDistance) || float.IsInfinity(initialDistance))
+            {
+                initialDistance = 20f;
+            }
             _previousDistance = initialDistance;
             _bestDistance = initialDistance;
             _stepsSinceImprovement = 0;
@@ -52,7 +58,32 @@ namespace PoRacer.Rewards
         /// <param name="uprightDot">Dot of root up-vector with world up; 1 = upright.</param>
         public float Step(float currentDistance, float normalizedTorque, float uprightDot)
         {
+            // NaN/Inf firewall: an exploding articulation can produce NaN distance,
+            // torque, or up-vector for a frame before the agent's failure check
+            // catches it. A single NaN reward aborts the whole training run
+            // (mlagents raises on NaN), so sanitize every input here — the one
+            // choke point all creature agents share.
+            if (float.IsNaN(currentDistance) || float.IsInfinity(currentDistance))
+            {
+                currentDistance = _previousDistance;
+            }
+            if (float.IsNaN(normalizedTorque) || float.IsInfinity(normalizedTorque))
+            {
+                normalizedTorque = 0f;
+            }
+            if (float.IsNaN(uprightDot) || float.IsInfinity(uprightDot))
+            {
+                uprightDot = 0f;
+            }
+
             float delta = _previousDistance - currentDistance;
+            // Final belt: the ternary clamp below passes NaN through (NaN fails every
+            // comparison), so a poisoned stored state must be zeroed here.
+            if (float.IsNaN(delta))
+            {
+                delta = 0f;
+                _previousDistance = currentDistance;
+            }
             delta = delta > MAX_STEP_DELTA_METERS ? MAX_STEP_DELTA_METERS
                 : delta < -MAX_STEP_DELTA_METERS ? -MAX_STEP_DELTA_METERS : delta;
             _previousDistance = currentDistance;

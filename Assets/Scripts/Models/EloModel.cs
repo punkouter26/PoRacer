@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace PoRacer.Models
@@ -8,8 +7,6 @@ namespace PoRacer.Models
         public const float DEFAULT_RATING = 1200f;
 
         private readonly Dictionary<string, float> _ratings = new();
-
-        public event Action Changed;
 
         public IReadOnlyDictionary<string, float> Ratings => _ratings;
 
@@ -22,7 +19,5 @@ namespace PoRacer.Models
         {
             _ratings[creatureId] = rating;
         }
-
-        public void NotifyChanged() => Changed?.Invoke();
     }
 }

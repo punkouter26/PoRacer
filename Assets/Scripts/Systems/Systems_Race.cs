@@ -55,9 +55,7 @@ namespace PoRacer.Systems
             }
             _model.ElapsedSeconds = 0f;
             _model.RaceActive = true;
-            _model.RaceNumber++;
-            _model.NotifyChanged();
-            _startedPublisher.Publish(new RaceStartedMessage(racers.Count));
+            _model.RaceNumber++;            _startedPublisher.Publish(new RaceStartedMessage(racers.Count));
         }
 
         public void ReportProgress(string racerId, float progressMeters)
@@ -84,9 +82,7 @@ namespace PoRacer.Systems
             }
             racer.Status = RacerStatus.Finished;
             racer.Place = _nextPlace++;
-            racer.FinishTime = _model.ElapsedSeconds;
-            _model.NotifyChanged();
-            _racerFinishedPublisher.Publish(new RacerFinishedMessage(racerId, racer.Place, racer.FinishTime));
+            racer.FinishTime = _model.ElapsedSeconds;            _racerFinishedPublisher.Publish(new RacerFinishedMessage(racerId, racer.Place, racer.FinishTime));
             CheckRaceEnd();
         }
 
@@ -102,9 +98,7 @@ namespace PoRacer.Systems
             _model.RaceActive = false;
             _model.ClearRacers();
             _lastProgress.Clear();
-            _lastProgressTime.Clear();
-            _model.NotifyChanged();
-        }
+            _lastProgressTime.Clear();        }
 
         public void Advance(float deltaSeconds)
         {
@@ -139,9 +133,7 @@ namespace PoRacer.Systems
                 return;
             }
             racer.Status = RacerStatus.Dnf;
-            racer.Place = -1;
-            _model.NotifyChanged();
-            _dnfPublisher.Publish(new RacerDnfMessage(racer.RacerId));
+            racer.Place = -1;            _dnfPublisher.Publish(new RacerDnfMessage(racer.RacerId));
         }
 
         private void CheckRaceEnd()
@@ -158,8 +150,6 @@ namespace PoRacer.Systems
                 }
             }
             _model.RaceActive = false;
-            _model.NotifyChanged();
-
             var results = new List<RaceResultEntry>(_model.Racers.Count);
             for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
             {

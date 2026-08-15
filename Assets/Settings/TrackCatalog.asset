@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e6cc9d1951ee6243ba3b2dab638b166, type: 3}
+  m_Name: TrackCatalog
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Models.TrackCatalog
+  _entries:
+  - id: Flat_v01
+    displayName: Flat
+    source: 0
+    proceduralKind: 0
+    importedPrefab: {fileID: 0}
+    availableForRace: 1
+  - id: Hills_v01
+    displayName: Hills
+    source: 0
+    proceduralKind: 1
+    importedPrefab: {fileID: 0}
+    availableForRace: 1
+  - id: Bumps_v01
+    displayName: Bumps
+    source: 0
+    proceduralKind: 2
+    importedPrefab: {fileID: 0}
+    availableForRace: 1
+  - id: Walls_v01
+    displayName: Walls
+    source: 0
+    proceduralKind: 3
+    importedPrefab: {fileID: 0}
+    availableForRace: 1
+  - id: Rough_v01
+    displayName: Rough
+    source: 0
+    proceduralKind: 4
+    importedPrefab: {fileID: 0}
+    availableForRace: 0
+  - id: Canyon_v01
+    displayName: Canyon (GLB)
+    source: 1
+    proceduralKind: 0
+    importedPrefab: {fileID: 0}
+    availableForRace: 0
+  - id: Dunes_v01
+    displayName: Dunes (GLB)
+    source: 1
+    proceduralKind: 0
+    importedPrefab: {fileID: 0}
+    availableForRace: 0
+  - id: Ruins_v01
+    displayName: Ruins (GLB)
+    source: 1
+    proceduralKind: 0
+    importedPrefab: {fileID: 0}
+    availableForRace: 0

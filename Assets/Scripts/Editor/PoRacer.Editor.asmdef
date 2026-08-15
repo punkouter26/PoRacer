@@ -3,7 +3,8 @@
     "rootNamespace": "PoRacer.Editor",
     "references": [
         "PoRacer.Runtime",
-        "Unity.InferenceEngine"
+        "Unity.InferenceEngine",
+        "Unity.ML-Agents"
     ],
     "includePlatforms": [
         "Editor"

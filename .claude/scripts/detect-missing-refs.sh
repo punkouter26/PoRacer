@@ -107,7 +107,7 @@ while IFS= read -r -d '' meta_file; do
     if [[ -n "$guid" ]]; then
         KNOWN_GUIDS["$guid"]=1
     fi
-    ((meta_count++))
+    meta_count=$((meta_count+1))
 done < <(find "$PROJECT_ROOT/Assets" "$PROJECT_ROOT/Packages" -name '*.meta' -print0 2>/dev/null || find "$PROJECT_ROOT/Assets" -name '*.meta' -print0 2>/dev/null)
 
 info_msg "Indexed $meta_count .meta files (${#KNOWN_GUIDS[@]} unique GUIDs)."
@@ -127,7 +127,7 @@ report() {
     local rel="${file#"$PROJECT_ROOT/"}"
     echo "  ${RED}[$type]${RESET} ${rel}:${lineno}"
     echo "    ${YELLOW}${detail}${RESET}"
-    ((total_issues++))
+    total_issues=$((total_issues+1))
 }
 
 # ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ echo ""
 process_file() {
     local filepath="$1"
     local rel="${filepath#"$PROJECT_ROOT/"}"
-    ((files_scanned++))
+    files_scanned=$((files_scanned+1))
 
     # --- Null/zero GUIDs ---
     while IFS=: read -r lineno line; do
@@ -147,7 +147,7 @@ process_file() {
         # Match guid: followed by all zeros (either 16 or 32 hex digits)
         if echo "$line" | grep -qE 'guid:\s*(0{16}|0{32})'; then
             report "NULL GUID" "$filepath" "$lineno" "$(echo "$line" | sed 's/^[[:space:]]*//')"
-            ((null_guid_count++))
+            null_guid_count=$((null_guid_count+1))
         fi
     done < <(grep -n 'guid:' "$filepath" 2>/dev/null || true)
 
@@ -155,7 +155,7 @@ process_file() {
     while IFS=: read -r lineno line; do
         [[ -z "$lineno" ]] && continue
         report "MISSING SCRIPT" "$filepath" "$lineno" "$(echo "$line" | sed 's/^[[:space:]]*//')"
-        ((missing_script_count++))
+        missing_script_count=$((missing_script_count+1))
     done < <(grep -n 'm_Script:\s*{fileID:\s*0}' "$filepath" 2>/dev/null || true)
 
     # --- Dangling script GUIDs ---
@@ -173,7 +173,7 @@ process_file() {
         # Check if GUID exists in our index
         if [[ -z "${KNOWN_GUIDS[$guid]:-}" ]]; then
             report "DANGLING GUID" "$filepath" "$lineno" "Script GUID $guid not found in any .meta file"
-            ((dangling_guid_count++))
+            dangling_guid_count=$((dangling_guid_count+1))
         fi
     done < <(grep -n 'm_Script:\s*{fileID:\s*11500000,\s*guid:' "$filepath" 2>/dev/null || true)
 }

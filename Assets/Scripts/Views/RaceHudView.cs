@@ -20,20 +20,29 @@ namespace PoRacer.Views
         private RaceModel _raceModel;
         private EloModel _eloModel;
         private RaceConfigModel _configModel;
+        private CommentaryModel _commentaryModel;
         private Systems_Spawn _spawn;
         private VisualElement _hudRoot;
         private Label _statusLabel;
         private Label _bannerLabel;
         private VisualElement _leaderboard;
         private readonly System.Collections.Generic.List<Label> _rowLabels = new();
+        private readonly System.Collections.Generic.List<Label> _tickerLabels = new();
         private readonly System.Collections.Generic.List<RacerState> _sortBuffer = new();
+        private int _commentaryVersion = -1;
 
         [Inject]
-        public void Construct(RaceModel raceModel, EloModel eloModel, RaceConfigModel configModel, Systems_Spawn spawn)
+        public void Construct(
+            RaceModel raceModel,
+            EloModel eloModel,
+            RaceConfigModel configModel,
+            CommentaryModel commentaryModel,
+            Systems_Spawn spawn)
         {
             _raceModel = raceModel;
             _eloModel = eloModel;
             _configModel = configModel;
+            _commentaryModel = commentaryModel;
             _spawn = spawn;
         }
 
@@ -50,7 +59,7 @@ namespace PoRacer.Views
             versionLabel.style.position = Position.Absolute;
             versionLabel.style.top = 4;
             versionLabel.style.left = 6;
-            versionLabel.style.color = new Color(1f, 1f, 1f, 0.7f);
+            versionLabel.style.color = UiTheme.TextDim;
             versionLabel.style.fontSize = 12;
             root.Add(versionLabel);
 
@@ -68,6 +77,21 @@ namespace PoRacer.Views
             _statusLabel.style.fontSize = 14;
             _statusLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             panel.Add(_statusLabel);
+
+            // Commentary ticker: newest line bright, older lines dimmed.
+            for (int tickerIndex = 0; tickerIndex < CommentaryModel.MAX_LINES; tickerIndex++)
+            {
+                var tickerLabel = new Label { pickingMode = PickingMode.Ignore };
+                tickerLabel.style.color = tickerIndex == 0 ? UiTheme.Gold : UiTheme.TextDim;
+                tickerLabel.style.fontSize = 12;
+                tickerLabel.style.marginTop = tickerIndex == 0 ? 4 : 1;
+                if (tickerIndex == 0)
+                {
+                    tickerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                }
+                _tickerLabels.Add(tickerLabel);
+                panel.Add(tickerLabel);
+            }
 
             _leaderboard = new VisualElement { pickingMode = PickingMode.Ignore };
             _leaderboard.style.marginTop = 4;
@@ -125,10 +149,21 @@ namespace PoRacer.Views
                 }
             }
 
-            string ticker = leader != null ? $"  |  Leader: {leader.DisplayName} {leader.Progress:0.0}m" : string.Empty;
+            string ticker = leader != null ? $"   Leader: {leader.DisplayName}  {leader.Progress:0.0}m" : string.Empty;
             _statusLabel.text = _raceModel.RaceActive
-                ? $"Race {_raceModel.RaceNumber} [{_raceModel.TrackName}]  {_raceModel.ElapsedSeconds:0.0}s  ({_raceModel.Racers.Count} racers){ticker}"
+                ? $"Race {_raceModel.RaceNumber}  {_raceModel.ElapsedSeconds:0}s{ticker}"
                 : $"Race {_raceModel.RaceNumber} finished — next starting soon";
+
+            if (_commentaryModel != null && _commentaryModel.Version != _commentaryVersion)
+            {
+                _commentaryVersion = _commentaryModel.Version;
+                for (int tickerIndex = 0; tickerIndex < _tickerLabels.Count; tickerIndex++)
+                {
+                    _tickerLabels[tickerIndex].text = tickerIndex < _commentaryModel.Lines.Count
+                        ? _commentaryModel.Lines[tickerIndex]
+                        : string.Empty;
+                }
+            }
 
             if (winner != null)
             {
