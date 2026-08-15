@@ -1,0 +1,25 @@
+{
+    "name": "PoRacer.Runtime",
+    "rootNamespace": "PoRacer",
+    "references": [
+        "Unity.ML-Agents",
+        "Unity.InferenceEngine",
+        "VContainer",
+        "MessagePipe",
+        "MessagePipe.VContainer",
+        "UniTask",
+        "Unity.InputSystem",
+        "Unity.Cinemachine",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

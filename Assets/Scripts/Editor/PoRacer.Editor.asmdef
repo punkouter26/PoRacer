@@ -1,0 +1,19 @@
+{
+    "name": "PoRacer.Editor",
+    "rootNamespace": "PoRacer.Editor",
+    "references": [
+        "PoRacer.Runtime",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
