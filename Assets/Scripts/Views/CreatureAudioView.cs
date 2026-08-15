@@ -28,7 +28,10 @@ namespace PoRacer.Views
             _source.loop = true;
             _source.playOnAwake = false;
             _source.spatialBlend = 1f;
-            _source.dopplerLevel = 0f;
+            // Mild doppler: audible pitch bend when a racer passes the camera,
+            // without warbling from articulated-body jitter.
+            _source.dopplerLevel = 0.35f;
+            _source.spread = 60f;
             _source.minDistance = 2f;
             _source.maxDistance = 40f;
             int entityId = GetEntityId().GetHashCode();

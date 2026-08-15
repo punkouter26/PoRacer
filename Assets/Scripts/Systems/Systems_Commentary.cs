@@ -21,6 +21,7 @@ namespace PoRacer.Systems
 
         private readonly RaceModel _model;
         private readonly CommentaryModel _commentary;
+        private readonly IPublisher<LeadChangedMessage> _leadChangedPublisher;
         private readonly IDisposable _subscriptions;
 
         private string _leaderId;
@@ -29,6 +30,7 @@ namespace PoRacer.Systems
         public Systems_Commentary(
             RaceModel model,
             CommentaryModel commentary,
+            IPublisher<LeadChangedMessage> leadChangedPublisher,
             ISubscriber<RaceStartedMessage> started,
             ISubscriber<RacerFinishedMessage> racerFinished,
             ISubscriber<RacerDnfMessage> dnf,
@@ -36,6 +38,7 @@ namespace PoRacer.Systems
         {
             _model = model;
             _commentary = commentary;
+            _leadChangedPublisher = leadChangedPublisher;
             DisposableBagBuilder bag = DisposableBag.CreateBuilder();
             started.Subscribe(OnRaceStarted).AddTo(bag);
             racerFinished.Subscribe(OnRacerFinished).AddTo(bag);
@@ -67,11 +70,12 @@ namespace PoRacer.Systems
 
             if (_leaderId == null)
             {
-                _commentary.Add($"{leader.DisplayName} grabs the early lead!");
+                _commentary.Add($"{ColoredName(leader)} grabs the early lead!");
             }
             else if (_model.ElapsedSeconds - _lastLeadChangeSeconds >= LEAD_CHANGE_COOLDOWN_SECONDS)
             {
-                _commentary.Add($"{leader.DisplayName} takes the lead!");
+                _commentary.Add($"{ColoredName(leader)} takes the lead!");
+                _leadChangedPublisher.Publish(new LeadChangedMessage(leader.RacerId));
             }
             else
             {
@@ -101,7 +105,7 @@ namespace PoRacer.Systems
                 return;
             }
             RacerState racer = _model.FindRacer(message.RacerId);
-            string name = racer != null ? racer.DisplayName : message.RacerId;
+            string name = racer != null ? ColoredName(racer) : message.RacerId;
             string line = message.Place switch
             {
                 1 => $"{name} WINS in {message.Time:0.0}s!",
@@ -118,12 +122,19 @@ namespace PoRacer.Systems
                 return;
             }
             RacerState racer = _model.FindRacer(message.RacerId);
-            _commentary.Add($"{(racer != null ? racer.DisplayName : message.RacerId)} is out of the race!");
+            _commentary.Add($"{(racer != null ? ColoredName(racer) : message.RacerId)} is out of the race!");
         }
 
         private void OnRaceFinished(RaceFinishedMessage message)
         {
             _commentary.Add("Race complete! Next race starting soon.");
+        }
+
+        private static string ColoredName(RacerState racer)
+        {
+            return string.IsNullOrEmpty(racer.TintHex)
+                ? racer.DisplayName
+                : $"<color=#{racer.TintHex}>{racer.DisplayName}</color>";
         }
     }
 }

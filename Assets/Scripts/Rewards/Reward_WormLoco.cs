@@ -18,6 +18,10 @@ namespace PoRacer.Rewards
         public const float MAX_STEP_DELTA_METERS = 0.2f; // physics-glitch clamp: real max is ~0.04 m per 0.02 s step
         public const float ENERGY_PENALTY_SCALE = 0.05f;
         public const float UPRIGHT_BONUS_SCALE = 0.02f;
+        // Races are won on time: a constant per-step cost makes a fast finish
+        // strictly better than a slow one even when both cover the same meters.
+        // Full episode (3000 steps) costs 6, well under the goal bonus of 10.
+        public const float TIME_PENALTY = 0.002f;
         private const float IMPROVEMENT_EPSILON = 0.05f;
 
         private float _previousDistance;
@@ -104,7 +108,7 @@ namespace PoRacer.Rewards
             LastEfficiencyPenalty = -ENERGY_PENALTY_SCALE * clampedTorque;
             LastUprightBonus = UPRIGHT_BONUS_SCALE * uprightPositive;
 
-            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus;
+            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus - TIME_PENALTY;
         }
 
         public bool ReachedGoal(float currentDistance) => currentDistance <= GOAL_RADIUS_METERS;

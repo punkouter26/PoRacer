@@ -808,7 +808,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 5071429042841699206}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 07003b5fe9c07e74fadca3d2142e687d, type: 3}
+  m_Script: {fileID: 11500000, guid: d117e2333d6294048ad745df9cc1eac8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Agents.Agent_Worm
   agentParameters:
@@ -823,6 +823,28 @@ MonoBehaviour:
   - {fileID: 8778531104699250926}
   - {fileID: 7464428974567483769}
   _goal: {fileID: 0}
+  _jointDriveScale: 45
+  _maxJointTorque: 1350
+  _gaitFrequency: 0.7957747
+  _gaitPhases:
+  - 0
+  - -1.1
+  - -2.2
+  - -3.3
+  - -4.4
+  _gaitAmplitudes:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  _gaitOffsets:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  _useTerrainProbes: 0
 --- !u!114 &3124767886420816970
 MonoBehaviour:
   m_ObjectHideFlags: 0

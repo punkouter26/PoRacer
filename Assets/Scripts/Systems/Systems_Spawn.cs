@@ -28,6 +28,11 @@ namespace PoRacer.Systems
         private const float QUIRK_POWER_SPAN = 0.16f;
         private const float MIGHTY_POWER = 1.05f;
         private const float SLEEPY_POWER = 0.95f;
+        // Golden-ratio hue stepping spreads racer tints evenly around the wheel.
+        private const float TINT_HUE_STEP = 0.61803f;
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int LegacyColorId = Shader.PropertyToID("_Color");
         private const int GRID_COLUMNS = 10;
         private const float GRID_X_SPACING = 2f;
         private const float GRID_ROW_SPACING = 1.6f;
@@ -45,6 +50,7 @@ namespace PoRacer.Systems
         private readonly List<GameObject> _spawned = new();
         private readonly List<Transform> _racerRoots = new();
         private readonly List<int> _nameOrder = new();
+        private readonly MaterialPropertyBlock _tintBlock = new();
         private bool _racingLoopActive;
         // Incremented on every BeginRacing/RequestMenu; async chains capture it and
         // bail out after each await if a newer session has superseded them.
@@ -156,7 +162,9 @@ namespace PoRacer.Systems
             _raceModel.TrackName = map.DisplayName;
             if (_track.TrackRoot != null)
             {
-                _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: 22f, _rng);
+                float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : -1f;
+                _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: 22f, _rng,
+                    decorate: true, finishZ: finishZ);
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
                 if (!IsCurrent(generation))
@@ -171,6 +179,10 @@ namespace PoRacer.Systems
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
                 ? _track.SpawnPoints[0].parent.position
                 : Vector3.zero;
+            if (_track.FinishLine != null)
+            {
+                _raceModel.TrackLengthMeters = Mathf.Max(1f, _track.FinishLine.position.z - gridOrigin.z);
+            }
 
             int gridIndex = 0;
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
@@ -249,15 +261,46 @@ namespace PoRacer.Systems
                     ArticulationBody[] quirkBodies = instance.GetComponentsInChildren<ArticulationBody>();
                     for (int bodyIndex = 0; bodyIndex < quirkBodies.Length; bodyIndex++)
                     {
+                        // A body read in the same frame it was instantiated can
+                        // return garbage before physics initializes it; writing
+                        // that back is rejected with a console error. Skip it —
+                        // the joint just keeps its authored drive, quirk-less.
                         ArticulationDrive drive = quirkBodies[bodyIndex].xDrive;
+                        if (!float.IsFinite(drive.stiffness) || !float.IsFinite(drive.damping)
+                            || !float.IsFinite(drive.target) || !float.IsFinite(drive.targetVelocity)
+                            || !float.IsFinite(drive.lowerLimit) || !float.IsFinite(drive.upperLimit))
+                        {
+                            continue;
+                        }
                         drive.stiffness *= quirkPower;
-                        drive.forceLimit *= quirkPower;
+                        // Unlimited force budgets stay unlimited; scaling infinity
+                        // would invalidate the whole drive.
+                        if (float.IsFinite(drive.forceLimit))
+                        {
+                            drive.forceLimit *= quirkPower;
+                        }
                         quirkBodies[bodyIndex].xDrive = drive;
                     }
                     string quirkTitle = quirkPower >= MIGHTY_POWER
                         ? "Mighty "
                         : quirkPower <= SLEEPY_POWER ? "Sleepy " : string.Empty;
                     string funName = RacerNames.Get(_nameOrder, gridIndex);
+
+                    // Connective limb visuals must exist before tinting so the
+                    // links pick up this racer's color along with its parts.
+                    instance.AddComponent<BodyLinkView>();
+
+                    // Unique tint per racer via property block: shared material
+                    // stays shared, so batching is not broken by material clones.
+                    Color tint = Color.HSVToRGB(gridIndex * TINT_HUE_STEP % 1f, 0.6f, 1f);
+                    _tintBlock.Clear();
+                    _tintBlock.SetColor(BaseColorId, tint);
+                    _tintBlock.SetColor(LegacyColorId, tint);
+                    Renderer[] tintRenderers = instance.GetComponentsInChildren<Renderer>();
+                    for (int rendererIndex = 0; rendererIndex < tintRenderers.Length; rendererIndex++)
+                    {
+                        tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
+                    }
 
                     RacerView view = instance.AddComponent<RacerView>();
                     float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : float.PositiveInfinity;
@@ -272,7 +315,9 @@ namespace PoRacer.Systems
                         RacerId = racerId,
                         CreatureId = entry.id,
                         DisplayName = $"{quirkTitle}{funName} the {entry.displayName}",
-                        Status = RacerStatus.Racing
+                        Status = RacerStatus.Racing,
+                        Tint = tint,
+                        TintHex = ColorUtility.ToHtmlStringRGB(tint)
                     });
                     gridIndex++;
                 }

@@ -44,11 +44,13 @@ namespace PoRacer
             builder.RegisterComponentInHierarchy<AudioDirectorView>();
             builder.RegisterComponentInHierarchy<CameraFxView>();
             builder.RegisterComponentInHierarchy<DebugOverlayView>();
+            builder.RegisterComponentInHierarchy<PostFxView>();
 
             MessagePipeOptions options = builder.RegisterMessagePipe();
             builder.RegisterMessageBroker<RaceStartedMessage>(options);
             builder.RegisterMessageBroker<RacerFinishedMessage>(options);
             builder.RegisterMessageBroker<RacerDnfMessage>(options);
+            builder.RegisterMessageBroker<LeadChangedMessage>(options);
             builder.RegisterMessageBroker<RaceFinishedMessage>(options);
 
             // Systems_Elo has no tick/start interface; force eager construction so

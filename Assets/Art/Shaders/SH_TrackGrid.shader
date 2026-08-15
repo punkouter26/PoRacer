@@ -6,6 +6,9 @@ Shader "PoRacer/TrackGrid"
         _LineColor ("Line Color", Color) = (0.95, 0.55, 0.2, 1)
         _GridSize ("Grid Size (m)", Float) = 2.0
         _LineWidth ("Line Width (m)", Float) = 0.04
+        // Sampled in world space (1 tile per _TexTileSize m), so meshes need no UVs.
+        _BaseMap ("Base Map", 2D) = "white" {}
+        _TexTileSize ("Texture Tile Size (m)", Float) = 4.0
     }
     SubShader
     {
@@ -31,7 +34,11 @@ Shader "PoRacer/TrackGrid"
                 half4 _LineColor;
                 float _GridSize;
                 float _LineWidth;
+                float _TexTileSize;
             CBUFFER_END
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
 
             struct Attributes
             {
@@ -69,7 +76,9 @@ Shader "PoRacer/TrackGrid"
                 float camDist = distance(_WorldSpaceCameraPos, input.positionWS);
                 lineMask *= saturate(1.0 - camDist / 90.0);
 
-                half3 albedo = lerp(_BaseColor.rgb, _LineColor.rgb, lineMask);
+                half3 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap,
+                    input.positionWS.xz / _TexTileSize).rgb;
+                half3 albedo = lerp(_BaseColor.rgb * texColor, _LineColor.rgb, lineMask);
 
                 float3 normalWS = normalize(input.normalWS);
                 float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);

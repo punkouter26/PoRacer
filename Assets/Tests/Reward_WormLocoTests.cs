@@ -11,21 +11,24 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            Assert.That(sut.Step(9.9f, 0f, 0f), Is.EqualTo(0.1f * Reward_WormLoco.PROGRESS_SCALE).Within(0.0001f));
+            Assert.That(sut.Step(9.9f, 0f, 0f),
+                Is.EqualTo(0.1f * Reward_WormLoco.PROGRESS_SCALE - Reward_WormLoco.TIME_PENALTY).Within(0.0001f));
             Assert.That(sut.Step(9.95f, 0f, 0f), Is.LessThan(0f));
         }
 
         [Test]
-        public void EpisodeRewardSum_EqualsNetProgress()
+        public void EpisodeRewardSum_EqualsNetProgressMinusTimeCost()
         {
-            // Step deltas stay under the physics-glitch clamp, so the sum equals net approach.
-            // Torque/upright terms are zeroed here so this stays a pure progress-sum check.
+            // Step deltas stay under the physics-glitch clamp, so the sum equals net
+            // approach minus the constant per-step time cost. Torque/upright terms
+            // are zeroed here so this stays a pure progress-sum check.
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
             float total = sut.Step(9.9f, 0f, 0f) + sut.Step(9.95f, 0f, 0f) + sut.Step(9.8f, 0f, 0f);
 
-            Assert.That(total, Is.EqualTo(0.2f * Reward_WormLoco.PROGRESS_SCALE).Within(0.0001f));
+            Assert.That(total,
+                Is.EqualTo(0.2f * Reward_WormLoco.PROGRESS_SCALE - 3f * Reward_WormLoco.TIME_PENALTY).Within(0.0001f));
         }
 
         [Test]

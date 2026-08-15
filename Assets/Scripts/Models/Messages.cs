@@ -26,6 +26,16 @@ namespace PoRacer.Models
         }
     }
 
+    public readonly struct LeadChangedMessage
+    {
+        public readonly string RacerId;
+
+        public LeadChangedMessage(string racerId)
+        {
+            RacerId = racerId;
+        }
+    }
+
     public readonly struct RacerDnfMessage
     {
         public readonly string RacerId;

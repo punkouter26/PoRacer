@@ -42,17 +42,22 @@ namespace PoRacer.Views
 
         private void OnRacerFinished(RacerFinishedMessage message)
         {
+            if (_finishLine != null)
+            {
+                _confetti.transform.position = _finishLine.position + Vector3.up * 2f;
+            }
             if (message.Place == 1)
             {
-                if (_finishLine != null)
-                {
-                    _confetti.transform.position = _finishLine.position + Vector3.up * 2f;
-                }
                 _confetti.Emit(CONFETTI_COUNT);
                 _audioSource.PlayOneShot(_fanfare, 0.8f);
             }
             else
             {
+                // Small podium puff for 2nd and 3rd, a bare tick after that.
+                if (message.Place <= 3)
+                {
+                    _confetti.Emit(CONFETTI_COUNT / 4);
+                }
                 _audioSource.PlayOneShot(_tick, 0.5f);
             }
         }

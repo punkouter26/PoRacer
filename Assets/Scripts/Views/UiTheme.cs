@@ -73,5 +73,52 @@ namespace PoRacer.Views
             element.style.paddingLeft = horizontal;
             element.style.paddingRight = horizontal;
         }
+
+        /// <summary>
+        /// Full-screen child container inset by the device safe area (notches,
+        /// rounded corners, home bars). Screens add their content here instead of
+        /// the raw document root. A no-op rectangle on screens without cutouts.
+        /// </summary>
+        public static VisualElement BuildSafeRoot(VisualElement root)
+        {
+            var safe = new VisualElement { pickingMode = PickingMode.Ignore };
+            safe.style.position = Position.Absolute;
+            safe.style.left = 0f;
+            safe.style.top = 0f;
+            safe.style.right = 0f;
+            safe.style.bottom = 0f;
+            root.Add(safe);
+            safe.RegisterCallback<GeometryChangedEvent>(_ => ApplySafeInsets(root, safe));
+            return safe;
+        }
+
+        private static void ApplySafeInsets(VisualElement root, VisualElement safe)
+        {
+            float rootWidth = root.resolvedStyle.width;
+            if (Screen.width <= 0 || rootWidth <= 0f || float.IsNaN(rootWidth))
+            {
+                return;
+            }
+            Rect area = Screen.safeArea;
+            // Panel units per screen pixel; safeArea is reported in screen pixels
+            // with a bottom-left origin.
+            float scale = rootWidth / Screen.width;
+            safe.style.left = area.xMin * scale;
+            safe.style.right = (Screen.width - area.xMax) * scale;
+            safe.style.top = (Screen.height - area.yMax) * scale;
+            safe.style.bottom = area.yMin * scale;
+        }
+
+        /// <summary>
+        /// Pointer-over brightening for buttons whose background color is static.
+        /// Do not use on selection-tinted buttons — it would clobber their color.
+        /// </summary>
+        public static void AddHover(Button button, bool accent = false)
+        {
+            Color baseColor = accent ? Accent : ButtonBg;
+            Color hoverColor = Color.Lerp(baseColor, Color.white, 0.18f);
+            button.RegisterCallback<PointerEnterEvent>(_ => button.style.backgroundColor = hoverColor);
+            button.RegisterCallback<PointerLeaveEvent>(_ => button.style.backgroundColor = baseColor);
+        }
     }
 }

@@ -38,9 +38,22 @@ namespace PoRacer.Systems
         private const float ROUGH_SPAWN_PAD_FLAT_Z = 2f;  // flat until here (racers spawn stable)
         private const float MARKER_ALPHA = 0.12f;
         private const float MARKER_HEIGHT_OFFSET = 0.02f;
+        // Visual-only side aprons that hold trees, tents, and bushes.
+        private const float DECOR_MARGIN = 14f;
+        private const float ARCH_MODEL_WIDTH = 14f;
 
         private static Material _markerMaterial;
         private static Material _mudMaterial;
+        private static readonly System.Collections.Generic.Dictionary<TrackKind, Material> GroundMaterials = new();
+        private static bool _propsLoaded;
+        private static GameObject _bushPrefab;
+        private static GameObject _forestPrefab;
+        private static GameObject _tentsPrefab;
+        private static GameObject _archPrefab;
+        // The imported .glb props reference a colormap texture that does not ship
+        // with them, so they render white; these replacements are built in code.
+        private static Material _propAtlasMaterial;
+        private static Material _archMaterial;
 
         /// <summary>
         /// Curriculum knob (0..1+): scales rough-terrain height. Training sets this
@@ -59,21 +72,27 @@ namespace PoRacer.Systems
             _physicsMaterial = physicsMaterial;
         }
 
-        /// <summary>Clears previous children and builds the track under 'parent'. Origin is the start line center.</summary>
-        public void Build(TrackKind kind, Transform parent, float width, float length, System.Random rng)
+        /// <summary>
+        /// Clears previous children and builds the track under 'parent'. Origin is
+        /// the start line center. 'decorate' adds visual-only side scenery and the
+        /// finish arch (gameplay scene only; training keeps the bare track).
+        /// </summary>
+        public void Build(TrackKind kind, Transform parent, float width, float length, System.Random rng,
+            bool decorate = false, float finishZ = -1f)
         {
             for (int childIndex = parent.childCount - 1; childIndex >= 0; childIndex--)
             {
                 UnityEngine.Object.Destroy(parent.GetChild(childIndex).gameObject);
             }
 
+            float sideMargin = decorate ? DECOR_MARGIN : 0f;
             if (kind == TrackKind.Hills || kind == TrackKind.Rough || kind == TrackKind.RoughBlocked || kind == TrackKind.Lumpy)
             {
-                BuildTerrainMesh(kind, parent, width, length);
+                BuildTerrainMesh(kind, parent, width, length, sideMargin);
             }
             else
             {
-                BuildFlatGround(parent, width, length);
+                BuildFlatGround(kind, parent, width, length, sideMargin);
             }
 
             BuildScaleMarkers(kind, parent, width, length);
@@ -97,6 +116,11 @@ namespace PoRacer.Systems
             {
                 BuildMudPits(parent, width, length, rng, count: 5);
                 BuildGates(parent, width, length, rng, count: 2);
+            }
+
+            if (decorate)
+            {
+                DecorateTrack(kind, parent, width, length, finishZ > 0f ? finishZ : length - 2f, rng);
             }
         }
 
@@ -125,20 +149,22 @@ namespace PoRacer.Systems
             return 0f;
         }
 
-        private void BuildFlatGround(Transform parent, float width, float length)
+        private void BuildFlatGround(TrackKind kind, Transform parent, float width, float length, float sideMargin)
         {
+            float fullWidth = width + sideMargin * 2f;
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.SetParent(parent, false);
             // A plane primitive is 10x10 at scale 1; margin behind the start line.
             ground.transform.localPosition = new Vector3(0f, 0f, length * 0.5f - 3f);
-            ground.transform.localScale = new Vector3(width / 10f, 1f, (length + 8f) / 10f);
-            ground.GetComponent<MeshRenderer>().sharedMaterial = _groundMaterial;
+            ground.transform.localScale = new Vector3(fullWidth / 10f, 1f, (length + 8f) / 10f);
+            ground.GetComponent<MeshRenderer>().sharedMaterial = GroundMaterialFor(kind);
             ground.GetComponent<MeshCollider>().sharedMaterial = _physicsMaterial;
         }
 
-        private void BuildTerrainMesh(TrackKind kind, Transform parent, float width, float length)
+        private void BuildTerrainMesh(TrackKind kind, Transform parent, float width, float length, float sideMargin)
         {
+            width += sideMargin * 2f;
             float fullLength = length + 8f;
             float zStart = -5f;
             int stepsZ = Mathf.CeilToInt(fullLength * MESH_STEPS_PER_METER);
@@ -148,6 +174,7 @@ namespace PoRacer.Systems
                 ? Mathf.CeilToInt(width * MESH_STEPS_PER_METER)
                 : Mathf.CeilToInt(width * MESH_STEPS_PER_METER / 4f);
             var vertices = new Vector3[(stepsX + 1) * (stepsZ + 1)];
+            var uvs = new Vector2[vertices.Length];
             var triangles = new int[stepsX * stepsZ * 6];
 
             for (int zIndex = 0; zIndex <= stepsZ; zIndex++)
@@ -157,6 +184,8 @@ namespace PoRacer.Systems
                 {
                     float x = -width * 0.5f + width * xIndex / stepsX;
                     vertices[zIndex * (stepsX + 1) + xIndex] = new Vector3(x, SurfaceHeight(kind, x, z), z);
+                    // One texture tile per 4 m, same density as the flat plane.
+                    uvs[zIndex * (stepsX + 1) + xIndex] = new Vector2(x * 0.25f, z * 0.25f);
                 }
             }
             int triangleIndex = 0;
@@ -173,13 +202,13 @@ namespace PoRacer.Systems
                     triangles[triangleIndex++] = corner + stepsX + 2;
                 }
             }
-            var mesh = new Mesh { vertices = vertices, triangles = triangles };
+            var mesh = new Mesh { vertices = vertices, uv = uvs, triangles = triangles };
             mesh.RecalculateNormals();
 
             var ground = new GameObject("Ground");
             ground.transform.SetParent(parent, false);
             ground.AddComponent<MeshFilter>().sharedMesh = mesh;
-            ground.AddComponent<MeshRenderer>().sharedMaterial = _groundMaterial;
+            ground.AddComponent<MeshRenderer>().sharedMaterial = GroundMaterialFor(kind);
             var collider = ground.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
             collider.sharedMaterial = _physicsMaterial;
@@ -268,6 +297,81 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
+        /// Per-kind ground material: a clone of the base ground material with a
+        /// procedural dirt/rock/bog texture. Cached so every rebuild and every
+        /// training area shares one material per kind (one draw-call state).
+        /// </summary>
+        private Material GroundMaterialFor(TrackKind kind)
+        {
+            // Headless training builds strip rendering; texture work is wasted there.
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null || _groundMaterial == null)
+            {
+                return _groundMaterial;
+            }
+            if (GroundMaterials.TryGetValue(kind, out Material cached) && cached != null)
+            {
+                return cached;
+            }
+            var material = new Material(_groundMaterial);
+            // TrackGrid samples _BaseMap in world space; white base keeps the
+            // texture's own colors, grid lines stay untouched.
+            material.SetColor("_BaseColor", Color.white);
+            material.SetTexture("_BaseMap", BuildGroundTexture(kind));
+            GroundMaterials[kind] = material;
+            return material;
+        }
+
+        private static Texture2D BuildGroundTexture(TrackKind kind)
+        {
+            Color baseColor;
+            Color veinColor;
+            if (kind == TrackKind.Swamp)
+            {
+                baseColor = new Color(0.24f, 0.3f, 0.18f);   // boggy moss
+                veinColor = new Color(0.35f, 0.3f, 0.18f);   // drier peat
+            }
+            else if (kind == TrackKind.Lumpy || kind == TrackKind.Hills)
+            {
+                baseColor = new Color(0.45f, 0.34f, 0.22f);  // dry dirt
+                veinColor = new Color(0.55f, 0.45f, 0.32f);
+            }
+            else if (kind == TrackKind.Rough || kind == TrackKind.RoughBlocked)
+            {
+                baseColor = new Color(0.38f, 0.37f, 0.36f);  // rock
+                veinColor = new Color(0.5f, 0.48f, 0.45f);
+            }
+            else
+            {
+                baseColor = new Color(0.5f, 0.44f, 0.34f);   // packed sand
+                veinColor = new Color(0.58f, 0.53f, 0.43f);
+            }
+
+            const int size = 256;
+            var texture = new Texture2D(size, size, TextureFormat.RGB24, true)
+            {
+                wrapMode = TextureWrapMode.Repeat
+            };
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Two Perlin octaves for blotches, one high-frequency speckle.
+                    float broad = Mathf.PerlinNoise(x * 0.03f + (int)kind * 37f, y * 0.03f);
+                    float detail = Mathf.PerlinNoise(x * 0.11f + 91f, y * 0.11f + 17f);
+                    float speckle = Mathf.PerlinNoise(x * 0.45f + 5f, y * 0.45f + 43f);
+                    float blend = Mathf.Clamp01(broad * 0.6f + detail * 0.4f);
+                    Color color = Color.Lerp(baseColor, veinColor, blend);
+                    float shade = 0.92f + speckle * 0.16f;
+                    pixels[y * size + x] = new Color(color.r * shade, color.g * shade, color.b * shade);
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(true);
+            return texture;
+        }
+
+        /// <summary>
         /// Mud pits: a flat translucent brown quad on the ground plus a trigger
         /// box with a MudZoneView that drags every creature body inside.
         /// </summary>
@@ -327,7 +431,7 @@ namespace PoRacer.Systems
         /// </summary>
         private void BuildGates(Transform parent, float width, float length, System.Random rng, int count)
         {
-            const float gapWidth = 6f;
+            const float gapWidth = 9f;
             const float wallHeight = 0.35f;
             const float wallDepth = 0.4f;
             for (int gateIndex = 0; gateIndex < count; gateIndex++)
@@ -361,6 +465,118 @@ namespace PoRacer.Systems
             wall.transform.localScale = size;
             wall.GetComponent<MeshRenderer>().sharedMaterial = _obstacleMaterial;
             wall.GetComponent<BoxCollider>().sharedMaterial = _physicsMaterial;
+        }
+
+        /// <summary>
+        /// Visual-only scenery: finish arch over the line, forest and tent tiles on
+        /// the side aprons, bushes hugging the track edge. All colliders stripped so
+        /// gameplay and physics are untouched; everything lives under 'parent' and
+        /// is cleared with the track on rebuild.
+        /// </summary>
+        private static void DecorateTrack(TrackKind kind, Transform parent, float width, float length,
+            float finishZ, System.Random rng)
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                return;
+            }
+            if (!_propsLoaded)
+            {
+                _propsLoaded = true;
+                _bushPrefab = Resources.Load<GameObject>("Props/bush");
+                _forestPrefab = Resources.Load<GameObject>("Props/deco_forest");
+                _tentsPrefab = Resources.Load<GameObject>("Props/deco_tents");
+                _archPrefab = Resources.Load<GameObject>("Props/finish_arch");
+
+                Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
+                if (litShader != null)
+                {
+                    var atlas = Resources.Load<Texture2D>("Props/citybits_texture");
+                    _propAtlasMaterial = new Material(litShader);
+                    _propAtlasMaterial.SetFloat("_Smoothness", 0f);
+                    if (atlas != null)
+                    {
+                        _propAtlasMaterial.SetTexture("_BaseMap", atlas);
+                    }
+                    _archMaterial = new Material(litShader);
+                    _archMaterial.SetColor("_BaseColor", new Color(0.82f, 0.24f, 0.2f));
+                    _archMaterial.SetFloat("_Smoothness", 0.25f);
+                }
+            }
+
+            if (_archPrefab != null)
+            {
+                float archScale = width / ARCH_MODEL_WIDTH;
+                PlaceProp(_archPrefab, parent,
+                    new Vector3(0f, SurfaceHeight(kind, 0f, finishZ), finishZ),
+                    rotationY: 0f, new Vector3(archScale, archScale * 0.8f, 1f), _archMaterial);
+            }
+
+            if (_forestPrefab != null)
+            {
+                // Forest tiles are 10 m squares; three per side, jittered so the
+                // tree line never reads as a fence.
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    for (int tileIndex = 0; tileIndex < 3; tileIndex++)
+                    {
+                        float z = 1f + tileIndex * 11f + (float)rng.NextDouble() * 4f;
+                        float x = side * (width * 0.5f + 8f + (float)rng.NextDouble() * 2.5f);
+                        PlaceProp(_forestPrefab, parent,
+                            new Vector3(x, SurfaceHeight(kind, x, z), z),
+                            rotationY: rng.Next(4) * 90f, Vector3.one, _propAtlasMaterial);
+                    }
+                }
+            }
+
+            if (_tentsPrefab != null)
+            {
+                // Spectator camps flanking the start grid.
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float x = side * (width * 0.5f + 8.5f);
+                    float z = -4f + (float)rng.NextDouble() * 2f;
+                    PlaceProp(_tentsPrefab, parent,
+                        new Vector3(x, SurfaceHeight(kind, x, z), z),
+                        rotationY: side < 0 ? 90f : 270f, Vector3.one, _propAtlasMaterial);
+                }
+            }
+
+            if (_bushPrefab != null)
+            {
+                for (int bushIndex = 0; bushIndex < 22; bushIndex++)
+                {
+                    int side = rng.Next(2) == 0 ? -1 : 1;
+                    float x = side * (width * 0.5f + 0.8f + (float)rng.NextDouble() * 2.8f);
+                    float z = -4f + (float)rng.NextDouble() * (length + 8f);
+                    float scale = 1.6f + (float)rng.NextDouble() * 1.8f;
+                    PlaceProp(_bushPrefab, parent,
+                        new Vector3(x, SurfaceHeight(kind, x, z), z),
+                        rotationY: (float)rng.NextDouble() * 360f, Vector3.one * scale, overrideMaterial: null);
+                }
+            }
+        }
+
+        private static void PlaceProp(GameObject prefab, Transform parent, Vector3 localPosition,
+            float rotationY, Vector3 scale, Material overrideMaterial)
+        {
+            GameObject prop = UnityEngine.Object.Instantiate(prefab, parent);
+            prop.transform.localPosition = localPosition;
+            prop.transform.localRotation = Quaternion.Euler(0f, rotationY, 0f);
+            prop.transform.localScale = scale;
+            Collider[] colliders = prop.GetComponentsInChildren<Collider>(true);
+            for (int colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex++)
+            {
+                UnityEngine.Object.Destroy(colliders[colliderIndex]);
+            }
+            if (overrideMaterial != null)
+            {
+                Renderer[] renderers = prop.GetComponentsInChildren<Renderer>(true);
+                for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+                {
+                    renderers[rendererIndex].sharedMaterial = overrideMaterial;
+                }
+            }
         }
 
         private void ScatterBoxes(TrackKind kind, Transform parent, float width, float length, System.Random rng,

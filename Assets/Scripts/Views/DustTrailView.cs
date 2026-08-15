@@ -13,8 +13,6 @@ namespace PoRacer.Views
         private const float MAX_RATE = 22f;
         private const float FULL_RATE_SPEED = 2.5f;
 
-        private static Material SharedMaterial;
-
         private ParticleSystem.EmissionModule _emission;
         private Transform _transform;
         private Vector3 _lastPosition;
@@ -81,47 +79,14 @@ namespace PoRacer.Views
             sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 1.6f));
 
             var particleRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            particleRenderer.material = GetSharedMaterial();
+            Material sharedMaterial = FxUtil.SoftParticleMaterial();
+            if (sharedMaterial != null)
+            {
+                particleRenderer.material = sharedMaterial;
+            }
             particleRenderer.shadowCastingMode = ShadowCastingMode.Off;
             particleRenderer.receiveShadows = false;
             return ps;
-        }
-
-        private static Material GetSharedMaterial()
-        {
-            if (SharedMaterial != null)
-            {
-                return SharedMaterial;
-            }
-            var material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
-            material.SetFloat("_Surface", 1f);
-            material.SetFloat("_Blend", 0f);
-            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
-            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.renderQueue = (int)RenderQueue.Transparent;
-            material.SetTexture("_BaseMap", BuildSoftCircle());
-            SharedMaterial = material;
-            return material;
-        }
-
-        private static Texture2D BuildSoftCircle()
-        {
-            const int size = 64;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dx = (x + 0.5f) / size - 0.5f;
-                    float dy = (y + 0.5f) / size - 0.5f;
-                    float alpha = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy) * 2f);
-                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha * alpha));
-                }
-            }
-            texture.Apply();
-            return texture;
         }
     }
 }

@@ -7,9 +7,8 @@ using UnityEngine;
 namespace PoRacer.Agents
 {
     /// <summary>
-    /// Generic N-joint locomotion agent shared by all procedurally built creatures
-    /// (hexapod, quad, snake, centipede, crab, kangaroo, blob). Same observation and
-    /// action layout as Agent_Worm, with joint count and limits configured per prefab
+    /// Generic N-joint locomotion agent shared by every creature, worm and spider
+    /// included, with joint count, limits, and gait tables configured per prefab
     /// (MVS carve-out: ML-Agents Agents own their observation/action/reward logic).
     ///
     /// Observations (N*2 + 11): per joint: normalized position + velocity; root up
@@ -24,6 +23,12 @@ namespace PoRacer.Agents
         private const float MAX_ROOT_SPEED = 2f;      // m/s, normalization only
         private const float GOAL_DISTANCE_NORM = 20f;
         private const float MAX_ANGULAR_VELOCITY = 20f;
+        // Terrain look-ahead: ground height relative to the root, sampled at fixed
+        // distances along the flattened forward direction.
+        private const float PROBE_RAY_HEIGHT = 3f;
+        private const float PROBE_RAY_RANGE = 6f;
+        private const float PROBE_HEIGHT_NORM = 2f;
+        private static readonly float[] ProbeDistances = { 0.5f, 1.2f, 2.2f, 3.5f };
 
         [SerializeField] private ArticulationBody _root;
         [SerializeField] private ArticulationBody[] _joints;
@@ -36,6 +41,11 @@ namespace PoRacer.Agents
         [SerializeField] private float _gaitFrequency = 0.8f;
         [SerializeField] private float[] _gaitPhases;
         [SerializeField] private float[] _gaitAmplitudes;
+        // Per-joint DC offset so crouched stances (bent knees) are expressible.
+        [SerializeField] private float[] _gaitOffsets;
+        // Adds 4 look-ahead height observations. Changes the observation size:
+        // enable only together with a matching VectorObservationSize and a retrain.
+        [SerializeField] private bool _useTerrainProbes;
 
         private readonly Reward_WormLoco _reward = new();
         private System.Action _areaReset;
@@ -95,6 +105,25 @@ namespace PoRacer.Agents
 
             Vector3 localVelocity = rootTransform.InverseTransformDirection(_root.linearVelocity);
             sensor.AddObservation(SafeVector(Vector3.ClampMagnitude(localVelocity / MAX_ROOT_SPEED, 1f)));
+
+            if (_useTerrainProbes)
+            {
+                Vector3 forward = rootTransform.forward;
+                forward.y = 0f;
+                forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
+                float rootY = rootTransform.position.y;
+                for (int probeIndex = 0; probeIndex < ProbeDistances.Length; probeIndex++)
+                {
+                    Vector3 origin = rootTransform.position
+                        + forward * ProbeDistances[probeIndex] + Vector3.up * PROBE_RAY_HEIGHT;
+                    float relativeHeight = 0f;
+                    if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, PROBE_RAY_RANGE))
+                    {
+                        relativeHeight = hit.point.y - rootY;
+                    }
+                    sensor.AddObservation(Safe(Mathf.Clamp(relativeHeight / PROBE_HEIGHT_NORM, -1f, 1f)));
+                }
+            }
         }
 
         public override void OnActionReceived(ActionBuffers actions)
@@ -150,10 +179,12 @@ namespace PoRacer.Agents
             float angle = 2f * Mathf.PI * _gaitFrequency * Time.fixedTime;
             bool hasGait = _gaitPhases != null && _gaitPhases.Length == _joints.Length
                 && _gaitAmplitudes != null && _gaitAmplitudes.Length == _joints.Length;
+            bool hasOffsets = _gaitOffsets != null && _gaitOffsets.Length == _joints.Length;
             for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
             {
+                float offset = hasOffsets ? _gaitOffsets[jointIndex] : 0f;
                 continuous[jointIndex] = hasGait
-                    ? _gaitAmplitudes[jointIndex] * Mathf.Sin(angle + _gaitPhases[jointIndex])
+                    ? _gaitAmplitudes[jointIndex] * Mathf.Sin(angle + _gaitPhases[jointIndex]) + offset
                     : Mathf.Sin(angle - jointIndex * 1.1f);
             }
         }
@@ -183,6 +214,7 @@ namespace PoRacer.Agents
             stats.Add("Reward/Progress", _reward.LastProgressReward);
             stats.Add("Reward/EfficiencyPenalty", _reward.LastEfficiencyPenalty);
             stats.Add("Reward/UprightBonus", _reward.LastUprightBonus);
+            stats.Add("Reward/TimePenalty", -Reward_WormLoco.TIME_PENALTY);
         }
 
         private static float Safe(float value)

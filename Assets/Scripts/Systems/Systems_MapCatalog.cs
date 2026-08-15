@@ -13,20 +13,22 @@ namespace PoRacer.Systems
             public readonly string DisplayName;
             public readonly TrackKind Kind;
             public readonly bool Available;
+            public readonly string Blurb;
 
-            public MapEntry(string displayName, TrackKind kind, bool available)
+            public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "")
             {
                 DisplayName = displayName;
                 Kind = kind;
                 Available = available;
+                Blurb = blurb;
             }
         }
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
-            new MapEntry("Flat", TrackKind.Flat, available: true),
-            new MapEntry("Lumpy", TrackKind.Lumpy, available: true),
-            new MapEntry("Swamp", TrackKind.Swamp, available: true),
+            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test"),
+            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge"),
+            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them"),
             new MapEntry("Map 4", TrackKind.Flat, available: false),
             new MapEntry("Map 5", TrackKind.Flat, available: false),
             new MapEntry("Map 6", TrackKind.Flat, available: false),

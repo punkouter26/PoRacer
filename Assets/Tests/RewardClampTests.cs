@@ -13,7 +13,8 @@ namespace PoRacer.Tests
 
             float reward = sut.Step(1000000f, 0f, 0f); // exploded body teleports far away
 
-            Assert.That(reward, Is.EqualTo(-Reward_WormLoco.MAX_STEP_DELTA_METERS * Reward_WormLoco.PROGRESS_SCALE));
+            Assert.That(reward, Is.EqualTo(
+                -Reward_WormLoco.MAX_STEP_DELTA_METERS * Reward_WormLoco.PROGRESS_SCALE - Reward_WormLoco.TIME_PENALTY));
         }
     }
 }

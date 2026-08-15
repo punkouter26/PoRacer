@@ -18,6 +18,9 @@ namespace PoRacer.Models
         public RacerStatus Status { get; set; }
         public int Place { get; set; }
         public float FinishTime { get; set; }
+        public UnityEngine.Color Tint { get; set; }
+        // Cached "RRGGBB" so commentary/HUD rich text never re-encodes per line.
+        public string TintHex { get; set; }
     }
 
     public sealed class RaceModel
@@ -30,6 +33,8 @@ namespace PoRacer.Models
         public bool RaceActive;
         public int RaceNumber;
         public string TrackName = "Flat";
+        // Start line to finish line, for progress-strip percentages.
+        public float TrackLengthMeters = 22f;
 
         public void SetRacers(IReadOnlyList<RacerState> racers)
         {
