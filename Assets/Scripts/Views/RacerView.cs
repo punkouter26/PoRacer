@@ -9,11 +9,14 @@ namespace PoRacer.Views
     /// as DNF. A failed racer is deactivated so it cannot disturb the rest of
     /// the race. Also backstops the finish trigger: a racer fast enough to
     /// tunnel through the BoxCollider is finished by distance instead.
+    /// The first knockdown earns a marshal rescue (set upright in place);
+    /// the second is a DNF.
     /// </summary>
     public sealed class RacerView : MonoBehaviour
     {
-        private const float KNOCKDOWN_SECONDS = 5f;
+        private const float KNOCKDOWN_SECONDS = 7f;
         private const float KNOCKDOWN_SPEED = 0.1f;
+        private const int MAX_RESCUES = 1;
         private const float OUT_OF_BOUNDS_METERS = 100f;
         private const float FALL_OFF_Y = -10f;
 
@@ -26,6 +29,7 @@ namespace PoRacer.Views
         private float _lastZ;
         private float _finishDistance;
         private bool _finished;
+        private int _rescuesUsed;
 
         public string RacerId => _racerId;
 
@@ -84,6 +88,13 @@ namespace PoRacer.Views
             _lastZ = z;
             if (_flippedSeconds >= KNOCKDOWN_SECONDS)
             {
+                if (_rescuesUsed < MAX_RESCUES)
+                {
+                    _rescuesUsed++;
+                    _flippedSeconds = 0f;
+                    RescueFlip(position);
+                    return;
+                }
                 _race.NotifyFailure(_racerId);
                 FxUtil.KnockoutPuff(position);
                 enabled = false;
@@ -92,6 +103,46 @@ namespace PoRacer.Views
             }
 
             _race.ReportProgress(_racerId, z - _startZ);
+        }
+
+        /// <summary>
+        /// Marshal rescue: stand the creature upright where it lies (keeping its
+        /// heading), calm every joint, and puff some dust. Same reset recipe the
+        /// training areas use, so the brain resumes from a familiar pose.
+        /// </summary>
+        private void RescueFlip(Vector3 position)
+        {
+            ArticulationBody[] bodies = GetComponentsInChildren<ArticulationBody>();
+            ArticulationBody root = null;
+            for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
+            {
+                if (bodies[bodyIndex].isRoot)
+                {
+                    root = bodies[bodyIndex];
+                    break;
+                }
+            }
+            if (root == null)
+            {
+                return;
+            }
+            Quaternion upright = Quaternion.Euler(0f, root.transform.rotation.eulerAngles.y, 0f);
+            root.TeleportRoot(position + Vector3.up * 0.25f, upright);
+            for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
+            {
+                ArticulationBody body = bodies[bodyIndex];
+                if (body.jointPosition.dofCount > 0)
+                {
+                    body.jointPosition = new ArticulationReducedSpace(0f);
+                    body.jointVelocity = new ArticulationReducedSpace(0f);
+                    ArticulationDrive drive = body.xDrive;
+                    drive.target = 0f;
+                    body.xDrive = drive;
+                }
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+            FxUtil.KnockoutPuff(position);
         }
     }
 }
