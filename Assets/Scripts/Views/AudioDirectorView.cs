@@ -10,9 +10,14 @@ namespace PoRacer.Views
     /// Global race audio: start horn, crowd reactions, a synthesized music loop
     /// (pad + bass + arpeggio), and a per-map nature ambience bed (swamp crickets,
     /// dusty wind, open-field birds). Big events duck the music like a sidechain
-    /// compressor; the whole mix softens while the menu is open. All clips are
-    /// generated in code — no audio asset files. Per-racer and win sounds live in
-    /// CreatureAudioView and WinFxView.
+    /// compressor; the whole mix softens while the menu is open.
+    ///
+    /// One-shots (horn, crowd, DNF, countdown) are recorded CC0 clips pulled through
+    /// AudioLibrary, each with a code-synthesized fallback so a missing Audio folder
+    /// costs fidelity and nothing else. The music loop and the ambience beds stay
+    /// synthesized: both need seamless looping and per-map variation that no single
+    /// recording gives for free. Per-racer and win sounds live in CreatureAudioView
+    /// and WinFxView.
     /// </summary>
     public sealed class AudioDirectorView : MonoBehaviour
     {
@@ -20,8 +25,20 @@ namespace PoRacer.Views
         private const float MUSIC_VOLUME = 0.22f;
         private const float AMBIENCE_VOLUME = 0.17f;
         private const float MENU_MIX = 0.5f;
+        // One-shot levels. Every clip AudioLibrary hands back peaks near 0.9,
+        // recorded or synthesized, so these read as a straight mix balance.
+        private const float HORN_VOLUME = 0.55f;
+        private const float CHEER_VOLUME = 0.4f;
+        private const float ROAR_VOLUME = 0.6f;
+        private const float DNF_VOLUME = 0.5f;
+        private const float COUNTDOWN_VOLUME = 0.4f;
         private const float DUCK_DEPTH = 0.65f;
         private const float DUCK_RECOVERY_SECONDS = 1.2f;
+        // Final stretch: once the leader passes this fraction of the track, the
+        // music pitches up a hair so the finish feels like a finish.
+        private const float FINAL_STRETCH_FRACTION = 0.8f;
+        private const float FINAL_STRETCH_PITCH = 1.07f;
+        private const float STRETCH_POLL_SECONDS = 0.25f;
 
         private AudioSource _sfxSource;
         private AudioSource _musicSource;
@@ -39,6 +56,8 @@ namespace PoRacer.Views
         private TrackKind _ambienceKind = (TrackKind)(-1);
         private float _duck;
         private float _menuMix = MENU_MIX;
+        private float _stretchPollTimer;
+        private bool _finalStretch;
 
         [Inject]
         public void Construct(
@@ -79,11 +98,14 @@ namespace PoRacer.Views
             _ambienceSource.loop = true;
             _ambienceSource.volume = AMBIENCE_VOLUME * MENU_MIX;
 
-            _startHorn = SynthesizeStartHorn();
-            _crowdCheer = SynthesizeCrowd(seconds: 1.1f, gain: 0.6f, seed: 777);
-            _crowdRoar = SynthesizeCrowd(seconds: 2.4f, gain: 0.9f, seed: 1234);
-            _dnfBlip = SynthesizeDnfBlip();
-            _countdownBeep = SynthesizeCountdownBeep();
+            // Recorded one-shots when the CC0 clips are present, code-synthesized
+            // stand-ins when they are not. AudioLibrary peak-matches the fallbacks,
+            // so the mix volumes below hold either way.
+            _startHorn = AudioLibrary.GetOrSynthesize("start_horn", SynthesizeStartHorn);
+            _crowdCheer = AudioLibrary.GetOrSynthesize("crowd_cheer", SynthesizeCheer);
+            _crowdRoar = AudioLibrary.GetOrSynthesize("crowd_roar", SynthesizeRoar);
+            _dnfBlip = AudioLibrary.GetOrSynthesize("dnf_blip", SynthesizeDnfBlip);
+            _countdownBeep = AudioLibrary.GetOrSynthesize("countdown_beep", SynthesizeCountdownBeep);
         }
 
         private void Start()
@@ -102,11 +124,19 @@ namespace PoRacer.Views
             {
                 if (_raceModel.CountdownValue > 0)
                 {
-                    _sfxSource.PlayOneShot(_countdownBeep, 0.55f);
+                    _sfxSource.PlayOneShot(_countdownBeep, COUNTDOWN_VOLUME);
                 }
                 _lastCountdown = _raceModel.CountdownValue;
             }
             _duck = Mathf.MoveTowards(_duck, 0f, Time.deltaTime / DUCK_RECOVERY_SECONDS);
+            _stretchPollTimer -= Time.deltaTime;
+            if (_stretchPollTimer <= 0f)
+            {
+                _stretchPollTimer = STRETCH_POLL_SECONDS;
+                _finalStretch = IsFinalStretch();
+            }
+            _musicSource.pitch = Mathf.MoveTowards(
+                _musicSource.pitch, _finalStretch ? FINAL_STRETCH_PITCH : 1f, Time.deltaTime * 0.25f);
             float menuTarget = _config != null && _config.MenuVisible ? MENU_MIX : 1f;
             _menuMix = Mathf.MoveTowards(_menuMix, menuTarget, Time.deltaTime * 1.5f);
             float mix = (1f - DUCK_DEPTH * _duck) * _menuMix;
@@ -121,6 +151,24 @@ namespace PoRacer.Views
             {
                 _config.Changed -= OnConfigChanged;
             }
+        }
+
+        private bool IsFinalStretch()
+        {
+            if (_raceModel == null || !_raceModel.RaceActive || _raceModel.TrackLengthMeters <= 0f)
+            {
+                return false;
+            }
+            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
+            {
+                RacerState racer = _raceModel.Racers[racerIndex];
+                if (racer.Status == RacerStatus.Racing
+                    && racer.Progress / _raceModel.TrackLengthMeters >= FINAL_STRETCH_FRACTION)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void OnConfigChanged()
@@ -142,13 +190,13 @@ namespace PoRacer.Views
 
         private void OnRaceStarted(RaceStartedMessage message)
         {
-            _sfxSource.PlayOneShot(_startHorn, 0.7f);
+            _sfxSource.PlayOneShot(_startHorn, HORN_VOLUME);
             _duck = 1f;
         }
 
         private void OnLeadChanged(LeadChangedMessage message)
         {
-            _sfxSource.PlayOneShot(_crowdCheer, 0.5f);
+            _sfxSource.PlayOneShot(_crowdCheer, CHEER_VOLUME);
             _duck = Mathf.Max(_duck, 0.5f);
         }
 
@@ -156,15 +204,19 @@ namespace PoRacer.Views
         {
             if (message.Place == 1)
             {
-                _sfxSource.PlayOneShot(_crowdRoar, 0.8f);
+                _sfxSource.PlayOneShot(_crowdRoar, ROAR_VOLUME);
                 _duck = 1f;
             }
         }
 
         private void OnRacerDnf(RacerDnfMessage message)
         {
-            _sfxSource.PlayOneShot(_dnfBlip, 0.4f);
+            _sfxSource.PlayOneShot(_dnfBlip, DNF_VOLUME);
         }
+
+        private static AudioClip SynthesizeCheer() => SynthesizeCrowd(seconds: 1.1f, gain: 0.6f, seed: 777);
+
+        private static AudioClip SynthesizeRoar() => SynthesizeCrowd(seconds: 2.4f, gain: 0.9f, seed: 1234);
 
         /// <summary>Band-passed noise swell with whistle overtones: a crowd reaction.</summary>
         private static AudioClip SynthesizeCrowd(float seconds, float gain, int seed)

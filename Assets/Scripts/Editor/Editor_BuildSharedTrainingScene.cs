@@ -112,24 +112,11 @@ namespace PoRacer.Editor
 
         private static (Material, Material, PhysicsMaterial) ReadWormAreaMaterials()
         {
-            Scene wormScene = EditorSceneManager.OpenScene("Assets/Scenes/SCN_TRAIN_WORM.unity", OpenSceneMode.Additive);
-            Material ground = null;
-            Material obstacle = null;
-            PhysicsMaterial physics = null;
-            foreach (GameObject rootGo in wormScene.GetRootGameObjects())
-            {
-                var area = rootGo.GetComponentInChildren<Systems_TrainingArea>(true);
-                if (area != null)
-                {
-                    var so = new SerializedObject(area);
-                    ground = so.FindProperty("_groundMaterial").objectReferenceValue as Material;
-                    obstacle = so.FindProperty("_obstacleMaterial").objectReferenceValue as Material;
-                    physics = so.FindProperty("_physicsMaterial").objectReferenceValue as PhysicsMaterial;
-                    break;
-                }
-            }
-            EditorSceneManager.CloseScene(wormScene, true);
-            return (ground, obstacle, physics);
+            // Same assets the retired per-creature training scenes wired up;
+            // loaded directly so this builder depends on no other scene.
+            Material ground = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Materials/M_Ground.mat");
+            Material obstacle = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Materials/M_Worm.mat");
+            return (ground, obstacle, null);
         }
     }
 }

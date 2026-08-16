@@ -8,62 +8,73 @@ namespace PoRacer.Views
 {
     /// <summary>
     /// Runtime UI Toolkit HUD, hierarchy built entirely in C# (no .uxml/.uss).
-    /// Version stamp top-left (non-pickable); leaderboard refreshed on a schedule
-    /// by reading the Models — no per-frame polling in Update.
+    /// Deliberately minimal so the race itself owns the screen: version stamp
+    /// top-left, MENU button top-right, top-3 chips under the stamp, a thin
+    /// progress rail hugging the right edge, center banners (countdown / GO /
+    /// winner), and the between-races podium. Refreshed on a schedule by reading
+    /// the Models — no per-frame polling in Update, and no allocation in the
+    /// refresh past the elements pooled during the first build.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class RaceHudView : MonoBehaviour
     {
         private const long REFRESH_INTERVAL_MS = 250;
-        private const int MAX_LEADERBOARD_ROWS = 10;
-        private const int MAX_PROGRESS_DOTS = 50;
-        private const int TICKER_ANIMATION_MS = 300;
-        private const int ROW_POP_MS = 250;
         private const float GO_BANNER_SECONDS = 1.5f;
         private const float WINNER_BANNER_SECONDS = 3f;
         private const int PODIUM_ROWS = 3;
+        private const int TOP_CHIP_COUNT = 3;
+        // Rail dots are pooled: a 100+ racer field shows only the leading pack.
+        private const int MAX_RAIL_DOTS = 32;
+        private const float RAIL_WIDTH = 7f;
+        private const float RAIL_DOT_SIZE = 9f;
+        // Percent of the rail a dot's top may reach, leaving room for its height.
+        private const float RAIL_SPAN_PERCENT = 96f;
+        private const float CHIP_SWATCH_SIZE = 8f;
+
+        private static readonly Color[] MedalColors = { UiTheme.Gold, UiTheme.Silver, UiTheme.Bronze };
 
         private RaceModel _raceModel;
         private EloModel _eloModel;
         private RaceConfigModel _configModel;
-        private CommentaryModel _commentaryModel;
         private Systems_Spawn _spawn;
         private VisualElement _hudRoot;
-        private Label _statusLabel;
         private Label _bannerLabel;
-        private VisualElement _leaderboard;
-        private VisualElement _progressStrip;
-        private readonly System.Collections.Generic.List<VisualElement> _rows = new();
-        private readonly System.Collections.Generic.List<VisualElement> _rowChips = new();
-        private readonly System.Collections.Generic.List<Label> _rowLabels = new();
-        private readonly System.Collections.Generic.List<Label> _tickerLabels = new();
-        private readonly System.Collections.Generic.List<VisualElement> _progressDots = new();
-        private readonly System.Collections.Generic.List<RacerState> _sortBuffer = new();
-        private readonly System.Collections.Generic.Dictionary<string, int> _lastRowByRacer = new();
-        private int _commentaryVersion = -1;
         private bool _wasRaceActive;
         private float _goBannerUntil;
         private float _winnerBannerUntil;
         private VisualElement _podiumPanel;
         private readonly System.Collections.Generic.List<Label> _podiumLabels = new();
-        private readonly System.Collections.Generic.List<VisualElement> _podiumChips = new();
-        private string _lastLeaderId;
-        private float _lastLeaderProgress;
-        private float _lastLeaderSampleTime;
-        private float _leaderSpeed;
+        private string _lastBannerText;
+
+        // --- Right-edge progress rail ---
+        private VisualElement _rail;
+        private readonly VisualElement[] _railDots = new VisualElement[MAX_RAIL_DOTS];
+        private readonly Color[] _railDotTints = new Color[MAX_RAIL_DOTS];
+        private int _railDotsShown = -1;
+
+        // --- Top-3 chips ---
+        private VisualElement _chipRow;
+        private readonly VisualElement[] _chips = new VisualElement[TOP_CHIP_COUNT];
+        private readonly VisualElement[] _chipSwatches = new VisualElement[TOP_CHIP_COUNT];
+        private readonly Label[] _chipNames = new Label[TOP_CHIP_COUNT];
+        private readonly string[] _chipSourceNames = new string[TOP_CHIP_COUNT];
+        private readonly Color[] _chipTints = new Color[TOP_CHIP_COUNT];
+        private int _chipsShown = -1;
+
+        // Leader ordering scratch buffer, filled in place every refresh.
+        private readonly RacerState[] _leaders = new RacerState[MAX_RAIL_DOTS];
+        private bool _widgetsVisible;
 
         [Inject]
         public void Construct(
             RaceModel raceModel,
             EloModel eloModel,
             RaceConfigModel configModel,
-            CommentaryModel commentaryModel,
             Systems_Spawn spawn)
         {
             _raceModel = raceModel;
             _eloModel = eloModel;
             _configModel = configModel;
-            _commentaryModel = commentaryModel;
             _spawn = spawn;
         }
 
@@ -79,55 +90,14 @@ namespace PoRacer.Views
                 pickingMode = PickingMode.Ignore
             };
             versionLabel.style.position = Position.Absolute;
-            versionLabel.style.top = 4;
-            versionLabel.style.left = 6;
+            versionLabel.style.top = UiTheme.SPACE_XS;
+            versionLabel.style.left = UiTheme.SPACE_SM;
             versionLabel.style.color = UiTheme.TextDim;
-            versionLabel.style.fontSize = 12;
+            versionLabel.style.fontSize = UiTheme.FONT_SM;
             safeRoot.Add(versionLabel);
 
-            var panel = new VisualElement();
-            panel.style.position = Position.Absolute;
-            panel.style.top = 24;
-            panel.style.left = 6;
-            panel.style.right = 6;
-            UiTheme.StylePanel(panel);
-            panel.pickingMode = PickingMode.Ignore;
-            safeRoot.Add(panel);
-
-            _statusLabel = new Label { pickingMode = PickingMode.Ignore };
-            _statusLabel.style.color = UiTheme.Text;
-            _statusLabel.style.fontSize = 14;
-            _statusLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            panel.Add(_statusLabel);
-
-            // Commentary ticker: newest line bright, older lines dimmed.
-            for (int tickerIndex = 0; tickerIndex < CommentaryModel.MAX_LINES; tickerIndex++)
-            {
-                var tickerLabel = new Label { pickingMode = PickingMode.Ignore };
-                tickerLabel.style.color = tickerIndex == 0 ? UiTheme.Gold : UiTheme.TextDim;
-                tickerLabel.style.fontSize = 12;
-                tickerLabel.style.marginTop = tickerIndex == 0 ? 4 : 1;
-                if (tickerIndex == 0)
-                {
-                    tickerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-                }
-                _tickerLabels.Add(tickerLabel);
-                panel.Add(tickerLabel);
-            }
-
-            // Progress strip: every racer is a colored dot moving start -> finish.
-            _progressStrip = new VisualElement { pickingMode = PickingMode.Ignore };
-            _progressStrip.style.height = 10;
-            _progressStrip.style.marginTop = 6;
-            _progressStrip.style.backgroundColor = new Color(0f, 0f, 0f, 0.35f);
-            _progressStrip.style.borderRightColor = UiTheme.Gold;
-            _progressStrip.style.borderRightWidth = 2;
-            UiTheme.SetRadius(_progressStrip, 5f);
-            panel.Add(_progressStrip);
-
-            _leaderboard = new VisualElement { pickingMode = PickingMode.Ignore };
-            _leaderboard.style.marginTop = 4;
-            panel.Add(_leaderboard);
+            BuildTopChips(safeRoot);
+            BuildProgressRail(safeRoot);
 
             _bannerLabel = new Label { pickingMode = PickingMode.Ignore };
             _bannerLabel.style.position = Position.Absolute;
@@ -135,7 +105,7 @@ namespace PoRacer.Views
             _bannerLabel.style.left = 0;
             _bannerLabel.style.right = 0;
             _bannerLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _bannerLabel.style.fontSize = 30;
+            _bannerLabel.style.fontSize = UiTheme.FONT_TITLE;
             _bannerLabel.style.color = UiTheme.Gold;
             _bannerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             _bannerLabel.style.display = DisplayStyle.None;
@@ -151,30 +121,24 @@ namespace PoRacer.Views
             _podiumPanel.style.display = DisplayStyle.None;
             var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
             podiumTitle.style.color = UiTheme.Gold;
-            podiumTitle.style.fontSize = 18;
+            podiumTitle.style.fontSize = UiTheme.FONT_LG;
             podiumTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
             podiumTitle.style.unityTextAlign = TextAnchor.MiddleCenter;
-            podiumTitle.style.marginBottom = 6;
+            podiumTitle.style.marginBottom = UiTheme.SPACE_SM;
             _podiumPanel.Add(podiumTitle);
-            Color[] medalColors = { UiTheme.Gold, UiTheme.Silver, UiTheme.Bronze };
             for (int podiumIndex = 0; podiumIndex < PODIUM_ROWS; podiumIndex++)
             {
                 var row = new VisualElement { pickingMode = PickingMode.Ignore };
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
-                row.style.marginTop = 3;
-                var medal = new VisualElement { pickingMode = PickingMode.Ignore };
-                medal.style.width = 12;
-                medal.style.height = 12;
-                medal.style.marginRight = 8;
-                medal.style.backgroundColor = medalColors[podiumIndex];
-                UiTheme.SetRadius(medal, 6f);
+                row.style.marginTop = UiTheme.SPACE_XS;
+                VisualElement medal = UiTheme.MakeSwatch(MedalColors[podiumIndex], UiTheme.SPACE_MD);
+                medal.style.marginRight = UiTheme.SPACE_SM;
                 row.Add(medal);
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.style.color = UiTheme.Text;
-                label.style.fontSize = 15;
+                label.style.fontSize = UiTheme.FONT_MD;
                 row.Add(label);
-                _podiumChips.Add(medal);
                 _podiumLabels.Add(label);
                 _podiumPanel.Add(row);
             }
@@ -182,15 +146,109 @@ namespace PoRacer.Views
 
             var menuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
             menuButton.style.position = Position.Absolute;
-            menuButton.style.top = 4;
-            menuButton.style.right = 6;
+            menuButton.style.top = UiTheme.SPACE_XS;
+            menuButton.style.right = UiTheme.SPACE_SM;
             menuButton.style.width = 64;
-            menuButton.style.height = 26;
+            menuButton.style.height = UiTheme.CONTROL_SM;
+            menuButton.style.fontSize = UiTheme.FONT_SM;
             UiTheme.StyleButton(menuButton);
             UiTheme.AddHover(menuButton);
             safeRoot.Add(menuButton);
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
+        }
+
+        /// <summary>
+        /// Up to three tiny pills under the version stamp: place, racer tint and
+        /// the first word of the racer's name. Elements are built once and only
+        /// their text/tint change, and only when the occupant changes.
+        /// </summary>
+        private void BuildTopChips(VisualElement safeRoot)
+        {
+            _chipRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            _chipRow.style.position = Position.Absolute;
+            _chipRow.style.top = UiTheme.SPACE_LG + UiTheme.SPACE_SM;
+            _chipRow.style.left = 0;
+            _chipRow.style.right = 0;
+            _chipRow.style.flexDirection = FlexDirection.Row;
+            _chipRow.style.justifyContent = Justify.Center;
+            _chipRow.style.display = DisplayStyle.None;
+            safeRoot.Add(_chipRow);
+
+            for (int chipIndex = 0; chipIndex < TOP_CHIP_COUNT; chipIndex++)
+            {
+                var chip = new VisualElement { pickingMode = PickingMode.Ignore };
+                chip.style.flexDirection = FlexDirection.Row;
+                chip.style.alignItems = Align.Center;
+                UiTheme.SetMargin(chip, 0f, UiTheme.SPACE_XS * 0.5f);
+                UiTheme.StyleChip(chip);
+                chip.style.display = DisplayStyle.None;
+
+                var place = new Label((chipIndex + 1).ToString()) { pickingMode = PickingMode.Ignore };
+                place.style.color = MedalColors[chipIndex];
+                place.style.fontSize = UiTheme.FONT_XS;
+                place.style.unityFontStyleAndWeight = FontStyle.Bold;
+                place.style.marginRight = UiTheme.SPACE_XS;
+                chip.Add(place);
+
+                VisualElement swatch = UiTheme.MakeSwatch(UiTheme.TextDim, CHIP_SWATCH_SIZE);
+                swatch.style.marginRight = UiTheme.SPACE_XS;
+                chip.Add(swatch);
+
+                var name = new Label { pickingMode = PickingMode.Ignore };
+                name.style.color = UiTheme.Text;
+                name.style.fontSize = UiTheme.FONT_XS;
+                chip.Add(name);
+
+                _chips[chipIndex] = chip;
+                _chipSwatches[chipIndex] = swatch;
+                _chipNames[chipIndex] = name;
+                _chipRow.Add(chip);
+            }
+        }
+
+        /// <summary>
+        /// Thin vertical rail on the right edge: one pooled dot per leading racer,
+        /// bottom (start line) to top (finish line).
+        /// </summary>
+        private void BuildProgressRail(VisualElement safeRoot)
+        {
+            _rail = new VisualElement { pickingMode = PickingMode.Ignore };
+            _rail.style.position = Position.Absolute;
+            _rail.style.right = UiTheme.SPACE_SM;
+            _rail.style.top = new Length(15f, LengthUnit.Percent);
+            _rail.style.bottom = new Length(15f, LengthUnit.Percent);
+            _rail.style.width = RAIL_WIDTH;
+            _rail.style.backgroundColor = UiTheme.TrackBg;
+            UiTheme.SetRadius(_rail, RAIL_WIDTH * 0.5f);
+            _rail.style.display = DisplayStyle.None;
+            safeRoot.Add(_rail);
+
+            // Gold cap marks the finish end of the rail.
+            var finishCap = new VisualElement { pickingMode = PickingMode.Ignore };
+            finishCap.style.position = Position.Absolute;
+            finishCap.style.top = 0;
+            finishCap.style.left = 0;
+            finishCap.style.right = 0;
+            finishCap.style.height = 2;
+            finishCap.style.backgroundColor = UiTheme.Gold;
+            _rail.Add(finishCap);
+
+            for (int dotIndex = 0; dotIndex < MAX_RAIL_DOTS; dotIndex++)
+            {
+                var dot = new VisualElement { pickingMode = PickingMode.Ignore };
+                dot.style.position = Position.Absolute;
+                // Centers the dot over the narrower rail.
+                dot.style.left = (RAIL_WIDTH - RAIL_DOT_SIZE) * 0.5f;
+                dot.style.width = RAIL_DOT_SIZE;
+                dot.style.height = RAIL_DOT_SIZE;
+                dot.style.backgroundColor = UiTheme.TextDim;
+                UiTheme.SetRadius(dot, RAIL_DOT_SIZE * 0.5f);
+                dot.style.display = DisplayStyle.None;
+                _railDots[dotIndex] = dot;
+                _railDotTints[dotIndex] = UiTheme.TextDim;
+                _rail.Add(dot);
+            }
         }
 
         private void Refresh()
@@ -206,18 +264,13 @@ namespace PoRacer.Views
             }
             _hudRoot.style.display = DisplayStyle.Flex;
 
-            RacerState leader = null;
             RacerState winner = null;
             for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
             {
-                RacerState racer = _raceModel.Racers[racerIndex];
-                if (racer.Place == 1)
+                if (_raceModel.Racers[racerIndex].Place == 1)
                 {
-                    winner = racer;
-                }
-                if (racer.Status == RacerStatus.Racing && (leader == null || racer.Progress > leader.Progress))
-                {
-                    leader = racer;
+                    winner = _raceModel.Racers[racerIndex];
+                    break;
                 }
             }
 
@@ -228,34 +281,6 @@ namespace PoRacer.Views
             }
             _wasRaceActive = _raceModel.RaceActive;
 
-            UpdateLeaderSpeed(leader);
-            string speed = leader != null && _leaderSpeed > 0.05f ? $"  {_leaderSpeed:0.0} m/s" : string.Empty;
-            string ticker = leader != null ? $"   Leader: {leader.DisplayName}  {leader.Progress:0.0}m{speed}" : string.Empty;
-            _statusLabel.text = _raceModel.RaceActive
-                ? $"Race {_raceModel.RaceNumber}  {_raceModel.ElapsedSeconds:0}s{ticker}"
-                : $"Race {_raceModel.RaceNumber} finished — next starting soon";
-
-            if (_commentaryModel != null && _commentaryModel.Version != _commentaryVersion)
-            {
-                _commentaryVersion = _commentaryModel.Version;
-                for (int tickerIndex = 0; tickerIndex < _tickerLabels.Count; tickerIndex++)
-                {
-                    _tickerLabels[tickerIndex].text = tickerIndex < _commentaryModel.Lines.Count
-                        ? _commentaryModel.Lines[tickerIndex]
-                        : string.Empty;
-                }
-                // Newest line slides in from the left and fades up.
-                Label newest = _tickerLabels[0];
-                newest.style.opacity = 0f;
-                newest.experimental.animation.Start(0f, 1f, TICKER_ANIMATION_MS, (element, value) =>
-                {
-                    element.style.opacity = value;
-                    element.style.translate = new Translate(-16f * (1f - value), 0f);
-                });
-            }
-
-            RefreshProgressStrip();
-
             if (winner != null && _winnerBannerUntil == 0f)
             {
                 _winnerBannerUntil = Time.unscaledTime + WINNER_BANNER_SECONDS;
@@ -263,105 +288,49 @@ namespace PoRacer.Views
             if (_raceModel.CountdownValue > 0)
             {
                 _bannerLabel.text = _raceModel.CountdownValue.ToString();
-                _bannerLabel.style.fontSize = 64;
+                _bannerLabel.style.fontSize = UiTheme.FONT_COUNTDOWN;
                 _bannerLabel.style.display = DisplayStyle.Flex;
+                PopBanner();
             }
             else if (winner != null && Time.unscaledTime < _winnerBannerUntil)
             {
                 // Brief celebration only: after a few seconds the banner clears so
                 // the rest of the field stays watchable.
                 _bannerLabel.text = $"WINNER  {winner.DisplayName}  {winner.FinishTime:0.0}s";
-                _bannerLabel.style.fontSize = 30;
+                _bannerLabel.style.fontSize = UiTheme.FONT_TITLE;
                 _bannerLabel.style.display = DisplayStyle.Flex;
+                PopBanner();
             }
             else if (Time.unscaledTime < _goBannerUntil)
             {
                 _bannerLabel.text = "GO!";
-                _bannerLabel.style.fontSize = 52;
+                _bannerLabel.style.fontSize = UiTheme.FONT_BANNER;
                 _bannerLabel.style.display = DisplayStyle.Flex;
+                PopBanner();
             }
             else
             {
                 _bannerLabel.style.display = DisplayStyle.None;
+                _lastBannerText = null;
             }
 
             RefreshPodium();
+            RefreshFieldWidgets();
+        }
 
-            _sortBuffer.Clear();
-            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
+        /// <summary>Scale-pop the banner once each time its text changes.</summary>
+        private void PopBanner()
+        {
+            if (_bannerLabel.text == _lastBannerText)
             {
-                _sortBuffer.Add(_raceModel.Racers[racerIndex]);
+                return;
             }
-            _sortBuffer.Sort(CompareRacers);
-
-            int visibleRows = _sortBuffer.Count < MAX_LEADERBOARD_ROWS ? _sortBuffer.Count : MAX_LEADERBOARD_ROWS;
-            while (_rows.Count < visibleRows)
+            _lastBannerText = _bannerLabel.text;
+            _bannerLabel.experimental.animation.Start(0f, 1f, UiTheme.POP_MS, (element, value) =>
             {
-                var row = new VisualElement { pickingMode = PickingMode.Ignore };
-                row.style.flexDirection = FlexDirection.Row;
-                row.style.alignItems = Align.Center;
-                row.style.marginTop = 2;
-                row.style.paddingLeft = 4;
-                row.style.paddingTop = 1;
-                row.style.paddingBottom = 1;
-                UiTheme.SetRadius(row, 3f);
-
-                var chip = new VisualElement { pickingMode = PickingMode.Ignore };
-                chip.style.width = 8;
-                chip.style.height = 8;
-                chip.style.marginRight = 5;
-                UiTheme.SetRadius(chip, 2f);
-                row.Add(chip);
-
-                var label = new Label { pickingMode = PickingMode.Ignore };
-                label.style.color = UiTheme.Text;
-                label.style.fontSize = 12;
-                row.Add(label);
-
-                _rows.Add(row);
-                _rowChips.Add(chip);
-                _rowLabels.Add(label);
-                _leaderboard.Add(row);
-            }
-            for (int rowIndex = 0; rowIndex < _rows.Count; rowIndex++)
-            {
-                if (rowIndex >= visibleRows)
-                {
-                    _rows[rowIndex].style.display = DisplayStyle.None;
-                    continue;
-                }
-                _rows[rowIndex].style.display = DisplayStyle.Flex;
-                RacerState racer = _sortBuffer[rowIndex];
-                // Pop the row when its racer climbed the board since last refresh.
-                if (_lastRowByRacer.TryGetValue(racer.RacerId, out int previousRow) && rowIndex < previousRow)
-                {
-                    _rows[rowIndex].experimental.animation.Start(0f, 1f, ROW_POP_MS, (element, value) =>
-                    {
-                        element.style.translate = new Translate(10f * (1f - value), 0f);
-                    });
-                }
-                string status = racer.Status switch
-                {
-                    RacerStatus.Finished => $"#{racer.Place} {racer.FinishTime:0.0}s",
-                    RacerStatus.Dnf => "DNF",
-                    _ => $"{racer.Progress:0.0}m"
-                };
-                float rating = _eloModel.GetRating(racer.CreatureId);
-                _rowChips[rowIndex].style.backgroundColor = racer.Tint;
-                _rowLabels[rowIndex].text = $"{rowIndex + 1}. {racer.DisplayName}  {status}  ELO {rating:0}";
-                _rows[rowIndex].style.backgroundColor = racer.Place switch
-                {
-                    1 => new Color(UiTheme.Gold.r, UiTheme.Gold.g, UiTheme.Gold.b, 0.18f),
-                    2 => new Color(UiTheme.Silver.r, UiTheme.Silver.g, UiTheme.Silver.b, 0.14f),
-                    3 => new Color(UiTheme.Bronze.r, UiTheme.Bronze.g, UiTheme.Bronze.b, 0.14f),
-                    _ => StyleKeyword.Null
-                };
-            }
-            _lastRowByRacer.Clear();
-            for (int rowIndex = 0; rowIndex < visibleRows; rowIndex++)
-            {
-                _lastRowByRacer[_sortBuffer[rowIndex].RacerId] = rowIndex;
-            }
+                float scale = 1.6f - 0.6f * value;
+                element.style.scale = new Scale(new Vector2(scale, scale));
+            });
         }
 
         private void RefreshPodium()
@@ -398,85 +367,140 @@ namespace PoRacer.Views
             }
         }
 
-        private void UpdateLeaderSpeed(RacerState leader)
+        /// <summary>Drives both the right-edge rail and the top-3 chips.</summary>
+        private void RefreshFieldWidgets()
         {
-            if (leader == null)
+            int leaderCount = SelectLeaders();
+            bool show = leaderCount > 0;
+            if (show != _widgetsVisible)
             {
-                _lastLeaderId = null;
-                _leaderSpeed = 0f;
+                _widgetsVisible = show;
+                DisplayStyle display = show ? DisplayStyle.Flex : DisplayStyle.None;
+                _rail.style.display = display;
+                _chipRow.style.display = display;
+            }
+            if (!show)
+            {
                 return;
             }
-            float now = Time.unscaledTime;
-            if (leader.RacerId == _lastLeaderId && now > _lastLeaderSampleTime)
-            {
-                float instant = (leader.Progress - _lastLeaderProgress) / (now - _lastLeaderSampleTime);
-                _leaderSpeed = Mathf.Lerp(_leaderSpeed, Mathf.Max(0f, instant), 0.5f);
-            }
-            else
-            {
-                _leaderSpeed = 0f;
-            }
-            _lastLeaderId = leader.RacerId;
-            _lastLeaderProgress = leader.Progress;
-            _lastLeaderSampleTime = now;
+            RefreshRail(leaderCount);
+            RefreshChips(leaderCount);
         }
 
-        private void RefreshProgressStrip()
+        /// <summary>
+        /// Fills <see cref="_leaders"/> with the best racers, best first, by an
+        /// insertion pass over the field. No sorting of the Model's own list and
+        /// no allocation — the buffer is reused every refresh.
+        /// </summary>
+        private int SelectLeaders()
         {
-            int dotCount = _raceModel.Racers.Count < MAX_PROGRESS_DOTS ? _raceModel.Racers.Count : MAX_PROGRESS_DOTS;
-            _progressStrip.style.display = dotCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            while (_progressDots.Count < dotCount)
+            int count = 0;
+            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
             {
-                var dot = new VisualElement { pickingMode = PickingMode.Ignore };
-                dot.style.position = Position.Absolute;
-                dot.style.width = 6;
-                dot.style.height = 6;
-                dot.style.top = 2;
-                UiTheme.SetRadius(dot, 3f);
-                _progressDots.Add(dot);
-                _progressStrip.Add(dot);
-            }
-            float trackLength = _raceModel.TrackLengthMeters;
-            for (int dotIndex = 0; dotIndex < _progressDots.Count; dotIndex++)
-            {
-                if (dotIndex >= dotCount)
+                RacerState racer = _raceModel.Racers[racerIndex];
+                float key = RankKey(racer);
+                int insertAt = count;
+                while (insertAt > 0 && RankKey(_leaders[insertAt - 1]) < key)
                 {
-                    _progressDots[dotIndex].style.display = DisplayStyle.None;
+                    insertAt--;
+                }
+                if (insertAt >= MAX_RAIL_DOTS)
+                {
                     continue;
                 }
-                RacerState racer = _raceModel.Racers[dotIndex];
-                float percent = racer.Status == RacerStatus.Finished
+                int shiftFrom = count < MAX_RAIL_DOTS ? count : MAX_RAIL_DOTS - 1;
+                for (int shiftIndex = shiftFrom; shiftIndex > insertAt; shiftIndex--)
+                {
+                    _leaders[shiftIndex] = _leaders[shiftIndex - 1];
+                }
+                _leaders[insertAt] = racer;
+                if (count < MAX_RAIL_DOTS)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>Finished racers outrank anything still on track, by place.</summary>
+        private static float RankKey(RacerState racer)
+        {
+            if (racer.Status == RacerStatus.Finished)
+            {
+                return 1000000f - racer.Place;
+            }
+            return racer.Progress;
+        }
+
+        private void RefreshRail(int leaderCount)
+        {
+            if (_railDotsShown != leaderCount)
+            {
+                for (int dotIndex = 0; dotIndex < MAX_RAIL_DOTS; dotIndex++)
+                {
+                    _railDots[dotIndex].style.display =
+                        dotIndex < leaderCount ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+                _railDotsShown = leaderCount;
+            }
+            float trackLength = Mathf.Max(1f, _raceModel.TrackLengthMeters);
+            for (int dotIndex = 0; dotIndex < leaderCount; dotIndex++)
+            {
+                RacerState racer = _leaders[dotIndex];
+                float fraction = racer.Status == RacerStatus.Finished
                     ? 1f
                     : Mathf.Clamp01(racer.Progress / trackLength);
-                VisualElement dot = _progressDots[dotIndex];
-                dot.style.display = DisplayStyle.Flex;
-                // 97% keeps the dot inside the strip's right edge.
-                dot.style.left = new Length(percent * 97f, LengthUnit.Percent);
-                dot.style.backgroundColor = racer.Status == RacerStatus.Dnf
-                    ? new Color(0.4f, 0.4f, 0.4f, 0.5f)
-                    : racer.Tint;
+                // Bottom of the rail is the start line, top is the finish.
+                _railDots[dotIndex].style.top =
+                    new Length((1f - fraction) * RAIL_SPAN_PERCENT, LengthUnit.Percent);
+                Color tint = racer.Status == RacerStatus.Dnf ? UiTheme.Dnf : racer.Tint;
+                if (_railDotTints[dotIndex] != tint)
+                {
+                    _railDotTints[dotIndex] = tint;
+                    _railDots[dotIndex].style.backgroundColor = tint;
+                }
             }
         }
 
-        private static int CompareRacers(RacerState first, RacerState second)
+        private void RefreshChips(int leaderCount)
         {
-            bool firstFinished = first.Status == RacerStatus.Finished;
-            bool secondFinished = second.Status == RacerStatus.Finished;
-            if (firstFinished && secondFinished)
+            int shown = leaderCount < TOP_CHIP_COUNT ? leaderCount : TOP_CHIP_COUNT;
+            if (_chipsShown != shown)
             {
-                return first.Place.CompareTo(second.Place);
+                for (int chipIndex = 0; chipIndex < TOP_CHIP_COUNT; chipIndex++)
+                {
+                    _chips[chipIndex].style.display =
+                        chipIndex < shown ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+                _chipsShown = shown;
             }
-            if (firstFinished != secondFinished)
+            for (int chipIndex = 0; chipIndex < shown; chipIndex++)
             {
-                return firstFinished ? -1 : 1;
+                RacerState racer = _leaders[chipIndex];
+                // Name only changes when the chip's occupant does; skipping the
+                // rebuild keeps the substring allocation out of the steady state.
+                if (!string.Equals(_chipSourceNames[chipIndex], racer.DisplayName))
+                {
+                    _chipSourceNames[chipIndex] = racer.DisplayName;
+                    _chipNames[chipIndex].text = FirstWord(racer.DisplayName);
+                }
+                Color tint = racer.Status == RacerStatus.Dnf ? UiTheme.Dnf : racer.Tint;
+                if (_chipTints[chipIndex] != tint)
+                {
+                    _chipTints[chipIndex] = tint;
+                    _chipSwatches[chipIndex].style.backgroundColor = tint;
+                }
             }
-            bool firstDnf = first.Status == RacerStatus.Dnf;
-            bool secondDnf = second.Status == RacerStatus.Dnf;
-            if (firstDnf != secondDnf)
+        }
+
+        private static string FirstWord(string displayName)
+        {
+            if (string.IsNullOrEmpty(displayName))
             {
-                return firstDnf ? 1 : -1;
+                return string.Empty;
             }
-            return second.Progress.CompareTo(first.Progress);
+            int space = displayName.IndexOf(' ');
+            return space > 0 ? displayName.Substring(0, space) : displayName;
         }
     }
 }

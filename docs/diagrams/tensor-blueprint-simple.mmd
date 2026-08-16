@@ -1,0 +1,9 @@
+flowchart LR
+    OBS["Observation Vector<br/>N*2 + 11"] --> DENSE["Dense 256<br/>Dense 256"]
+    DENSE --> ACT["Action Vector<br/>N continuous"]
+    ACT --> JOINTS["ArticulationDrive<br/>target per joint"]
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
+    class OBS,DENSE,ACT ml;
+    class JOINTS phys;

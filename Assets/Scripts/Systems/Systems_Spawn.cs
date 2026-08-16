@@ -23,16 +23,49 @@ namespace PoRacer.Systems
     {
         private const float SECONDS_BETWEEN_RACES = 5f;
         private const int DECISION_PERIOD = 5;
-        // Per-racer power quirk: same brain, slightly stronger/weaker joints.
-        private const float QUIRK_POWER_MIN = 0.92f;
-        private const float QUIRK_POWER_SPAN = 0.16f;
-        private const float MIGHTY_POWER = 1.05f;
-        private const float SLEEPY_POWER = 0.95f;
+
+        // Visible quirks: same brain, mild physics tweak, HUD badge + name prefix.
+        private readonly struct QuirkDef
+        {
+            public readonly string Prefix;
+            public readonly string Tag;
+            public readonly float Power;
+            public readonly float MassScale;
+            public readonly float Weight;
+            public readonly Color Badge;
+
+            public QuirkDef(string prefix, string tag, float power, float massScale, float weight, Color badge)
+            {
+                Prefix = prefix;
+                Tag = tag;
+                Power = power;
+                MassScale = massScale;
+                Weight = weight;
+                Badge = badge;
+            }
+        }
+
+        private static readonly QuirkDef[] Quirks =
+        {
+            new(string.Empty, string.Empty, 1f, 1f, 0.30f, Color.clear),
+            new("Mighty ", "MIGHTY", 1.06f, 1f, 0.16f, new Color(1f, 0.45f, 0.2f)),
+            new("Sleepy ", "SLEEPY", 0.94f, 1f, 0.16f, new Color(0.4f, 0.6f, 1f)),
+            new("Turbo ", "TURBO", 1.12f, 1f, 0.10f, new Color(1f, 0.85f, 0.2f)),
+            new("Heavy ", "HEAVY", 1f, 1.12f, 0.14f, new Color(0.65f, 0.65f, 0.7f)),
+            new("Feather ", "FEATHER", 1f, 0.9f, 0.14f, new Color(0.95f, 0.95f, 0.85f))
+        };
+
+        // Roulette map: kinds the trained brains already know from the curriculum.
+        private static readonly TrackKind[] RouletteKinds =
+        {
+            TrackKind.Flat, TrackKind.Bumps, TrackKind.Walls, TrackKind.Lumpy, TrackKind.Swamp
+        };
         // Golden-ratio hue stepping spreads racer tints evenly around the wheel.
         private const float TINT_HUE_STEP = 0.61803f;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int LegacyColorId = Shader.PropertyToID("_Color");
+        private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
         private const int GRID_COLUMNS = 10;
         private const float GRID_X_SPACING = 2f;
         private const float GRID_ROW_SPACING = 1.6f;
@@ -146,6 +179,9 @@ namespace PoRacer.Systems
                 return;
             }
             Despawn();
+            // The podium had its 5 s; from here the old roster is history. Clearing
+            // it keeps the HUD from listing last race's results over the new grid.
+            _raceModel.ClearRacers();
             // Destroy() is deferred to end of frame; spawning immediately would
             // overlap new worms with old colliders and explode the physics.
             await UniTask.NextFrame(_cts.Token);
@@ -159,8 +195,34 @@ namespace PoRacer.Systems
         private async UniTask SpawnAndStartRace(int generation, CancellationToken token)
         {
             Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Get(_config.SelectedMapIndex);
-            _currentTrack = map.Kind;
-            _raceModel.TrackName = map.DisplayName;
+            TrackKind rolledKind = map.Kind;
+            TrackFeatures rolledFeatures = map.Features;
+            string trackName = map.DisplayName;
+            if (map.Randomize)
+            {
+                // Roulette: roll terrain and hazards fresh for every race.
+                rolledKind = RouletteKinds[_rng.Next(RouletteKinds.Length)];
+                rolledFeatures = TrackFeatures.None;
+                if (rolledKind != TrackKind.Swamp && _rng.Next(2) == 0)
+                {
+                    rolledFeatures |= TrackFeatures.MudPits;
+                }
+                if (_rng.Next(2) == 0)
+                {
+                    rolledFeatures |= TrackFeatures.BoostPads;
+                }
+                if (_rng.Next(3) == 0)
+                {
+                    rolledFeatures |= TrackFeatures.Gusts;
+                }
+                if (rolledKind != TrackKind.Swamp && _rng.Next(3) == 0)
+                {
+                    rolledFeatures |= TrackFeatures.Gates;
+                }
+                trackName = $"Roulette: {rolledKind}";
+            }
+            _currentTrack = rolledKind;
+            _raceModel.TrackName = trackName;
             // The finish line (trigger + agent goal) moves to the map's length so
             // race distance is a per-map design knob, not a scene constant.
             if (_track.FinishLine != null)
@@ -172,8 +234,12 @@ namespace PoRacer.Systems
             if (_track.TrackRoot != null)
             {
                 float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : -1f;
+                // The ground must reach past the last grid row: big rosters spawn
+                // many rows deep behind the start line.
+                int gridRows = (_config.TotalCount() + GRID_COLUMNS - 1) / GRID_COLUMNS;
+                float backMargin = Mathf.Max(7f, gridRows * GRID_ROW_SPACING + 4f);
                 _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
-                    decorate: true, finishZ: finishZ);
+                    decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
                 if (!IsCurrent(generation))
@@ -183,7 +249,7 @@ namespace PoRacer.Systems
             }
 
             var racers = new List<RacerState>();
-            var pendingQuirks = new List<(GameObject instance, float power)>();
+            var pendingQuirks = new List<(GameObject instance, float power, float massScale)>();
             _racerRoots.Clear();
             RacerNames.Shuffle(_rng, _nameOrder);
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
@@ -226,9 +292,10 @@ namespace PoRacer.Systems
                     int row = gridIndex / GRID_COLUMNS;
                     float localZ = -row * GRID_ROW_SPACING;
                     float localX = (column - (GRID_COLUMNS - 1) * 0.5f) * GRID_X_SPACING;
+                    // Small extra drop height so nobody is born intersecting the ground.
                     Vector3 position = gridOrigin + new Vector3(
                         localX,
-                        Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight,
+                        Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight + 0.05f,
                         localZ);
 
                     GameObject instance = UnityEngine.Object.Instantiate(entry.prefab, position, Quaternion.identity);
@@ -265,15 +332,14 @@ namespace PoRacer.Systems
                         decisionRequester.DecisionStep = gridIndex % DECISION_PERIOD;
                     }
 
-                    // Quirk: scale every joint drive so this racer runs a touch
-                    // hotter or colder than its siblings with the same brain.
+                    // Quirk: scale joint drives and body mass so this racer runs a
+                    // touch differently than its siblings with the same brain.
                     // Applied one frame later — a joint written in the frame it was
                     // instantiated rejects the drive as non-finite.
-                    float quirkPower = QUIRK_POWER_MIN + (float)_rng.NextDouble() * QUIRK_POWER_SPAN;
-                    pendingQuirks.Add((instance, quirkPower));
-                    string quirkTitle = quirkPower >= MIGHTY_POWER
-                        ? "Mighty "
-                        : quirkPower <= SLEEPY_POWER ? "Sleepy " : string.Empty;
+                    QuirkDef quirk = PickQuirk();
+                    // Small jitter so same-quirk siblings still differ a touch.
+                    float quirkPower = quirk.Power * (0.99f + (float)_rng.NextDouble() * 0.02f);
+                    pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
                     string funName = RacerNames.Get(_nameOrder, gridIndex);
 
                     // Connective limb visuals must exist before tinting so the
@@ -282,13 +348,18 @@ namespace PoRacer.Systems
 
                     // Unique tint per racer via property block: shared material
                     // stays shared, so batching is not broken by material clones.
+                    // Alternating light/dark segments plus a touch of gloss give
+                    // the primitive bodies visible form under the sun.
                     Color tint = Color.HSVToRGB(gridIndex * TINT_HUE_STEP % 1f, 0.6f, 1f);
-                    _tintBlock.Clear();
-                    _tintBlock.SetColor(BaseColorId, tint);
-                    _tintBlock.SetColor(LegacyColorId, tint);
+                    Color darkTint = new Color(tint.r * 0.78f, tint.g * 0.78f, tint.b * 0.78f);
                     Renderer[] tintRenderers = instance.GetComponentsInChildren<Renderer>();
                     for (int rendererIndex = 0; rendererIndex < tintRenderers.Length; rendererIndex++)
                     {
+                        Color segmentTint = rendererIndex % 2 == 0 ? tint : darkTint;
+                        _tintBlock.Clear();
+                        _tintBlock.SetColor(BaseColorId, segmentTint);
+                        _tintBlock.SetColor(LegacyColorId, segmentTint);
+                        _tintBlock.SetFloat(SmoothnessId, 0.5f);
                         tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
                     }
 
@@ -304,10 +375,12 @@ namespace PoRacer.Systems
                     {
                         RacerId = racerId,
                         CreatureId = entry.id,
-                        DisplayName = $"{quirkTitle}{funName} the {entry.displayName}",
+                        DisplayName = $"{quirk.Prefix}{funName} the {entry.displayName}",
                         Status = RacerStatus.Racing,
                         Tint = tint,
-                        TintHex = ColorUtility.ToHtmlStringRGB(tint)
+                        TintHex = ColorUtility.ToHtmlStringRGB(tint),
+                        QuirkTag = quirk.Tag,
+                        QuirkColor = quirk.Badge
                     });
                     gridIndex++;
                 }
@@ -336,7 +409,8 @@ namespace PoRacer.Systems
             }
             for (int quirkIndex = 0; quirkIndex < pendingQuirks.Count; quirkIndex++)
             {
-                ApplyPowerQuirk(pendingQuirks[quirkIndex].instance, pendingQuirks[quirkIndex].power);
+                ApplyQuirk(pendingQuirks[quirkIndex].instance, pendingQuirks[quirkIndex].power,
+                    pendingQuirks[quirkIndex].massScale);
             }
 
             // 3-2-1 countdown: the grid settles physically while the HUD counts
@@ -355,7 +429,26 @@ namespace PoRacer.Systems
             _race.StartRace(racers);
         }
 
-        private static void ApplyPowerQuirk(GameObject instance, float quirkPower)
+        private QuirkDef PickQuirk()
+        {
+            float totalWeight = 0f;
+            for (int quirkIndex = 0; quirkIndex < Quirks.Length; quirkIndex++)
+            {
+                totalWeight += Quirks[quirkIndex].Weight;
+            }
+            float roll = (float)_rng.NextDouble() * totalWeight;
+            for (int quirkIndex = 0; quirkIndex < Quirks.Length; quirkIndex++)
+            {
+                roll -= Quirks[quirkIndex].Weight;
+                if (roll <= 0f)
+                {
+                    return Quirks[quirkIndex];
+                }
+            }
+            return Quirks[0];
+        }
+
+        private static void ApplyQuirk(GameObject instance, float quirkPower, float massScale)
         {
             if (instance == null)
             {
@@ -364,6 +457,10 @@ namespace PoRacer.Systems
             ArticulationBody[] bodies = instance.GetComponentsInChildren<ArticulationBody>();
             for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
             {
+                if (massScale != 1f)
+                {
+                    bodies[bodyIndex].mass *= massScale;
+                }
                 ArticulationDrive drive = bodies[bodyIndex].xDrive;
                 // Guard the PRODUCT, not the input: locked joints author
                 // float.MaxValue budgets, and MaxValue * 1.05 overflows to

@@ -17,14 +17,21 @@ namespace PoRacer.Systems
             // Start line to finish line, meters. Longer than the old fixed 22 so
             // races build drama; slower terrain gets a shorter trek.
             public readonly float LengthMeters;
+            // Extra hazards layered on the kind (boost pads, gusts, mud, gates).
+            public readonly TrackFeatures Features;
+            // Roulette: the spawn system rolls a random kind + features per race.
+            public readonly bool Randomize;
 
-            public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "", float lengthMeters = 32f)
+            public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "",
+                float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None, bool randomize = false)
             {
                 DisplayName = displayName;
                 Kind = kind;
                 Available = available;
                 Blurb = blurb;
                 LengthMeters = lengthMeters;
+                Features = features;
+                Randomize = randomize;
             }
         }
 
@@ -33,8 +40,12 @@ namespace PoRacer.Systems
             new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 34f),
             new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 26f),
             new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 28f),
-            new MapEntry("Map 4", TrackKind.Flat, available: false),
-            new MapEntry("Map 5", TrackKind.Flat, available: false),
+            new MapEntry("Gale", TrackKind.Flat, available: true,
+                "Cross-winds shove the pack; boost pads reward a brave line", 30f,
+                TrackFeatures.Gusts | TrackFeatures.BoostPads),
+            new MapEntry("Roulette", TrackKind.Flat, available: true,
+                "The wheel spins: fresh terrain and hazards every race", 28f,
+                randomize: true),
             new MapEntry("Map 6", TrackKind.Flat, available: false),
             new MapEntry("Map 7", TrackKind.Flat, available: false),
             new MapEntry("Map 8", TrackKind.Flat, available: false)

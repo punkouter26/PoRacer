@@ -17,6 +17,7 @@ namespace PoRacer.Views
         [SerializeField] private Transform _finishLine;
 
         private ParticleSystem _confetti;
+        private ParticleSystem _fireworks;
         private AudioSource _audioSource;
         private AudioClip _fanfare;
         private AudioClip _tick;
@@ -36,6 +37,7 @@ namespace PoRacer.Views
             _fanfare = SynthesizeFanfare();
             _tick = SynthesizeTick();
             _confetti = BuildConfetti();
+            _fireworks = BuildFireworks();
         }
 
         private void OnDestroy() => _subscription?.Dispose();
@@ -45,10 +47,12 @@ namespace PoRacer.Views
             if (_finishLine != null)
             {
                 _confetti.transform.position = _finishLine.position + Vector3.up * 2f;
+                _fireworks.transform.position = _finishLine.position + Vector3.up * 5f;
             }
             if (message.Place == 1)
             {
                 _confetti.Emit(CONFETTI_COUNT);
+                _fireworks.Emit(90);
                 _audioSource.PlayOneShot(_fanfare, 0.8f);
             }
             else
@@ -81,13 +85,63 @@ namespace PoRacer.Views
             shape.shapeType = ParticleSystemShapeType.Cone;
             shape.angle = 40f;
             shape.rotation = new Vector3(-90f, 0f, 0f);
+            // A third of the confetti pieces pull short streamer tails.
+            ParticleSystem.TrailModule trails = ps.trails;
+            trails.enabled = true;
+            trails.ratio = 0.35f;
+            trails.lifetime = new ParticleSystem.MinMaxCurve(0.25f);
+            trails.dieWithParticles = true;
+            trails.inheritParticleColor = true;
+            trails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.05f);
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
-            // Headless builds have no shaders; the default particle material is fine there.
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader != null)
+            // Soft round sprite instead of the default square. Null in headless
+            // builds where shaders are stripped; defaults are fine there.
+            Material soft = FxUtil.SoftParticleMaterial();
+            if (soft != null)
             {
-                renderer.material = new Material(particleShader);
+                renderer.material = soft;
+                renderer.trailMaterial = soft;
             }
+            return ps;
+        }
+
+        private ParticleSystem BuildFireworks()
+        {
+            // Radial spark burst above the arch: the winner's firework.
+            var go = new GameObject("Fireworks");
+            go.transform.SetParent(transform, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = ps.main;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(6f, 12f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.15f);
+            main.gravityModifier = 0.9f;
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(1f, 0.85f, 0.2f), new Color(0.3f, 0.8f, 1f));
+            main.maxParticles = 400;
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.rateOverTime = 0f;
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.2f;
+            // Every spark drags a bright tail: reads as a real firework burst.
+            ParticleSystem.TrailModule trails = ps.trails;
+            trails.enabled = true;
+            trails.ratio = 1f;
+            trails.lifetime = new ParticleSystem.MinMaxCurve(0.35f);
+            trails.dieWithParticles = true;
+            trails.inheritParticleColor = true;
+            trails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.04f);
+            var fireworkRenderer = ps.GetComponent<ParticleSystemRenderer>();
+            Material soft = FxUtil.SoftParticleMaterial();
+            if (soft != null)
+            {
+                fireworkRenderer.material = soft;
+                fireworkRenderer.trailMaterial = soft;
+            }
+            fireworkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            fireworkRenderer.receiveShadows = false;
             return ps;
         }
 

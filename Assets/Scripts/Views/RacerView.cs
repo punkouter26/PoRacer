@@ -74,7 +74,7 @@ namespace PoRacer.Views
                 // Backstop for racers that tunnel through the finish trigger;
                 // NotifyFinish no-ops if the trigger already fired.
                 _finished = true;
-                _race.NotifyFinish(_racerId);
+                _race.NotifyFinish(_racerId, z - _startZ - _finishDistance);
             }
             if (_finished)
             {

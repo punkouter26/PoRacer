@@ -1,0 +1,13 @@
+flowchart LR
+    CFG["YAML Config<br/>WormLoco / AllLoco / WormSac"] --> PPO["PPO Trainer<br/>on-policy"]
+    CFG --> SAC["SAC Trainer<br/>off-policy"]
+    PPO --> NET["Net 256 x 2<br/>normalize"]
+    SAC --> NET
+    PPO --> ENV["8 Headless Envs"]
+    SAC --> ENV
+    ENV --> ONNX["Bake .onnx<br/>Assets/Agents/&lt;Name&gt;_v01/"]
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    class CFG,PPO,SAC ml;
+    class NET,ENV,ONNX rt;

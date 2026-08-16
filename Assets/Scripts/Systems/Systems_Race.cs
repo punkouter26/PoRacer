@@ -14,6 +14,9 @@ namespace PoRacer.Systems
     {
         public const float NO_PROGRESS_TIMEOUT_SECONDS = 20f;
         public const float RACE_TIMEOUT_SECONDS = 120f;
+        // The race is decided at the podium: once this many racers finish, the
+        // rest are scored as non-finishers and the race ends immediately.
+        public const int PODIUM_FINISHERS = 3;
         private const float MIN_PROGRESS_DELTA = 0.05f;
 
         private readonly RaceModel _model;
@@ -24,6 +27,10 @@ namespace PoRacer.Systems
 
         private readonly Dictionary<string, float> _lastProgress = new();
         private readonly Dictionary<string, float> _lastProgressTime = new();
+        // Finishers sharing one ElapsedSeconds stamp (same frame): their places are
+        // re-ranked by overshoot, since trigger callback order is arbitrary.
+        private readonly List<RacerState> _sameTimeFinishers = new();
+        private float _sameTimeStamp = -1f;
         private int _nextPlace;
 
         public Systems_Race(
@@ -47,6 +54,8 @@ namespace PoRacer.Systems
             _model.SetRacers(racers);
             _lastProgress.Clear();
             _lastProgressTime.Clear();
+            _sameTimeFinishers.Clear();
+            _sameTimeStamp = -1f;
             _nextPlace = 1;
             for (int racerIndex = 0; racerIndex < racers.Count; racerIndex++)
             {
@@ -73,7 +82,7 @@ namespace PoRacer.Systems
             }
         }
 
-        public void NotifyFinish(string racerId)
+        public void NotifyFinish(string racerId, float overshootMeters = 0f)
         {
             RacerState racer = _model.FindRacer(racerId);
             if (racer == null || racer.Status != RacerStatus.Racing)
@@ -82,8 +91,56 @@ namespace PoRacer.Systems
             }
             racer.Status = RacerStatus.Finished;
             racer.Place = _nextPlace++;
-            racer.FinishTime = _model.ElapsedSeconds;            _racerFinishedPublisher.Publish(new RacerFinishedMessage(racerId, racer.Place, racer.FinishTime));
+            racer.FinishTime = _model.ElapsedSeconds;
+            racer.FinishOvershoot = overshootMeters;
+            ResolveSameFrameTie(racer);
+            _racerFinishedPublisher.Publish(new RacerFinishedMessage(racerId, racer.Place, racer.FinishTime));
+
+            // Podium cutoff: with the top places decided there is nothing left to
+            // win. Everyone still racing is scored as a non-finisher — quietly, no
+            // per-racer DNF fanfare for a whole field at once — and ELO then
+            // scores the finishers above them all.
+            int podiumLimit = Math.Min(PODIUM_FINISHERS, _model.Racers.Count);
+            if (_nextPlace - 1 >= podiumLimit)
+            {
+                for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
+                {
+                    RacerState remaining = _model.Racers[racerIndex];
+                    if (remaining.Status == RacerStatus.Racing)
+                    {
+                        remaining.Status = RacerStatus.Dnf;
+                        remaining.Place = -1;
+                    }
+                }
+            }
             CheckRaceEnd();
+        }
+
+        /// <summary>
+        /// Finishers reported within one frame share a FinishTime; callback order is
+        /// engine-arbitrary. Re-rank that group by overshoot: whoever is farther
+        /// past the line crossed it earlier in the frame.
+        /// </summary>
+        private void ResolveSameFrameTie(RacerState racer)
+        {
+            if (racer.FinishTime != _sameTimeStamp)
+            {
+                _sameTimeFinishers.Clear();
+                _sameTimeStamp = racer.FinishTime;
+            }
+            _sameTimeFinishers.Add(racer);
+            if (_sameTimeFinishers.Count < 2)
+            {
+                return;
+            }
+            // The group's places are consecutive by construction (DNFs take no place).
+            _sameTimeFinishers.Sort(
+                (first, second) => second.FinishOvershoot.CompareTo(first.FinishOvershoot));
+            int firstPlace = _nextPlace - _sameTimeFinishers.Count;
+            for (int tieIndex = 0; tieIndex < _sameTimeFinishers.Count; tieIndex++)
+            {
+                _sameTimeFinishers[tieIndex].Place = firstPlace + tieIndex;
+            }
         }
 
         public void NotifyFailure(string racerId)
@@ -98,7 +155,10 @@ namespace PoRacer.Systems
             _model.RaceActive = false;
             _model.ClearRacers();
             _lastProgress.Clear();
-            _lastProgressTime.Clear();        }
+            _lastProgressTime.Clear();
+            _sameTimeFinishers.Clear();
+            _sameTimeStamp = -1f;
+        }
 
         public void Advance(float deltaSeconds)
         {

@@ -9,7 +9,8 @@ namespace PoRacer.Views
     /// mud. Bodies are collected in OnTriggerStay and forced once per
     /// FixedUpdate so multi-collider limbs are never double-damped.
     /// Entering the pit splashes mud particles; a looping spatial squelch rises
-    /// with the number of bodies wading. All assets are generated in code.
+    /// with the number of bodies wading. The squelch is a recorded CC0 loop with a
+    /// synthesized fallback; the particles and their material are built in code.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     public sealed class MudZoneView : MonoBehaviour
@@ -22,7 +23,6 @@ namespace PoRacer.Views
         private const float MAX_SQUELCH_VOLUME = 0.4f;
 
         private static readonly Color MudColor = new(0.4f, 0.28f, 0.13f);
-        private static AudioClip SharedSquelch;
 
         private readonly List<ArticulationBody> _bodiesInMud = new();
         private ParticleSystem _splash;
@@ -34,7 +34,7 @@ namespace PoRacer.Views
         {
             _splash = BuildSplash();
             _squelchSource = gameObject.AddComponent<AudioSource>();
-            _squelchSource.clip = GetSharedSquelch();
+            _squelchSource.clip = AudioLibrary.GetOrSynthesize("mud_squelch", SynthesizeSquelch);
             _squelchSource.loop = true;
             _squelchSource.playOnAwake = false;
             _squelchSource.spatialBlend = 1f;
@@ -125,13 +125,12 @@ namespace PoRacer.Views
             return ps;
         }
 
-        private static AudioClip GetSharedSquelch()
+        /// <summary>
+        /// Fallback squelch bed for when the recorded loop is absent: slow wet
+        /// blorps from low-passed noise gated by an irregular LFO.
+        /// </summary>
+        private static AudioClip SynthesizeSquelch()
         {
-            if (SharedSquelch != null)
-            {
-                return SharedSquelch;
-            }
-            // Slow wet blorps: low-passed noise gated by an irregular LFO.
             const int sampleRate = 44100;
             const float seconds = 2f;
             int samples = (int)(sampleRate * seconds);
@@ -148,7 +147,6 @@ namespace PoRacer.Views
             }
             var clip = AudioClip.Create("Squelch", samples, 1, sampleRate, false);
             clip.SetData(data, 0);
-            SharedSquelch = clip;
             return clip;
         }
     }

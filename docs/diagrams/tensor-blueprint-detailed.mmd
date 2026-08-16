@@ -1,0 +1,39 @@
+flowchart TB
+    subgraph Sensors["Sensor Inputs (Float32)"]
+        S1["RayPerception<br/>RaycastSensor (n_rays, 3)"]
+        S2["Joint State<br/>x[N], xdot[N]"]
+        S3["Root Pose<br/>up(3), height(1)"]
+        S4["Goal<br/>dir(3), dist(1)"]
+        S5["Root Velocity<br/>v(3) in local"]
+        S6["Terrain Probes<br/>height(4) optional"]
+        S1 --> OBS
+        S2 --> OBS
+        S3 --> OBS
+        S4 --> OBS
+        S5 --> OBS
+        S6 --> OBS
+        OBS["obs = concat(s1..s6)<br/>shape = N*2 + 11 + 4"]
+    end
+
+    subgraph Network["Policy / Value Network"]
+        OBS --> NORM["Input Normalizer<br/>running mean / var"]
+        NORM --> H1["Dense(256) + tanh"]
+        H1 --> H2["Dense(256) + tanh"]
+        H2 -.recurrent.-> LSTM["LSTM(128) optional"]
+        H2 --> HEAD
+        LSTM --> HEAD
+        HEAD["Heads<br/>mean, log_sigma, value"]
+    end
+
+    subgraph Actuators["Actuator Map (per joint)"]
+        HEAD --> ACT["action[i] in [-1, 1]"]
+        ACT --> SCALE["target = action[i] * driveScale (deg or m)"]
+        SCALE --> DRIVE["ArticulationDrive<br/>stiffness = Kp<br/>damping = Kd<br/>forceLimit = torque"]
+    end
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
+    classDef net fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    class S1,S2,S3,S4,S5,S6,OBS,ACT ml;
+    class NORM,H1,H2,LSTM,HEAD net;
+    class SCALE,DRIVE phys;

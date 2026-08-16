@@ -27,7 +27,8 @@ namespace PoRacer
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);
-            builder.Register<Systems_CameraDirector>(Lifetime.Singleton);
+            // Entry point: its Tick watches for the final stretch to re-aim the shot.
+            builder.RegisterEntryPoint<Systems_CameraDirector>().AsSelf();
             builder.Register(container =>
             {
                 var track = container.Resolve<Views.RaceTrackView>();

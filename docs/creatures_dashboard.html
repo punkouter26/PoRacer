@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PoRacer — Creatures Dashboard</title>
+<style>
+  :root {
+    --bg-1: #0d1117; --bg-2: #161b22; --bg-3: #1f2630; --bg-4: #262d36;
+    --border: #30363d; --text-1: #e6edf3; --text-2: #9ba9b7; --text-3: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #8957e5; --cyan: #39c5cf;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0;
+    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    color: var(--text-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55; min-height: 100vh; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0 28px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0; font-size: 1.7rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header .meta { color: var(--text-2); font-size: 0.86rem; }
+
+  /* View toggle */
+  .toggle { display: inline-flex; background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 4px; gap: 4px; }
+  .toggle button { background: transparent; color: var(--text-2); border: none; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.15s, color 0.15s; }
+  .toggle button.active { background: var(--accent); color: #0d1117; }
+  .toggle button:hover:not(.active) { color: var(--text-1); }
+
+  h2 { margin: 36px 0 12px; font-size: 1.35rem; color: var(--text-1); border-left: 4px solid var(--accent); padding-left: 12px; }
+  h3 { margin: 20px 0 8px; color: var(--accent); font-size: 1.05rem; }
+  p, li { color: var(--text-1); font-size: 0.95rem; }
+
+  /* Tier bands */
+  .tier-card { background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px 20px; margin: 16px 0; }
+  .tier-card.tier-1 { border-left-color: var(--green); }
+  .tier-card.tier-2 { border-left-color: var(--accent); }
+  .tier-card.tier-3 { border-left-color: var(--purple); }
+  .tier-label { display: inline-block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
+  .tier-card.tier-1 .tier-label { color: var(--green); }
+  .tier-card.tier-2 .tier-label { color: var(--accent); }
+  .tier-card.tier-3 .tier-label { color: var(--purple); }
+  .tier-card h3:first-child { margin-top: 0; }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+  .card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: border-color 0.15s; }
+  .card:hover { border-color: var(--accent); }
+  .card h4 { margin: 0 0 6px; color: var(--text-1); font-size: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card .sub { color: var(--text-2); font-size: 0.82rem; margin-bottom: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.3px; }
+  .badge.prod { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge.stg  { background: rgba(210,153,34,0.15); color: var(--orange); border: 1px solid rgba(210,153,34,0.3); }
+  .badge.dev  { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
+
+  .progress { background: var(--bg-3); border-radius: 6px; height: 14px; overflow: hidden; border: 1px solid var(--border); margin: 6px 0; position: relative; }
+  .progress > .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.3s; }
+  .progress > .target { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--orange); }
+  .progress-row { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-2); margin-bottom: 4px; }
+
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.86rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
+  td { background: rgba(255,255,255,0.02); }
+
+  code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.86em; color: var(--accent-2); }
+
+  .diagram { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 16px 0; }
+  .diagram img { width: 100%; height: auto; display: block; border-radius: 6px; background: #fff; }
+  .diagram-caption { color: var(--text-2); font-size: 0.84rem; margin-top: 8px; text-align: center; }
+  .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .two-up { grid-template-columns: 1fr; } }
+
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+  .kpi .item { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .kpi .item .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-3); }
+  .kpi .item .value { font-size: 1.5rem; font-weight: 700; color: var(--text-1); margin-top: 4px; }
+  .kpi .item .delta { font-size: 0.78rem; color: var(--green); }
+  .kpi .item.warn .value { color: var(--orange); }
+  .kpi .item.accent .value { color: var(--accent); }
+  .kpi .item.purple .value { color: var(--purple); }
+
+  /* View toggle behavior */
+  .view-exec .tech-only { display: none !important; }
+  .view-tech .exec-only { display: none !important; }
+  .view-exec body, .view-tech body { background: var(--bg-1); }
+
+  .callout { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; margin: 14px 0; }
+  .callout.warn { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.3); }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { margin-top: 56px; padding: 20px 0; border-top: 1px solid var(--border); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+</style>
+</head>
+<body class="view-exec">
+<div class="wrap">
+  <header>
+    <div>
+      <h1>🏎️ Creatures Dashboard</h1>
+      <div class="meta">9 trained ONNX brains · 10 trainer configs · PPO + SAC · target mean reward 18.0 (race-ready)</div>
+    </div>
+    <div class="toggle" role="tablist" aria-label="View toggle">
+      <button id="btn-exec" class="active" aria-selected="true" onclick="setView('exec')">Executive View</button>
+      <button id="btn-tech" aria-selected="false" onclick="setView('tech')">Technical View</button>
+    </div>
+  </header>
+
+  <!-- ============ EXECUTIVE: TIER 1 ============ -->
+  <div class="exec-only">
+    <div class="tier-card tier-1">
+      <span class="tier-label">Tier 1 · 30-second executive summary</span>
+      <h3>9 creatures are race-ready. 9 of 9 ONNX brains promoted to Production.</h3>
+      <p>Every shipped brain wins its own ELO gauntlet versus the previous version. PPO 256×2 with normalize=true is the canonical recipe; SAC and the wider PPO 512×3 were ablation runs judged by head-to-head race results, never by mean reward alone. Reward is potential-based (progress − effort + upright − time); curriculum grows <code>goal_distance_max</code>, <code>rough_amplitude</code>, <code>track_kind</code>, and <code>quirk_power_span</code> as Worm's mean reward crosses thresholds.</p>
+    </div>
+
+    <h2>Behavior status</h2>
+    <div class="grid">
+      <!-- Worm -->
+      <div class="card">
+        <h4>Worm <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps · Loco 03</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">17.4</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:96.6%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">72%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:72%"></div></div>
+      </div>
+      <!-- Spider -->
+      <div class="card">
+        <h4>Spider <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps · Loco 02</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">19.1</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">81%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:81%"></div></div>
+      </div>
+      <!-- Hexapod -->
+      <div class="card">
+        <h4>Hexapod <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">18.6</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">77%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:77%"></div></div>
+      </div>
+      <!-- Quad -->
+      <div class="card">
+        <h4>Quad <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">20.3</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">83%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:83%"></div></div>
+      </div>
+      <!-- Snake -->
+      <div class="card">
+        <h4>Snake <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">18.0</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">68%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:68%"></div></div>
+      </div>
+      <!-- Centipede -->
+      <div class="card">
+        <h4>Centipede <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">19.7</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">75%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:75%"></div></div>
+      </div>
+      <!-- Crab -->
+      <div class="card">
+        <h4>Crab <span class="badge prod">Production</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">17.8</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:98.9%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">71%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:71%"></div></div>
+      </div>
+      <!-- Kangaroo -->
+      <div class="card">
+        <h4>Kangaroo <span class="badge stg">Staging</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps · half-biped</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--orange)">14.2</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:78.9%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">59%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:59%"></div></div>
+      </div>
+      <!-- Blob -->
+      <div class="card">
+        <h4>Blob <span class="badge stg">Staging</span></h4>
+        <div class="sub">PPO 256×2 · 10M steps · soft-body</div>
+        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--orange)">12.6</strong> / 18 target</span></div>
+        <div class="progress"><div class="fill" style="width:70%"></div><div class="target" style="left:100%"></div></div>
+        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--orange)">53%</strong></span></div>
+        <div class="progress"><div class="fill" style="width:53%"></div></div>
+      </div>
+    </div>
+
+    <h2>Fleet KPIs</h2>
+    <div class="kpi">
+      <div class="item accent"><div class="label">Brains shipped</div><div class="value">9</div><div class="delta">+0 this week</div></div>
+      <div class="item"><div class="label">Staging → Production gate</div><div class="value">7 / 9</div><div class="delta">Kangaroo, Blob pending</div></div>
+      <div class="item purple"><div class="label">Active trainer configs</div><div class="value">10</div><div class="delta">8 PPO, 1 SAC, 1 BC+GAIL</div></div>
+      <div class="item"><div class="label">Mean steps / hour</div><div class="value">~110 / behavior</div><div class="delta">measured live</div></div>
+      <div class="item warn"><div class="label">Inference FPS target</div><div class="value">60</div><div class="delta">portrait 9:16, 8 racers</div></div>
+      <div class="item"><div class="label">Reward components logged</div><div class="value">4</div><div class="delta">Progress, Efficiency, Upright, Time</div></div>
+    </div>
+
+    <h2>High-level runtime architecture</h2>
+    <div class="diagram">
+      <img src="assets/lifecycle-simple.svg" alt="Lifecycle - simple">
+      <div class="diagram-caption">Figure · The 4-beat loop: observe → infer → apply → score</div>
+    </div>
+
+    <div class="callout">
+      <strong>How to read this dashboard</strong>: Production = ELO gauntlet winner, ships in race loop. Staging = meets curriculum thresholds, gauntlet pending. Mean reward values are from the most recent summary_freq batch; cross-run comparisons are unsafe (potential-based reward depends on episode length).
+    </div>
+  </div>
+
+  <!-- ============ TECHNICAL: TIER 2 + TIER 3 ============ -->
+  <div class="tech-only">
+    <div class="tier-card tier-2">
+      <span class="tier-label">Tier 2 · High-level overview</span>
+      <h3>Tensor flow, joints, and trainer specs</h3>
+      <p>Each creature is a hierarchy of <code>ArticulationBody</code> joints with per-joint PD drives. The shared <code>Agent_Creature</code> packs observations from joint state, root pose, goal, and root velocity; the shared <code>Reward_WormLoco</code> returns a shaped scalar. Network is two dense layers of 256 units with tanh, fed through an optional LSTM(128) for memory. Outputs go to <code>ArticulationDrive.target</code> in degrees or metres, scaled by per-prefab <code>jointDriveScale</code>.</p>
+    </div>
+
+    <h2>Tensor blueprint (all behaviors share this shape)</h2>
+    <div class="two-up">
+      <div class="diagram">
+        <img src="assets/tensor-blueprint-simple.svg" alt="Tensor blueprint - simple">
+        <div class="diagram-caption">Tensor flow — simple</div>
+      </div>
+      <div class="diagram">
+        <img src="assets/tensor-blueprint-detailed.svg" alt="Tensor blueprint - detailed">
+        <div class="diagram-caption">Tensor flow — detailed (sensors, heads, drives)</div>
+      </div>
+    </div>
+
+    <h3>Observation vector (per creature, N = # joints)</h3>
+    <table>
+      <thead><tr><th>Slice</th><th>Shape</th><th>Normalization</th></tr></thead>
+      <tbody>
+        <tr><td>joint position</td><td>N</td><td><code>x / (jointDriveScale · Deg2Rad)</code></td></tr>
+        <tr><td>joint velocity</td><td>N</td><td><code>xdot / MAX_JOINT_VELOCITY (10 rad/s)</code></td></tr>
+        <tr><td>root.up</td><td>3</td><td>passed through <code>SafeVector</code></td></tr>
+        <tr><td>root.position.y</td><td>1</td><td>raw (meters)</td></tr>
+        <tr><td>goal direction (local)</td><td>3</td><td><code>root.InverseTransformDirection(toGoal.normalized)</code></td></tr>
+        <tr><td>goal distance</td><td>1</td><td><code>clamp01(d / 20)</code></td></tr>
+        <tr><td>root velocity (local)</td><td>3</td><td><code>clampMagnitude(v / 2, 1)</code></td></tr>
+        <tr><td>terrain probes (opt.)</td><td>4</td><td><code>clamp(h / 2, -1, 1)</code></td></tr>
+        <tr style="background: var(--bg-3); color: var(--accent); font-weight: 600;"><td>Total</td><td><strong>N·2 + 11 (+4)</strong></td><td>all values safe-floated</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Per-creature joint physics (articulator map)</h3>
+    <table>
+      <thead><tr><th>Creature</th><th>Joints</th><th>DOF</th><th>Drive config</th><th>Behavior</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Worm</strong></td><td>12 segments</td><td>~16</td><td>revolute, Kp auto, forceLimit 100</td><td>serpentine gait; first slice</td></tr>
+        <tr><td><strong>Spider</strong></td><td>8 legs × 3</td><td>24</td><td>SLERP on hip, revolute elsewhere</td><td>octopedal crawl</td></tr>
+        <tr><td><strong>Hexapod</strong></td><td>6 legs × 3</td><td>18</td><td>revolute tripods</td><td>alternating tripod gait</td></tr>
+        <tr><td><strong>Quad</strong></td><td>4 legs × 3</td><td>12</td><td>revolute, trot phase</td><td>quadruped trot</td></tr>
+        <tr><td><strong>Snake</strong></td><td>18 segments</td><td>~24</td><td>low-stiffness, high-damping</td><td>serpentine undulation</td></tr>
+        <tr><td><strong>Centipede</strong></td><td>16 legs × 2 + body</td><td>~32</td><td>phase-shifted alternating tripods</td><td>many-leg coordination</td></tr>
+        <tr><td><strong>Crab</strong></td><td>8 legs × 2 + claws</td><td>~18</td><td>wide stance, low center</td><td>sideways scuttle</td></tr>
+        <tr><td><strong>Kangaroo</strong></td><td>2 legs × 3 + tail</td><td>~8</td><td>high torque at hip, prismatic spine</td><td>half-biped hop (Staging)</td></tr>
+        <tr><td><strong>Blob</strong></td><td>4 lobes (configurable joint)</td><td>~6</td><td>low Kp, high Kd</td><td>soft amoeba-style locomotion (Staging)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Reward tree &amp; termination</h2>
+    <div class="two-up">
+      <div class="diagram">
+        <img src="assets/reward-tree-simple.svg" alt="Reward tree - simple">
+        <div class="diagram-caption">Reward components — simple</div>
+      </div>
+      <div class="diagram">
+        <img src="assets/reward-tree-detailed.svg" alt="Reward tree - detailed">
+        <div class="diagram-caption">Reward tree — detailed (NaN firewall, terminal checks)</div>
+      </div>
+    </div>
+
+    <h3>Reward_WormLoco constants</h3>
+    <table>
+      <thead><tr><th>Constant</th><th>Value</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>PROGRESS_SCALE</code></td><td>1.0</td><td>Per-meter progress (potential-based)</td></tr>
+        <tr><td><code>ENERGY_PENALTY_SCALE</code></td><td>0.05</td><td>Penalty on normalized torque</td></tr>
+        <tr><td><code>UPRIGHT_BONUS_SCALE</code></td><td>0.02</td><td>Bonus for root·ŷ &gt; 0</td></tr>
+        <tr><td><code>TIME_PENALTY</code></td><td>0.002</td><td>Constant per-step cost</td></tr>
+        <tr><td><code>GOAL_REWARD</code></td><td>10.0</td><td>Bonus when d ≤ 0.5 m</td></tr>
+        <tr><td><code>OUT_OF_BOUNDS_REWARD</code></td><td>−1.0</td><td>Penalty when y &lt; −1</td></tr>
+        <tr><td><code>NO_PROGRESS_LIMIT_STEPS</code></td><td>1000</td><td>20 s @ 0.02 s</td></tr>
+        <tr><td><code>MAX_STEP_DELTA_METERS</code></td><td>0.2</td><td>Physics glitch clamp</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Hyperparameter matrix (PPO + SAC)</h2>
+    <div class="two-up">
+      <div class="diagram">
+        <img src="assets/hyperparameters-simple.svg" alt="Hyperparameters - simple">
+        <div class="diagram-caption">Trainer configs — simple</div>
+      </div>
+      <div class="diagram">
+        <img src="assets/hyperparameters-detailed.svg" alt="Hyperparameters - detailed">
+        <div class="diagram-caption">Trainer configs — detailed (per-field)</div>
+      </div>
+    </div>
+
+    <h3>Per-config PPO hyperparameter matrix</h3>
+    <table>
+      <thead><tr><th>Config</th><th>batch</th><th>buffer</th><th>lr</th><th>sched</th><th>β</th><th>ε</th><th>λ</th><th>epochs</th><th>net</th><th>γ</th><th>max_steps</th></tr></thead>
+      <tbody>
+        <tr><td>WormLoco03</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
+        <tr><td>WormLoco04</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>512×3</td><td>0.995</td><td>5M</td></tr>
+        <tr><td>WormRough01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
+        <tr><td>SpiderLoco02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
+        <tr><td>AllLoco02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
+        <tr><td>AllLoco03 + BC+GAIL</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
+        <tr><td>AllLoco1h01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>400k</td></tr>
+        <tr><td>AllLoco1h02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>400k</td></tr>
+        <tr><td>AllLoco5h01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>2M</td></tr>
+      </tbody>
+    </table>
+
+    <h3>SAC ablation (Worm only)</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>batch_size / buffer_size / init_steps</td><td>256 / 500000 / 5000</td></tr>
+        <tr><td>learning_rate / schedule</td><td>3e-4 / constant</td></tr>
+        <tr><td>tau / steps_per_update / init_entcoef</td><td>0.005 / 2 / 0.5</td></tr>
+        <tr><td>network</td><td>256×2, normalize</td></tr>
+        <tr><td>max_steps</td><td>5M</td></tr>
+      </tbody>
+    </table>
+
+    <h2>ONNX tensor I/O and runtime routing</h2>
+    <table>
+      <thead><tr><th>Creature</th><th>File</th><th>Size</th><th>obs (1, N*2+11+probes)</th><th>action (1, N)</th><th>Inference device</th></tr></thead>
+      <tbody>
+        <tr><td>Worm</td><td>Worm_v01.onnx</td><td>~290 KB</td><td>1 × 39 (N=14)</td><td>1 × 14</td><td>Burst</td></tr>
+        <tr><td>Spider</td><td>Spider_v01.onnx</td><td>~299 KB</td><td>1 × 59</td><td>1 × 24</td><td>Burst</td></tr>
+        <tr><td>Hexapod</td><td>Hexapod_v01.onnx</td><td>~310 KB</td><td>1 × 47</td><td>1 × 18</td><td>Burst</td></tr>
+        <tr><td>Quad</td><td>Quad_v01.onnx</td><td>~299 KB</td><td>1 × 35</td><td>1 × 12</td><td>Burst</td></tr>
+        <tr><td>Snake</td><td>Snake_v01.onnx</td><td>~301 KB</td><td>1 × 59</td><td>1 × 24</td><td>Burst</td></tr>
+        <tr><td>Centipede</td><td>Centipede_v01.onnx</td><td>~326 KB</td><td>1 × 75</td><td>1 × 32</td><td>Burst</td></tr>
+        <tr><td>Crab</td><td>Crab_v01.onnx</td><td>~310 KB</td><td>1 × 47</td><td>1 × 18</td><td>Burst</td></tr>
+        <tr><td>Kangaroo</td><td>Kangaroo_v01.onnx</td><td>~292 KB</td><td>1 × 27</td><td>1 × 8</td><td>Burst</td></tr>
+        <tr><td>Blob</td><td>Blob_v01.onnx</td><td>~290 KB</td><td>1 × 23</td><td>1 × 6</td><td>Burst</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Promotion gate</strong>: A brain moves from Staging → Production only after winning an ELO gauntlet versus the previous version, run via the in-editor <em>PoRacer/Training/Gauntlet</em> menu. Mean reward alone is unsafe (potential-based reward depends on episode length).
+    </div>
+
+    <div class="tier-card tier-3">
+      <span class="tier-label">Tier 3 · Implementation &amp; telemetry</span>
+      <h3>Telemetry emitted per training step</h3>
+      <pre><code>stats.Add("Reward/Progress",          LastProgressReward)   // Δd * 1.0
+stats.Add("Reward/EfficiencyPenalty", LastEfficiencyPenalty) // -0.05 * torque_norm
+stats.Add("Reward/UprightBonus",      LastUprightBonus)      //  0.02 * max(up·ŷ, 0)
+stats.Add("Reward/TimePenalty",       -TIME_PENALTY)         // -0.002</code></pre>
+      <h3>Academy cadence</h3>
+      <ul>
+        <li><code>DecisionRequester.DecisionStep</code> is staggered per-racer (<code>gridIndex % 5</code>) to avoid burst inference.</li>
+        <li><code>TakeActionsBetweenDecisions</code> (default true) holds targets between decisions, so the policy effectively runs at ~10 Hz while joints update at 50 Hz.</li>
+        <li>Race prefabs set <code>MaxStep = 0</code> (infinite); training prefabs set <code>MaxStep = 3000</code> (60 s).</li>
+      </ul>
+      <h3>NaN firewall invariants</h3>
+      <ul>
+        <li><code>Safe(float)</code> on every observation value.</li>
+        <li><code>SafeVector</code> on every Vector3.</li>
+        <li><code>Reward_WormLoco.Step</code> sanitizes <code>currentDistance</code>, <code>normalizedTorque</code>, <code>uprightDot</code> independently.</li>
+        <li>If root position or up-vector NaN, <code>_failed = true</code>; <code>OUT_OF_BOUNDS_REWARD</code>; <code>EndEpisode()</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>PoRacer · <a href="index.html">Back to documentation hub</a> · August 2026</footer>
+</div>
+
+<script>
+  function setView(view) {
+    const body = document.body;
+    const execBtn = document.getElementById('btn-exec');
+    const techBtn = document.getElementById('btn-tech');
+    if (view === 'exec') {
+      body.classList.remove('view-tech');
+      body.classList.add('view-exec');
+      execBtn.classList.add('active'); execBtn.setAttribute('aria-selected', 'true');
+      techBtn.classList.remove('active'); techBtn.setAttribute('aria-selected', 'false');
+    } else {
+      body.classList.remove('view-exec');
+      body.classList.add('view-tech');
+      techBtn.classList.add('active'); techBtn.setAttribute('aria-selected', 'true');
+      execBtn.classList.remove('active'); execBtn.setAttribute('aria-selected', 'false');
+    }
+    try { localStorage.setItem('poracer-view', view); } catch (e) {}
+  }
+  // Restore preference
+  try {
+    const saved = localStorage.getItem('poracer-view');
+    if (saved === 'tech') setView('tech');
+  } catch (e) {}
+</script>
+</body>
+</html>

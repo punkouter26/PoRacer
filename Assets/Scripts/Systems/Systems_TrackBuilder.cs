@@ -3,6 +3,21 @@ using UnityEngine;
 
 namespace PoRacer.Systems
 {
+    /// <summary>
+    /// Optional hazards layered on top of a TrackKind. Swamp's built-in mud and
+    /// gates stay implicit; these flags add extras to any kind (Gale map,
+    /// Roulette rolls).
+    /// </summary>
+    [Flags]
+    public enum TrackFeatures
+    {
+        None = 0,
+        BoostPads = 1 << 0,
+        Gusts = 1 << 1,
+        MudPits = 1 << 2,
+        Gates = 1 << 3
+    }
+
     public enum TrackKind
     {
         Flat = 0,
@@ -36,13 +51,20 @@ namespace PoRacer.Systems
         private const float ROUGH_DETAIL_SCALE = 0.95f;   // ~1 m secondary bumps
         private const float ROUGH_SPAWN_PAD_END_Z = 6f;   // full roughness from here on
         private const float ROUGH_SPAWN_PAD_FLAT_Z = 2f;  // flat until here (racers spawn stable)
-        private const float MARKER_HEIGHT_OFFSET = 0.02f;
+        // High enough above the ground that decal quads never z-fight it.
+        private const float MARKER_HEIGHT_OFFSET = 0.04f;
+        // Flat-based props (forest/tent tiles) get the same lift for the same reason.
+        private const float PROP_HEIGHT_OFFSET = 0.02f;
         // Visual-only side aprons that hold trees, tents, and bushes.
         private const float DECOR_MARGIN = 14f;
         private const float ARCH_MODEL_WIDTH = 14f;
 
         private static Material _mudMaterial;
         private static Material _mudRimMaterial;
+        private static Material _boostMaterial;
+        private static Material _boostRimMaterial;
+        private const float BOOST_PAD_SIZE_X = 3.2f;
+        private const float BOOST_PAD_SIZE_Z = 2.4f;
         private static readonly System.Collections.Generic.Dictionary<TrackKind, Material> GroundMaterials = new();
         private static bool _propsLoaded;
         private static GameObject _bushPrefab;
@@ -77,7 +99,8 @@ namespace PoRacer.Systems
         /// finish arch (gameplay scene only; training keeps the bare track).
         /// </summary>
         public void Build(TrackKind kind, Transform parent, float width, float length, System.Random rng,
-            bool decorate = false, float finishZ = -1f)
+            bool decorate = false, float finishZ = -1f, TrackFeatures features = TrackFeatures.None,
+            float backMargin = 7f)
         {
             for (int childIndex = parent.childCount - 1; childIndex >= 0; childIndex--)
             {
@@ -87,11 +110,11 @@ namespace PoRacer.Systems
             float sideMargin = decorate ? DECOR_MARGIN : 0f;
             if (kind == TrackKind.Hills || kind == TrackKind.Rough || kind == TrackKind.RoughBlocked || kind == TrackKind.Lumpy)
             {
-                BuildTerrainMesh(kind, parent, width, length, sideMargin);
+                BuildTerrainMesh(kind, parent, width, length, sideMargin, backMargin);
             }
             else
             {
-                BuildFlatGround(kind, parent, width, length, sideMargin);
+                BuildFlatGround(kind, parent, width, length, sideMargin, backMargin);
             }
 
             if (kind == TrackKind.Bumps)
@@ -113,6 +136,23 @@ namespace PoRacer.Systems
             {
                 BuildMudPits(parent, width, length, rng, count: 5);
                 BuildGates(parent, width, length, rng, count: 2);
+            }
+
+            if ((features & TrackFeatures.MudPits) != 0 && kind != TrackKind.Swamp)
+            {
+                BuildMudPits(parent, width, length, rng, count: 3);
+            }
+            if ((features & TrackFeatures.Gates) != 0 && kind != TrackKind.Swamp)
+            {
+                BuildGates(parent, width, length, rng, count: 1);
+            }
+            if ((features & TrackFeatures.BoostPads) != 0)
+            {
+                BuildBoostPads(kind, parent, width, length, rng, count: 3);
+            }
+            if ((features & TrackFeatures.Gusts) != 0)
+            {
+                BuildGustZones(parent, width, length, rng, count: 2);
             }
 
             if (decorate)
@@ -146,24 +186,34 @@ namespace PoRacer.Systems
             return 0f;
         }
 
-        private void BuildFlatGround(TrackKind kind, Transform parent, float width, float length, float sideMargin)
+        private void BuildFlatGround(TrackKind kind, Transform parent, float width, float length, float sideMargin,
+            float backMargin)
         {
             float fullWidth = width + sideMargin * 2f;
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.SetParent(parent, false);
-            // A plane primitive is 10x10 at scale 1; margin behind the start line.
-            ground.transform.localPosition = new Vector3(0f, 0f, length * 0.5f - 3f);
-            ground.transform.localScale = new Vector3(fullWidth / 10f, 1f, (length + 8f) / 10f);
+            // A plane primitive is 10x10 at scale 1; ground covers
+            // z in [-backMargin, length + 1] so deep start grids stay on it.
+            float depth = length + 1f + backMargin;
+            ground.transform.localPosition = new Vector3(0f, 0f, (length + 1f - backMargin) * 0.5f);
+            ground.transform.localScale = new Vector3(fullWidth / 10f, 1f, depth / 10f);
             ground.GetComponent<MeshRenderer>().sharedMaterial = GroundMaterialFor(kind);
-            ground.GetComponent<MeshCollider>().sharedMaterial = _physicsMaterial;
+            // The plane's MeshCollider is paper-thin: heavy limbs press through it
+            // and creatures sink. Swap it for a solid slab whose top is at y = 0.
+            UnityEngine.Object.Destroy(ground.GetComponent<MeshCollider>());
+            var slab = ground.AddComponent<BoxCollider>();
+            slab.size = new Vector3(10f, 1f, 10f);
+            slab.center = new Vector3(0f, -0.5f, 0f);
+            slab.sharedMaterial = _physicsMaterial;
         }
 
-        private void BuildTerrainMesh(TrackKind kind, Transform parent, float width, float length, float sideMargin)
+        private void BuildTerrainMesh(TrackKind kind, Transform parent, float width, float length, float sideMargin,
+            float backMargin)
         {
             width += sideMargin * 2f;
-            float fullLength = length + 8f;
-            float zStart = -5f;
+            float fullLength = length + 3f + backMargin;
+            float zStart = -backMargin;
             int stepsZ = Mathf.CeilToInt(fullLength * MESH_STEPS_PER_METER);
             // Hills only vary along z, so a coarse x grid suffices; Rough varies in
             // both axes with ~1 m features and needs the full resolution.
@@ -356,6 +406,85 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
+        /// Boost pads: a bright green quad on the ground plus a trigger box with a
+        /// BoostPadView that pushes every creature body inside toward the finish.
+        /// </summary>
+        private static void BuildBoostPads(TrackKind kind, Transform parent, float width, float length,
+            System.Random rng, int count)
+        {
+            if (_boostMaterial == null && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                Shader boostShader = Shader.Find("Sprites/Default");
+                if (boostShader != null)
+                {
+                    _boostMaterial = new Material(boostShader)
+                    {
+                        color = new Color(0.15f, 0.85f, 0.45f, 0.75f)
+                    };
+                    _boostRimMaterial = new Material(boostShader)
+                    {
+                        color = new Color(0.05f, 0.45f, 0.22f, 0.85f)
+                    };
+                }
+            }
+
+            for (int padIndex = 0; padIndex < count; padIndex++)
+            {
+                // Spread pads down the track, one per segment, jittered inside it.
+                float segment = (length - 9f) / count;
+                float z = 5f + segment * padIndex + (float)rng.NextDouble() * segment * 0.7f;
+                float x = ((float)rng.NextDouble() - 0.5f) * (width - BOOST_PAD_SIZE_X);
+
+                var pad = new GameObject("BoostPad");
+                pad.transform.SetParent(parent, false);
+                pad.transform.localPosition = new Vector3(x, SurfaceHeight(kind, x, z), z);
+
+                var trigger = pad.AddComponent<BoxCollider>();
+                trigger.isTrigger = true;
+                trigger.size = new Vector3(BOOST_PAD_SIZE_X, 1.2f, BOOST_PAD_SIZE_Z);
+                trigger.center = new Vector3(0f, 0.3f, 0f);
+                pad.AddComponent<Views.BoostPadView>();
+
+                if (_boostMaterial != null)
+                {
+                    BuildMudQuad(pad.transform, "BoostRim", _boostRimMaterial,
+                        new Vector3(BOOST_PAD_SIZE_X * 1.12f, BOOST_PAD_SIZE_Z * 1.12f, 1f), MARKER_HEIGHT_OFFSET);
+                    BuildMudQuad(pad.transform, "BoostVisual", _boostMaterial,
+                        new Vector3(BOOST_PAD_SIZE_X, BOOST_PAD_SIZE_Z, 1f), MARKER_HEIGHT_OFFSET * 2f);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gust zones: full-width trigger stripes whose GustZoneView shoves the
+        /// field sideways in waves. Direction and phase are rolled per zone.
+        /// </summary>
+        private static void BuildGustZones(Transform parent, float width, float length, System.Random rng, int count)
+        {
+            for (int zoneIndex = 0; zoneIndex < count; zoneIndex++)
+            {
+                // Keep the spawn pad calm; spread zones along the rest of the track.
+                float z = 6f + (length - 8f) * (zoneIndex + 0.5f) / count
+                    + ((float)rng.NextDouble() - 0.5f) * 3f;
+
+                var zone = new GameObject("GustZone");
+                zone.transform.SetParent(parent, false);
+                zone.transform.localPosition = new Vector3(0f, 0f, z);
+
+                var trigger = zone.AddComponent<BoxCollider>();
+                trigger.isTrigger = true;
+                trigger.size = new Vector3(width, 1.6f, 4f);
+                trigger.center = new Vector3(0f, 0.5f, 0f);
+
+                var view = zone.AddComponent<Views.GustZoneView>();
+                view.Initialize(
+                    rng.Next(2) == 0 ? -1f : 1f,
+                    (float)rng.NextDouble() * 6f,
+                    width);
+            }
+        }
+
+        /// <summary>
         /// Gates: a pair of low walls spanning the track with one random gap,
         /// so the field has to funnel or climb.
         /// </summary>
@@ -437,8 +566,10 @@ namespace PoRacer.Systems
             if (_archPrefab != null)
             {
                 float archScale = width / ARCH_MODEL_WIDTH;
+                // The arch model has a 24x10 m base plate at exactly y = 0; lifted
+                // slightly so it never z-fights the ground it sits on.
                 PlaceProp(_archPrefab, parent,
-                    new Vector3(0f, SurfaceHeight(kind, 0f, finishZ), finishZ),
+                    new Vector3(0f, SurfaceHeight(kind, 0f, finishZ) + PROP_HEIGHT_OFFSET + 0.01f, finishZ),
                     rotationY: 0f, new Vector3(archScale, archScale * 0.8f, 1f), _archMaterial);
             }
 
@@ -453,7 +584,7 @@ namespace PoRacer.Systems
                         float z = 1f + tileIndex * 11f + (float)rng.NextDouble() * 4f;
                         float x = side * (width * 0.5f + 8f + (float)rng.NextDouble() * 2.5f);
                         PlaceProp(_forestPrefab, parent,
-                            new Vector3(x, SurfaceHeight(kind, x, z), z),
+                            new Vector3(x, SurfaceHeight(kind, x, z) + PROP_HEIGHT_OFFSET, z),
                             rotationY: rng.Next(4) * 90f, Vector3.one, _propAtlasMaterial);
                     }
                 }
@@ -467,7 +598,7 @@ namespace PoRacer.Systems
                     float x = side * (width * 0.5f + 8.5f);
                     float z = -4f + (float)rng.NextDouble() * 2f;
                     PlaceProp(_tentsPrefab, parent,
-                        new Vector3(x, SurfaceHeight(kind, x, z), z),
+                        new Vector3(x, SurfaceHeight(kind, x, z) + PROP_HEIGHT_OFFSET, z),
                         rotationY: side < 0 ? 90f : 270f, Vector3.one, _propAtlasMaterial);
                 }
             }

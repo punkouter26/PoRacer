@@ -1,0 +1,17 @@
+flowchart LR
+    SENSORS["Sensors<br/>Joints + Root Pose + Goal"] --> REW["Reward_WormLoco<br/>Composite"]
+    REW --> SUM{"Per Step Total"}
+    SUM --> R1["Progress<br/>delta * 1.0"]
+    SUM --> R2["Efficiency<br/>-0.05 * torque"]
+    SUM --> R3["Upright<br/>0.02 * up_dot"]
+    SUM --> R4["Time<br/>-0.002"]
+    R1 --> TOTAL["AddReward -> PPO/SAC"]
+    R2 --> TOTAL
+    R3 --> TOTAL
+    R4 --> TOTAL
+    TOTAL --> TERM{"Terminal Check<br/>goal / out-of-bounds / no-progress"}
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef ctrl fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    class SENSORS,REW,SUM,R1,R2,R3,R4,TOTAL ml;
+    class TERM ctrl;

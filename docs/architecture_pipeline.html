@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PoRacer — Architecture & Runtime Pipeline</title>
+<style>
+  :root {
+    --bg-1: #0d1117; --bg-2: #161b22; --bg-3: #1f2630;
+    --border: #30363d; --text-1: #e6edf3; --text-2: #9ba9b7;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #8957e5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0;
+    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    color: var(--text-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.65; min-height: 100vh; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
+  header { padding: 24px 0 32px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0 0 8px; font-size: 2rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: var(--text-2); margin: 4px 0; }
+  nav.toc { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+  nav.toc a { color: var(--accent); background: var(--bg-3); padding: 6px 14px; border-radius: 999px; text-decoration: none; font-size: 0.85rem; border: 1px solid var(--border); }
+  nav.toc a:hover { border-color: var(--accent); }
+  h2 { margin: 48px 0 16px; font-size: 1.6rem; color: var(--text-1); border-left: 4px solid var(--accent); padding-left: 14px; }
+  h3 { margin: 28px 0 10px; font-size: 1.15rem; color: var(--accent); }
+  h4 { margin: 18px 0 8px; font-size: 1rem; color: var(--accent-2); }
+  p, li { color: var(--text-1); }
+  ul, ol { padding-left: 22px; }
+  code { background: var(--bg-3); padding: 2px 7px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; color: var(--accent-2); }
+  pre { background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; overflow-x: auto; font-size: 0.86rem; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: var(--text-1); }
+  table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-3); color: var(--accent); }
+  td { background: rgba(255,255,255,0.02); }
+  .tier-card { background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 18px 22px; margin: 20px 0; }
+  .tier-card.tier-1 { border-left-color: var(--green); }
+  .tier-card.tier-2 { border-left-color: var(--accent); }
+  .tier-card.tier-3 { border-left-color: var(--purple); }
+  .tier-label { display: inline-block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
+  .tier-card.tier-1 .tier-label { color: var(--green); }
+  .tier-card.tier-2 .tier-label { color: var(--accent); }
+  .tier-card.tier-3 .tier-label { color: var(--purple); }
+  .tier-card h3:first-child { margin-top: 0; }
+  .diagram { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 20px 0; }
+  .diagram img { width: 100%; height: auto; display: block; border-radius: 6px; background: #fff; }
+  .diagram-caption { color: var(--text-2); font-size: 0.86rem; margin-top: 10px; text-align: center; }
+  .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two-up { grid-template-columns: 1fr; } }
+  .callout { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; margin: 14px 0; color: var(--text-1); }
+  .callout.warn { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.3); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem; color: var(--text-2); margin: 10px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  a { color: var(--accent); }
+  footer { margin-top: 56px; padding: 20px 0; border-top: 1px solid var(--border); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Architecture & Runtime Pipeline</h1>
+    <p>C# (ML-Agents) → ONNX (Sentis/Barracuda) → PhysX 5 Articulations → buffer / reset.</p>
+    <p style="font-size: 0.88rem;">Every section below carries three progressive detail tiers so the same page serves an executive skim and a deep implementation dive.</p>
+    <nav class="toc">
+      <a href="#lifecycle">Lifecycle &amp; Execution Loop</a>
+      <a href="#tensors">Tensor Blueprint &amp; Actuator Map</a>
+      <a href="#reward">Sensor Perception &amp; Reward Tree</a>
+      <a href="#hparams">Hyperparameters &amp; Trainer</a>
+      <a href="#hub">← Back to Hub</a>
+    </nav>
+  </header>
+
+  <!-- ============================== LIFECYCLE ============================== -->
+  <h2 id="lifecycle">1. Dynamic Lifecycle &amp; Execution Loop</h2>
+
+  <div class="tier-card tier-1">
+    <span class="tier-label">Tier 1 · Executive summary</span>
+    <h3>The 4-beat loop</h3>
+    <p><strong>Observe</strong> joints, root pose, goal, velocity → <strong>Infer</strong> with ONNX → <strong>Apply</strong> targets to PhysX joint drives → <strong>Score</strong> with the reward function and check for termination. Every 0.02 s (FixedUpdate).</p>
+  </div>
+
+  <div class="tier-card tier-2">
+    <span class="tier-label">Tier 2 · Basic overview</span>
+    <h3>Loop steps and message flow</h3>
+    <ol>
+      <li><strong>C# Agent</strong> (<code>Agent_Creature</code>) packs an observation vector from <code>ArticulationBody.jointPosition</code>, <code>jointVelocity</code>, root <code>up</code>, <code>position.y</code>, goal direction &amp; distance, and root velocity.</li>
+      <li><strong>Sentis</strong> runs the ONNX policy on Burst and returns continuous actions <code>a ∈ [-1, 1]^N</code>.</li>
+      <li>Each action becomes an <code>ArticulationDrive.target</code> in degrees (revolute) or metres (prismatic) before the next PhysX step.</li>
+      <li><strong>Reward_WormLoco.Step</strong> computes potential-based progress, efficiency penalty, upright bonus, and constant time cost; <strong>Agent_Creature</strong> fires terminal checks (goal hit / out-of-bounds / no-progress) and either ends the episode or loops back.</li>
+    </ol>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/lifecycle-simple.svg" alt="Lifecycle - simple">
+    <div class="diagram-caption">Figure L1 · Lifecycle &amp; execution loop — simple (conceptual)</div>
+  </div>
+
+  <div class="tier-card tier-3">
+    <span class="tier-label">Tier 3 · Complete specification</span>
+    <h3>Detailed pipeline (tensors, memory, Sentis, PhysX)</h3>
+    <p>The detailed diagram breaks the loop into four runtime layers: C# packing, ONNX inference, PhysX solve, and the buffer / reset loop. Key invariant: <strong>actions are applied only in <code>FixedUpdate</code></strong> because <code>ArticulationBody.Solve</code> consumes targets at the same cadence as the simulation step (0.02 s).</p>
+    <h4>Cadence and timing</h4>
+    <ul>
+      <li><code>Time.fixedDeltaTime = 0.02</code> · <code>Physics.gravity = (0, -9.81, 0)</code> · <code>vSyncCount = 0</code>, <code>targetFrameRate = 60</code></li>
+      <li><code>DecisionRequester.DecisionStep = 5</code> on inference racers means the policy runs every ~0.10 s, but PD targets are held continuously by the drive between decisions.</li>
+      <li>Training cadence: the trainer runs <code>num_epoch = 3</code> passes per buffer with a <code>batch_size = 2048</code> gradient step.</li>
+    </ul>
+    <h4>NaN firewall</h4>
+    <p><code>Reward_WormLoco.Step</code> sanitizes <code>currentDistance</code>, <code>normalizedTorque</code>, and <code>uprightDot</code> before any arithmetic. One exploding body must never feed NaN into a sensor, which would abort the Academy step for <em>all</em> agents sharing the environment.</p>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/lifecycle-detailed.svg" alt="Lifecycle - detailed">
+    <div class="diagram-caption">Figure L2 · Lifecycle &amp; execution loop — detailed (tensors, memory, PhysX)</div>
+  </div>
+
+  <!-- ============================== TENSORS ============================== -->
+  <h2 id="tensors">2. Tensor Blueprint &amp; Actuator Map</h2>
+
+  <div class="tier-card tier-1">
+    <span class="tier-label">Tier 1 · Executive summary</span>
+    <h3>What the policy sees and what it controls</h3>
+    <p><strong>Input</strong>: per-joint position + velocity (<code>2·N</code>), root up, height, goal direction, goal distance, root velocity → <code>N·2 + 11</code> floats. <strong>Output</strong>: one continuous value per joint, in <code>[-1, 1]</code>, scaled into an <code>ArticulationDrive.target</code>.</p>
+  </div>
+
+  <div class="tier-card tier-2">
+    <span class="tier-label">Tier 2 · Basic overview</span>
+    <h3>Per-creature observation shape</h3>
+    <pre><code>obs = [
+  joint_position_normalized (N),
+  joint_velocity_normalized (N),
+  root.up (3),
+  root.position.y (1),
+  goal_dir_local (3),
+  goal_distance / 20 (1),
+  root_velocity_local / MAX_ROOT_SPEED (3)
+]   // total = N*2 + 11</code></pre>
+    <p>With terrain probes enabled, four look-ahead raycasts add <code>+4</code> floats. Each value passes through <code>Safe()</code> so NaN/Infinity collapse to 0.</p>
+    <h3>Network</h3>
+    <p>Two fully-connected layers of 256 units with tanh activations, fed through an optional LSTM(128) for memory. Output heads emit per-action means; SAC additionally emits <code>log_sigma</code>.</p>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/tensor-blueprint-simple.svg" alt="Tensor blueprint - simple">
+    <div class="diagram-caption">Figure T1 · Tensor blueprint &amp; actuator map — simple</div>
+  </div>
+
+  <div class="tier-card tier-3">
+    <span class="tier-label">Tier 3 · Complete specification</span>
+    <h3>Sensor layout and normalization constants</h3>
+    <table>
+      <thead><tr><th>Sensor / Field</th><th>Shape</th><th>Range</th><th>Normalization</th></tr></thead>
+      <tbody>
+        <tr><td>joint position</td><td><code>N</code></td><td><code>[-π, π]</code> rad</td><td><code>x / (jointDriveScale · Deg2Rad)</code></td></tr>
+        <tr><td>joint velocity</td><td><code>N</code></td><td><code>[-10, 10]</code> rad/s</td><td><code>xdot / MAX_JOINT_VELOCITY (=10)</code></td></tr>
+        <tr><td>root.up</td><td><code>3</code></td><td>unit vector</td><td>passed through <code>SafeVector</code></td></tr>
+        <tr><td>root.position.y</td><td><code>1</code></td><td>meters</td><td>raw, clamped</td></tr>
+        <tr><td>goal direction (local)</td><td><code>3</code></td><td>unit</td><td><code>root.InverseTransformDirection(normalized(toGoal))</code></td></tr>
+        <tr><td>goal distance</td><td><code>1</code></td><td><code>[0, 20]</code> m</td><td><code>clamp01(d / GOAL_DISTANCE_NORM)</code></td></tr>
+        <tr><td>root velocity (local)</td><td><code>3</code></td><td><code>|v| ≤ 2 m/s</code></td><td><code>clampMagnitude(v / MAX_ROOT_SPEED, 1)</code></td></tr>
+        <tr><td>terrain probes (opt.)</td><td><code>4</code></td><td><code>[-2, 2]</code> m</td><td><code>clamp(h / PROBE_HEIGHT_NORM, -1, 1)</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Actuator map and drive constants</h3>
+    <table>
+      <thead><tr><th>Parameter</th><th>Default</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><code>jointDriveScale</code> (deg / m)</td><td><code>45</code></td><td><code>Agent_Creature</code> serialized field, per prefab</td></tr>
+        <tr><td><code>forceLimit</code> (N·m)</td><td><code>100</code></td><td>matched to prefab's <code>ArticulationDrive.forceLimit</code></td></tr>
+        <tr><td><code>stiffness</code> (Kp)</td><td>per joint</td><td>authored per prefab, modified by race-day quirk ±8%</td></tr>
+        <tr><td><code>damping</code> (Kd)</td><td>per joint</td><td>authored per prefab</td></tr>
+        <tr><td><code>maxAngularVelocity</code></td><td><code>20</code> rad/s</td><td>set in <code>Initialize</code> on root + every joint</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Action flow</h4>
+    <pre><code>// In Agent.OnActionReceived:
+for each joint i:
+    a_i = clamp(actions.ContinuousActions[i], -1, 1)
+    drive = joint.xDrive
+    drive.target = a_i * jointDriveScale
+    joint.xDrive = drive
+// PhysX.ArticulationBody.Solve applies torque:
+//   tau = stiffness * (target - x) - damping * xdot   (clamped to forceLimit)</code></pre>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/tensor-blueprint-detailed.svg" alt="Tensor blueprint - detailed">
+    <div class="diagram-caption">Figure T2 · Tensor blueprint &amp; actuator map — detailed</div>
+  </div>
+
+  <!-- ============================== REWARD ============================== -->
+  <h2 id="reward">3. Sensor Perception &amp; Reward Tree</h2>
+
+  <div class="tier-card tier-1">
+    <span class="tier-label">Tier 1 · Executive summary</span>
+    <h3>Reward = progress − effort + upright − time</h3>
+    <p>The composite reward favors forward motion, discourages waste of torque, rewards staying upright, and adds a constant per-step cost so faster finishes win. Three terminal conditions: reach the goal, fall out of bounds, or 20 s without progress.</p>
+  </div>
+
+  <div class="tier-card tier-2">
+    <span class="tier-label">Tier 2 · Basic overview</span>
+    <h3>Components (per step)</h3>
+    <table>
+      <thead><tr><th>Signal</th><th>Formula</th><th>Sign</th><th>Weight</th></tr></thead>
+      <tbody>
+        <tr><td>Progress (extrinsic)</td><td><code>Δd × PROGRESS_SCALE</code></td><td>+</td><td><code>1.0</code></td></tr>
+        <tr><td>Efficiency penalty</td><td><code>−ENERGY_PENALTY × torque_norm</code></td><td>−</td><td><code>0.05</code></td></tr>
+        <tr><td>Upright bonus</td><td><code>UPRIGHT_BONUS × max(up·ŷ, 0)</code></td><td>+</td><td><code>0.02</code></td></tr>
+        <tr><td>Time penalty</td><td>constant</td><td>−</td><td><code>0.002</code></td></tr>
+      </tbody>
+    </table>
+    <h3>Terminal conditions</h3>
+    <ul>
+      <li><strong>Goal</strong>: <code>d ≤ 0.5 m</code> → <code>+10</code> bonus, <code>EndEpisode()</code></li>
+      <li><strong>Out-of-bounds</strong>: <code>y &lt; −1</code> → <code>−1</code>, <code>EndEpisode()</code></li>
+      <li><strong>No-progress</strong>: 1000 steps (~20 s) without best-distance improvement → <code>EpisodeInterrupted()</code></li>
+    </ul>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/reward-tree-simple.svg" alt="Reward tree - simple">
+    <div class="diagram-caption">Figure R1 · Sensor perception &amp; reward tree — simple</div>
+  </div>
+
+  <div class="tier-card tier-3">
+    <span class="tier-label">Tier 3 · Complete specification</span>
+    <h3>Reward shaping constants (Reward_WormLoco)</h3>
+    <pre><code>PROGRESS_SCALE         = 1.0
+GOAL_REWARD            = 10.0
+OUT_OF_BOUNDS_REWARD   = -1.0
+GOAL_RADIUS_METERS     = 0.5
+NO_PROGRESS_LIMIT_STEPS = 1000     // 20 s @ 0.02 s
+MAX_STEP_DELTA_METERS  = 0.2       // physics glitch clamp
+ENERGY_PENALTY_SCALE   = 0.05
+UPRIGHT_BONUS_SCALE    = 0.02
+TIME_PENALTY           = 0.002     // ≈ 6 / full 3000-step episode</code></pre>
+
+    <h3>StatsRecorder telemetry (training only)</h3>
+    <p>When <code>Academy.IsCommunicatorOn</code>, <code>Agent_Creature</code> writes:</p>
+    <pre><code>stats.Add("Reward/Progress",           LastProgressReward)
+stats.Add("Reward/EfficiencyPenalty",  LastEfficiencyPenalty)
+stats.Add("Reward/UprightBonus",       LastUprightBonus)
+stats.Add("Reward/TimePenalty",        -TIME_PENALTY)</code></pre>
+    <p>Inference-only racers never pay this cost — hundreds of bots in a race do not record stats.</p>
+
+    <h3>NaN firewall invariants</h3>
+    <ul>
+      <li><code>currentDistance</code>: NaN/Inf → fall back to <code>_previousDistance</code> (no zero-delta that would still poison progress).</li>
+      <li><code>normalizedTorque</code>: NaN/Inf → 0 (no efficiency penalty).</li>
+      <li><code>uprightDot</code>: NaN/Inf → 0 (no upright bonus).</li>
+      <li><code>delta</code> ternary clamp passes NaN through; the stored <code>_previousDistance</code> is reset explicitly when <code>delta</code> is NaN.</li>
+    </ul>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/reward-tree-detailed.svg" alt="Reward tree - detailed">
+    <div class="diagram-caption">Figure R2 · Sensor perception &amp; reward tree — detailed</div>
+  </div>
+
+  <!-- ============================== HYPERPARAMS ============================== -->
+  <h2 id="hparams">4. Hyperparameters &amp; Trainer Specification</h2>
+
+  <div class="tier-card tier-1">
+    <span class="tier-label">Tier 1 · Executive summary</span>
+    <h3>Two trainers, one shared network shape</h3>
+    <p><strong>PPO</strong> for the bulk of behaviors (256×2 dense, normalize=true). <strong>SAC</strong> for the off-policy ablation against PPO. Both share the same observation contract and ArticulationBody actuator map.</p>
+  </div>
+
+  <div class="tier-card tier-2">
+    <span class="tier-label">Tier 2 · Basic overview</span>
+    <h3>PPO config (canonical — WormLoco03 / AllLoco1h01)</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>batch_size / buffer_size</td><td><code>2048</code> / <code>20480</code></td></tr>
+        <tr><td>learning_rate / schedule</td><td><code>3e-4</code> / <code>linear</code></td></tr>
+        <tr><td>epsilon / lambd / beta / num_epoch</td><td><code>0.2</code> / <code>0.95</code> / <code>0.005</code> / <code>3</code></td></tr>
+        <tr><td>network</td><td><code>Dense(256) → Dense(256)</code>, tanh, normalize=true</td></tr>
+        <tr><td>extrinsic γ / strength</td><td><code>0.995</code> / <code>1.0</code></td></tr>
+        <tr><td>time_horizon / max_steps</td><td><code>1000</code> / <code>10M</code> (long), <code>400k</code> (1 h), <code>2M</code> (5 h)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>SAC config (WormSac01)</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>batch_size / buffer_size / init_steps</td><td><code>256</code> / <code>500000</code> / <code>5000</code></td></tr>
+        <tr><td>learning_rate / schedule</td><td><code>3e-4</code> / <code>constant</code></td></tr>
+        <tr><td>tau / steps_per_update / init_entcoef</td><td><code>0.005</code> / <code>2</code> / <code>0.5</code></td></tr>
+        <tr><td>network</td><td><code>Dense(256) → Dense(256)</code>, normalize=true</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/hyperparameters-simple.svg" alt="Hyperparameters - simple">
+    <div class="diagram-caption">Figure H1 · Hyperparameters &amp; trainer specification — simple</div>
+  </div>
+
+  <div class="tier-card tier-3">
+    <span class="tier-label">Tier 3 · Complete specification</span>
+    <h3>YAML trainer registry</h3>
+    <table>
+      <thead><tr><th>Config</th><th>Run ID</th><th>Trainer</th><th>Network</th><th>Max Steps</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>WormLoco03.yaml</code></td><td><code>worm_loco03</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Reference worm locomotion run</td></tr>
+        <tr><td><code>WormLoco04.yaml</code></td><td><code>worm_loco04</code></td><td>PPO 512×3</td><td>normalize</td><td><code>5M</code></td><td>Wider-network ablation vs SAC</td></tr>
+        <tr><td><code>WormSac01.yaml</code></td><td><code>worm_sac01</code></td><td>SAC</td><td>normalize</td><td><code>5M</code></td><td>Off-policy ablation vs PPO 512</td></tr>
+        <tr><td><code>WormRough01.yaml</code></td><td><code>worm_rough01</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Single-creature rough-terrain curriculum</td></tr>
+        <tr><td><code>SpiderLoco02.yaml</code></td><td><code>spider_loco02</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Spider-only run</td></tr>
+        <tr><td><code>AllLoco02.yaml</code></td><td><code>all_loco02</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>10M</code>/beh</td><td>All creatures, shared curriculum</td></tr>
+        <tr><td><code>AllLoco03.yaml</code></td><td><code>all_loco03</code></td><td>PPO + BC + GAIL</td><td>normalize</td><td><code>10M</code>/beh</td><td>BC + GAIL warm start from coded-gait demos</td></tr>
+        <tr><td><code>AllLoco1h01.yaml</code></td><td><code>all1h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>400k</code>/beh</td><td>1-hour budget (~110 steps/s)</td></tr>
+        <tr><td><code>AllLoco1h02.yaml</code></td><td><code>all1h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>400k</code>/beh</td><td>Gen3 refresh of 1h01, adds track_kind &amp; quirk_power_span</td></tr>
+        <tr><td><code>AllLoco5h01.yaml</code></td><td><code>all5h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>2M</code>/beh</td><td>5-hour unattended box</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Curriculum knobs read by <code>Systems_TrainingArea</code></h3>
+    <table>
+      <thead><tr><th>Parameter</th><th>Lessons</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><code>goal_distance_max</code></td><td><code>8 → 14 → 20</code> m</td><td>YAML <code>environment_parameters.goal_distance_max</code></td></tr>
+        <tr><td><code>rough_amplitude</code></td><td><code>0.35 → 0.7 → 1.0</code></td><td>YAML <code>environment_parameters.rough_amplitude</code></td></tr>
+        <tr><td><code>track_kind</code></td><td><code>Flat 0 → Lumpy 6 → Swamp 7</code></td><td>YAML <code>environment_parameters.track_kind</code></td></tr>
+        <tr><td><code>quirk_power_span</code></td><td><code>0 → 0.05 → 0.08</code></td><td>YAML <code>environment_parameters.quirk_power_span</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Reward signal strengths</h3>
+    <ul>
+      <li><strong>Extrinsic</strong>: <code>γ = 0.995</code>, <code>strength = 1.0</code> — universal.</li>
+      <li><strong>GAIL</strong>: <code>γ = 0.99</code>, <code>strength = 0.05</code>, <code>demo_path = Assets/Demonstrations/&lt;Name&gt;.demo</code> — AllLoco03.</li>
+      <li><strong>Behavioral cloning</strong>: <code>strength = 0.3</code>, <code>steps = 500000</code> — AllLoco03 warm start.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Promotion gate</strong>: A brain moves from Staging → Production only after winning an ELO gauntlet. Never by mean reward alone (the shared potential-based reward scales with episode length, making cross-run reward comparisons unsafe).
+    </div>
+  </div>
+
+  <div class="diagram">
+    <img src="assets/hyperparameters-detailed.svg" alt="Hyperparameters - detailed">
+    <div class="diagram-caption">Figure H2 · Hyperparameters &amp; trainer specification — detailed</div>
+  </div>
+
+  <footer>PoRacer · <a href="index.html">Back to documentation hub</a> · August 2026</footer>
+</div>
+</body>
+</html>

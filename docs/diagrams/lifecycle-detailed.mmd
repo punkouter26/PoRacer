@@ -1,0 +1,40 @@
+flowchart TB
+    subgraph CSharp["C# Runtime (Unity 6 + ML-Agents 4.1)"]
+        OBS["Agent.CollectObservations<br/>VectorSensor.AddObservation"]
+        ACT["Agent.OnActionReceived<br/>ActionBuffers"]
+        NAIVE["Agent.Heuristic<br/>Coded Gait"]
+        NAIVE -.fallback.-> ACT
+        OBS --> TENSOR["obs_vec Float32[N*2+11+probes]"]
+        ACT --> DRIVE["xDrive.target per joint"]
+        DRIVE --> STEP["ArticulationBody.Solve<br/>ArticulationReducedSpace"]
+    end
+
+    subgraph Sentis["Sentis / Barracuda ONNX Engine"]
+        TENSOR --> INF["ModelExecutor<br/>Burst Backend"]
+        INF --> HIDDEN["Dense x2 (256u, tanh)"]
+        HIDDEN --> POL["PolicyHead / ValueHead"]
+        HIDDEN -.RL alg.-> PPO["PPO: clipped surrogate"]
+        HIDDEN -.off-pol.-> SAC["SAC: tanh-Gaussian"]
+        POL --> ACTIONS["action Float32[N]"]
+    end
+
+    subgraph PhysX["PhysX 5 Articulation Solver"]
+        STEP --> JOINT["ArticulationDrive PD<br/>Kp * (x - xDrive.target) - Kd * xdot"]
+        JOINT --> TORQUE["jointForce -> torque sum"]
+        TORQUE -->|clamp| STEP
+        STEP --> STATE["x, xdot, q, qdot"]
+        STATE --> TERMCHECK{"Terminated?<br/>NaN | y < -1 | no-progress 20s"}
+        TERMCHECK -- No --> OBS
+        TERMCHECK -- Yes --> BUF["StatsRecorder.Add<br/>Reward/Progress, Efficiency, Upright"]
+        BUF --> RES["Episode Reset<br/>articular state + drives cleared"]
+        RES --> OBS
+    end
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
+    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    classDef buf fill:#8957e5,stroke:#4a2a8c,color:#fff,stroke-width:2px;
+    class OBS,ACT,NAIVE,DRIVE,STEP ml;
+    class TENSOR,INF,HIDDEN,POL,ACTIONS,PPO,SAC rt;
+    class JOINT,TORQUE,STATE phys;
+    class TERMCHECK,BUF,RES buf;

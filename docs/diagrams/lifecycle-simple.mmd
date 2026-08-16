@@ -1,0 +1,17 @@
+flowchart LR
+    A[C# Agent<br/>CollectObservations] --> B[ONNX Brain<br/>Sentis/Barracuda]
+    B --> C[Action Targets<br/>Normalized -1..1]
+    C --> D[PhysX<br/>ArticulationBody Step]
+    D --> E{Terminal?}
+    E -- No --> A
+    E -- Yes --> F[Buffer / Reset]
+    F --> A
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
+    classDef ctrl fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    class A,ml1 ml;
+    class B ml;
+    class C ml;
+    class D phys;
+    class E,F ctrl;

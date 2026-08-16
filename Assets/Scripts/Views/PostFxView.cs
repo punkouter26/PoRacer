@@ -249,6 +249,9 @@ namespace PoRacer.Views
             ChromaticAberration aberration = _profile.Add<ChromaticAberration>(true);
             aberration.intensity.value = 0.06f;
 
+            MotionBlur motionBlur = _profile.Add<MotionBlur>(true);
+            motionBlur.intensity.value = 0.18f;
+
             _colorAdjustments = _profile.Add<ColorAdjustments>(true);
             _colorAdjustments.postExposure.value = BASE_EXPOSURE;
             _colorAdjustments.saturation.value = 10f;

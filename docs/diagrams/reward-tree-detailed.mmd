@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph Perception["Perception (per step)"]
+        P1["RayPerceptionSensor3D<br/>n_rays * 3 floats"]
+        P2["ArticulationBody.JointState<br/>x, xdot per DoF"]
+        P3["Root.up / Root.position.y"]
+        P4["goal - root (direction, distance)"]
+        P5["linearVelocity (root-local)"]
+        P6["Physics.Raycast 4 probes<br/>forward * d, height"]
+    end
+
+    subgraph Reward["Reward_WormLoco.Step (NaN firewall)"]
+        R0["Sanitize inputs<br/>NaN -> previous / 0"]
+        R0 --> RP["Progress = delta_d * 1.0<br/>clamp +- 0.2 m / step"]
+        R0 --> RE["Efficiency = -0.05 * torque_sum / N"]
+        R0 --> RU["Upright = 0.02 * max(up_dot, 0)"]
+        R0 --> RT["Time = -0.002 / step"]
+        RP --> RADD["sum = progress + efficiency + upright + time"]
+        RE --> RADD
+        RU --> RADD
+        RT --> RADD
+        RADD --> RLOG["StatsRecorder<br/>Reward/Progress, /Efficiency, /Upright"]
+    end
+
+    subgraph Terminal["Terminal Evaluation"]
+        RADD --> TG{"d <= 0.5 m ?<br/>GOAL (+10)"}
+        TG -- Yes --> END1["EndEpisode"]
+        TG -- No --> TB{"y < -1 ?<br/>OOB (-1)"}
+        TB -- Yes --> END2["EndEpisode"]
+        TB -- No --> TN{"no-progress steps >= 1000 ?"}
+        TN -- Yes --> END3["EpisodeInterrupted"]
+        TN -- No --> CONTINUE["continue"]
+    end
+
+    Perception --> Reward
+    RLOG -->|academy only| ACADEMY["Academy.StatsRecorder"]
+
+    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
+    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
+    classDef ctrl fill:#8957e5,stroke:#4a2a8c,color:#fff,stroke-width:2px;
+    class P1,P2,P3,P4,P5,P6 ml;
+    class R0,RP,RE,RU,RT,RADD,RLOG,ACADEMY rt;
+    class TG,TB,TN,END1,END2,END3,CONTINUE ctrl;

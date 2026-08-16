@@ -27,7 +27,8 @@ namespace PoRacer.Views
             RacerView racer = other.GetComponentInParent<RacerView>();
             if (racer != null)
             {
-                _race.NotifyFinish(racer.RacerId);
+                float overshoot = racer.transform.position.z - transform.position.z;
+                _race.NotifyFinish(racer.RacerId, overshoot);
             }
         }
     }

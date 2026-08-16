@@ -78,6 +78,38 @@ namespace PoRacer.Tests
         }
 
         [Test]
+        public void ThirdFinisher_EndsRaceAndScoresTheRestAsDnf()
+        {
+            _sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing },
+                new() { RacerId = "b", CreatureId = "spider", Status = RacerStatus.Racing },
+                new() { RacerId = "c", CreatureId = "crab", Status = RacerStatus.Racing },
+                new() { RacerId = "d", CreatureId = "blob", Status = RacerStatus.Racing },
+                new() { RacerId = "e", CreatureId = "snake", Status = RacerStatus.Racing }
+            });
+
+            _sut.NotifyFinish("a");
+            _sut.NotifyFinish("b");
+            Assert.That(_model.RaceActive, Is.True);
+            _sut.NotifyFinish("c");
+
+            Assert.That(_model.RaceActive, Is.False);
+            Assert.That(_model.FindRacer("d").Status, Is.EqualTo(RacerStatus.Dnf));
+            Assert.That(_model.FindRacer("e").Status, Is.EqualTo(RacerStatus.Dnf));
+            IReadOnlyList<RaceResultEntry> results = _raceFinished.Published[^1].Results;
+            int finishers = 0;
+            for (int resultIndex = 0; resultIndex < results.Count; resultIndex++)
+            {
+                if (!results[resultIndex].Dnf)
+                {
+                    finishers++;
+                }
+            }
+            Assert.That(finishers, Is.EqualTo(3));
+        }
+
+        [Test]
         public void FinishAfterDnf_IsIgnored()
         {
             _sut.Advance(Systems_Race.RACE_TIMEOUT_SECONDS + 1f);

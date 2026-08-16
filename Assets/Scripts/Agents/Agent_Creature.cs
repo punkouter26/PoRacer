@@ -167,6 +167,7 @@ namespace PoRacer.Agents
             }
             else if (_reward.NoProgressExceeded)
             {
+                AddReward(Reward_WormLoco.STALL_REWARD);
                 EpisodeInterrupted();
             }
         }

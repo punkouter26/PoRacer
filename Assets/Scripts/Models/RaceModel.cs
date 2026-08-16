@@ -18,9 +18,16 @@ namespace PoRacer.Models
         public RacerStatus Status { get; set; }
         public int Place { get; set; }
         public float FinishTime { get; set; }
+        // Meters past the finish line when the crossing was reported; breaks
+        // same-frame ties (farther past the line = crossed earlier).
+        public float FinishOvershoot { get; set; }
         public UnityEngine.Color Tint { get; set; }
         // Cached "RRGGBB" so commentary/HUD rich text never re-encodes per line.
         public string TintHex { get; set; }
+        // Visible quirk: short tag ("TURBO"); empty for a plain racer.
+        public string QuirkTag { get; set; } = string.Empty;
+        // HUD badge color for the quirk; alpha 0 hides the badge.
+        public UnityEngine.Color QuirkColor { get; set; }
     }
 
     public sealed class RaceModel

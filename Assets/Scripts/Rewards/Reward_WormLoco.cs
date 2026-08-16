@@ -15,6 +15,10 @@ namespace PoRacer.Rewards
         public const float OUT_OF_BOUNDS_REWARD = -1f;
         public const float GOAL_RADIUS_METERS = 0.5f;
         public const int NO_PROGRESS_LIMIT_STEPS = 1000; // 20 s at 0.02 s per step
+        // Giving up must never be reward-neutral: without this, freezing beats
+        // trying-and-falling (-1) in expectation, which trains passive brains.
+        // Milder than OUT_OF_BOUNDS_REWARD so trying stays the better gamble.
+        public const float STALL_REWARD = -0.5f;
         public const float MAX_STEP_DELTA_METERS = 0.2f; // physics-glitch clamp: real max is ~0.04 m per 0.02 s step
         public const float ENERGY_PENALTY_SCALE = 0.05f;
         public const float UPRIGHT_BONUS_SCALE = 0.02f;
