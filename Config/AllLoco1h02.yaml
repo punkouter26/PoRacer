@@ -1,0 +1,114 @@
+# Run-id: all1h_<timestamp> (launched by scripts\train_all_1h.ps1)
+# Unattended 1-hour all-creatures run. Gen3 refresh of AllLoco1h01: same
+# ~400k steps/behavior/hour budget, but with the post-time-penalty reward
+# thresholds (12/22) and the curriculum knobs Systems_TrainingArea now reads:
+#   track_kind (Flat 0 -> Lumpy 6 -> Swamp 7) and quirk_power_span (race-day
+#   joint power randomization). Mirrors Config/AllLoco5h01.yaml at 1/5 scale.
+behaviors:
+  Worm: &loco
+    trainer_type: ppo
+    threaded: true
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+    max_steps: 400000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 100000
+  Spider: *loco
+  Hexapod: *loco
+  Quad: *loco
+  Snake: *loco
+  Centipede: *loco
+  Crab: *loco
+  Kangaroo: *loco
+  Blob: *loco
+
+environment_parameters:
+  goal_distance_max:
+    curriculum:
+      - name: near
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 12.0
+          min_lesson_length: 100
+        value: 8.0
+      - name: mid
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 22.0
+          min_lesson_length: 100
+        value: 14.0
+      - name: far
+        value: 20.0
+  rough_amplitude:
+    curriculum:
+      - name: gentle
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 12.0
+          min_lesson_length: 100
+        value: 0.35
+      - name: medium
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 22.0
+          min_lesson_length: 100
+        value: 0.7
+      - name: full
+        value: 1.0
+  track_kind:
+    curriculum:
+      - name: flat
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 18.0
+          min_lesson_length: 200
+        value: 0.0
+      - name: lumpy
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 24.0
+          min_lesson_length: 200
+        value: 6.0
+      - name: swamp
+        value: 7.0
+  quirk_power_span:
+    curriculum:
+      - name: none
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 12.0
+          min_lesson_length: 100
+        value: 0.0
+      - name: mild
+        completion_criteria:
+          measure: reward
+          behavior: Worm
+          threshold: 22.0
+          min_lesson_length: 100
+        value: 0.05
+      - name: race
+        value: 0.08

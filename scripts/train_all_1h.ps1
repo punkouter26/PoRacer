@@ -1,11 +1,11 @@
 # Unattended 1-hour all-creatures training run with a timestamped run-id.
-# Usage: .\scripts\train_all_1h.ps1 [-ConfigPath Config\AllLoco1h01.yaml] [-Hours 1]
+# Usage: .\scripts\train_all_1h.ps1 [-ConfigPath Config\AllLoco1h02.yaml] [-Hours 1]
 # max_steps in the config is calibrated to finish near the 1 h mark; the time box
 # here is the hard stop. Starts TensorBoard first (project rule).
 # num-envs: this env holds 18 articulated areas per instance, so instances are
 # CPU-heavy; cores/6 capped at 4 leaves torch its share (recorded per MLOps rule).
 param(
-    [string]$ConfigPath = "Config\AllLoco1h01.yaml",
+    [string]$ConfigPath = "Config\AllLoco1h02.yaml",
     [string]$EnvExe = "Builds\AllEnv\AllEnv.exe",
     [double]$Hours = 1
 )

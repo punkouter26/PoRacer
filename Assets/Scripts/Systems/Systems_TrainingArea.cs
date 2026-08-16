@@ -71,7 +71,8 @@ namespace PoRacer.Systems
             {
                 var envParams = Unity.MLAgents.Academy.Instance.EnvironmentParameters;
                 maxGoalDistance = envParams.GetWithDefault("goal_distance_max", MAX_GOAL_DISTANCE);
-                Systems_TrackBuilder.RoughAmplitudeScale = envParams.GetWithDefault("rough_amplitude", 1f);
+                // Clamped: above 1.0 terrain dips would cross the agents' fixed fall line (y < -1).
+                Systems_TrackBuilder.RoughAmplitudeScale = Mathf.Clamp(envParams.GetWithDefault("rough_amplitude", 1f), 0f, 1f);
                 quirkSpan = Mathf.Clamp(envParams.GetWithDefault("quirk_power_span", 0f), 0f, 0.5f);
                 int kindValue = Mathf.RoundToInt(envParams.GetWithDefault("track_kind", (float)_trackKind));
                 if (System.Enum.IsDefined(typeof(TrackKind), kindValue))
