@@ -12,6 +12,7 @@ namespace PoRacer.Views
     {
         private static Texture2D _softCircle;
         private static Material _softParticleMaterial;
+        private static ParticleSystem _knockoutPuff;
 
         /// <summary>Radial-falloff white circle used as the universal particle sprite.</summary>
         public static Texture2D SoftCircle()
@@ -63,6 +64,47 @@ namespace PoRacer.Views
             material.SetTexture("_BaseMap", SoftCircle());
             _softParticleMaterial = material;
             return material;
+        }
+
+        /// <summary>
+        /// Gray smoke puff at a knocked-out racer's position, so eliminations read
+        /// on screen instead of the creature silently vanishing. One shared
+        /// world-space system serves every knockout.
+        /// </summary>
+        public static void KnockoutPuff(Vector3 position)
+        {
+            if (_knockoutPuff == null)
+            {
+                Material material = SoftParticleMaterial();
+                if (material == null)
+                {
+                    return;
+                }
+                var go = new GameObject("KnockoutPuff");
+                var ps = go.AddComponent<ParticleSystem>();
+                ParticleSystem.MainModule main = ps.main;
+                main.playOnAwake = false;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.6f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.2f, 0.5f);
+                main.startColor = new ParticleSystem.MinMaxGradient(
+                    new Color(0.55f, 0.55f, 0.55f, 0.5f), new Color(0.35f, 0.35f, 0.35f, 0.4f));
+                main.gravityModifier = -0.05f;
+                main.maxParticles = 200;
+                ParticleSystem.EmissionModule emission = ps.emission;
+                emission.rateOverTime = 0f;
+                ParticleSystem.ShapeModule shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 0.25f;
+                var puffRenderer = ps.GetComponent<ParticleSystemRenderer>();
+                puffRenderer.material = material;
+                puffRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                puffRenderer.receiveShadows = false;
+                _knockoutPuff = ps;
+            }
+            _knockoutPuff.transform.position = position;
+            _knockoutPuff.Emit(14);
         }
     }
 }

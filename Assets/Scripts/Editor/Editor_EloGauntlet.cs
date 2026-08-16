@@ -108,7 +108,15 @@ namespace PoRacer.EditorTools
             for (int entryIndex = 0; entryIndex < baseCount; entryIndex++)
             {
                 string id = entries.GetArrayElementAtIndex(entryIndex).FindPropertyRelative("id").stringValue;
-                if (!string.IsNullOrEmpty(id) && !id.Contains("@") && lowered.Contains(id.ToLowerInvariant()))
+                if (string.IsNullOrEmpty(id) || id.Contains("@"))
+                {
+                    continue;
+                }
+                // Catalog ids are versioned ("Worm_v01") while checkpoint files are
+                // "Worm-4999588.onnx": match on the creature name before "_v".
+                int versionCut = id.IndexOf("_v", System.StringComparison.OrdinalIgnoreCase);
+                string creature = (versionCut > 0 ? id.Substring(0, versionCut) : id).ToLowerInvariant();
+                if (lowered.StartsWith(creature))
                 {
                     return entryIndex;
                 }

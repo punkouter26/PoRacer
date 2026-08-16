@@ -14,21 +14,25 @@ namespace PoRacer.Systems
             public readonly TrackKind Kind;
             public readonly bool Available;
             public readonly string Blurb;
+            // Start line to finish line, meters. Longer than the old fixed 22 so
+            // races build drama; slower terrain gets a shorter trek.
+            public readonly float LengthMeters;
 
-            public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "")
+            public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "", float lengthMeters = 32f)
             {
                 DisplayName = displayName;
                 Kind = kind;
                 Available = available;
                 Blurb = blurb;
+                LengthMeters = lengthMeters;
             }
         }
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
-            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test"),
-            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge"),
-            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them"),
+            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 34f),
+            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 26f),
+            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 28f),
             new MapEntry("Map 4", TrackKind.Flat, available: false),
             new MapEntry("Map 5", TrackKind.Flat, available: false),
             new MapEntry("Map 6", TrackKind.Flat, available: false),

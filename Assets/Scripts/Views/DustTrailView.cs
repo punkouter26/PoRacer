@@ -13,6 +13,7 @@ namespace PoRacer.Views
         private const float MAX_RATE = 22f;
         private const float FULL_RATE_SPEED = 2.5f;
 
+        private ParticleSystem _particles;
         private ParticleSystem.EmissionModule _emission;
         private Transform _transform;
         private Vector3 _lastPosition;
@@ -21,12 +22,19 @@ namespace PoRacer.Views
         {
             _transform = transform;
             _lastPosition = _transform.position;
-            ParticleSystem particles = BuildParticles();
-            _emission = particles.emission;
+            _particles = BuildParticles();
+            _emission = _particles.emission;
         }
 
         private void Update()
         {
+            // The cached module throws if its particle system died under us
+            // (observed in large gauntlet fields); a dead trail just retires.
+            if (_particles == null)
+            {
+                enabled = false;
+                return;
+            }
             Vector3 position = _transform.position;
             float speed = (position - _lastPosition).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
             _lastPosition = position;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PoRacer.Models;
 using PoRacer.Systems;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace PoRacer.Views
 
         private CreatureCatalog _catalog;
         private RaceConfigModel _config;
+        private EloModel _eloModel;
         private Systems_Spawn _spawn;
         private VisualElement _root;
         private VisualElement _content;
@@ -27,10 +29,11 @@ namespace PoRacer.Views
         private bool _wasVisible;
 
         [Inject]
-        public void Construct(CreatureCatalog catalog, RaceConfigModel config, Systems_Spawn spawn)
+        public void Construct(CreatureCatalog catalog, RaceConfigModel config, EloModel eloModel, Systems_Spawn spawn)
         {
             _catalog = catalog;
             _config = config;
+            _eloModel = eloModel;
             _spawn = spawn;
         }
 
@@ -122,12 +125,15 @@ namespace PoRacer.Views
             _content.Add(brainToggle);
 
             BuildMapPicker();
+            BuildStandings();
 
             var creatureHeader = new Label("Creatures");
             creatureHeader.style.fontSize = 14;
             creatureHeader.style.color = UiTheme.TextDim;
             creatureHeader.style.marginBottom = 4;
             _content.Add(creatureHeader);
+
+            BuildPresetRow();
 
             // Creature list scrolls so the START button never leaves the screen
             // on portrait, no matter how many creatures the catalog grows to.
@@ -182,20 +188,21 @@ namespace PoRacer.Views
             mapLabel.style.marginBottom = 4;
             _content.Add(mapLabel);
 
+            // Only playable maps get buttons; unfinished slots stay out of the UI
+            // entirely instead of filling rows with dead "Soon" placeholders.
             int mapCount = Systems_MapCatalog.Entries.Count;
             _mapButtons = new Button[mapCount];
-            const int mapsPerRow = 4;
-            VisualElement row = null;
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.marginBottom = 4;
+            _content.Add(row);
             for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
             {
-                if (mapIndex % mapsPerRow == 0)
-                {
-                    row = new VisualElement();
-                    row.style.flexDirection = FlexDirection.Row;
-                    row.style.marginBottom = 4;
-                    _content.Add(row);
-                }
                 Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Entries[mapIndex];
+                if (!map.Available)
+                {
+                    continue;
+                }
                 int capturedIndex = mapIndex;
                 var button = new Button(() =>
                 {
@@ -203,7 +210,7 @@ namespace PoRacer.Views
                     RefreshMapButtons();
                 })
                 {
-                    text = map.Available ? map.DisplayName : "Soon"
+                    text = map.DisplayName
                 };
                 button.style.height = 30;
                 button.style.fontSize = 12;
@@ -211,12 +218,6 @@ namespace PoRacer.Views
                 button.style.flexGrow = 1f;
                 button.style.flexBasis = 0f;
                 UiTheme.StyleButton(button);
-                if (!map.Available)
-                {
-                    button.SetEnabled(false);
-                    button.style.color = UiTheme.TextDim;
-                    button.style.opacity = 0.45f;
-                }
                 _mapButtons[mapIndex] = button;
                 row.Add(button);
             }
@@ -234,11 +235,99 @@ namespace PoRacer.Views
         {
             for (int mapIndex = 0; mapIndex < _mapButtons.Length; mapIndex++)
             {
+                if (_mapButtons[mapIndex] == null)
+                {
+                    continue;
+                }
                 bool isSelected = mapIndex == _config.SelectedMapIndex;
                 _mapButtons[mapIndex].style.backgroundColor = isSelected ? UiTheme.Accent : UiTheme.ButtonBg;
             }
             Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
             _mapBlurbLabel.text = $"{selected.DisplayName} — {selected.Blurb}";
+        }
+
+        /// <summary>Top-5 ELO table so race history means something in the menu.</summary>
+        private void BuildStandings()
+        {
+            var header = new Label("Standings (ELO)");
+            header.style.fontSize = 14;
+            header.style.color = UiTheme.TextDim;
+            header.style.marginBottom = 4;
+            _content.Add(header);
+
+            var ranked = new List<CreatureCatalog.CreatureEntry>();
+            for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
+            {
+                if (_catalog.Entries[entryIndex].prefab != null)
+                {
+                    ranked.Add(_catalog.Entries[entryIndex]);
+                }
+            }
+            ranked.Sort((first, second) =>
+                _eloModel.GetRating(second.id).CompareTo(_eloModel.GetRating(first.id)));
+
+            var panel = new VisualElement();
+            UiTheme.StyleRow(panel);
+            panel.style.marginBottom = 10;
+            int rows = ranked.Count < 5 ? ranked.Count : 5;
+            for (int rankIndex = 0; rankIndex < rows; rankIndex++)
+            {
+                CreatureCatalog.CreatureEntry entry = ranked[rankIndex];
+                var line = new Label(
+                    $"{rankIndex + 1}. {entry.displayName}   {_eloModel.GetRating(entry.id):0}");
+                line.style.color = rankIndex == 0 ? UiTheme.Gold : UiTheme.Text;
+                line.style.fontSize = 12;
+                panel.Add(line);
+            }
+            if (rows == 0)
+            {
+                var empty = new Label("No races yet — standings appear after the first race.");
+                empty.style.color = UiTheme.TextDim;
+                empty.style.fontSize = 12;
+                panel.Add(empty);
+            }
+            _content.Add(panel);
+        }
+
+        /// <summary>One-tap field setup instead of nine separate count rows.</summary>
+        private void BuildPresetRow()
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.marginBottom = 6;
+            string[] labels = { "All x1", "All x10", "Clear" };
+            int[] counts = { 1, 10, 0 };
+            for (int presetIndex = 0; presetIndex < labels.Length; presetIndex++)
+            {
+                int count = counts[presetIndex];
+                var button = new Button(() => ApplyPreset(count)) { text = labels[presetIndex] };
+                button.style.height = 26;
+                button.style.fontSize = 12;
+                button.style.marginRight = 4;
+                button.style.flexGrow = 1f;
+                button.style.flexBasis = 0f;
+                UiTheme.StyleButton(button);
+                UiTheme.AddHover(button);
+                row.Add(button);
+            }
+            _content.Add(row);
+        }
+
+        private void ApplyPreset(int count)
+        {
+            bool scripted = _config.UseScriptedBrains;
+            for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
+            {
+                CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
+                if (entry.prefab != null && (entry.model != null || scripted))
+                {
+                    _config.SetCount(entry.id, count);
+                }
+            }
+            // Count buttons highlight from config state; rebuild to reflect it.
+            _root.Clear();
+            BuildMenu();
+            _config.NotifyChanged();
         }
 
         private void ToggleBrains()

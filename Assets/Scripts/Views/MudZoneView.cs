@@ -103,8 +103,10 @@ namespace PoRacer.Views
             main.gravityModifier = 1.4f;
             main.maxParticles = 200;
 
+            // A slow ambient blorp telegraphs the pit as a hazard even when nothing
+            // is wading; entry splashes still come from Emit().
             ParticleSystem.EmissionModule emission = ps.emission;
-            emission.rateOverTime = 0f;
+            emission.rateOverTime = 2.5f;
 
             ParticleSystem.ShapeModule shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Cone;

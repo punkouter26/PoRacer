@@ -20,6 +20,8 @@ namespace PoRacer.Views
         private const int TICKER_ANIMATION_MS = 300;
         private const int ROW_POP_MS = 250;
         private const float GO_BANNER_SECONDS = 1.5f;
+        private const float WINNER_BANNER_SECONDS = 3f;
+        private const int PODIUM_ROWS = 3;
 
         private RaceModel _raceModel;
         private EloModel _eloModel;
@@ -41,6 +43,10 @@ namespace PoRacer.Views
         private int _commentaryVersion = -1;
         private bool _wasRaceActive;
         private float _goBannerUntil;
+        private float _winnerBannerUntil;
+        private VisualElement _podiumPanel;
+        private readonly System.Collections.Generic.List<Label> _podiumLabels = new();
+        private readonly System.Collections.Generic.List<VisualElement> _podiumChips = new();
         private string _lastLeaderId;
         private float _lastLeaderProgress;
         private float _lastLeaderSampleTime;
@@ -135,6 +141,45 @@ namespace PoRacer.Views
             _bannerLabel.style.display = DisplayStyle.None;
             safeRoot.Add(_bannerLabel);
 
+            // Podium: shown in the pause between races (top 3 with medal tints).
+            _podiumPanel = new VisualElement { pickingMode = PickingMode.Ignore };
+            _podiumPanel.style.position = Position.Absolute;
+            _podiumPanel.style.top = new Length(38f, LengthUnit.Percent);
+            _podiumPanel.style.left = new Length(12f, LengthUnit.Percent);
+            _podiumPanel.style.right = new Length(12f, LengthUnit.Percent);
+            UiTheme.StylePanel(_podiumPanel);
+            _podiumPanel.style.display = DisplayStyle.None;
+            var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
+            podiumTitle.style.color = UiTheme.Gold;
+            podiumTitle.style.fontSize = 18;
+            podiumTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            podiumTitle.style.unityTextAlign = TextAnchor.MiddleCenter;
+            podiumTitle.style.marginBottom = 6;
+            _podiumPanel.Add(podiumTitle);
+            Color[] medalColors = { UiTheme.Gold, UiTheme.Silver, UiTheme.Bronze };
+            for (int podiumIndex = 0; podiumIndex < PODIUM_ROWS; podiumIndex++)
+            {
+                var row = new VisualElement { pickingMode = PickingMode.Ignore };
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+                row.style.marginTop = 3;
+                var medal = new VisualElement { pickingMode = PickingMode.Ignore };
+                medal.style.width = 12;
+                medal.style.height = 12;
+                medal.style.marginRight = 8;
+                medal.style.backgroundColor = medalColors[podiumIndex];
+                UiTheme.SetRadius(medal, 6f);
+                row.Add(medal);
+                var label = new Label { pickingMode = PickingMode.Ignore };
+                label.style.color = UiTheme.Text;
+                label.style.fontSize = 15;
+                row.Add(label);
+                _podiumChips.Add(medal);
+                _podiumLabels.Add(label);
+                _podiumPanel.Add(row);
+            }
+            safeRoot.Add(_podiumPanel);
+
             var menuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
             menuButton.style.position = Position.Absolute;
             menuButton.style.top = 4;
@@ -179,6 +224,7 @@ namespace PoRacer.Views
             if (_raceModel.RaceActive && !_wasRaceActive)
             {
                 _goBannerUntil = Time.unscaledTime + GO_BANNER_SECONDS;
+                _winnerBannerUntil = 0f;
             }
             _wasRaceActive = _raceModel.RaceActive;
 
@@ -210,8 +256,20 @@ namespace PoRacer.Views
 
             RefreshProgressStrip();
 
-            if (winner != null)
+            if (winner != null && _winnerBannerUntil == 0f)
             {
+                _winnerBannerUntil = Time.unscaledTime + WINNER_BANNER_SECONDS;
+            }
+            if (_raceModel.CountdownValue > 0)
+            {
+                _bannerLabel.text = _raceModel.CountdownValue.ToString();
+                _bannerLabel.style.fontSize = 64;
+                _bannerLabel.style.display = DisplayStyle.Flex;
+            }
+            else if (winner != null && Time.unscaledTime < _winnerBannerUntil)
+            {
+                // Brief celebration only: after a few seconds the banner clears so
+                // the rest of the field stays watchable.
                 _bannerLabel.text = $"WINNER  {winner.DisplayName}  {winner.FinishTime:0.0}s";
                 _bannerLabel.style.fontSize = 30;
                 _bannerLabel.style.display = DisplayStyle.Flex;
@@ -226,6 +284,8 @@ namespace PoRacer.Views
             {
                 _bannerLabel.style.display = DisplayStyle.None;
             }
+
+            RefreshPodium();
 
             _sortBuffer.Clear();
             for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
@@ -301,6 +361,40 @@ namespace PoRacer.Views
             for (int rowIndex = 0; rowIndex < visibleRows; rowIndex++)
             {
                 _lastRowByRacer[_sortBuffer[rowIndex].RacerId] = rowIndex;
+            }
+        }
+
+        private void RefreshPodium()
+        {
+            // Only during the pause between races, once results exist.
+            bool showPodium = !_raceModel.RaceActive && _raceModel.Racers.Count > 0
+                && _raceModel.CountdownValue == 0;
+            _podiumPanel.style.display = showPodium ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!showPodium)
+            {
+                return;
+            }
+            for (int podiumIndex = 0; podiumIndex < PODIUM_ROWS; podiumIndex++)
+            {
+                RacerState medalist = null;
+                for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
+                {
+                    if (_raceModel.Racers[racerIndex].Place == podiumIndex + 1)
+                    {
+                        medalist = _raceModel.Racers[racerIndex];
+                        break;
+                    }
+                }
+                if (medalist != null)
+                {
+                    float rating = _eloModel.GetRating(medalist.CreatureId);
+                    _podiumLabels[podiumIndex].text =
+                        $"{medalist.DisplayName}  {medalist.FinishTime:0.0}s  ELO {rating:0}";
+                }
+                else
+                {
+                    _podiumLabels[podiumIndex].text = "—";
+                }
             }
         }
 

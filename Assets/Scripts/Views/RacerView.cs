@@ -54,6 +54,11 @@ namespace PoRacer.Views
             if (corrupt || (_agent != null && _agent.Failed))
             {
                 _race.NotifyFailure(_racerId);
+                if (!corrupt)
+                {
+                    // Corrupt positions are NaN/far away — no place to puff there.
+                    FxUtil.KnockoutPuff(position);
+                }
                 enabled = false;
                 gameObject.SetActive(false);
                 return;
@@ -80,6 +85,7 @@ namespace PoRacer.Views
             if (_flippedSeconds >= KNOCKDOWN_SECONDS)
             {
                 _race.NotifyFailure(_racerId);
+                FxUtil.KnockoutPuff(position);
                 enabled = false;
                 gameObject.SetActive(false);
                 return;

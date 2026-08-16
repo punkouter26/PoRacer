@@ -32,6 +32,8 @@ namespace PoRacer.Models
         public float ElapsedSeconds;
         public bool RaceActive;
         public int RaceNumber;
+        // Pre-start countdown: 3, 2, 1 while the grid settles; 0 = none.
+        public int CountdownValue;
         public string TrackName = "Flat";
         // Start line to finish line, for progress-strip percentages.
         public float TrackLengthMeters = 22f;

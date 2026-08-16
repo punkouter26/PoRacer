@@ -207,8 +207,10 @@ namespace PoRacer.Views
             emission.rateOverTime = rate;
             ParticleSystem.VelocityOverLifetimeModule velocity = _ambientFx.velocityOverLifetime;
             velocity.enabled = true;
+            // All three axes must use the same curve mode (TwoConstants here).
             velocity.x = new ParticleSystem.MinMaxCurve(windX * 0.5f, windX);
             velocity.y = new ParticleSystem.MinMaxCurve(riseSpeed * 0.5f, riseSpeed);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             ParticleSystem.NoiseModule noise = _ambientFx.noise;
             noise.enabled = wander > 0f;
             noise.strength = wander;

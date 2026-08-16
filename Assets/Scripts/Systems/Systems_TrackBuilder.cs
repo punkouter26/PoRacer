@@ -36,14 +36,13 @@ namespace PoRacer.Systems
         private const float ROUGH_DETAIL_SCALE = 0.95f;   // ~1 m secondary bumps
         private const float ROUGH_SPAWN_PAD_END_Z = 6f;   // full roughness from here on
         private const float ROUGH_SPAWN_PAD_FLAT_Z = 2f;  // flat until here (racers spawn stable)
-        private const float MARKER_ALPHA = 0.12f;
         private const float MARKER_HEIGHT_OFFSET = 0.02f;
         // Visual-only side aprons that hold trees, tents, and bushes.
         private const float DECOR_MARGIN = 14f;
         private const float ARCH_MODEL_WIDTH = 14f;
 
-        private static Material _markerMaterial;
         private static Material _mudMaterial;
+        private static Material _mudRimMaterial;
         private static readonly System.Collections.Generic.Dictionary<TrackKind, Material> GroundMaterials = new();
         private static bool _propsLoaded;
         private static GameObject _bushPrefab;
@@ -94,8 +93,6 @@ namespace PoRacer.Systems
             {
                 BuildFlatGround(kind, parent, width, length, sideMargin);
             }
-
-            BuildScaleMarkers(kind, parent, width, length);
 
             if (kind == TrackKind.Bumps)
             {
@@ -215,88 +212,6 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
-        /// Checkerboard of 1 m x 1 m semi-transparent tiles so creature scale is
-        /// readable at a glance. All tiles share one mesh and one material:
-        /// a single draw call, no colliders, no shadows.
-        /// </summary>
-        private static void BuildScaleMarkers(TrackKind kind, Transform parent, float width, float length)
-        {
-            // Headless training builds strip rendering: no device, and Shader.Find
-            // may return null for shaders not in Always Included Shaders. Markers
-            // are visual-only, so skip them instead of throwing in Awake.
-            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
-            {
-                return;
-            }
-            if (_markerMaterial == null)
-            {
-                Shader markerShader = Shader.Find("Sprites/Default");
-                if (markerShader == null)
-                {
-                    return;
-                }
-                _markerMaterial = new Material(markerShader)
-                {
-                    color = new Color(1f, 1f, 1f, MARKER_ALPHA)
-                };
-            }
-
-            int cellsX = Mathf.FloorToInt(width);
-            int zStart = -4;
-            int zEnd = Mathf.CeilToInt(length) + 2;
-            int cellCount = 0;
-            for (int cellZ = zStart; cellZ < zEnd; cellZ++)
-            {
-                for (int cellX = 0; cellX < cellsX; cellX++)
-                {
-                    if (((cellX + cellZ) & 1) == 0)
-                    {
-                        cellCount++;
-                    }
-                }
-            }
-
-            var vertices = new Vector3[cellCount * 4];
-            var triangles = new int[cellCount * 6];
-            int vertexIndex = 0;
-            int triangleIndex = 0;
-            float xOrigin = -width * 0.5f;
-            for (int cellZ = zStart; cellZ < zEnd; cellZ++)
-            {
-                for (int cellX = 0; cellX < cellsX; cellX++)
-                {
-                    if (((cellX + cellZ) & 1) != 0)
-                    {
-                        continue;
-                    }
-                    float x0 = xOrigin + cellX;
-                    float z0 = cellZ;
-                    vertices[vertexIndex] = new Vector3(x0, SurfaceHeight(kind, x0, z0) + MARKER_HEIGHT_OFFSET, z0);
-                    vertices[vertexIndex + 1] = new Vector3(x0, SurfaceHeight(kind, x0, z0 + 1f) + MARKER_HEIGHT_OFFSET, z0 + 1f);
-                    vertices[vertexIndex + 2] = new Vector3(x0 + 1f, SurfaceHeight(kind, x0 + 1f, z0 + 1f) + MARKER_HEIGHT_OFFSET, z0 + 1f);
-                    vertices[vertexIndex + 3] = new Vector3(x0 + 1f, SurfaceHeight(kind, x0 + 1f, z0) + MARKER_HEIGHT_OFFSET, z0);
-                    triangles[triangleIndex++] = vertexIndex;
-                    triangles[triangleIndex++] = vertexIndex + 1;
-                    triangles[triangleIndex++] = vertexIndex + 2;
-                    triangles[triangleIndex++] = vertexIndex;
-                    triangles[triangleIndex++] = vertexIndex + 2;
-                    triangles[triangleIndex++] = vertexIndex + 3;
-                    vertexIndex += 4;
-                }
-            }
-            var markerMesh = new Mesh { vertices = vertices, triangles = triangles };
-            markerMesh.RecalculateNormals();
-
-            var markers = new GameObject("ScaleMarkers");
-            markers.transform.SetParent(parent, false);
-            markers.AddComponent<MeshFilter>().sharedMesh = markerMesh;
-            var markerRenderer = markers.AddComponent<MeshRenderer>();
-            markerRenderer.sharedMaterial = _markerMaterial;
-            markerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            markerRenderer.receiveShadows = false;
-        }
-
-        /// <summary>
         /// Per-kind ground material: a clone of the base ground material with a
         /// procedural dirt/rock/bog texture. Cached so every rebuild and every
         /// training area shares one material per kind (one draw-call state).
@@ -382,9 +297,15 @@ namespace PoRacer.Systems
                 Shader mudShader = Shader.Find("Sprites/Default");
                 if (mudShader != null)
                 {
+                    // Dark, near-opaque goop plus a darker rim ring so pits read as
+                    // a hazard from the race camera, not a faint stain.
                     _mudMaterial = new Material(mudShader)
                     {
-                        color = new Color(0.32f, 0.22f, 0.10f, 0.65f)
+                        color = new Color(0.26f, 0.17f, 0.07f, 0.88f)
+                    };
+                    _mudRimMaterial = new Material(mudShader)
+                    {
+                        color = new Color(0.12f, 0.08f, 0.03f, 0.9f)
                     };
                 }
             }
@@ -410,19 +331,28 @@ namespace PoRacer.Systems
 
                 if (_mudMaterial != null)
                 {
-                    var visual = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                    visual.name = "MudVisual";
-                    UnityEngine.Object.Destroy(visual.GetComponent<Collider>());
-                    visual.transform.SetParent(pit.transform, false);
-                    visual.transform.localPosition = new Vector3(0f, MARKER_HEIGHT_OFFSET * 2f, 0f);
-                    visual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    visual.transform.localScale = new Vector3(sizeX, sizeZ, 1f);
-                    var mudRenderer = visual.GetComponent<MeshRenderer>();
-                    mudRenderer.sharedMaterial = _mudMaterial;
-                    mudRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    mudRenderer.receiveShadows = false;
+                    BuildMudQuad(pit.transform, "MudRim", _mudRimMaterial,
+                        new Vector3(sizeX * 1.14f, sizeZ * 1.14f, 1f), MARKER_HEIGHT_OFFSET);
+                    BuildMudQuad(pit.transform, "MudVisual", _mudMaterial,
+                        new Vector3(sizeX, sizeZ, 1f), MARKER_HEIGHT_OFFSET * 2f);
                 }
             }
+        }
+
+        private static void BuildMudQuad(Transform parent, string name, Material material,
+            Vector3 scale, float heightOffset)
+        {
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            visual.name = name;
+            UnityEngine.Object.Destroy(visual.GetComponent<Collider>());
+            visual.transform.SetParent(parent, false);
+            visual.transform.localPosition = new Vector3(0f, heightOffset, 0f);
+            visual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            visual.transform.localScale = scale;
+            var mudRenderer = visual.GetComponent<MeshRenderer>();
+            mudRenderer.sharedMaterial = material;
+            mudRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mudRenderer.receiveShadows = false;
         }
 
         /// <summary>

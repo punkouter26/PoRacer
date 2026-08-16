@@ -30,7 +30,10 @@ namespace PoRacer.Views
         private AudioClip _crowdCheer;
         private AudioClip _crowdRoar;
         private AudioClip _dnfBlip;
+        private AudioClip _countdownBeep;
         private RaceConfigModel _config;
+        private RaceModel _raceModel;
+        private int _lastCountdown;
         private System.IDisposable _subscriptions;
         private readonly System.Collections.Generic.Dictionary<TrackKind, AudioClip> _ambienceByKind = new();
         private TrackKind _ambienceKind = (TrackKind)(-1);
@@ -40,12 +43,14 @@ namespace PoRacer.Views
         [Inject]
         public void Construct(
             RaceConfigModel config,
+            RaceModel raceModel,
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<LeadChangedMessage> leadChanged,
             ISubscriber<RacerFinishedMessage> racerFinished,
             ISubscriber<RacerDnfMessage> racerDnf)
         {
             _config = config;
+            _raceModel = raceModel;
             var bag = DisposableBag.CreateBuilder();
             raceStarted.Subscribe(OnRaceStarted).AddTo(bag);
             leadChanged.Subscribe(OnLeadChanged).AddTo(bag);
@@ -78,6 +83,7 @@ namespace PoRacer.Views
             _crowdCheer = SynthesizeCrowd(seconds: 1.1f, gain: 0.6f, seed: 777);
             _crowdRoar = SynthesizeCrowd(seconds: 2.4f, gain: 0.9f, seed: 1234);
             _dnfBlip = SynthesizeDnfBlip();
+            _countdownBeep = SynthesizeCountdownBeep();
         }
 
         private void Start()
@@ -91,6 +97,15 @@ namespace PoRacer.Views
 
         private void Update()
         {
+            // Countdown pips: RaceModel drives the timing; one beep per tick.
+            if (_raceModel != null && _raceModel.CountdownValue != _lastCountdown)
+            {
+                if (_raceModel.CountdownValue > 0)
+                {
+                    _sfxSource.PlayOneShot(_countdownBeep, 0.55f);
+                }
+                _lastCountdown = _raceModel.CountdownValue;
+            }
             _duck = Mathf.MoveTowards(_duck, 0f, Time.deltaTime / DUCK_RECOVERY_SECONDS);
             float menuTarget = _config != null && _config.MenuVisible ? MENU_MIX : 1f;
             _menuMix = Mathf.MoveTowards(_menuMix, menuTarget, Time.deltaTime * 1.5f);
@@ -204,6 +219,23 @@ namespace PoRacer.Views
                 cursor += noteSamples + gapSamples;
             }
             var clip = AudioClip.Create("StartHorn", data.Length, 1, SAMPLE_RATE, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private static AudioClip SynthesizeCountdownBeep()
+        {
+            // Single short pip; the start horn itself is the "GO".
+            const float seconds = 0.12f;
+            int samples = (int)(SAMPLE_RATE * seconds);
+            var data = new float[samples];
+            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
+            {
+                float t = (float)sampleIndex / SAMPLE_RATE;
+                float envelope = Mathf.Min(1f, t * 90f) * Mathf.Exp(-5f * t / seconds);
+                data[sampleIndex] = Mathf.Sin(2f * Mathf.PI * 660f * t) * envelope * 0.4f;
+            }
+            var clip = AudioClip.Create("CountdownBeep", samples, 1, SAMPLE_RATE, false);
             clip.SetData(data, 0);
             return clip;
         }

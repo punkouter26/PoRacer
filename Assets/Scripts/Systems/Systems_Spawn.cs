@@ -114,6 +114,7 @@ namespace PoRacer.Systems
             _cts.Dispose();
             _cts = new CancellationTokenSource();
             Despawn();
+            _raceModel.CountdownValue = 0;
             _cameraDirector.SetTargets(System.Array.Empty<Transform>());
             _race.AbortRace();
             _config.MenuVisible = true;
@@ -160,10 +161,18 @@ namespace PoRacer.Systems
             Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Get(_config.SelectedMapIndex);
             _currentTrack = map.Kind;
             _raceModel.TrackName = map.DisplayName;
+            // The finish line (trigger + agent goal) moves to the map's length so
+            // race distance is a per-map design knob, not a scene constant.
+            if (_track.FinishLine != null)
+            {
+                Vector3 finishPosition = _track.FinishLine.position;
+                finishPosition.z = map.LengthMeters - 2f;
+                _track.FinishLine.position = finishPosition;
+            }
             if (_track.TrackRoot != null)
             {
                 float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : -1f;
-                _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: 22f, _rng,
+                _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
                     decorate: true, finishZ: finishZ);
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
@@ -174,6 +183,7 @@ namespace PoRacer.Systems
             }
 
             var racers = new List<RacerState>();
+            var pendingQuirks = new List<(GameObject instance, float power)>();
             _racerRoots.Clear();
             RacerNames.Shuffle(_rng, _nameOrder);
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
@@ -257,30 +267,10 @@ namespace PoRacer.Systems
 
                     // Quirk: scale every joint drive so this racer runs a touch
                     // hotter or colder than its siblings with the same brain.
+                    // Applied one frame later — a joint written in the frame it was
+                    // instantiated rejects the drive as non-finite.
                     float quirkPower = QUIRK_POWER_MIN + (float)_rng.NextDouble() * QUIRK_POWER_SPAN;
-                    ArticulationBody[] quirkBodies = instance.GetComponentsInChildren<ArticulationBody>();
-                    for (int bodyIndex = 0; bodyIndex < quirkBodies.Length; bodyIndex++)
-                    {
-                        // A body read in the same frame it was instantiated can
-                        // return garbage before physics initializes it; writing
-                        // that back is rejected with a console error. Skip it —
-                        // the joint just keeps its authored drive, quirk-less.
-                        ArticulationDrive drive = quirkBodies[bodyIndex].xDrive;
-                        if (!float.IsFinite(drive.stiffness) || !float.IsFinite(drive.damping)
-                            || !float.IsFinite(drive.target) || !float.IsFinite(drive.targetVelocity)
-                            || !float.IsFinite(drive.lowerLimit) || !float.IsFinite(drive.upperLimit))
-                        {
-                            continue;
-                        }
-                        drive.stiffness *= quirkPower;
-                        // Unlimited force budgets stay unlimited; scaling infinity
-                        // would invalidate the whole drive.
-                        if (float.IsFinite(drive.forceLimit))
-                        {
-                            drive.forceLimit *= quirkPower;
-                        }
-                        quirkBodies[bodyIndex].xDrive = drive;
-                    }
+                    pendingQuirks.Add((instance, quirkPower));
                     string quirkTitle = quirkPower >= MIGHTY_POWER
                         ? "Mighty "
                         : quirkPower <= SLEEPY_POWER ? "Sleepy " : string.Empty;
@@ -324,13 +314,72 @@ namespace PoRacer.Systems
             }
 
             _cameraDirector.SetTargets(_racerRoots);
+            // Registered after SetTargets, which clears the id registry.
+            for (int racerIndex = 0; racerIndex < racers.Count; racerIndex++)
+            {
+                _cameraDirector.RegisterRacer(racers[racerIndex].RacerId, _racerRoots[racerIndex]);
+            }
             if (racers.Count == 0)
             {
                 Debug.LogWarning("No valid racers could be spawned; returning to menu.");
                 RequestMenu();
                 return;
             }
+
+            // One frame so physics initializes every articulation, then the power
+            // quirks apply cleanly.
+            await UniTask.NextFrame(token);
+            if (!IsCurrent(generation))
+            {
+                Despawn();
+                return;
+            }
+            for (int quirkIndex = 0; quirkIndex < pendingQuirks.Count; quirkIndex++)
+            {
+                ApplyPowerQuirk(pendingQuirks[quirkIndex].instance, pendingQuirks[quirkIndex].power);
+            }
+
+            // 3-2-1 countdown: the grid settles physically while the HUD counts
+            // and the audio director beeps along (it watches CountdownValue).
+            for (int countdown = 3; countdown >= 1; countdown--)
+            {
+                _raceModel.CountdownValue = countdown;
+                await UniTask.Delay(TimeSpan.FromSeconds(0.8), cancellationToken: token);
+                if (!IsCurrent(generation))
+                {
+                    _raceModel.CountdownValue = 0;
+                    return;
+                }
+            }
+            _raceModel.CountdownValue = 0;
             _race.StartRace(racers);
+        }
+
+        private static void ApplyPowerQuirk(GameObject instance, float quirkPower)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+            ArticulationBody[] bodies = instance.GetComponentsInChildren<ArticulationBody>();
+            for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
+            {
+                ArticulationDrive drive = bodies[bodyIndex].xDrive;
+                // Guard the PRODUCT, not the input: locked joints author
+                // float.MaxValue budgets, and MaxValue * 1.05 overflows to
+                // infinity, which the physics engine rejects wholesale.
+                float scaledStiffness = drive.stiffness * quirkPower;
+                float scaledForceLimit = drive.forceLimit * quirkPower;
+                if (float.IsFinite(scaledStiffness))
+                {
+                    drive.stiffness = scaledStiffness;
+                }
+                if (float.IsFinite(scaledForceLimit))
+                {
+                    drive.forceLimit = scaledForceLimit;
+                }
+                bodies[bodyIndex].xDrive = drive;
+            }
         }
 
         private void Despawn()
