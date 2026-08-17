@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
-using MessagePipe;
 using PoRacer.Agents;
 using PoRacer.Models;
 using PoRacer.Views;
@@ -14,14 +13,13 @@ namespace PoRacer.Systems
 {
     /// <summary>
     /// Spawns racers from the creature catalog per the RaceConfigModel counts,
-    /// in grid rows behind the start line (marathon start), then runs the endless
-    /// race loop: race finished -> pause -> despawn -> respawn -> next race.
-    /// BeginRacing() is called by the menu; RequestMenu() stops the loop.
+    /// in grid rows behind the start line (marathon start). After a race the
+    /// results panel stays up until the player picks RACE AGAIN (RaceAgain) or
+    /// MENU (RequestMenu). BeginRacing() is called by the menu.
     /// A racer whose .onnx model is missing is skipped with a warning (never crashes).
     /// </summary>
     public sealed class Systems_Spawn : IStartable, IDisposable
     {
-        private const float SECONDS_BETWEEN_RACES = 5f;
         private const int DECISION_PERIOD = 5;
 
         // Visible quirks: same brain, mild physics tweak, HUD badge + name prefix.
@@ -84,7 +82,6 @@ namespace PoRacer.Systems
         private readonly RaceModel _raceModel;
         private readonly Systems_TrackBuilder _trackBuilder;
         private readonly System.Random _rng = new();
-        private readonly IDisposable _subscription;
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
         private readonly List<Transform> _racerRoots = new();
@@ -103,8 +100,7 @@ namespace PoRacer.Systems
             Systems_Race race,
             Systems_CameraDirector cameraDirector,
             RaceModel raceModel,
-            Systems_TrackBuilder trackBuilder,
-            ISubscriber<RaceFinishedMessage> raceFinished)
+            Systems_TrackBuilder trackBuilder)
         {
             _catalog = catalog;
             _config = config;
@@ -113,7 +109,6 @@ namespace PoRacer.Systems
             _cameraDirector = cameraDirector;
             _raceModel = raceModel;
             _trackBuilder = trackBuilder;
-            _subscription = raceFinished.Subscribe(OnRaceFinished);
         }
 
         public void Start()
@@ -142,7 +137,18 @@ namespace PoRacer.Systems
             _config.MenuVisible = false;
             _config.NotifyChanged();
             _racingLoopActive = true;
-            SpawnAndStartRace(++_generation, _cts.Token).Forget();
+            RunRaceGuarded(++_generation, _cts.Token).Forget();
+        }
+
+        /// <summary>Results-panel button: same roster and map, fresh grid.</summary>
+        public void RaceAgain()
+        {
+            if (_config.MenuVisible)
+            {
+                return;
+            }
+            _racingLoopActive = true;
+            RunRestartGuarded(++_generation, _cts.Token).Forget();
         }
 
         public void RequestMenu()
@@ -162,40 +168,63 @@ namespace PoRacer.Systems
 
         public void Dispose()
         {
-            _subscription.Dispose();
             _cts.Cancel();
             _cts.Dispose();
         }
 
-        private void OnRaceFinished(RaceFinishedMessage message)
+        private bool IsCurrent(int generation) => _racingLoopActive && generation == _generation;
+
+        /// <summary>
+        /// Crash guard around the whole spawn chain: a track-builder or prefab
+        /// exception must never strand the game with no racers and no menu.
+        /// </summary>
+        private async UniTaskVoid RunRaceGuarded(int generation, CancellationToken token)
         {
-            if (_racingLoopActive)
+            try
             {
-                RestartAfterDelay(_generation).Forget();
+                await SpawnAndStartRace(generation, token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError($"Race spawn failed; returning to menu. {exception}");
+                if (IsCurrent(generation))
+                {
+                    RequestMenu();
+                }
             }
         }
 
-        private bool IsCurrent(int generation) => _racingLoopActive && generation == _generation;
-
-        private async UniTaskVoid RestartAfterDelay(int generation)
+        private async UniTaskVoid RunRestartGuarded(int generation, CancellationToken token)
         {
-            await UniTask.Delay(TimeSpan.FromSeconds(SECONDS_BETWEEN_RACES), cancellationToken: _cts.Token);
-            if (!IsCurrent(generation))
+            try
             {
-                return;
+                Despawn();
+                // The old roster is history. Clearing it keeps the HUD from
+                // listing last race's results over the new grid.
+                _raceModel.ClearRacers();
+                // Destroy() is deferred to end of frame; spawning immediately would
+                // overlap new worms with old colliders and explode the physics.
+                await UniTask.NextFrame(token);
+                if (!IsCurrent(generation))
+                {
+                    return;
+                }
+                await SpawnAndStartRace(generation, token);
             }
-            Despawn();
-            // The podium had its 5 s; from here the old roster is history. Clearing
-            // it keeps the HUD from listing last race's results over the new grid.
-            _raceModel.ClearRacers();
-            // Destroy() is deferred to end of frame; spawning immediately would
-            // overlap new worms with old colliders and explode the physics.
-            await UniTask.NextFrame(_cts.Token);
-            if (!IsCurrent(generation))
+            catch (OperationCanceledException)
             {
-                return;
             }
-            await SpawnAndStartRace(generation, _cts.Token);
+            catch (Exception exception)
+            {
+                Debug.LogError($"Race spawn failed; returning to menu. {exception}");
+                if (IsCurrent(generation))
+                {
+                    RequestMenu();
+                }
+            }
         }
 
         private async UniTask SpawnAndStartRace(int generation, CancellationToken token)
@@ -387,7 +416,10 @@ namespace PoRacer.Systems
 
                     RacerView view = instance.AddComponent<RacerView>();
                     float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : float.PositiveInfinity;
-                    view.Initialize(racerId, _race, position.z, agent, finishZ);
+                    // Progress is measured from the common start line (grid row 0),
+                    // not this racer's own spawn row — otherwise back-row racers
+                    // report inflated progress and corrupt the leader ranking.
+                    view.Initialize(racerId, _race, gridOrigin.z, agent, finishZ);
                     instance.AddComponent<DustTrailView>();
                     instance.AddComponent<CreatureAudioView>();
                     // After tinting on purpose: the eyes keep their own colors.

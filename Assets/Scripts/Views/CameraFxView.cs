@@ -77,6 +77,14 @@ namespace PoRacer.Views
             }
         }
 
+        private void OnDisable()
+        {
+            // Disabled mid-slow-mo, Update stops running: the recovery ramp must
+            // not leave the whole game stuck below full speed.
+            _slowMoUntil = 0f;
+            Time.timeScale = 1f;
+        }
+
         private void OnDestroy()
         {
             _subscriptions?.Dispose();

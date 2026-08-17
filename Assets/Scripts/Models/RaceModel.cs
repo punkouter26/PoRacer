@@ -42,8 +42,9 @@ namespace PoRacer.Models
         // Pre-start countdown: 3, 2, 1 while the grid settles; 0 = none.
         public int CountdownValue;
         public string TrackName = "Flat";
-        // Start line to finish line, for progress-strip percentages.
-        public float TrackLengthMeters = 22f;
+        // Start line to finish line, for progress-strip percentages. Overwritten
+        // per race from the map catalog; this is only a fallback.
+        public float TrackLengthMeters = 30f;
 
         public void SetRacers(IReadOnlyList<RacerState> racers)
         {

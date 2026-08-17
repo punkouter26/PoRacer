@@ -15,8 +15,7 @@ namespace PoRacer.Systems
     /// stretch the shot tightens to an orbit around them, so the finish plays
     /// on the star. InputView's NextTarget/PrevTarget switch to the orbit
     /// manually, and Overview returns to the wide static shot. Both race rigs
-    /// are built at runtime — the scene's chase camera stays as a dormant
-    /// fallback.
+    /// are built at runtime.
     /// </summary>
     public sealed class Systems_CameraDirector : ITickable, IDisposable
     {
@@ -144,7 +143,6 @@ namespace PoRacer.Systems
         public void ShowOverview()
         {
             _rig.OverviewCamera.Priority = ACTIVE_PRIORITY;
-            _rig.ChaseCamera.Priority = INACTIVE_PRIORITY;
             if (_orbitCamera != null)
             {
                 _orbitCamera.Priority = INACTIVE_PRIORITY;
@@ -159,7 +157,6 @@ namespace PoRacer.Systems
         {
             _packCamera.Priority = ACTIVE_PRIORITY;
             _rig.OverviewCamera.Priority = INACTIVE_PRIORITY;
-            _rig.ChaseCamera.Priority = INACTIVE_PRIORITY;
             if (_orbitCamera != null)
             {
                 _orbitCamera.Priority = INACTIVE_PRIORITY;
@@ -190,7 +187,6 @@ namespace PoRacer.Systems
             _orbit.SetTarget(target);
             _orbitCamera.Priority = ACTIVE_PRIORITY;
             _rig.OverviewCamera.Priority = INACTIVE_PRIORITY;
-            _rig.ChaseCamera.Priority = INACTIVE_PRIORITY;
             if (_packCamera != null)
             {
                 _packCamera.Priority = INACTIVE_PRIORITY;

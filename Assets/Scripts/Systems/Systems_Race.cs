@@ -12,7 +12,7 @@ namespace PoRacer.Systems
     /// </summary>
     public sealed class Systems_Race : ITickable, IDisposable
     {
-        public const float NO_PROGRESS_TIMEOUT_SECONDS = 20f;
+        public const float NO_PROGRESS_TIMEOUT_SECONDS = 30f;
         public const float RACE_TIMEOUT_SECONDS = 120f;
         // The race is decided at the podium: once this many racers finish, the
         // rest are scored as non-finishers and the race ends immediately.
@@ -47,7 +47,9 @@ namespace PoRacer.Systems
             _raceFinishedPublisher = raceFinishedPublisher;
         }
 
-        public void Tick() => Advance(UnityEngine.Time.deltaTime);
+        // Unscaled: the winner slow-mo (CameraFxView) must not stretch the race
+        // clock or the DNF timers.
+        public void Tick() => Advance(UnityEngine.Time.unscaledDeltaTime);
 
         public void StartRace(IReadOnlyList<RacerState> racers)
         {
@@ -59,12 +61,16 @@ namespace PoRacer.Systems
             _nextPlace = 1;
             for (int racerIndex = 0; racerIndex < racers.Count; racerIndex++)
             {
-                _lastProgress[racers[racerIndex].RacerId] = 0f;
+                // Negative infinity: progress is measured from the common start
+                // line, so back-row racers begin below zero. The first report
+                // sets the real baseline for the stall timer.
+                _lastProgress[racers[racerIndex].RacerId] = float.NegativeInfinity;
                 _lastProgressTime[racers[racerIndex].RacerId] = 0f;
             }
             _model.ElapsedSeconds = 0f;
             _model.RaceActive = true;
-            _model.RaceNumber++;            _startedPublisher.Publish(new RaceStartedMessage(racers.Count));
+            _model.RaceNumber++;
+            _startedPublisher.Publish(new RaceStartedMessage(racers.Count));
         }
 
         public void ReportProgress(string racerId, float progressMeters)
@@ -168,20 +174,57 @@ namespace PoRacer.Systems
             }
             _model.ElapsedSeconds += deltaSeconds;
 
-            bool timedOut = _model.ElapsedSeconds >= RACE_TIMEOUT_SECONDS;
-            for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
+            if (_model.ElapsedSeconds >= RACE_TIMEOUT_SECONDS)
             {
-                RacerState racer = _model.Racers[racerIndex];
-                if (racer.Status != RacerStatus.Racing)
+                // Full time: the race is decided by distance instead of ending
+                // with an empty podium. Everyone still racing finishes now, ranked
+                // by how far they got; the podium cutoff DNFs the rest as usual.
+                FinishByDistance();
+            }
+            else
+            {
+                for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
                 {
-                    continue;
-                }
-                if (timedOut || _model.ElapsedSeconds - _lastProgressTime[racer.RacerId] >= NO_PROGRESS_TIMEOUT_SECONDS)
-                {
-                    MarkDnf(racer);
+                    RacerState racer = _model.Racers[racerIndex];
+                    if (racer.Status != RacerStatus.Racing)
+                    {
+                        continue;
+                    }
+                    if (_model.ElapsedSeconds - _lastProgressTime[racer.RacerId] >= NO_PROGRESS_TIMEOUT_SECONDS)
+                    {
+                        MarkDnf(racer);
+                    }
                 }
             }
             CheckRaceEnd();
+        }
+
+        /// <summary>
+        /// Timeout referee: finishes every still-racing racer in order of current
+        /// progress. NotifyFinish stamps them all with the same ElapsedSeconds, and
+        /// the same-frame tie resolver keeps this ordering because progress is
+        /// passed as the overshoot.
+        /// </summary>
+        private void FinishByDistance()
+        {
+            while (true)
+            {
+                RacerState farthest = null;
+                for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
+                {
+                    RacerState racer = _model.Racers[racerIndex];
+                    if (racer.Status == RacerStatus.Racing
+                        && (farthest == null || racer.Progress > farthest.Progress))
+                    {
+                        farthest = racer;
+                    }
+                }
+                if (farthest == null)
+                {
+                    return;
+                }
+                NotifyFinish(farthest.RacerId, farthest.Progress);
+            }
         }
 
         public void Dispose() { }
@@ -193,7 +236,8 @@ namespace PoRacer.Systems
                 return;
             }
             racer.Status = RacerStatus.Dnf;
-            racer.Place = -1;            _dnfPublisher.Publish(new RacerDnfMessage(racer.RacerId));
+            racer.Place = -1;
+            _dnfPublisher.Publish(new RacerDnfMessage(racer.RacerId));
         }
 
         private void CheckRaceEnd()
@@ -210,6 +254,7 @@ namespace PoRacer.Systems
                 }
             }
             _model.RaceActive = false;
+            RankLeftoverDnfs();
             var results = new List<RaceResultEntry>(_model.Racers.Count);
             for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
             {
@@ -222,6 +267,35 @@ namespace PoRacer.Systems
                     racer.Status == RacerStatus.Dnf));
             }
             _raceFinishedPublisher.Publish(new RaceFinishedMessage(results));
+        }
+
+        /// <summary>
+        /// Fills any podium places still empty at race end (fewer than 3 crossed,
+        /// or nobody did) with the knocked-out racers who got farthest. They keep
+        /// DNF status, so the HUD marks them as such and ELO still scores them as
+        /// non-finishers.
+        /// </summary>
+        private void RankLeftoverDnfs()
+        {
+            int podiumLimit = Math.Min(PODIUM_FINISHERS, _model.Racers.Count);
+            for (int place = _nextPlace; place <= podiumLimit; place++)
+            {
+                RacerState farthest = null;
+                for (int racerIndex = 0; racerIndex < _model.Racers.Count; racerIndex++)
+                {
+                    RacerState racer = _model.Racers[racerIndex];
+                    if (racer.Status == RacerStatus.Dnf && racer.Place <= 0
+                        && (farthest == null || racer.Progress > farthest.Progress))
+                    {
+                        farthest = racer;
+                    }
+                }
+                if (farthest == null)
+                {
+                    return;
+                }
+                farthest.Place = place;
+            }
         }
     }
 }

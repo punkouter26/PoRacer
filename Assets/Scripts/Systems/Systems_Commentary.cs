@@ -127,7 +127,7 @@ namespace PoRacer.Systems
 
         private void OnRaceFinished(RaceFinishedMessage message)
         {
-            _commentary.Add("Race complete! Next race starting soon.");
+            _commentary.Add("Race complete!");
         }
 
         private static string ColoredName(RacerState racer)

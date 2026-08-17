@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace PoRacer.Systems
 {
     /// <summary>
-    /// The 8 player-selectable maps. A map is a TrackKind the builder can produce;
-    /// slots without one yet are placeholders shown greyed out in the menu.
+    /// The player-selectable maps. A map is a TrackKind the builder can produce,
+    /// plus a race length and optional hazard features.
     /// </summary>
     public static class Systems_MapCatalog
     {
@@ -37,21 +37,19 @@ namespace PoRacer.Systems
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
-            // Lengths were 34/26/28/30/28; quadrupled 2026-08-17 per design request
-            // for long marathon races. Width stays 24 m so the 10-wide grid still
-            // fills the lane visually.
-            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 136f),
-            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 104f),
-            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 112f),
+            // Lengths sized to the current brains' training distribution (goals up
+            // to ~20 m): a winner should cross in roughly 1-2 minutes. The 4x
+            // "marathon" lengths produced all-DNF races. Width stays 24 m so the
+            // 10-wide grid still fills the lane visually.
+            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 34f),
+            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 26f),
+            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 28f),
             new MapEntry("Gale", TrackKind.Flat, available: true,
-                "Cross-winds shove the pack; boost pads reward a brave line", 120f,
+                "Cross-winds shove the pack; boost pads reward a brave line", 30f,
                 TrackFeatures.Gusts | TrackFeatures.BoostPads),
             new MapEntry("Roulette", TrackKind.Flat, available: true,
-                "The wheel spins: fresh terrain and hazards every race", 112f,
-                randomize: true),
-            new MapEntry("Map 6", TrackKind.Flat, available: false),
-            new MapEntry("Map 7", TrackKind.Flat, available: false),
-            new MapEntry("Map 8", TrackKind.Flat, available: false)
+                "The wheel spins: fresh terrain and hazards every race", 28f,
+                randomize: true)
         };
 
         /// <summary>Clamps out-of-range or placeholder picks back to the first map.</summary>

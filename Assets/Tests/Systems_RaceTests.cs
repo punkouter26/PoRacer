@@ -64,12 +64,31 @@ namespace PoRacer.Tests
         }
 
         [Test]
-        public void AllDnf_EndsRaceWithNoWinner()
+        public void Timeout_DecidesRaceByDistance()
         {
+            _sut.ReportProgress("worm#2", 8f);
+            _sut.ReportProgress("worm#1", 3f);
             _sut.Advance(Systems_Race.RACE_TIMEOUT_SECONDS + 1f);
 
             Assert.That(_model.RaceActive, Is.False);
             Assert.That(_raceFinished.Published, Has.Count.EqualTo(1));
+            Assert.That(_model.FindRacer("worm#2").Place, Is.EqualTo(1));
+            Assert.That(_model.FindRacer("worm#2").Status, Is.EqualTo(RacerStatus.Finished));
+            Assert.That(_model.FindRacer("worm#1").Place, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void AllKnockedOut_PodiumStillRanksByDistance()
+        {
+            _sut.ReportProgress("worm#2", 8f);
+            _sut.ReportProgress("worm#1", 3f);
+            _sut.NotifyFailure("worm#1");
+            _sut.NotifyFailure("worm#2");
+
+            Assert.That(_model.RaceActive, Is.False);
+            Assert.That(_model.FindRacer("worm#2").Place, Is.EqualTo(1));
+            Assert.That(_model.FindRacer("worm#2").Status, Is.EqualTo(RacerStatus.Dnf));
+            Assert.That(_model.FindRacer("worm#1").Place, Is.EqualTo(2));
             IReadOnlyList<RaceResultEntry> results = _raceFinished.Published[0].Results;
             for (int resultIndex = 0; resultIndex < results.Count; resultIndex++)
             {
@@ -110,9 +129,31 @@ namespace PoRacer.Tests
         }
 
         [Test]
+        public void OneFinisher_RemainingPodiumFilledByDistance()
+        {
+            _sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing },
+                new() { RacerId = "b", CreatureId = "spider", Status = RacerStatus.Racing },
+                new() { RacerId = "c", CreatureId = "crab", Status = RacerStatus.Racing }
+            });
+            _sut.ReportProgress("b", 2f);
+            _sut.ReportProgress("c", 6f);
+            _sut.NotifyFinish("a");
+            _sut.NotifyFailure("b");
+            _sut.NotifyFailure("c");
+
+            Assert.That(_model.RaceActive, Is.False);
+            Assert.That(_model.FindRacer("a").Place, Is.EqualTo(1));
+            Assert.That(_model.FindRacer("c").Place, Is.EqualTo(2));
+            Assert.That(_model.FindRacer("c").Status, Is.EqualTo(RacerStatus.Dnf));
+            Assert.That(_model.FindRacer("b").Place, Is.EqualTo(3));
+        }
+
+        [Test]
         public void FinishAfterDnf_IsIgnored()
         {
-            _sut.Advance(Systems_Race.RACE_TIMEOUT_SECONDS + 1f);
+            _sut.Advance(Systems_Race.NO_PROGRESS_TIMEOUT_SECONDS + 1f);
             _sut.NotifyFinish("worm#1");
 
             Assert.That(_model.FindRacer("worm#1").Status, Is.EqualTo(RacerStatus.Dnf));

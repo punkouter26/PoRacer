@@ -36,6 +36,9 @@ namespace PoRacer.Systems
 
         public void ApplyResults(System.Collections.Generic.IReadOnlyList<RaceResultEntry> results)
         {
+            // Cleared even when the race scores nothing: last race's swings must
+            // not linger on the next podium.
+            _model.ClearDeltas();
             bool anyFinisher = false;
             for (int entryIndex = 0; entryIndex < results.Count; entryIndex++)
             {
@@ -68,8 +71,11 @@ namespace PoRacer.Systems
                     float delta = pairK * (firstScore - expected);
                     _model.SetRating(first.CreatureId, firstRating + delta);
                     _model.SetRating(second.CreatureId, secondRating - delta);
+                    _model.AccumulateDelta(first.CreatureId, delta);
+                    _model.AccumulateDelta(second.CreatureId, -delta);
                 }
-            }        }
+            }
+        }
 
         private static float ScoreAgainst(RaceResultEntry first, RaceResultEntry second)
         {

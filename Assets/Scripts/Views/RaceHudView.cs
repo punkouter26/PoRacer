@@ -106,9 +106,12 @@ namespace PoRacer.Views
         // delta actually changes, keeping the shown podium allocation-free.
         private readonly string[] _podiumSourceIds = new string[PODIUM_ROWS];
         private readonly int[] _podiumSourceDeltas = new int[PODIUM_ROWS];
-        // Ratings captured on the race's rising edge, before Systems_Elo applies
-        // the result. Reused (cleared, never reallocated) every race.
-        private readonly System.Collections.Generic.Dictionary<string, float> _eloSnapshot = new();
+
+        // --- Commentary ticker ---
+        private CommentaryModel _commentary;
+        private VisualElement _ticker;
+        private readonly Label[] _tickerLines = new Label[CommentaryModel.MAX_LINES];
+        private int _tickerVersion = -1;
 
         // --- Right-edge progress rail ---
         private VisualElement _rail;
@@ -134,11 +137,13 @@ namespace PoRacer.Views
             RaceModel raceModel,
             EloModel eloModel,
             RaceConfigModel configModel,
+            CommentaryModel commentary,
             Systems_Spawn spawn)
         {
             _raceModel = raceModel;
             _eloModel = eloModel;
             _configModel = configModel;
+            _commentary = commentary;
             _spawn = spawn;
         }
 
@@ -211,7 +216,32 @@ namespace PoRacer.Views
                 _podiumRows.Add(row);
                 _podiumPanel.Add(row);
             }
+
+            // The results panel is a stop, not a pause: the player decides what
+            // happens next instead of the game silently looping forever.
+            var podiumButtons = new VisualElement();
+            podiumButtons.style.flexDirection = FlexDirection.Row;
+            podiumButtons.style.justifyContent = Justify.Center;
+            podiumButtons.style.marginTop = UiTheme.SPACE_MD;
+            var raceAgainButton = new Button(() => _spawn.RaceAgain()) { text = "RACE AGAIN" };
+            raceAgainButton.style.height = UiTheme.CONTROL_MD;
+            raceAgainButton.style.fontSize = UiTheme.FONT_MD;
+            raceAgainButton.style.flexGrow = 1f;
+            UiTheme.StyleButton(raceAgainButton);
+            UiTheme.AddHover(raceAgainButton);
+            podiumButtons.Add(raceAgainButton);
+            var backToMenuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
+            backToMenuButton.style.height = UiTheme.CONTROL_MD;
+            backToMenuButton.style.fontSize = UiTheme.FONT_MD;
+            backToMenuButton.style.width = 96;
+            backToMenuButton.style.marginLeft = UiTheme.SPACE_SM;
+            UiTheme.StyleButton(backToMenuButton);
+            UiTheme.AddHover(backToMenuButton);
+            podiumButtons.Add(backToMenuButton);
+            _podiumPanel.Add(podiumButtons);
+
             safeRoot.Add(_podiumPanel);
+            BuildTicker(safeRoot);
 
             var menuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
             menuButton.style.position = Position.Absolute;
@@ -272,6 +302,53 @@ namespace PoRacer.Views
             _introFieldLabel.style.fontSize = UiTheme.FONT_SM;
             _introFieldLabel.style.letterSpacing = 1.5f;
             details.Add(_introFieldLabel);
+        }
+
+        /// <summary>
+        /// Commentary ticker: the announcer lines from CommentaryModel, newest on
+        /// top, bottom-left above the safe inset. Labels are pooled; text is only
+        /// rewritten when the model version changes.
+        /// </summary>
+        private void BuildTicker(VisualElement safeRoot)
+        {
+            _ticker = new VisualElement { pickingMode = PickingMode.Ignore };
+            _ticker.style.position = Position.Absolute;
+            _ticker.style.left = UiTheme.SPACE_SM;
+            _ticker.style.right = new Length(20f, LengthUnit.Percent);
+            _ticker.style.bottom = UiTheme.SPACE_LG + UiTheme.SPACE_LG;
+            safeRoot.Add(_ticker);
+
+            for (int lineIndex = 0; lineIndex < CommentaryModel.MAX_LINES; lineIndex++)
+            {
+                var line = new Label { pickingMode = PickingMode.Ignore };
+                line.style.color = UiTheme.Text;
+                line.style.fontSize = UiTheme.FONT_SM;
+                line.style.whiteSpace = WhiteSpace.Normal;
+                line.enableRichText = true;
+                // Older lines fade back so the newest call reads first.
+                line.style.opacity = lineIndex == 0 ? 1f : 0.55f - 0.15f * lineIndex;
+                line.style.display = DisplayStyle.None;
+                _tickerLines[lineIndex] = line;
+                _ticker.Add(line);
+            }
+        }
+
+        private void RefreshTicker()
+        {
+            if (_commentary == null || _tickerVersion == _commentary.Version)
+            {
+                return;
+            }
+            _tickerVersion = _commentary.Version;
+            for (int lineIndex = 0; lineIndex < CommentaryModel.MAX_LINES; lineIndex++)
+            {
+                bool hasLine = lineIndex < _commentary.Lines.Count;
+                _tickerLines[lineIndex].style.display = hasLine ? DisplayStyle.Flex : DisplayStyle.None;
+                if (hasLine)
+                {
+                    _tickerLines[lineIndex].text = _commentary.Lines[lineIndex];
+                }
+            }
         }
 
         /// <summary>
@@ -380,12 +457,15 @@ namespace PoRacer.Views
             }
             _hudRoot.style.display = DisplayStyle.Flex;
 
+            // Only a racer who actually crossed (or was ranked in) counts for the
+            // celebration banner: an all-DNF race gets no "WINNER" fanfare.
             RacerState winner = null;
             for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
             {
-                if (_raceModel.Racers[racerIndex].Place == 1)
+                RacerState racer = _raceModel.Racers[racerIndex];
+                if (racer.Place == 1 && racer.Status == RacerStatus.Finished)
                 {
-                    winner = _raceModel.Racers[racerIndex];
+                    winner = racer;
                     break;
                 }
             }
@@ -394,10 +474,6 @@ namespace PoRacer.Views
             {
                 _goBannerUntil = Time.unscaledTime + GO_BANNER_SECONDS;
                 _winnerBannerUntil = 0f;
-                // Ratings must be captured now: Systems_Elo applies the result
-                // synchronously on RaceFinishedMessage, long before the podium
-                // refresh could read a "before" value.
-                SnapshotElo();
                 ShowIntroCard();
             }
             _wasRaceActive = _raceModel.RaceActive;
@@ -445,6 +521,7 @@ namespace PoRacer.Views
 
             RefreshPodium();
             RefreshFieldWidgets();
+            RefreshTicker();
         }
 
         /// <summary>
@@ -462,24 +539,6 @@ namespace PoRacer.Views
             _introCardHideAt = Time.unscaledTime
                 + INTRO_TOTAL_MS * 0.001f + INTRO_HIDE_GRACE_SECONDS;
             _introCard.experimental.animation.Start(0f, 1f, INTRO_TOTAL_MS, IntroCardTick);
-        }
-
-        /// <summary>
-        /// Stores each distinct creature's rating at the start of the race so the
-        /// podium can report the swing the race caused.
-        /// </summary>
-        private void SnapshotElo()
-        {
-            _eloSnapshot.Clear();
-            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
-            {
-                string creatureId = _raceModel.Racers[racerIndex].CreatureId;
-                if (string.IsNullOrEmpty(creatureId) || _eloSnapshot.ContainsKey(creatureId))
-                {
-                    continue;
-                }
-                _eloSnapshot[creatureId] = _eloModel.GetRating(creatureId);
-            }
         }
 
         /// <summary>Scale-pop the banner once each time its text changes.</summary>
@@ -539,7 +598,7 @@ namespace PoRacer.Views
                 if (medalist != null)
                 {
                     rating = _eloModel.GetRating(medalist.CreatureId);
-                    delta = Mathf.RoundToInt(rating - SnapshotRating(medalist.CreatureId, rating));
+                    delta = Mathf.RoundToInt(_eloModel.GetLastRaceDelta(medalist.CreatureId));
                 }
                 // Once the ELO update has landed nothing here changes again, so
                 // the steady-state podium builds no strings at all.
@@ -554,11 +613,17 @@ namespace PoRacer.Views
                 if (medalist == null)
                 {
                     _podiumLabels[podiumIndex].text = "—";
+                    continue;
                 }
-                else if (delta == 0)
+                // A knocked-out medalist got its place by distance, not by
+                // crossing — show DNF instead of a fictional finish time.
+                string timeText = medalist.Status == RacerStatus.Finished
+                    ? $"{medalist.FinishTime:0.0}s"
+                    : "DNF";
+                if (delta == 0)
                 {
                     _podiumLabels[podiumIndex].text =
-                        $"{medalist.DisplayName}  {medalist.FinishTime:0.0}s  ELO {rating:0}";
+                        $"{medalist.DisplayName}  {timeText}  ELO {rating:0}";
                 }
                 else
                 {
@@ -566,21 +631,10 @@ namespace PoRacer.Views
                     string sign = delta > 0 ? "+" : "-";
                     int magnitude = delta > 0 ? delta : -delta;
                     _podiumLabels[podiumIndex].text =
-                        $"{medalist.DisplayName}  {medalist.FinishTime:0.0}s  ELO {rating:0}  "
+                        $"{medalist.DisplayName}  {timeText}  ELO {rating:0}  "
                         + $"<color={deltaHex}>{sign}{magnitude}</color>";
                 }
             }
-        }
-
-        /// <summary>Rating this creature carried into the race just finished.</summary>
-        private float SnapshotRating(string creatureId, float fallback)
-        {
-            if (!string.IsNullOrEmpty(creatureId)
-                && _eloSnapshot.TryGetValue(creatureId, out float snapshot))
-            {
-                return snapshot;
-            }
-            return fallback;
         }
 
         /// <summary>

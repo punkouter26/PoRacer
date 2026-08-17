@@ -9,10 +9,7 @@ namespace PoRacer.Views
     public sealed class CameraRigView : MonoBehaviour
     {
         [SerializeField] private CinemachineCamera _overviewCamera;
-        [SerializeField] private CinemachineCamera _chaseCamera;
 
         public CinemachineCamera OverviewCamera => _overviewCamera;
-
-        public CinemachineCamera ChaseCamera => _chaseCamera;
     }
 }

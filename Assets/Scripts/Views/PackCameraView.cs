@@ -5,16 +5,19 @@ namespace PoRacer.Views
 {
     /// <summary>
     /// Drives the runtime pack camera created by Systems_CameraDirector: a
-    /// crane shot behind and above the field that widens or tightens so every
-    /// active racer stays in frame. Bounds and motion are smoothed so the shot
-    /// breathes instead of twitching with the physics. The CinemachineCamera on
-    /// this object is passive, so its transform — written here in LateUpdate —
-    /// is the shot.
+    /// crane shot behind and above the lead group that widens or tightens so
+    /// the racers who matter stay in frame. Stragglers far behind the leader
+    /// are dropped from the framing — chasing them made everyone a speck.
+    /// Bounds and motion are smoothed so the shot breathes instead of
+    /// twitching with the physics. The CinemachineCamera on this object is
+    /// passive, so its transform — written here in LateUpdate — is the shot.
     /// </summary>
     public sealed class PackCameraView : MonoBehaviour
     {
         private const float MIN_DISTANCE = 8f;
         private const float MAX_DISTANCE = 45f;
+        // Only racers within this many meters of the front runner are framed.
+        private const float LEAD_WINDOW_METERS = 14f;
         // Extra room around the bounds so nobody clips the frame edge.
         private const float FRAME_PADDING = 1.1f;
         private const float HEIGHT_RATIO = 0.62f;
@@ -47,13 +50,31 @@ namespace PoRacer.Views
 
         private void LateUpdate()
         {
+            // Pass 1: the front runner sets the framing window.
+            float leaderZ = float.NegativeInfinity;
+            for (int targetIndex = 0; targetIndex < _targets.Count; targetIndex++)
+            {
+                Transform target = _targets[targetIndex];
+                if (target == null || !target.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+                leaderZ = Mathf.Max(leaderZ, target.position.z);
+            }
+            if (float.IsNegativeInfinity(leaderZ))
+            {
+                return;
+            }
+
+            // Pass 2: bounds over the lead group only.
             Vector3 min = Vector3.positiveInfinity;
             Vector3 max = Vector3.negativeInfinity;
             int alive = 0;
             for (int targetIndex = 0; targetIndex < _targets.Count; targetIndex++)
             {
                 Transform target = _targets[targetIndex];
-                if (target == null || !target.gameObject.activeInHierarchy)
+                if (target == null || !target.gameObject.activeInHierarchy
+                    || target.position.z < leaderZ - LEAD_WINDOW_METERS)
                 {
                     continue;
                 }

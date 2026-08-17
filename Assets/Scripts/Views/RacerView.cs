@@ -9,14 +9,14 @@ namespace PoRacer.Views
     /// as DNF. A failed racer is deactivated so it cannot disturb the rest of
     /// the race. Also backstops the finish trigger: a racer fast enough to
     /// tunnel through the BoxCollider is finished by distance instead.
-    /// The first knockdown earns a marshal rescue (set upright in place);
-    /// the second is a DNF.
+    /// The first two knockdowns earn a marshal rescue (set upright in place);
+    /// the third is a DNF.
     /// </summary>
     public sealed class RacerView : MonoBehaviour
     {
         private const float KNOCKDOWN_SECONDS = 7f;
         private const float KNOCKDOWN_SPEED = 0.1f;
-        private const int MAX_RESCUES = 1;
+        private const int MAX_RESCUES = 2;
         private const float OUT_OF_BOUNDS_METERS = 100f;
         private const float FALL_OFF_Y = -10f;
 
