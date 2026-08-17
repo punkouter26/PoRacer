@@ -40,6 +40,11 @@ namespace PoRacer.Views
         public const int FADE_MS = 250;
         public const int POP_MS = 250;
         public const int ENTER_MS = 220;
+        // Gap between consecutive items of a staggered list entrance.
+        public const int STAGGER_MS = 120;
+        // Default rise distance of an entrance; panels use the taller travel.
+        public const float ENTER_SLIDE_PX = 16f;
+        public const float PANEL_SLIDE_PX = 24f;
 
         // ---- Palette ----
         // Accent is the single interactive/selection color; Gold is reserved for
@@ -251,18 +256,26 @@ namespace PoRacer.Views
         /// </summary>
         public static void PlayEnter(VisualElement element, int delayMs)
         {
-            const float SLIDE_PIXELS = 16f;
+            PlayEnter(element, delayMs, ENTER_SLIDE_PX);
+        }
+
+        /// <summary>
+        /// Same entrance with an explicit rise distance, for panels that need a
+        /// taller travel than a list row.
+        /// </summary>
+        public static void PlayEnter(VisualElement element, int delayMs, float slidePixels)
+        {
             float delay = delayMs < 0 ? 0f : delayMs;
             float total = delay + ENTER_MS;
             element.style.opacity = 0f;
-            element.style.translate = new Translate(0f, SLIDE_PIXELS);
+            element.style.translate = new Translate(0f, slidePixels);
             element.experimental.animation.Start(0f, 1f, (int)total, (target, value) =>
             {
                 float linear = Mathf.Clamp01((value * total - delay) / ENTER_MS);
                 float remaining = 1f - linear;
                 float eased = 1f - remaining * remaining * remaining;
                 target.style.opacity = eased;
-                target.style.translate = new Translate(0f, SLIDE_PIXELS * (1f - eased));
+                target.style.translate = new Translate(0f, slidePixels * (1f - eased));
             });
         }
     }

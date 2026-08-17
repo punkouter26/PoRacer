@@ -69,6 +69,12 @@ namespace PoRacer.Systems
         private const int GRID_COLUMNS = 10;
         private const float GRID_X_SPACING = 2f;
         private const float GRID_ROW_SPACING = 1.6f;
+        // Big fields start as a tower: keep a small footprint and stack layers
+        // upward, so the start is a glorious collapsing pile.
+        private const int STACK_THRESHOLD = 30;
+        private const int STACK_FOOTPRINT_ROWS = 3;
+        private const float STACK_LAYER_HEIGHT = 1.5f;
+        private const float STACK_JITTER = 0.35f;
 
         private readonly CreatureCatalog _catalog;
         private readonly RaceConfigModel _config;
@@ -235,8 +241,12 @@ namespace PoRacer.Systems
             {
                 float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : -1f;
                 // The ground must reach past the last grid row: big rosters spawn
-                // many rows deep behind the start line.
-                int gridRows = (_config.TotalCount() + GRID_COLUMNS - 1) / GRID_COLUMNS;
+                // many rows deep behind the start line. Stacked starts keep the
+                // small tower footprint instead.
+                int totalRequested = _config.TotalCount();
+                int gridRows = totalRequested > STACK_THRESHOLD
+                    ? STACK_FOOTPRINT_ROWS
+                    : (totalRequested + GRID_COLUMNS - 1) / GRID_COLUMNS;
                 float backMargin = Mathf.Max(7f, gridRows * GRID_ROW_SPACING + 4f);
                 _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
                     decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
@@ -288,14 +298,26 @@ namespace PoRacer.Systems
                             return;
                         }
                     }
-                    int column = gridIndex % GRID_COLUMNS;
-                    int row = gridIndex / GRID_COLUMNS;
+                    // Tower start for big fields: the same footprint repeats in
+                    // layers going up, with jitter so the pile topples, not balances.
+                    bool stacked = _config.TotalCount() > STACK_THRESHOLD;
+                    int layerSize = GRID_COLUMNS * STACK_FOOTPRINT_ROWS;
+                    int layer = stacked ? gridIndex / layerSize : 0;
+                    int flatIndex = stacked ? gridIndex % layerSize : gridIndex;
+                    int column = flatIndex % GRID_COLUMNS;
+                    int row = flatIndex / GRID_COLUMNS;
                     float localZ = -row * GRID_ROW_SPACING;
                     float localX = (column - (GRID_COLUMNS - 1) * 0.5f) * GRID_X_SPACING;
+                    if (layer > 0)
+                    {
+                        localX += ((float)_rng.NextDouble() - 0.5f) * 2f * STACK_JITTER;
+                        localZ += ((float)_rng.NextDouble() - 0.5f) * 2f * STACK_JITTER;
+                    }
                     // Small extra drop height so nobody is born intersecting the ground.
                     Vector3 position = gridOrigin + new Vector3(
                         localX,
-                        Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight + 0.05f,
+                        Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight + 0.05f
+                            + layer * STACK_LAYER_HEIGHT,
                         localZ);
 
                     GameObject instance = UnityEngine.Object.Instantiate(entry.prefab, position, Quaternion.identity);
@@ -368,6 +390,9 @@ namespace PoRacer.Systems
                     view.Initialize(racerId, _race, position.z, agent, finishZ);
                     instance.AddComponent<DustTrailView>();
                     instance.AddComponent<CreatureAudioView>();
+                    // After tinting on purpose: the eyes keep their own colors.
+                    instance.AddComponent<EyesView>();
+                    instance.AddComponent<SkidMarkView>().Initialize(_currentTrack);
 
                     _spawned.Add(instance);
                     _racerRoots.Add(instance.transform);
@@ -476,6 +501,13 @@ namespace PoRacer.Systems
                     drive.forceLimit = scaledForceLimit;
                 }
                 bodies[bodyIndex].xDrive = drive;
+            }
+            // Fatigue captures its full-power baseline lazily; the quirked drives
+            // must be what it captures, not the prefab's authored values.
+            var agent = instance.GetComponentInChildren<Unity.MLAgents.Agent>() as ICreatureAgent;
+            if (agent != null)
+            {
+                agent.NotifyDrivesChanged();
             }
         }
 

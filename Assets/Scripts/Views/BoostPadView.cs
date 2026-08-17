@@ -112,10 +112,11 @@ namespace PoRacer.Views
             shape.rotation = new Vector3(-90f, 0f, 0f);
 
             var sparkRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader != null)
+            // Additive glow: overlapping sparks burn hot instead of stacking flat.
+            Material glow = FxUtil.GlowParticleMaterial();
+            if (glow != null)
             {
-                sparkRenderer.material = new Material(particleShader);
+                sparkRenderer.material = glow;
             }
             sparkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             sparkRenderer.receiveShadows = false;

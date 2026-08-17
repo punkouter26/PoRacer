@@ -744,7 +744,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 29
+    VectorObservationSize: 46
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 9
@@ -813,6 +813,7 @@ MonoBehaviour:
   - 0.3
   - 0.85
   - 0.3
+  _gaitOffsets: []
 --- !u!114 &1311073377359481803
 MonoBehaviour:
   m_ObjectHideFlags: 0

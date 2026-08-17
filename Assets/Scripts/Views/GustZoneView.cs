@@ -125,11 +125,14 @@ namespace PoRacer.Views
             shape.scale = new Vector3(10f, 1.2f, 3f);
 
             var streakRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader != null)
+            // Soft round sprite; stretched along velocity so gusts read as streaks.
+            Material soft = FxUtil.SoftParticleMaterial();
+            if (soft != null)
             {
-                streakRenderer.material = new Material(particleShader);
+                streakRenderer.material = soft;
             }
+            streakRenderer.renderMode = ParticleSystemRenderMode.Stretch;
+            streakRenderer.velocityScale = 0.12f;
             streakRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             streakRenderer.receiveShadows = false;
             return ps;

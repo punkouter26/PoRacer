@@ -134,11 +134,12 @@ namespace PoRacer.Views
             trails.inheritParticleColor = true;
             trails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.04f);
             var fireworkRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            Material soft = FxUtil.SoftParticleMaterial();
-            if (soft != null)
+            // Additive glow: crossing spark tails sum into a bright bloom.
+            Material glow = FxUtil.GlowParticleMaterial();
+            if (glow != null)
             {
-                fireworkRenderer.material = soft;
-                fireworkRenderer.trailMaterial = soft;
+                fireworkRenderer.material = glow;
+                fireworkRenderer.trailMaterial = glow;
             }
             fireworkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             fireworkRenderer.receiveShadows = false;

@@ -25,7 +25,9 @@ namespace PoRacer.Systems
         private const float NEAR_CLIP = 0.3f;
         private const float FAR_CLIP = 400f;
         // Once the front runner passes this fraction of the track, feature them.
-        private const float FINAL_STRETCH_FRACTION = 0.75f;
+        // Late on purpose: the wide pack shot owns most of the race, the
+        // close-up only owns the finish itself.
+        private const float FINAL_STRETCH_FRACTION = 0.9f;
 
         private readonly RaceModel _model;
         private readonly CameraRigView _rig;

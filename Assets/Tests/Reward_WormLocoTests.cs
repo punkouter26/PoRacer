@@ -11,9 +11,9 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            Assert.That(sut.Step(9.9f, 0f, 0f),
+            Assert.That(sut.Step(9.9f, 0f, 0f, 0f),
                 Is.EqualTo(0.1f * Reward_WormLoco.PROGRESS_SCALE - Reward_WormLoco.TIME_PENALTY).Within(0.0001f));
-            Assert.That(sut.Step(9.95f, 0f, 0f), Is.LessThan(0f));
+            Assert.That(sut.Step(9.95f, 0f, 0f, 0f), Is.LessThan(0f));
         }
 
         [Test]
@@ -25,7 +25,7 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            float total = sut.Step(9.9f, 0f, 0f) + sut.Step(9.95f, 0f, 0f) + sut.Step(9.8f, 0f, 0f);
+            float total = sut.Step(9.9f, 0f, 0f, 0f) + sut.Step(9.95f, 0f, 0f, 0f) + sut.Step(9.8f, 0f, 0f, 0f);
 
             Assert.That(total,
                 Is.EqualTo(0.2f * Reward_WormLoco.PROGRESS_SCALE - 3f * Reward_WormLoco.TIME_PENALTY).Within(0.0001f));
@@ -39,7 +39,7 @@ namespace PoRacer.Tests
 
             for (int stepIndex = 0; stepIndex < Reward_WormLoco.NO_PROGRESS_LIMIT_STEPS; stepIndex++)
             {
-                sut.Step(10f, 0f, 0f);
+                sut.Step(10f, 0f, 0f, 0f);
             }
 
             Assert.That(sut.NoProgressExceeded, Is.True);
@@ -53,9 +53,9 @@ namespace PoRacer.Tests
 
             for (int stepIndex = 0; stepIndex < Reward_WormLoco.NO_PROGRESS_LIMIT_STEPS - 1; stepIndex++)
             {
-                sut.Step(10f, 0f, 0f);
+                sut.Step(10f, 0f, 0f, 0f);
             }
-            sut.Step(9f, 0f, 0f);
+            sut.Step(9f, 0f, 0f, 0f);
 
             Assert.That(sut.NoProgressExceeded, Is.False);
         }
@@ -75,7 +75,7 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            sut.Step(10f, 1f, 0f);
+            sut.Step(10f, 1f, 0f, 0f);
 
             Assert.That(sut.LastEfficiencyPenalty, Is.EqualTo(-Reward_WormLoco.ENERGY_PENALTY_SCALE).Within(0.0001f));
         }
@@ -86,7 +86,7 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            sut.Step(10f, 5f, 0f);
+            sut.Step(10f, 5f, 0f, 0f);
 
             Assert.That(sut.LastEfficiencyPenalty, Is.EqualTo(-Reward_WormLoco.ENERGY_PENALTY_SCALE).Within(0.0001f));
         }
@@ -97,7 +97,7 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            sut.Step(10f, 0f, 1f);
+            sut.Step(10f, 0f, 1f, 0f);
 
             Assert.That(sut.LastUprightBonus, Is.EqualTo(Reward_WormLoco.UPRIGHT_BONUS_SCALE).Within(0.0001f));
         }
@@ -108,9 +108,33 @@ namespace PoRacer.Tests
             var sut = new Reward_WormLoco();
             sut.Reset(10f);
 
-            sut.Step(10f, 0f, -1f);
+            sut.Step(10f, 0f, -1f, 0f);
 
             Assert.That(sut.LastUprightBonus, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Step_JerkyActions_ApplyJerkPenalty()
+        {
+            var sut = new Reward_WormLoco();
+            sut.Reset(10f);
+
+            sut.Step(10f, 0f, 0f, 1f);
+
+            Assert.That(sut.LastJerkPenalty, Is.EqualTo(-Reward_WormLoco.JERK_PENALTY_SCALE).Within(0.0001f));
+        }
+
+        [Test]
+        public void Step_JerkOutOfRange_IsClampedToActionRange()
+        {
+            // Mean |action delta| can never exceed 2 for [-1, 1] actions; larger
+            // values are corrupt input and must be clamped, not amplified.
+            var sut = new Reward_WormLoco();
+            sut.Reset(10f);
+
+            sut.Step(10f, 0f, 0f, 50f);
+
+            Assert.That(sut.LastJerkPenalty, Is.EqualTo(-2f * Reward_WormLoco.JERK_PENALTY_SCALE).Within(0.0001f));
         }
     }
 }

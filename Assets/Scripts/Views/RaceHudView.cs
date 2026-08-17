@@ -11,7 +11,8 @@ namespace PoRacer.Views
     /// Deliberately minimal so the race itself owns the screen: version stamp
     /// top-left, MENU button top-right, top-3 chips under the stamp, a thin
     /// progress rail hugging the right edge, center banners (countdown / GO /
-    /// winner), and the between-races podium. Refreshed on a schedule by reading
+    /// winner), a race intro card that wipes through on the start, and the
+    /// between-races podium with per-creature ELO swing. Refreshed on a schedule by reading
     /// the Models — no per-frame polling in Update, and no allocation in the
     /// refresh past the elements pooled during the first build.
     /// </summary>
@@ -31,7 +32,52 @@ namespace PoRacer.Views
         private const float RAIL_SPAN_PERCENT = 96f;
         private const float CHIP_SWATCH_SIZE = 8f;
 
+        // --- Race intro card ---
+        // Sits above the countdown/GO banner's 40% line so the two never collide.
+        private const float INTRO_TOP_PERCENT = 28f;
+        private const int INTRO_TOTAL_MS = 2500;
+        private const int INTRO_IN_MS = 320;
+        private const int INTRO_OUT_MS = 320;
+        private const float INTRO_SLIDE_PX = 280f;
+        // Safety net for the schedule-driven hide, past the animation's own end.
+        private const float INTRO_HIDE_GRACE_SECONDS = 0.25f;
+
+        // --- ELO delta rich-text tints ---
+        private const string DELTA_UP_HEX = "#7CE87C";
+        private const string DELTA_DOWN_HEX = "#E86A5A";
+
         private static readonly Color[] MedalColors = { UiTheme.Gold, UiTheme.Silver, UiTheme.Bronze };
+
+        /// <summary>
+        /// Slide-in, hold, slide-out of the intro card baked into a single
+        /// animation. Static so the delegate is allocated once for the process
+        /// rather than per race start.
+        /// </summary>
+        private static readonly System.Action<VisualElement, float> IntroCardTick = (element, value) =>
+        {
+            float elapsedMs = value * INTRO_TOTAL_MS;
+            float appear;
+            if (elapsedMs < INTRO_IN_MS)
+            {
+                float remaining = 1f - elapsedMs / INTRO_IN_MS;
+                appear = 1f - remaining * remaining * remaining;
+            }
+            else if (elapsedMs < INTRO_TOTAL_MS - INTRO_OUT_MS)
+            {
+                appear = 1f;
+            }
+            else
+            {
+                float exit = (elapsedMs - (INTRO_TOTAL_MS - INTRO_OUT_MS)) / INTRO_OUT_MS;
+                appear = 1f - exit * exit;
+            }
+            element.style.opacity = appear;
+            element.style.translate = new Translate(-INTRO_SLIDE_PX * (1f - appear), 0f);
+            if (value >= 1f)
+            {
+                element.style.display = DisplayStyle.None;
+            }
+        };
 
         private RaceModel _raceModel;
         private EloModel _eloModel;
@@ -44,7 +90,25 @@ namespace PoRacer.Views
         private float _winnerBannerUntil;
         private VisualElement _podiumPanel;
         private readonly System.Collections.Generic.List<Label> _podiumLabels = new();
+        private readonly System.Collections.Generic.List<VisualElement> _podiumRows = new();
         private string _lastBannerText;
+
+        // --- Race intro card ---
+        private VisualElement _introCard;
+        private Label _introRaceLabel;
+        private Label _introTrackLabel;
+        private Label _introFieldLabel;
+        private float _introCardHideAt;
+
+        // --- Results show ---
+        private bool _podiumWasVisible;
+        // Row change guards: text is only rebuilt when the occupant or its ELO
+        // delta actually changes, keeping the shown podium allocation-free.
+        private readonly string[] _podiumSourceIds = new string[PODIUM_ROWS];
+        private readonly int[] _podiumSourceDeltas = new int[PODIUM_ROWS];
+        // Ratings captured on the race's rising edge, before Systems_Elo applies
+        // the result. Reused (cleared, never reallocated) every race.
+        private readonly System.Collections.Generic.Dictionary<string, float> _eloSnapshot = new();
 
         // --- Right-edge progress rail ---
         private VisualElement _rail;
@@ -111,6 +175,8 @@ namespace PoRacer.Views
             _bannerLabel.style.display = DisplayStyle.None;
             safeRoot.Add(_bannerLabel);
 
+            BuildIntroCard(safeRoot);
+
             // Podium: shown in the pause between races (top 3 with medal tints).
             _podiumPanel = new VisualElement { pickingMode = PickingMode.Ignore };
             _podiumPanel.style.position = Position.Absolute;
@@ -138,8 +204,11 @@ namespace PoRacer.Views
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.style.color = UiTheme.Text;
                 label.style.fontSize = UiTheme.FONT_MD;
+                // The ELO delta is injected as a <color> tag.
+                label.enableRichText = true;
                 row.Add(label);
                 _podiumLabels.Add(label);
+                _podiumRows.Add(row);
                 _podiumPanel.Add(row);
             }
             safeRoot.Add(_podiumPanel);
@@ -156,6 +225,53 @@ namespace PoRacer.Views
             safeRoot.Add(menuButton);
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
+        }
+
+        /// <summary>
+        /// Broadcast-style bug that wipes in from the left edge as the race goes
+        /// green: race number, track and field size. Built once and toggled — a
+        /// race start only sets three strings and restarts one animation.
+        /// </summary>
+        private void BuildIntroCard(VisualElement safeRoot)
+        {
+            _introCard = new VisualElement { pickingMode = PickingMode.Ignore };
+            _introCard.style.position = Position.Absolute;
+            _introCard.style.top = new Length(INTRO_TOP_PERCENT, LengthUnit.Percent);
+            _introCard.style.left = UiTheme.SPACE_MD;
+            _introCard.style.flexDirection = FlexDirection.Row;
+            _introCard.style.alignItems = Align.Center;
+            UiTheme.StylePanel(_introCard);
+            _introCard.style.display = DisplayStyle.None;
+            safeRoot.Add(_introCard);
+
+            _introRaceLabel = new Label { pickingMode = PickingMode.Ignore };
+            _introRaceLabel.style.color = UiTheme.Text;
+            _introRaceLabel.style.fontSize = UiTheme.FONT_TITLE;
+            _introRaceLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _introCard.Add(_introRaceLabel);
+
+            var divider = new VisualElement { pickingMode = PickingMode.Ignore };
+            divider.style.width = 2f;
+            divider.style.height = UiTheme.CONTROL_MD;
+            divider.style.flexShrink = 0f;
+            divider.style.backgroundColor = UiTheme.Gold;
+            UiTheme.SetMargin(divider, 0f, UiTheme.SPACE_MD);
+            _introCard.Add(divider);
+
+            var details = new VisualElement { pickingMode = PickingMode.Ignore };
+            _introCard.Add(details);
+
+            _introTrackLabel = new Label { pickingMode = PickingMode.Ignore };
+            _introTrackLabel.style.color = UiTheme.Gold;
+            _introTrackLabel.style.fontSize = UiTheme.FONT_LG;
+            _introTrackLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            details.Add(_introTrackLabel);
+
+            _introFieldLabel = new Label { pickingMode = PickingMode.Ignore };
+            _introFieldLabel.style.color = UiTheme.TextDim;
+            _introFieldLabel.style.fontSize = UiTheme.FONT_SM;
+            _introFieldLabel.style.letterSpacing = 1.5f;
+            details.Add(_introFieldLabel);
         }
 
         /// <summary>
@@ -278,8 +394,21 @@ namespace PoRacer.Views
             {
                 _goBannerUntil = Time.unscaledTime + GO_BANNER_SECONDS;
                 _winnerBannerUntil = 0f;
+                // Ratings must be captured now: Systems_Elo applies the result
+                // synchronously on RaceFinishedMessage, long before the podium
+                // refresh could read a "before" value.
+                SnapshotElo();
+                ShowIntroCard();
             }
             _wasRaceActive = _raceModel.RaceActive;
+
+            // The card retires itself at the end of its animation; this is the
+            // backstop for a run interrupted by the menu or a domain event.
+            if (_introCardHideAt > 0f && Time.unscaledTime >= _introCardHideAt)
+            {
+                _introCardHideAt = 0f;
+                _introCard.style.display = DisplayStyle.None;
+            }
 
             if (winner != null && _winnerBannerUntil == 0f)
             {
@@ -318,6 +447,41 @@ namespace PoRacer.Views
             RefreshFieldWidgets();
         }
 
+        /// <summary>
+        /// Fills and plays the intro card. Independent of the banner elements, so
+        /// the countdown and GO logic are untouched by it.
+        /// </summary>
+        private void ShowIntroCard()
+        {
+            _introRaceLabel.text = $"RACE {_raceModel.RaceNumber}";
+            _introTrackLabel.text = _raceModel.TrackName;
+            _introFieldLabel.text = $"{_raceModel.Racers.Count} RACERS";
+            _introCard.style.opacity = 0f;
+            _introCard.style.translate = new Translate(-INTRO_SLIDE_PX, 0f);
+            _introCard.style.display = DisplayStyle.Flex;
+            _introCardHideAt = Time.unscaledTime
+                + INTRO_TOTAL_MS * 0.001f + INTRO_HIDE_GRACE_SECONDS;
+            _introCard.experimental.animation.Start(0f, 1f, INTRO_TOTAL_MS, IntroCardTick);
+        }
+
+        /// <summary>
+        /// Stores each distinct creature's rating at the start of the race so the
+        /// podium can report the swing the race caused.
+        /// </summary>
+        private void SnapshotElo()
+        {
+            _eloSnapshot.Clear();
+            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
+            {
+                string creatureId = _raceModel.Racers[racerIndex].CreatureId;
+                if (string.IsNullOrEmpty(creatureId) || _eloSnapshot.ContainsKey(creatureId))
+                {
+                    continue;
+                }
+                _eloSnapshot[creatureId] = _eloModel.GetRating(creatureId);
+            }
+        }
+
         /// <summary>Scale-pop the banner once each time its text changes.</summary>
         private void PopBanner()
         {
@@ -338,7 +502,21 @@ namespace PoRacer.Views
             // Only during the pause between races, once results exist.
             bool showPodium = !_raceModel.RaceActive && _raceModel.Racers.Count > 0
                 && _raceModel.CountdownValue == 0;
-            _podiumPanel.style.display = showPodium ? DisplayStyle.Flex : DisplayStyle.None;
+            if (showPodium != _podiumWasVisible)
+            {
+                _podiumWasVisible = showPodium;
+                _podiumPanel.style.display = showPodium ? DisplayStyle.Flex : DisplayStyle.None;
+                if (showPodium)
+                {
+                    // Force one rebuild of every row: racer ids can repeat across
+                    // races, so the change guards below must not carry over.
+                    for (int rowIndex = 0; rowIndex < PODIUM_ROWS; rowIndex++)
+                    {
+                        _podiumSourceIds[rowIndex] = null;
+                    }
+                    PlayPodiumEntrance();
+                }
+            }
             if (!showPodium)
             {
                 return;
@@ -354,16 +532,67 @@ namespace PoRacer.Views
                         break;
                     }
                 }
+
+                string sourceId = medalist == null ? string.Empty : medalist.RacerId;
+                float rating = 0f;
+                int delta = 0;
                 if (medalist != null)
                 {
-                    float rating = _eloModel.GetRating(medalist.CreatureId);
+                    rating = _eloModel.GetRating(medalist.CreatureId);
+                    delta = Mathf.RoundToInt(rating - SnapshotRating(medalist.CreatureId, rating));
+                }
+                // Once the ELO update has landed nothing here changes again, so
+                // the steady-state podium builds no strings at all.
+                if (string.Equals(_podiumSourceIds[podiumIndex], sourceId)
+                    && _podiumSourceDeltas[podiumIndex] == delta)
+                {
+                    continue;
+                }
+                _podiumSourceIds[podiumIndex] = sourceId;
+                _podiumSourceDeltas[podiumIndex] = delta;
+
+                if (medalist == null)
+                {
+                    _podiumLabels[podiumIndex].text = "—";
+                }
+                else if (delta == 0)
+                {
                     _podiumLabels[podiumIndex].text =
                         $"{medalist.DisplayName}  {medalist.FinishTime:0.0}s  ELO {rating:0}";
                 }
                 else
                 {
-                    _podiumLabels[podiumIndex].text = "—";
+                    string deltaHex = delta > 0 ? DELTA_UP_HEX : DELTA_DOWN_HEX;
+                    string sign = delta > 0 ? "+" : "-";
+                    int magnitude = delta > 0 ? delta : -delta;
+                    _podiumLabels[podiumIndex].text =
+                        $"{medalist.DisplayName}  {medalist.FinishTime:0.0}s  ELO {rating:0}  "
+                        + $"<color={deltaHex}>{sign}{magnitude}</color>";
                 }
+            }
+        }
+
+        /// <summary>Rating this creature carried into the race just finished.</summary>
+        private float SnapshotRating(string creatureId, float fallback)
+        {
+            if (!string.IsNullOrEmpty(creatureId)
+                && _eloSnapshot.TryGetValue(creatureId, out float snapshot))
+            {
+                return snapshot;
+            }
+            return fallback;
+        }
+
+        /// <summary>
+        /// Results reveal: the panel rises into place, then the three rows land
+        /// top to bottom.
+        /// </summary>
+        private void PlayPodiumEntrance()
+        {
+            UiTheme.PlayEnter(_podiumPanel, 0, UiTheme.PANEL_SLIDE_PX);
+            for (int podiumIndex = 0; podiumIndex < _podiumRows.Count; podiumIndex++)
+            {
+                UiTheme.PlayEnter(_podiumRows[podiumIndex], podiumIndex * UiTheme.STAGGER_MS);
             }
         }
 

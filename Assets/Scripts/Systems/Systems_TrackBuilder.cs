@@ -119,46 +119,56 @@ namespace PoRacer.Systems
 
             if (kind == TrackKind.Bumps)
             {
-                ScatterBoxes(kind, parent, width, length, rng, count: 24,
+                ScatterBoxes(kind, parent, width, length, rng, ScaleCount(24, length),
                     minSize: new Vector3(0.4f, 0.08f, 0.4f), maxSize: new Vector3(1.2f, 0.22f, 1.2f));
             }
             else if (kind == TrackKind.Walls || kind == TrackKind.RoughBlocked)
             {
-                ScatterBoxes(kind, parent, width, length, rng, count: 10,
+                ScatterBoxes(kind, parent, width, length, rng, ScaleCount(10, length),
                     minSize: new Vector3(2f, 0.25f, 0.25f), maxSize: new Vector3(5f, 0.4f, 0.35f));
             }
             else if (kind == TrackKind.Lumpy)
             {
-                ScatterBoxes(kind, parent, width, length, rng, count: 14,
+                ScatterBoxes(kind, parent, width, length, rng, ScaleCount(14, length),
                     minSize: new Vector3(0.5f, 0.3f, 0.5f), maxSize: new Vector3(1.8f, 0.9f, 1.8f));
             }
             else if (kind == TrackKind.Swamp)
             {
-                BuildMudPits(parent, width, length, rng, count: 5);
-                BuildGates(parent, width, length, rng, count: 2);
+                BuildMudPits(parent, width, length, rng, ScaleCount(5, length));
+                BuildGates(parent, width, length, rng, ScaleCount(2, length));
             }
 
             if ((features & TrackFeatures.MudPits) != 0 && kind != TrackKind.Swamp)
             {
-                BuildMudPits(parent, width, length, rng, count: 3);
+                BuildMudPits(parent, width, length, rng, ScaleCount(3, length));
             }
             if ((features & TrackFeatures.Gates) != 0 && kind != TrackKind.Swamp)
             {
-                BuildGates(parent, width, length, rng, count: 1);
+                BuildGates(parent, width, length, rng, ScaleCount(1, length));
             }
             if ((features & TrackFeatures.BoostPads) != 0)
             {
-                BuildBoostPads(kind, parent, width, length, rng, count: 3);
+                BuildBoostPads(kind, parent, width, length, rng, ScaleCount(3, length));
             }
             if ((features & TrackFeatures.Gusts) != 0)
             {
-                BuildGustZones(parent, width, length, rng, count: 2);
+                BuildGustZones(parent, width, length, rng, ScaleCount(2, length));
             }
 
             if (decorate)
             {
                 DecorateTrack(kind, parent, width, length, finishZ > 0f ? finishZ : length - 2f, rng);
             }
+        }
+
+        /// <summary>
+        /// Hazard/obstacle counts were authored for ~28 m tracks; longer maps
+        /// (quadrupled 2026-08-17) keep the same density per meter. Never shrinks
+        /// below the authored count, so training's 24 m areas are unchanged.
+        /// </summary>
+        private static int ScaleCount(int baseCount, float length)
+        {
+            return Mathf.Max(baseCount, Mathf.RoundToInt(baseCount * length / 28f));
         }
 
         /// <summary>Surface height at local z on the track centerline (x = 0).</summary>
@@ -281,7 +291,11 @@ namespace PoRacer.Systems
             // TrackGrid samples _BaseMap in world space; white base keeps the
             // texture's own colors, grid lines stay untouched.
             material.SetColor("_BaseColor", Color.white);
-            material.SetTexture("_BaseMap", BuildGroundTexture(kind));
+            Texture2D groundTexture = BuildGroundTexture(kind);
+            material.SetTexture("_BaseMap", groundTexture);
+            // Bump derived from the same blotches so the dirt catches the sun.
+            material.SetTexture("_BumpMap", BuildGroundNormalMap(groundTexture));
+            material.EnableKeyword("_NORMALMAP");
             GroundMaterials[kind] = material;
             return material;
         }
@@ -334,6 +348,37 @@ namespace PoRacer.Systems
             texture.SetPixels(pixels);
             texture.Apply(true);
             return texture;
+        }
+
+        /// <summary>
+        /// Tangent-space normal map from the ground texture's brightness: the
+        /// blotches become shallow bumps, so the flat dirt reads as dirt.
+        /// </summary>
+        private static Texture2D BuildGroundNormalMap(Texture2D source)
+        {
+            const float strength = 1.6f;
+            int size = source.width;
+            var normalMap = new Texture2D(size, size, TextureFormat.RGB24, true, linear: true)
+            {
+                wrapMode = TextureWrapMode.Repeat
+            };
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float left = source.GetPixel((x - 1 + size) % size, y).grayscale;
+                    float right = source.GetPixel((x + 1) % size, y).grayscale;
+                    float down = source.GetPixel(x, (y - 1 + size) % size).grayscale;
+                    float up = source.GetPixel(x, (y + 1) % size).grayscale;
+                    var normal = new Vector3((left - right) * strength, (down - up) * strength, 1f).normalized;
+                    pixels[y * size + x] = new Color(
+                        normal.x * 0.5f + 0.5f, normal.y * 0.5f + 0.5f, normal.z * 0.5f + 0.5f);
+                }
+            }
+            normalMap.SetPixels(pixels);
+            normalMap.Apply(true);
+            return normalMap;
         }
 
         /// <summary>
@@ -575,11 +620,12 @@ namespace PoRacer.Systems
 
             if (_forestPrefab != null)
             {
-                // Forest tiles are 10 m squares; three per side, jittered so the
-                // tree line never reads as a fence.
+                // Forest tiles are 10 m squares, one row per ~11 m of track per
+                // side, jittered so the tree line never reads as a fence.
+                int forestTiles = Mathf.Max(3, Mathf.CeilToInt(length / 11f));
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    for (int tileIndex = 0; tileIndex < 3; tileIndex++)
+                    for (int tileIndex = 0; tileIndex < forestTiles; tileIndex++)
                     {
                         float z = 1f + tileIndex * 11f + (float)rng.NextDouble() * 4f;
                         float x = side * (width * 0.5f + 8f + (float)rng.NextDouble() * 2.5f);
@@ -603,9 +649,12 @@ namespace PoRacer.Systems
                 }
             }
 
+            BuildCrowdStands(parent, width, length, rng);
+
             if (_bushPrefab != null)
             {
-                for (int bushIndex = 0; bushIndex < 22; bushIndex++)
+                int bushCount = ScaleCount(22, length);
+                for (int bushIndex = 0; bushIndex < bushCount; bushIndex++)
                 {
                     int side = rng.Next(2) == 0 ? -1 : 1;
                     float x = side * (width * 0.5f + 0.8f + (float)rng.NextDouble() * 2.8f);
@@ -614,6 +663,51 @@ namespace PoRacer.Systems
                     PlaceProp(_bushPrefab, parent,
                         new Vector3(x, SurfaceHeight(kind, x, z), z),
                         rotationY: (float)rng.NextDouble() * 360f, Vector3.one * scale, overrideMaterial: null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Grandstands: two per side, a dark bleacher wedge topped with a single
+        /// vertex-colored crowd mesh that CrowdStandView bounces on big moments.
+        /// Visual-only — no colliders.
+        /// </summary>
+        private static void BuildCrowdStands(Transform parent, float width, float length, System.Random rng)
+        {
+            const int standRows = 3;
+            const int standColumns = 16;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                for (int standIndex = 0; standIndex < 2; standIndex++)
+                {
+                    float z = length * (0.28f + 0.36f * standIndex) + ((float)rng.NextDouble() - 0.5f) * 2f;
+                    float x = side * (width * 0.5f + 3.2f);
+
+                    var stand = new GameObject("CrowdStand");
+                    stand.transform.SetParent(parent, false);
+                    stand.transform.localPosition = new Vector3(x, 0f, z);
+                    // Crowd mesh faces its local +z; turn each stand toward the track.
+                    stand.transform.localRotation = Quaternion.Euler(0f, side < 0 ? 90f : -90f, 0f);
+
+                    // Bleacher wedge: three rising steps, visual only.
+                    for (int stepIndex = 0; stepIndex < standRows; stepIndex++)
+                    {
+                        var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        step.name = "Bleacher";
+                        UnityEngine.Object.Destroy(step.GetComponent<Collider>());
+                        step.transform.SetParent(stand.transform, false);
+                        step.transform.localPosition = new Vector3(0f, 0.2f + stepIndex * 0.45f, -0.8f * stepIndex);
+                        step.transform.localScale = new Vector3(standColumns * 0.55f + 0.6f, 0.4f, 0.9f);
+                        var stepRenderer = step.GetComponent<MeshRenderer>();
+                        stepRenderer.sharedMaterial = _archMaterial != null ? _archMaterial : stepRenderer.sharedMaterial;
+                        stepRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    }
+
+                    GameObject crowd = Views.CrowdStandView.BuildCrowdMesh(rng, standRows, standColumns);
+                    crowd.transform.SetParent(stand.transform, false);
+                    crowd.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+                    stand.AddComponent<Views.CrowdStandView>()
+                        .Initialize(crowd.transform, (float)rng.NextDouble() * 3f);
                 }
             }
         }

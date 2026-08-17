@@ -22,6 +22,11 @@ namespace PoRacer.Rewards
         public const float MAX_STEP_DELTA_METERS = 0.2f; // physics-glitch clamp: real max is ~0.04 m per 0.02 s step
         public const float ENERGY_PENALTY_SCALE = 0.05f;
         public const float UPRIGHT_BONUS_SCALE = 0.02f;
+        // Smoothness shaping: mean |action delta| per joint per step. Actions are
+        // held between decisions (period 5), so the delta is nonzero on decision
+        // steps only; the scale is sized so a thrashing policy loses a few points
+        // per episode while a smooth gait barely notices it.
+        public const float JERK_PENALTY_SCALE = 0.01f;
         // Races are won on time: a constant per-step cost makes a fast finish
         // strictly better than a slow one even when both cover the same meters.
         // Full episode (3000 steps) costs 6, well under the goal bonus of 10.
@@ -41,6 +46,8 @@ namespace PoRacer.Rewards
 
         public float LastUprightBonus { get; private set; }
 
+        public float LastJerkPenalty { get; private set; }
+
         public void Reset(float initialDistance)
         {
             // A NaN initial distance (agent reset while its articulation was still
@@ -55,6 +62,7 @@ namespace PoRacer.Rewards
             LastProgressReward = 0f;
             LastEfficiencyPenalty = 0f;
             LastUprightBonus = 0f;
+            LastJerkPenalty = 0f;
         }
 
         /// <param name="currentDistance">Current distance to goal, meters.</param>
@@ -64,7 +72,8 @@ namespace PoRacer.Rewards
         /// must show up here even when the action itself barely changes.
         /// </param>
         /// <param name="uprightDot">Dot of root up-vector with world up; 1 = upright.</param>
-        public float Step(float currentDistance, float normalizedTorque, float uprightDot)
+        /// <param name="actionJerk">Mean |action delta| per joint this step, [0, 2].</param>
+        public float Step(float currentDistance, float normalizedTorque, float uprightDot, float actionJerk)
         {
             // NaN/Inf firewall: an exploding articulation can produce NaN distance,
             // torque, or up-vector for a frame before the agent's failure check
@@ -82,6 +91,10 @@ namespace PoRacer.Rewards
             if (float.IsNaN(uprightDot) || float.IsInfinity(uprightDot))
             {
                 uprightDot = 0f;
+            }
+            if (float.IsNaN(actionJerk) || float.IsInfinity(actionJerk))
+            {
+                actionJerk = 0f;
             }
 
             float delta = _previousDistance - currentDistance;
@@ -107,12 +120,14 @@ namespace PoRacer.Rewards
 
             float clampedTorque = normalizedTorque < 0f ? 0f : normalizedTorque > 1f ? 1f : normalizedTorque;
             float uprightPositive = uprightDot > 0f ? uprightDot : 0f;
+            float clampedJerk = actionJerk < 0f ? 0f : actionJerk > 2f ? 2f : actionJerk;
 
             LastProgressReward = delta * PROGRESS_SCALE;
             LastEfficiencyPenalty = -ENERGY_PENALTY_SCALE * clampedTorque;
             LastUprightBonus = UPRIGHT_BONUS_SCALE * uprightPositive;
+            LastJerkPenalty = -JERK_PENALTY_SCALE * clampedJerk;
 
-            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus - TIME_PENALTY;
+            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus + LastJerkPenalty - TIME_PENALTY;
         }
 
         public bool ReachedGoal(float currentDistance) => currentDistance <= GOAL_RADIUS_METERS;

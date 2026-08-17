@@ -83,9 +83,17 @@ namespace PoRacer.Views
             Time.timeScale = 1f;
         }
 
-        private void OnRaceStarted(RaceStartedMessage message) => _impulse.GenerateImpulse(START_SHAKE);
+        private void OnRaceStarted(RaceStartedMessage message)
+        {
+            _impulse.GenerateImpulse(START_SHAKE);
+            CrowdMood.Excite();
+        }
 
-        private void OnLeadChanged(LeadChangedMessage message) => _impulse.GenerateImpulse(LEAD_SHAKE);
+        private void OnLeadChanged(LeadChangedMessage message)
+        {
+            _impulse.GenerateImpulse(LEAD_SHAKE);
+            CrowdMood.Excite();
+        }
 
         private void OnRacerFinished(RacerFinishedMessage message)
         {
@@ -94,6 +102,7 @@ namespace PoRacer.Views
                 _impulse.GenerateImpulse(WIN_SHAKE);
                 _slowMoUntil = Time.unscaledTime + SLOWMO_SECONDS;
             }
+            CrowdMood.Excite();
         }
     }
 }

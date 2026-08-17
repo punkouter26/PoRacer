@@ -1,4 +1,5 @@
 using PoRacer.Rewards;
+using PoRacer.Sensors;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -11,11 +12,20 @@ namespace PoRacer.Agents
     /// included, with joint count, limits, and gait tables configured per prefab
     /// (MVS carve-out: ML-Agents Agents own their observation/action/reward logic).
     ///
-    /// Observations (N*2 + 11): per joint: normalized position + velocity; root up
-    /// vector (3); root height (1); goal direction in root space (3); normalized goal
-    /// distance (1); root velocity in root space (3).
+    /// Observations (N*3 + 19): per joint: normalized position + velocity + ground
+    /// contact; root up vector (3); root height (1); goal direction in root space
+    /// (3); normalized goal distance (1); root velocity in root space (3); root
+    /// angular velocity in root space (3); stamina (1); terrain look-ahead height
+    /// probes (4).
     /// Actions (N continuous, [-1,1]): drive target per joint, scaled by
     /// _jointDriveScale (degrees for revolute joints, metres for prismatic).
+    ///
+    /// Fatigue: applied torque above the sustainable fraction drains a stamina
+    /// pool; torque below it recovers. Low stamina scales joint stiffness and
+    /// force limit toward MIN_POWER_FACTOR. Load is read from applied torque, not
+    /// the action vector (project rule): isometric bracing tires a creature even
+    /// when its actions barely move. Identical in training and races, so the
+    /// policy learns to pace itself.
     /// </summary>
     public sealed class Agent_Creature : Agent, ICreatureAgent
     {
@@ -29,6 +39,17 @@ namespace PoRacer.Agents
         private const float PROBE_RAY_RANGE = 6f;
         private const float PROBE_HEIGHT_NORM = 2f;
         private static readonly float[] ProbeDistances = { 0.5f, 1.2f, 2.2f, 3.5f };
+        // Fatigue tuning. At full overload (normalized torque 1.0) a fresh pool
+        // empties in ~4 s; a resting creature refills it in ~6.7 s. An empty pool
+        // still leaves MIN_POWER_FACTOR of authored joint power, so tired racers
+        // slow down instead of collapsing.
+        private const float SUSTAINABLE_TORQUE_FRACTION = 0.5f;
+        private const float STAMINA_DRAIN_PER_SECOND = 0.25f;
+        private const float STAMINA_RECOVERY_PER_SECOND = 0.15f;
+        private const float MIN_POWER_FACTOR = 0.55f;
+        // Drives are only rewritten when the power factor moved this much, so a
+        // steady cruise costs no drive writes at all.
+        private const float POWER_FACTOR_WRITE_EPSILON = 0.005f;
 
         [SerializeField] private ArticulationBody _root;
         [SerializeField] private ArticulationBody[] _joints;
@@ -43,13 +64,20 @@ namespace PoRacer.Agents
         [SerializeField] private float[] _gaitAmplitudes;
         // Per-joint DC offset so crouched stances (bent knees) are expressible.
         [SerializeField] private float[] _gaitOffsets;
-        // Adds 4 look-ahead height observations. Changes the observation size:
-        // enable only together with a matching VectorObservationSize and a retrain.
-        [SerializeField] private bool _useTerrainProbes;
 
         private readonly Reward_WormLoco _reward = new();
         private System.Action _areaReset;
         private bool _failed;
+        private Sensor_LimbContact[] _limbContacts;
+        private float[] _previousActions;
+        private float _stamina = 1f;
+        private float _lastPowerFactor = 1f;
+        // Baseline drives for fatigue scaling, captured lazily on the first write
+        // so spawn-time quirk scaling (applied a frame after instantiation) is
+        // already included. NotifyDrivesChanged() invalidates the capture.
+        private float[] _baseStiffness;
+        private float[] _baseForceLimit;
+        private bool _driveBaselineCaptured;
 
         public bool Failed => _failed;
 
@@ -65,17 +93,41 @@ namespace PoRacer.Agents
 
         public void SetAreaResetCallback(System.Action areaReset) => _areaReset = areaReset;
 
+        public void NotifyDrivesChanged()
+        {
+            _driveBaselineCaptured = false;
+            _lastPowerFactor = 1f;
+        }
+
         public override void Initialize()
         {
             _root.maxAngularVelocity = MAX_ANGULAR_VELOCITY;
+            _previousActions = new float[_joints.Length];
+            _limbContacts = new Sensor_LimbContact[_joints.Length];
+            _baseStiffness = new float[_joints.Length];
+            _baseForceLimit = new float[_joints.Length];
             for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
             {
                 _joints[jointIndex].maxAngularVelocity = MAX_ANGULAR_VELOCITY;
+                GameObject jointGo = _joints[jointIndex].gameObject;
+                Sensor_LimbContact contact = jointGo.GetComponent<Sensor_LimbContact>();
+                _limbContacts[jointIndex] = contact != null ? contact : jointGo.AddComponent<Sensor_LimbContact>();
             }
         }
 
         public override void OnEpisodeBegin()
         {
+            // Fatigue cleared before motors are restored (project rule): undo any
+            // fatigue drive scaling first, then let the area reset re-author
+            // drives and quirks on top of clean values.
+            RestoreDriveBaseline();
+            _stamina = 1f;
+            _lastPowerFactor = 1f;
+            _driveBaselineCaptured = false;
+            if (_previousActions != null)
+            {
+                System.Array.Clear(_previousActions, 0, _previousActions.Length);
+            }
             _areaReset?.Invoke();
             _failed = false;
             _reward.Reset(DistanceToGoal());
@@ -92,6 +144,7 @@ namespace PoRacer.Agents
                 float jointVelocity = joint.jointVelocity.dofCount > 0 ? joint.jointVelocity[0] : 0f;
                 sensor.AddObservation(Safe(Mathf.Clamp(jointPosition / (_jointDriveScale * Mathf.Deg2Rad), -1f, 1f)));
                 sensor.AddObservation(Safe(Mathf.Clamp(jointVelocity / MAX_JOINT_VELOCITY, -1f, 1f)));
+                sensor.AddObservation(_limbContacts[jointIndex] != null && _limbContacts[jointIndex].IsGrounded ? 1f : 0f);
             }
 
             Transform rootTransform = _root.transform;
@@ -106,36 +159,42 @@ namespace PoRacer.Agents
             Vector3 localVelocity = rootTransform.InverseTransformDirection(_root.linearVelocity);
             sensor.AddObservation(SafeVector(Vector3.ClampMagnitude(localVelocity / MAX_ROOT_SPEED, 1f)));
 
-            if (_useTerrainProbes)
+            Vector3 localAngularVelocity = rootTransform.InverseTransformDirection(_root.angularVelocity);
+            sensor.AddObservation(SafeVector(Vector3.ClampMagnitude(localAngularVelocity / MAX_ANGULAR_VELOCITY, 1f)));
+
+            sensor.AddObservation(Safe(_stamina));
+
+            Vector3 forward = rootTransform.forward;
+            forward.y = 0f;
+            forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
+            float rootY = rootTransform.position.y;
+            for (int probeIndex = 0; probeIndex < ProbeDistances.Length; probeIndex++)
             {
-                Vector3 forward = rootTransform.forward;
-                forward.y = 0f;
-                forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
-                float rootY = rootTransform.position.y;
-                for (int probeIndex = 0; probeIndex < ProbeDistances.Length; probeIndex++)
+                Vector3 origin = rootTransform.position
+                    + forward * ProbeDistances[probeIndex] + Vector3.up * PROBE_RAY_HEIGHT;
+                float relativeHeight = 0f;
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, PROBE_RAY_RANGE))
                 {
-                    Vector3 origin = rootTransform.position
-                        + forward * ProbeDistances[probeIndex] + Vector3.up * PROBE_RAY_HEIGHT;
-                    float relativeHeight = 0f;
-                    if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, PROBE_RAY_RANGE))
-                    {
-                        relativeHeight = hit.point.y - rootY;
-                    }
-                    sensor.AddObservation(Safe(Mathf.Clamp(relativeHeight / PROBE_HEIGHT_NORM, -1f, 1f)));
+                    relativeHeight = hit.point.y - rootY;
                 }
+                sensor.AddObservation(Safe(Mathf.Clamp(relativeHeight / PROBE_HEIGHT_NORM, -1f, 1f)));
             }
         }
 
         public override void OnActionReceived(ActionBuffers actions)
         {
             // Runs every FixedUpdate (TakeActionsBetweenDecisions holds targets between decisions).
+            float jerkSum = 0f;
             for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
             {
                 float clamped = Mathf.Clamp(actions.ContinuousActions[jointIndex], -1f, 1f);
+                jerkSum += Mathf.Abs(clamped - _previousActions[jointIndex]);
+                _previousActions[jointIndex] = clamped;
                 ArticulationDrive drive = _joints[jointIndex].xDrive;
                 drive.target = clamped * _jointDriveScale;
                 _joints[jointIndex].xDrive = drive;
             }
+            float actionJerk = jerkSum / _joints.Length;
 
             Vector3 rootPosition = _root.transform.position;
             Vector3 rootUp = _root.transform.up;
@@ -150,8 +209,10 @@ namespace PoRacer.Agents
 
             float distance = DistanceToGoal();
             float normalizedTorque = ComputeNormalizedTorque();
+            UpdateStamina(normalizedTorque);
+            ApplyFatigueToDrives();
             float uprightDot = Vector3.Dot(_root.transform.up, Vector3.up);
-            AddReward(_reward.Step(distance, normalizedTorque, uprightDot));
+            AddReward(_reward.Step(distance, normalizedTorque, uprightDot, actionJerk));
             LogRewardComponents();
 
             if (_reward.ReachedGoal(distance))
@@ -203,6 +264,79 @@ namespace PoRacer.Agents
             return torqueSum / (_joints.Length * _maxJointTorque);
         }
 
+        private void UpdateStamina(float normalizedTorque)
+        {
+            float overload = (Mathf.Clamp01(normalizedTorque) - SUSTAINABLE_TORQUE_FRACTION)
+                / (1f - SUSTAINABLE_TORQUE_FRACTION);
+            _stamina += overload > 0f
+                ? -overload * STAMINA_DRAIN_PER_SECOND * Time.fixedDeltaTime
+                : STAMINA_RECOVERY_PER_SECOND * Time.fixedDeltaTime;
+            _stamina = Mathf.Clamp01(_stamina);
+        }
+
+        private void ApplyFatigueToDrives()
+        {
+            float factor = Mathf.Lerp(MIN_POWER_FACTOR, 1f, _stamina);
+            if (Mathf.Abs(factor - _lastPowerFactor) < POWER_FACTOR_WRITE_EPSILON)
+            {
+                return;
+            }
+            if (!_driveBaselineCaptured)
+            {
+                CaptureDriveBaseline();
+            }
+            for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
+            {
+                ArticulationDrive drive = _joints[jointIndex].xDrive;
+                float scaledStiffness = _baseStiffness[jointIndex] * factor;
+                float scaledForceLimit = _baseForceLimit[jointIndex] * factor;
+                if (float.IsFinite(scaledStiffness))
+                {
+                    drive.stiffness = scaledStiffness;
+                }
+                if (float.IsFinite(scaledForceLimit))
+                {
+                    drive.forceLimit = scaledForceLimit;
+                }
+                _joints[jointIndex].xDrive = drive;
+            }
+            _lastPowerFactor = factor;
+        }
+
+        private void CaptureDriveBaseline()
+        {
+            // Unwind whatever factor is currently applied so the baseline always
+            // stores the drives at full power, quirks included.
+            for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
+            {
+                ArticulationDrive drive = _joints[jointIndex].xDrive;
+                _baseStiffness[jointIndex] = drive.stiffness / _lastPowerFactor;
+                _baseForceLimit[jointIndex] = drive.forceLimit / _lastPowerFactor;
+            }
+            _driveBaselineCaptured = true;
+        }
+
+        private void RestoreDriveBaseline()
+        {
+            if (!_driveBaselineCaptured)
+            {
+                return;
+            }
+            for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
+            {
+                ArticulationDrive drive = _joints[jointIndex].xDrive;
+                if (float.IsFinite(_baseStiffness[jointIndex]))
+                {
+                    drive.stiffness = _baseStiffness[jointIndex];
+                }
+                if (float.IsFinite(_baseForceLimit[jointIndex]))
+                {
+                    drive.forceLimit = _baseForceLimit[jointIndex];
+                }
+                _joints[jointIndex].xDrive = drive;
+            }
+        }
+
         private void LogRewardComponents()
         {
             // Only meaningful with a trainer attached; hundreds of inference-only
@@ -215,7 +349,9 @@ namespace PoRacer.Agents
             stats.Add("Reward/Progress", _reward.LastProgressReward);
             stats.Add("Reward/EfficiencyPenalty", _reward.LastEfficiencyPenalty);
             stats.Add("Reward/UprightBonus", _reward.LastUprightBonus);
+            stats.Add("Reward/JerkPenalty", _reward.LastJerkPenalty);
             stats.Add("Reward/TimePenalty", -Reward_WormLoco.TIME_PENALTY);
+            stats.Add("Fatigue/Stamina", _stamina);
         }
 
         private static float Safe(float value)

@@ -137,7 +137,10 @@ namespace PoRacer.Editor
         {
             var behavior = rootGo.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = behaviorName;
-            behavior.BrainParameters.VectorObservationSize = context.Joints.Count * 2 + 11;
+            // Must match Agent_Creature's layout: per joint position + velocity +
+            // contact, plus 19 root/goal/stamina/probe values. Editor_SyncObservationSizes
+            // rewrites existing prefabs after a layout change.
+            behavior.BrainParameters.VectorObservationSize = context.Joints.Count * 3 + 19;
             behavior.BrainParameters.NumStackedVectorObservations = 1;
             behavior.BrainParameters.ActionSpec = ActionSpec.MakeContinuous(context.Joints.Count);
 

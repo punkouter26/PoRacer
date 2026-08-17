@@ -115,10 +115,11 @@ namespace PoRacer.Views
             shape.rotation = new Vector3(-90f, 0f, 0f);
 
             var splashRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader != null)
+            // Shared soft sprite so droplets look like goop, not squares.
+            Material soft = FxUtil.SoftParticleMaterial();
+            if (soft != null)
             {
-                splashRenderer.material = new Material(particleShader);
+                splashRenderer.material = soft;
             }
             splashRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             splashRenderer.receiveShadows = false;

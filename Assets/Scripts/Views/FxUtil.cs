@@ -10,8 +10,11 @@ namespace PoRacer.Views
     /// </summary>
     internal static class FxUtil
     {
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+
         private static Texture2D _softCircle;
         private static Material _softParticleMaterial;
+        private static Material _glowParticleMaterial;
         private static ParticleSystem _knockoutPuff;
 
         /// <summary>Radial-falloff white circle used as the universal particle sprite.</summary>
@@ -39,31 +42,59 @@ namespace PoRacer.Views
         }
 
         /// <summary>
-        /// Shared alpha-blended unlit particle material. Null in headless builds
-        /// where shaders are stripped.
+        /// Shared alpha-blended unlit particle material. Loaded from a material
+        /// ASSET (Assets/Resources/FX) so the URP particle shader survives build
+        /// stripping — a runtime Shader.Find material renders magenta on device.
+        /// Null in headless builds where rendering is absent.
         /// </summary>
         public static Material SoftParticleMaterial()
         {
-            if (_softParticleMaterial != null)
+            if (_softParticleMaterial == null)
             {
-                return _softParticleMaterial;
+                _softParticleMaterial = LoadParticleMaterial("FX/M_ParticleSoft");
             }
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader == null)
+            return _softParticleMaterial;
+        }
+
+        /// <summary>
+        /// Shared additive particle material: overlapping particles sum to a hot
+        /// glow. For sparks, fireworks, boost FX. Same asset-loading rule as
+        /// SoftParticleMaterial.
+        /// </summary>
+        public static Material GlowParticleMaterial()
+        {
+            if (_glowParticleMaterial == null)
+            {
+                _glowParticleMaterial = LoadParticleMaterial("FX/M_ParticleGlow");
+            }
+            return _glowParticleMaterial;
+        }
+
+        private static Material LoadParticleMaterial(string resourcePath)
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
             {
                 return null;
             }
-            var material = new Material(particleShader);
-            material.SetFloat("_Surface", 1f);
-            material.SetFloat("_Blend", 0f);
-            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
-            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.renderQueue = (int)RenderQueue.Transparent;
-            material.SetTexture("_BaseMap", SoftCircle());
-            _softParticleMaterial = material;
-            return material;
+            Material asset = Resources.Load<Material>(resourcePath);
+            if (asset != null)
+            {
+                // Copy so the runtime-generated sprite never dirties the asset in
+                // the editor; the copy keeps the asset's shader variant.
+                var material = new Material(asset);
+                material.SetTexture(BaseMapId, SoftCircle());
+                return material;
+            }
+            // Fallback if the assets are missing (run "PoRacer/Build FX Particle
+            // Materials"): Sprites/Default is in Always Included Shaders, so it
+            // never strips. Alpha-blended only — glow loses its additive pop but
+            // nothing renders magenta.
+            Shader spriteShader = Shader.Find("Sprites/Default");
+            if (spriteShader == null)
+            {
+                return null;
+            }
+            return new Material(spriteShader) { mainTexture = SoftCircle() };
         }
 
         /// <summary>
