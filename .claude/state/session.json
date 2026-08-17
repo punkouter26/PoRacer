@@ -21,14 +21,14 @@
     "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Tests\\Systems_RaceTests.cs"
   ],
   "recent_commits": [
+    "04af6fb Persist portrait-only autorotation flags from the Android build",
     "2386d53 Make races winnable and end at a player-driven results screen",
-    "3e43c09 ...",
-    "d29ba2b ..."
+    "3e43c09 ..."
   ],
-  "session_duration": "73m 11s",
+  "session_duration": "86m 2s",
   "tool_calls": 0,
   "warnings_count": 19,
-  "saved_at": "2026-08-17T16:45:57Z",
+  "saved_at": "2026-08-17T16:58:48Z",
   "plan": {},
   "verification": {},
   "agent_context": {}
