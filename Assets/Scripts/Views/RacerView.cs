@@ -126,7 +126,11 @@ namespace PoRacer.Views
             {
                 return;
             }
-            Quaternion upright = Quaternion.Euler(0f, root.transform.rotation.eulerAngles.y, 0f);
+            // Heading only on the yaw; the creature's authored rest pose is kept
+            // underneath it, or standing a snake "upright" means standing its
+            // capsule chain on end.
+            Quaternion upright = Quaternion.Euler(0f, root.transform.rotation.eulerAngles.y, 0f)
+                * (_agent != null ? _agent.RestRotation : Quaternion.identity);
             root.TeleportRoot(position + Vector3.up * 0.25f, upright);
             for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
             {

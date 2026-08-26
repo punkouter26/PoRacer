@@ -36,6 +36,9 @@ namespace PoRacer.Views
         public const float CONTROL_MD = 34f;
         public const float CONTROL_LG = 52f;
 
+        // ---- Scrollbar ----
+        public const float SCROLLBAR_THICKNESS = 4f;
+
         // ---- Motion ----
         public const int FADE_MS = 250;
         public const int POP_MS = 250;
@@ -66,6 +69,7 @@ namespace PoRacer.Views
         public static readonly Color Bronze = new(0.85f, 0.58f, 0.35f);
         // Retired / did-not-finish markers.
         public static readonly Color Dnf = new(0.42f, 0.44f, 0.48f);
+        public static readonly Color ScrollThumb = new(1f, 1f, 1f, 0.22f);
 
         public static void StylePanel(VisualElement panel)
         {
@@ -139,6 +143,68 @@ namespace PoRacer.Views
             SetBorder(button, Color.clear, 0f);
             SetMargin(button, 0f, 1f);
             SetPadding(button, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Touch-first scroller chrome. UI Toolkit ships desktop scrollbars —
+        /// a light track with stepper arrow buttons — which read as OS chrome on
+        /// a portrait phone layout and eat horizontal room. This strips the
+        /// steppers, slims the bar and repaints it in the theme; pass
+        /// <paramref name="hideBar"/> for swipe strips that need no bar at all.
+        /// </summary>
+        public static void StyleScrollView(ScrollView scroll, bool hideBar = false)
+        {
+            scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            scroll.verticalScrollerVisibility = hideBar
+                ? ScrollerVisibility.Hidden
+                : ScrollerVisibility.Auto;
+            scroll.style.backgroundColor = Color.clear;
+            StyleScroller(scroll.verticalScroller);
+            StyleScroller(scroll.horizontalScroller);
+        }
+
+        private static void StyleScroller(Scroller scroller)
+        {
+            if (scroller == null)
+            {
+                return;
+            }
+            // The steppers are pure desktop affordance — no touch user presses a
+            // 10 px arrow. Removing them also reclaims their reserved height.
+            scroller.lowButton.style.display = DisplayStyle.None;
+            scroller.highButton.style.display = DisplayStyle.None;
+            scroller.style.width = SCROLLBAR_THICKNESS;
+            scroller.style.backgroundColor = Color.clear;
+            SetBorder(scroller, Color.clear, 0f);
+
+            Slider slider = scroller.slider;
+            if (slider == null)
+            {
+                return;
+            }
+            slider.style.marginTop = 0f;
+            slider.style.marginBottom = 0f;
+            slider.style.marginLeft = 0f;
+            slider.style.marginRight = 0f;
+
+            VisualElement tracker = slider.Q("unity-tracker");
+            if (tracker != null)
+            {
+                tracker.style.backgroundColor = TrackBg;
+                SetBorder(tracker, Color.clear, 0f);
+                SetRadius(tracker, SCROLLBAR_THICKNESS * 0.5f);
+            }
+
+            VisualElement dragger = slider.Q("unity-dragger");
+            if (dragger != null)
+            {
+                dragger.style.backgroundColor = ScrollThumb;
+                SetBorder(dragger, Color.clear, 0f);
+                SetRadius(dragger, SCROLLBAR_THICKNESS * 0.5f);
+                dragger.style.width = SCROLLBAR_THICKNESS;
+                dragger.style.marginLeft = 0f;
+                dragger.style.marginRight = 0f;
+            }
         }
 
         public static void SetRadius(VisualElement element, float radius)
@@ -231,10 +297,16 @@ namespace PoRacer.Views
             // Panel units per screen pixel; safeArea is reported in screen pixels
             // with a bottom-left origin.
             float scale = rootWidth / Screen.width;
-            safe.style.left = area.xMin * scale;
-            safe.style.right = (Screen.width - area.xMax) * scale;
-            safe.style.top = (Screen.height - area.yMax) * scale;
-            safe.style.bottom = area.yMin * scale;
+            // Clamped at zero: an inset is a cut *into* the screen, never an
+            // expansion out of it. The Editor Game View can report a safeArea
+            // larger than Screen.width/height (it tracks the editor window, not
+            // the simulated resolution), and the raw subtraction then yields
+            // negative insets that stretch this container past the panel and
+            // push the header/title off-screen.
+            safe.style.left = Mathf.Max(0f, area.xMin * scale);
+            safe.style.right = Mathf.Max(0f, (Screen.width - area.xMax) * scale);
+            safe.style.top = Mathf.Max(0f, (Screen.height - area.yMax) * scale);
+            safe.style.bottom = Mathf.Max(0f, area.yMin * scale);
         }
 
         /// <summary>

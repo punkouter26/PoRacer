@@ -132,6 +132,7 @@ namespace PoRacer.Views
             var creatureScroll = new ScrollView(ScrollViewMode.Vertical);
             creatureScroll.style.flexGrow = 1f;
             creatureScroll.style.flexShrink = 1f;
+            UiTheme.StyleScrollView(creatureScroll);
             _content.Add(creatureScroll);
 
             int comingSoonCount = 0;
@@ -227,6 +228,10 @@ namespace PoRacer.Views
             strip.style.height = MAP_STRIP_HEIGHT;
             strip.style.flexShrink = 0f;
             strip.contentContainer.style.flexDirection = FlexDirection.Row;
+            // A swipe strip: the partly-visible next card is the affordance, so
+            // the bar is dead chrome and its reserved height was eating into the
+            // cards and clipping their blurbs.
+            UiTheme.StyleScrollView(strip, hideBar: true);
             _content.Add(strip);
 
             for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)

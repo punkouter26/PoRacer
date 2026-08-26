@@ -22,11 +22,14 @@ namespace PoRacer.Views
 
         private void Awake()
         {
-            _controls = new PlayerControls();
+            _controls ??= new PlayerControls();
         }
 
         private void OnEnable()
         {
+            // A domain reload while playing wipes this non-serialized field and
+            // re-runs OnEnable without Awake, so it has to be able to rebuild.
+            _controls ??= new PlayerControls();
             _controls.Camera.Enable();
             _controls.Camera.Next.performed += OnNext;
             _controls.Camera.Prev.performed += OnPrev;
@@ -35,6 +38,10 @@ namespace PoRacer.Views
 
         private void OnDisable()
         {
+            if (_controls == null)
+            {
+                return;
+            }
             _controls.Camera.Next.performed -= OnNext;
             _controls.Camera.Prev.performed -= OnPrev;
             _controls.Camera.Overview.performed -= OnOverview;

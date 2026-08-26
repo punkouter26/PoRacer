@@ -58,6 +58,10 @@ namespace PoRacer.Systems
         // Visual-only side aprons that hold trees, tents, and bushes.
         private const float DECOR_MARGIN = 14f;
         private const float ARCH_MODEL_WIDTH = 14f;
+        // Half-depth of the camera keep-out around the finish line. The arch's
+        // solid band hugs the line; its renderer bounds are far deeper because of
+        // the flat ground plate, which no camera can clip into.
+        private const float ARCH_KEEPOUT_HALF_DEPTH = 1.6f;
 
         private static Material _mudMaterial;
         private static Material _mudRimMaterial;
@@ -81,6 +85,23 @@ namespace PoRacer.Systems
         /// from the mlagents environment_parameters lesson; gameplay leaves it at 1.
         /// </summary>
         public static float RoughAmplitudeScale = 1f;
+
+        // Scenery carries no colliders by design, so a physics-based camera
+        // collision test cannot see the finish arch. The build publishes the
+        // arch's world volume instead and Systems_Spawn hands it to the camera
+        // director, which keeps the orbit shot out of it.
+        private bool _hasFinishArchBounds;
+        private Bounds _finishArchBounds;
+
+        /// <summary>
+        /// World-space volume of the finish arch from the last <see cref="Build"/>,
+        /// or false when the track was built without decoration.
+        /// </summary>
+        public bool TryGetFinishArchBounds(out Bounds bounds)
+        {
+            bounds = _finishArchBounds;
+            return _hasFinishArchBounds;
+        }
 
         private readonly Material _groundMaterial;
         private readonly Material _obstacleMaterial;
@@ -155,6 +176,7 @@ namespace PoRacer.Systems
                 BuildGustZones(parent, width, length, rng, ScaleCount(2, length));
             }
 
+            _hasFinishArchBounds = false;
             if (decorate)
             {
                 DecorateTrack(kind, parent, width, length, finishZ > 0f ? finishZ : length - 2f, rng);
@@ -577,7 +599,7 @@ namespace PoRacer.Systems
         /// gameplay and physics are untouched; everything lives under 'parent' and
         /// is cleared with the track on rebuild.
         /// </summary>
-        private static void DecorateTrack(TrackKind kind, Transform parent, float width, float length,
+        private void DecorateTrack(TrackKind kind, Transform parent, float width, float length,
             float finishZ, System.Random rng)
         {
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
@@ -613,9 +635,21 @@ namespace PoRacer.Systems
                 float archScale = width / ARCH_MODEL_WIDTH;
                 // The arch model has a 24x10 m base plate at exactly y = 0; lifted
                 // slightly so it never z-fights the ground it sits on.
-                PlaceProp(_archPrefab, parent,
+                GameObject arch = PlaceProp(_archPrefab, parent,
                     new Vector3(0f, SurfaceHeight(kind, 0f, finishZ) + PROP_HEIGHT_OFFSET + 0.01f, finishZ),
                     rotationY: 0f, new Vector3(archScale, archScale * 0.8f, 1f), _archMaterial);
+                if (TryGetWorldBounds(arch, out Bounds archBounds))
+                {
+                    // The renderer bounds include the flat ground plate, which a
+                    // camera at orbit height can never clip into; only the solid
+                    // band around the line matters, so the depth is trimmed to it.
+                    Vector3 extents = archBounds.extents;
+                    extents.z = Mathf.Min(extents.z, ARCH_KEEPOUT_HALF_DEPTH);
+                    Vector3 center = archBounds.center;
+                    center.z = arch.transform.position.z;
+                    _finishArchBounds = new Bounds(center, extents * 2f);
+                    _hasFinishArchBounds = true;
+                }
             }
 
             if (_forestPrefab != null)
@@ -712,7 +746,7 @@ namespace PoRacer.Systems
             }
         }
 
-        private static void PlaceProp(GameObject prefab, Transform parent, Vector3 localPosition,
+        private static GameObject PlaceProp(GameObject prefab, Transform parent, Vector3 localPosition,
             float rotationY, Vector3 scale, Material overrideMaterial)
         {
             GameObject prop = UnityEngine.Object.Instantiate(prefab, parent);
@@ -732,6 +766,26 @@ namespace PoRacer.Systems
                     renderers[rendererIndex].sharedMaterial = overrideMaterial;
                 }
             }
+            return prop;
+        }
+
+        /// <summary>
+        /// World bounds of every renderer under 'prop', or false when it has none.
+        /// </summary>
+        private static bool TryGetWorldBounds(GameObject prop, out Bounds bounds)
+        {
+            bounds = default;
+            Renderer[] renderers = prop.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0)
+            {
+                return false;
+            }
+            bounds = renderers[0].bounds;
+            for (int rendererIndex = 1; rendererIndex < renderers.Length; rendererIndex++)
+            {
+                bounds.Encapsulate(renderers[rendererIndex].bounds);
+            }
+            return true;
         }
 
         private void ScatterBoxes(TrackKind kind, Transform parent, float width, float length, System.Random rng,

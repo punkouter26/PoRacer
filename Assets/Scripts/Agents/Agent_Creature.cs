@@ -32,6 +32,8 @@ namespace PoRacer.Agents
         private const float MAX_JOINT_VELOCITY = 10f; // rad/s (or m/s), normalization only
         private const float MAX_ROOT_SPEED = 2f;      // m/s, normalization only
         private const float GOAL_DISTANCE_NORM = 20f;
+        // Far past any reachable distance: only a diverged body gets here.
+        private const float DIVERGED_GOAL_DISTANCE = 500f;
         private const float MAX_ANGULAR_VELOCITY = 20f;
         // Terrain look-ahead: ground height relative to the root, sampled at fixed
         // distances along the flattened forward direction.
@@ -78,8 +80,11 @@ namespace PoRacer.Agents
         private float[] _baseStiffness;
         private float[] _baseForceLimit;
         private bool _driveBaselineCaptured;
+        private Quaternion _restRotation = Quaternion.identity;
 
         public bool Failed => _failed;
+
+        public Quaternion RestRotation => _restRotation;
 
         int ICreatureAgent.MaxStep
         {
@@ -101,6 +106,9 @@ namespace PoRacer.Agents
 
         public override void Initialize()
         {
+            // Captured before the first episode reset can move it: this is the
+            // authored rest pose the whole rig was laid out around.
+            _restRotation = _root.transform.localRotation;
             _root.maxAngularVelocity = MAX_ANGULAR_VELOCITY;
             _previousActions = new float[_joints.Length];
             _limbContacts = new Sensor_LimbContact[_joints.Length];
@@ -220,8 +228,12 @@ namespace PoRacer.Agents
                 AddReward(Reward_WormLoco.GOAL_REWARD);
                 EndEpisode();
             }
-            else if (rootPosition.y < -1f)
+            else if (rootPosition.y < -1f || distance > DIVERGED_GOAL_DISTANCE)
             {
+                // A solver divergence reaches absurd-but-finite coordinates long
+                // before it reaches NaN, and every step in between feeds garbage
+                // into the trainer. Measured against the goal so it holds wherever
+                // a training area sits in the world.
                 _failed = true;
                 AddReward(Reward_WormLoco.OUT_OF_BOUNDS_REWARD);
                 EndEpisode();

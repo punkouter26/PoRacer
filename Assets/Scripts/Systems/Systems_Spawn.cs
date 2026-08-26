@@ -279,6 +279,16 @@ namespace PoRacer.Systems
                 float backMargin = Mathf.Max(7f, gridRows * GRID_ROW_SPACING + 4f);
                 _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
                     decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
+                // The finish arch has no collider, so the camera cannot discover
+                // it by sweeping; hand its volume over as an explicit keep-out.
+                if (_trackBuilder.TryGetFinishArchBounds(out Bounds archBounds))
+                {
+                    _cameraDirector.SetKeepOut(archBounds);
+                }
+                else
+                {
+                    _cameraDirector.ClearKeepOut();
+                }
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
                 if (!IsCurrent(generation))
@@ -349,7 +359,11 @@ namespace PoRacer.Systems
                             + layer * STACK_LAYER_HEIGHT,
                         localZ);
 
-                    GameObject instance = UnityEngine.Object.Instantiate(entry.prefab, position, Quaternion.identity);
+                    // The prefab's own rotation, not identity: Snake and Centipede
+                    // are authored lying down (90 deg on X) and spawn as a
+                    // collapsing vertical tower of capsules without it.
+                    GameObject instance = UnityEngine.Object.Instantiate(
+                        entry.prefab, position, entry.prefab.transform.rotation);
                     // Generation-scoped so an orphan from a superseded spawn chain can
                     // never collide with a live racer's ID in RaceModel.
                     string racerId = $"{entry.id}#{generation}.{gridIndex + 1}";

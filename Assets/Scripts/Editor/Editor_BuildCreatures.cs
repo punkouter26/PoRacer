@@ -255,9 +255,11 @@ namespace PoRacer.Editor
                 // Alternate pitch (climb hills) and yaw (steer around obstacles).
                 Hinge(context, segment, segmentMass, new Vector3(0f, 1f, 0f), yaw ? AxisY : AxisX, 40f);
                 previous = segment.transform;
-                // Serpentine: a wave travels down the body; sideways sweep dominates,
-                // pitch stays small to hug the ground.
-                phases.Add(-segmentIndex * 0.7f);
+                // Serpentine: a wave travels head to tail, which is what drives an
+                // undulating body forward. The phase must therefore *lead* with
+                // depth — a negative step runs the wave tail to head and walks the
+                // creature backwards (measured: worm -0.3 m vs +2.1 m per 30 s).
+                phases.Add(segmentIndex * 0.7f);
                 amplitudes.Add(yaw ? 0.85f : 0.3f);
             }
             Finish(behaviorName, rootGo, context, 40f, 0.7f, phases.ToArray(), amplitudes.ToArray());
@@ -280,8 +282,9 @@ namespace PoRacer.Editor
                 Hinge(context, segment, 8f, new Vector3(0f, 1f, 0f), segmentIndex % 2 == 0 ? AxisY : AxisX, 30f);
                 segments.Add(segment.transform);
                 previous = segment.transform;
-                // Gentle spine wave so the body follows the legs.
-                phases.Add(-segmentIndex * 0.6f);
+                // Gentle spine wave so the body follows the legs; head-to-tail for
+                // the same reason as the snake's.
+                phases.Add(segmentIndex * 0.6f);
                 amplitudes.Add(0.25f);
             }
             for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
@@ -294,7 +297,7 @@ namespace PoRacer.Editor
                     Hinge(context, leg, 1.5f, new Vector3(0f, 1f, 0f), AxisY, 35f);
                     // Metachronal wave: each segment's legs lag the pair ahead of it,
                     // left and right half a cycle apart.
-                    phases.Add(-segmentIndex * 0.9f + (side > 0 ? Mathf.PI : 0f));
+                    phases.Add(segmentIndex * 0.9f + (side > 0 ? Mathf.PI : 0f));
                     amplitudes.Add(0.8f);
                 }
             }

@@ -828,10 +828,10 @@ MonoBehaviour:
   _gaitFrequency: 0.7957747
   _gaitPhases:
   - 0
-  - -1.1
-  - -2.2
-  - -3.3
-  - -4.4
+  - 1.1
+  - 2.2
+  - 3.3
+  - 4.4
   _gaitAmplitudes:
   - 1
   - 1

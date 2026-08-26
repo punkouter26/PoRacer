@@ -159,7 +159,11 @@ namespace PoRacer.Systems
 
             ArticulationBody root = _creature.Root;
             Vector3 spawnLift = Vector3.up * Systems_TrackBuilder.SurfaceHeight(_activeKind, 0f);
-            root.TeleportRoot(_spawnPoint.position + spawnLift, _spawnPoint.rotation);
+            // The spawn point only carries a heading; the creature's authored
+            // rest pose has to survive the reset or a lying-down rig (snake,
+            // centipede) is stood upright and explodes on the next step.
+            root.TeleportRoot(_spawnPoint.position + spawnLift,
+                _spawnPoint.rotation * _creature.RestRotation);
             ApplyQuirks(quirkPowerSpan, quirkMassSpan);
             ResetBody(root);
             for (int bodyIndex = 0; bodyIndex < _bodies.Length; bodyIndex++)

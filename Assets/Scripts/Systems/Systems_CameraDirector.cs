@@ -40,6 +40,8 @@ namespace PoRacer.Systems
         private PackCameraView _pack;
         private Transform _orbitTarget;
         private bool _finalStretch;
+        private Bounds _keepOut;
+        private bool _hasKeepOut;
 
         public Systems_CameraDirector(RaceModel model, CameraRigView rig, ISubscriber<LeadChangedMessage> leadChanged)
         {
@@ -112,6 +114,24 @@ namespace PoRacer.Systems
             {
                 ShowOverview();
             }
+        }
+
+        /// <summary>
+        /// Spawn hands over the finish arch's volume after each track build. The
+        /// arch is collider-free decoration, so nothing else stops the orbit shot
+        /// from sweeping straight into it as the leader crosses the line.
+        /// </summary>
+        public void SetKeepOut(Bounds keepOut)
+        {
+            _keepOut = keepOut;
+            _hasKeepOut = true;
+            _orbit?.SetKeepOut(keepOut);
+        }
+
+        public void ClearKeepOut()
+        {
+            _hasKeepOut = false;
+            _orbit?.ClearKeepOut();
         }
 
         /// <summary>Spawn registers each racer so lead changes can find its transform.</summary>
@@ -237,6 +257,10 @@ namespace PoRacer.Systems
             _orbitCamera.Priority = INACTIVE_PRIORITY;
             go.AddComponent<CinemachineImpulseListener>();
             _orbit = go.AddComponent<OrbitCameraView>();
+            if (_hasKeepOut)
+            {
+                _orbit.SetKeepOut(_keepOut);
+            }
         }
     }
 }
