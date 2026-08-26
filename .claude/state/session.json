@@ -1,34 +1,23 @@
 {
   "schema_version": 1,
-  "branch": "master",
+  "branch": "fix/rig-rotation-and-gen4-brains",
   "workflow_phase": "",
   "modified_files": [
     "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\MEMORY.md",
-    "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\poracer-race-flow-2026-08.md",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Models\\EloModel.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Models\\RaceModel.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_CameraDirector.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_Commentary.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_Elo.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_MapCatalog.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_Race.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Systems\\Systems_Spawn.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Views\\CameraFxView.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Views\\CameraRigView.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Views\\PackCameraView.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Views\\RaceHudView.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Views\\RacerView.cs",
-    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Tests\\Systems_RaceTests.cs"
+    "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\poracer-gen4-overhaul.md",
+    "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Editor\\Editor_BuildRiggedCreatures.cs",
+    "c:\\Users\\punko\\Downloads\\PoRacer\\Config\\Humanoids01.yaml",
+    "c:\\Users\\punko\\Downloads\\PoRacer\\scripts\\train_humanoids.ps1"
   ],
   "recent_commits": [
-    "04af6fb Persist portrait-only autorotation flags from the Android build",
-    "2386d53 Make races winnable and end at a player-driven results screen",
-    "3e43c09 ..."
+    "520e4b6 Split the bipeds into their own training scene, config and run",
+    "be06062 Add the four humanoid racers and re-record every demo",
+    "9daba59 Fix creature rest-rotation loss and ship the gen4 brains"
   ],
-  "session_duration": "86m 2s",
+  "session_duration": "142m 15s",
   "tool_calls": 0,
   "warnings_count": 19,
-  "saved_at": "2026-08-17T16:58:48Z",
+  "saved_at": "2026-08-26T21:14:14Z",
   "plan": {},
   "verification": {},
   "agent_context": {}
