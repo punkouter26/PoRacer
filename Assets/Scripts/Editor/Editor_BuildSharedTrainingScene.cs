@@ -30,9 +30,17 @@ namespace PoRacer.Editor
             "Assets/Prefabs/Centipede_v01.prefab",
             "Assets/Prefabs/Crab_v01.prefab",
             "Assets/Prefabs/Kangaroo_v01.prefab",
-            "Assets/Prefabs/Blob_v01.prefab",
-            // Humanoids from Editor_BuildRiggedCreatures — bipeds, so they start
-            // from scratch and need their own training run.
+            "Assets/Prefabs/Blob_v01.prefab"
+        };
+
+        /// <summary>
+        /// The .glb bipeds train in their own scene and their own run. They share
+        /// nothing with the coded-gait fleet — different behaviors, different
+        /// areas — and mixing them only splits one time box across a much harder
+        /// problem, starving both halves.
+        /// </summary>
+        private static readonly string[] HumanoidPrefabs =
+        {
             "Assets/Prefabs/Grandma_v01.prefab",
             "Assets/Prefabs/Grandpa_v01.prefab",
             "Assets/Prefabs/Matt_v01.prefab",
@@ -44,16 +52,27 @@ namespace PoRacer.Editor
         [MenuItem("PoRacer/Build Shared Training Scene (SCN_TRAIN_ALL)")]
         public static void BuildScene()
         {
+            BuildSceneFrom(CreaturePrefabs, "Assets/Scenes/SCN_TRAIN_ALL.unity");
+        }
+
+        [MenuItem("PoRacer/Build Humanoid Training Scene (SCN_TRAIN_HUMANOIDS)")]
+        public static void BuildHumanoidScene()
+        {
+            BuildSceneFrom(HumanoidPrefabs, "Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity");
+        }
+
+        private static void BuildSceneFrom(string[] prefabPaths, string scenePath)
+        {
             (Material ground, Material obstacle, PhysicsMaterial physics) = ReadWormAreaMaterials();
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             int built = 0;
-            for (int creatureIndex = 0; creatureIndex < CreaturePrefabs.Length; creatureIndex++)
+            for (int creatureIndex = 0; creatureIndex < prefabPaths.Length; creatureIndex++)
             {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CreaturePrefabs[creatureIndex]);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPaths[creatureIndex]);
                 if (prefab == null)
                 {
-                    Debug.LogWarning($"Missing prefab {CreaturePrefabs[creatureIndex]} — run 'Build Creature Prefabs' first. Skipping.");
+                    Debug.LogWarning($"Missing prefab {prefabPaths[creatureIndex]} — run 'Build Creature Prefabs' first. Skipping.");
                     continue;
                 }
                 for (int variantIndex = 0; variantIndex < Variants.Length; variantIndex++)
@@ -64,22 +83,33 @@ namespace PoRacer.Editor
                     built++;
                 }
             }
-            EditorSceneManager.SaveScene(scene, "Assets/Scenes/SCN_TRAIN_ALL.unity");
-            Debug.Log($"SCN_TRAIN_ALL saved with {built} training areas.");
+            EditorSceneManager.SaveScene(scene, scenePath);
+            Debug.Log($"{System.IO.Path.GetFileNameWithoutExtension(scenePath)} saved with {built} training areas.");
         }
 
         [MenuItem("PoRacer/Build All-Creatures Training Env")]
         public static void BuildEnv()
         {
+            BuildEnvFrom("Assets/Scenes/SCN_TRAIN_ALL.unity", "Builds/AllEnv/AllEnv.exe");
+        }
+
+        [MenuItem("PoRacer/Build Humanoid Training Env")]
+        public static void BuildHumanoidEnv()
+        {
+            BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");
+        }
+
+        private static void BuildEnvFrom(string scenePath, string outputPath)
+        {
             var options = new BuildPlayerOptions
             {
-                scenes = new[] { "Assets/Scenes/SCN_TRAIN_ALL.unity" },
-                locationPathName = "Builds/AllEnv/AllEnv.exe",
+                scenes = new[] { scenePath },
+                locationPathName = outputPath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
             };
             var report = BuildPipeline.BuildPlayer(options);
-            Debug.Log($"All-creatures env build: {report.summary.result}, {report.summary.totalErrors} errors.");
+            Debug.Log($"Env build {outputPath}: {report.summary.result}, {report.summary.totalErrors} errors.");
         }
 
         private static void BuildArea(GameObject prefab, TrackKind kind, Vector3 origin,

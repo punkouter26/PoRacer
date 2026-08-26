@@ -2,10 +2,10 @@
 # Usage: .\scripts\train_all_8h.ps1 [-ConfigPath Config\AllLoco8h01.yaml] [-Hours 8]
 # max_steps in the config (3.2M) is calibrated to finish near the 8 h mark; the
 # time box here is the hard stop. Starts TensorBoard first (project rule).
-# num-envs: this env holds 26 articulated areas per instance (13 creatures x 2
-# track variants), so instances are CPU-heavy; cores/4 capped at 3 keeps the
-# total live area count near the 72 the 4x18 layout ran at, and leaves torch its
-# share (recorded per MLOps rule).
+# num-envs: this env holds 18 articulated areas per instance (9 creatures x 2
+# track variants), so instances are CPU-heavy; cores/3 capped at 4 leaves torch
+# its share (recorded per MLOps rule). The four .glb bipeds train separately via
+# scripts	rain_humanoids.ps1 - see Config\Humanoids01.yaml for why.
 param(
     [string]$ConfigPath = "Config\AllLoco8h01.yaml",
     [string]$EnvExe = "Builds\AllEnv\AllEnv.exe",
@@ -49,7 +49,7 @@ if (-not $tbUp) {
 Write-Host "TensorBoard: http://localhost:6006"
 
 $cores = [Environment]::ProcessorCount
-$numEnvs = [Math]::Max(2, [Math]::Min(3, [int][Math]::Floor($cores / 4)))
+$numEnvs = [Math]::Max(2, [Math]::Min(4, [int][Math]::Floor($cores / 3)))
 
 $trainArgs = @(
     $config,
