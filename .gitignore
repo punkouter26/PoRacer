@@ -13,11 +13,10 @@
 [Aa]ssets/AssetStoreTools*
 [Aa]ssets/Plugins/Editor/JetBrains*
 
-# IDE
-.idea/
+# IDE & Local Config
 .vs/
 .vscode/
-*.csproj
+.claude/settings.local.json
 *.sln
 *.slnx
 *.suo

@@ -1,23 +1,24 @@
 {
   "schema_version": 1,
-  "branch": "fix/rig-rotation-and-gen4-brains",
+  "branch": "master",
   "workflow_phase": "",
   "modified_files": [
     "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\MEMORY.md",
     "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\poracer-gen4-overhaul.md",
+    "C:\\Users\\punko\\.claude\\projects\\c--Users-punko-Downloads-PoRacer\\memory\\poracer-master-only-git.md",
     "c:\\Users\\punko\\Downloads\\PoRacer\\Assets\\Scripts\\Editor\\Editor_BuildRiggedCreatures.cs",
     "c:\\Users\\punko\\Downloads\\PoRacer\\Config\\Humanoids01.yaml",
     "c:\\Users\\punko\\Downloads\\PoRacer\\scripts\\train_humanoids.ps1"
   ],
   "recent_commits": [
-    "520e4b6 Split the bipeds into their own training scene, config and run",
-    "be06062 Add the four humanoid racers and re-record every demo",
-    "9daba59 Fix creature rest-rotation loss and ship the gen4 brains"
+    "4aa0bd2 Ship the first humanoid brains from humanoids_20260826_1711",
+    "3ab2536 ...",
+    "520e4b6 Split the bipeds into their own training scene, config and run"
   ],
-  "session_duration": "142m 15s",
+  "session_duration": "162m 50s",
   "tool_calls": 0,
   "warnings_count": 19,
-  "saved_at": "2026-08-26T21:14:14Z",
+  "saved_at": "2026-08-26T21:34:49Z",
   "plan": {},
   "verification": {},
   "agent_context": {}
