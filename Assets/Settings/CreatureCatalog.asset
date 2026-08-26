@@ -71,20 +71,20 @@ MonoBehaviour:
   - id: Grandma_v01
     displayName: Grandma
     prefab: {fileID: 5968860914327035298, guid: 0bede39b6e5c87548a945de57315bfa3, type: 3}
-    model: {fileID: 0}
+    model: {fileID: 5022602860645237092, guid: 0aa94ab6a5a087840b0da5d5bfe61297, type: 3}
     spawnHeight: 0.94
   - id: Grandpa_v01
     displayName: Grandpa
     prefab: {fileID: 6690032468228268047, guid: 268b0cfb7fbd9b9429ff1806b5d7583e, type: 3}
-    model: {fileID: 0}
+    model: {fileID: 5022602860645237092, guid: e45fa630607bf214a9910c41455f9345, type: 3}
     spawnHeight: 0.98
   - id: Matt_v01
     displayName: Matt
     prefab: {fileID: 3045579408805537150, guid: 051b227b1673e114499a76d1e575e260, type: 3}
-    model: {fileID: 0}
+    model: {fileID: 5022602860645237092, guid: 09d336b97ca3a9e45b0b40a85876bd65, type: 3}
     spawnHeight: 0.93
   - id: Nick_v01
     displayName: Nick
     prefab: {fileID: 8082396077218772856, guid: 88e86a4820159d0488db120672ef284e, type: 3}
-    model: {fileID: 0}
+    model: {fileID: 5022602860645237092, guid: 537fd20e2064b7a41b210e920be23ece, type: 3}
     spawnHeight: 0.99
