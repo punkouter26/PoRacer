@@ -30,7 +30,13 @@ namespace PoRacer.Editor
             "Assets/Prefabs/Centipede_v01.prefab",
             "Assets/Prefabs/Crab_v01.prefab",
             "Assets/Prefabs/Kangaroo_v01.prefab",
-            "Assets/Prefabs/Blob_v01.prefab"
+            "Assets/Prefabs/Blob_v01.prefab",
+            // Humanoids from Editor_BuildRiggedCreatures — bipeds, so they start
+            // from scratch and need their own training run.
+            "Assets/Prefabs/Grandma_v01.prefab",
+            "Assets/Prefabs/Grandpa_v01.prefab",
+            "Assets/Prefabs/Matt_v01.prefab",
+            "Assets/Prefabs/Nick_v01.prefab"
         };
 
         private static readonly TrackKind[] Variants = { TrackKind.Walls, TrackKind.Lumpy };

@@ -2,8 +2,10 @@
 # Usage: .\scripts\train_all_8h.ps1 [-ConfigPath Config\AllLoco8h01.yaml] [-Hours 8]
 # max_steps in the config (3.2M) is calibrated to finish near the 8 h mark; the
 # time box here is the hard stop. Starts TensorBoard first (project rule).
-# num-envs: this env holds 18 articulated areas per instance, so instances are
-# CPU-heavy; cores/3 capped at 4 leaves torch its share (recorded per MLOps rule).
+# num-envs: this env holds 26 articulated areas per instance (13 creatures x 2
+# track variants), so instances are CPU-heavy; cores/4 capped at 3 keeps the
+# total live area count near the 72 the 4x18 layout ran at, and leaves torch its
+# share (recorded per MLOps rule).
 param(
     [string]$ConfigPath = "Config\AllLoco8h01.yaml",
     [string]$EnvExe = "Builds\AllEnv\AllEnv.exe",
@@ -29,9 +31,14 @@ if (-not (Test-Path $config)) { throw "Config missing: $config" }
 if (-not (Test-Path $mlagents)) { throw "mlagents-learn missing: $mlagents" }
 $settings = Get-Content (Join-Path $root "ProjectSettings\ProjectSettings.asset") -Raw
 if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
-# The config warm-starts from BC/GAIL demos; refuse to launch without them.
-$demos = Get-ChildItem (Join-Path $root "Assets\Demonstrations\*.demo") -ErrorAction SilentlyContinue
-if (-not $demos -or $demos.Count -lt 9) { throw "Need 9 .demo files in Assets\Demonstrations (found $($demos.Count)). Record via PoRacer/Training menu." }
+# The config warm-starts the nine coded-gait creatures from BC/GAIL demos, by
+# exact filename - a stale recording session leaves "Worm_1.demo" behind while
+# "Worm.demo" is missing, which mlagents only complains about minutes in. The
+# four humanoids are deliberately absent: a biped's coded gait is a fall, so they
+# train on extrinsic reward alone.
+$demoBehaviors = @("Worm", "Spider", "Hexapod", "Quad", "Snake", "Centipede", "Crab", "Kangaroo", "Blob")
+$missingDemos = $demoBehaviors | Where-Object { -not (Test-Path (Join-Path $root "Assets\Demonstrations\$_.demo")) }
+if ($missingDemos) { throw "Missing demos: $($missingDemos -join ', '). Record via PoRacer/Training menu (delete the old .demo files first, or the new ones land as <Name>_1.demo)." }
 
 # TensorBoard first (project rule).
 $tbUp = $false
@@ -42,7 +49,7 @@ if (-not $tbUp) {
 Write-Host "TensorBoard: http://localhost:6006"
 
 $cores = [Environment]::ProcessorCount
-$numEnvs = [Math]::Max(2, [Math]::Min(4, [int][Math]::Floor($cores / 3)))
+$numEnvs = [Math]::Max(2, [Math]::Min(3, [int][Math]::Floor($cores / 4)))
 
 $trainArgs = @(
     $config,

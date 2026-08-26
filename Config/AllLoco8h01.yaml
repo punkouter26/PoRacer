@@ -163,6 +163,60 @@ behaviors:
     keep_checkpoints: 5
     checkpoint_interval: 250000
 
+  # --- Humanoid bipeds (Editor_BuildRiggedCreatures) -------------------------
+  # No BC/GAIL: the coded gait for a biped is a fall, so cloning it would teach
+  # these four to face-plant faster. They learn to balance from scratch on
+  # extrinsic reward alone, which is slower — expect them to trail the fleet for
+  # the first run.
+  Grandma:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *hp
+    network_settings: *net
+    reward_signals:
+      extrinsic: *ext
+    max_steps: *steps
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 250000
+  Grandpa:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *hp
+    network_settings: *net
+    reward_signals:
+      extrinsic: *ext
+    max_steps: *steps
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 250000
+  Matt:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *hp
+    network_settings: *net
+    reward_signals:
+      extrinsic: *ext
+    max_steps: *steps
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 250000
+  Nick:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *hp
+    network_settings: *net
+    reward_signals:
+      extrinsic: *ext
+    max_steps: *steps
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 250000
+
 # All lessons gate on progress (behavior step count / max_steps) so the schedule
 # is a shared clock, fair to every creature. Order of arrival:
 #   10%: goals get longer, terrain roughens, power/mass/friction quirks begin
