@@ -20,10 +20,13 @@ namespace PoRacer
             builder.Register<EloModel>(Lifetime.Singleton);
             builder.Register<RaceConfigModel>(Lifetime.Singleton);
             builder.Register<CommentaryModel>(Lifetime.Singleton);
+            builder.Register<AudioMixModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
             builder.RegisterEntryPoint<Systems_Race>().AsSelf();
             builder.RegisterEntryPoint<Systems_Commentary>();
+            // Entry point: its Tick runs the duck release and the menu mix slide.
+            builder.RegisterEntryPoint<Systems_AudioMix>().AsSelf();
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);
@@ -53,6 +56,13 @@ namespace PoRacer
             builder.RegisterMessageBroker<RacerDnfMessage>(options);
             builder.RegisterMessageBroker<LeadChangedMessage>(options);
             builder.RegisterMessageBroker<RaceFinishedMessage>(options);
+            // These three were declared and published but never registered, so
+            // VContainer handed every publisher and subscriber the null default
+            // its optional parameter allowed: wipeout audio, the wipeout camera
+            // shake, the photo-finish sting and its commentary line were all dead.
+            builder.RegisterMessageBroker<RacerWipeoutMessage>(options);
+            builder.RegisterMessageBroker<RacerOvertakeMessage>(options);
+            builder.RegisterMessageBroker<PhotoFinishMessage>(options);
 
             // Systems_Elo has no tick/start interface; force eager construction so
             // its RaceFinishedMessage subscription exists before the first race ends.

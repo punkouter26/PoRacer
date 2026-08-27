@@ -66,6 +66,16 @@ namespace PoRacer.Systems
         private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
         private static readonly int MetallicId = Shader.PropertyToID("_Metallic");
         private static readonly int SpecColorId = Shader.PropertyToID("_SpecColor");
+        private static readonly int SurfaceIdId = Shader.PropertyToID("_SurfaceId");
+
+        // SH_Creature pattern ids. The shader generates its own detail, so the
+        // roster gets visibly different skins without a single texture asset:
+        // segmented bodies read as scaled, the arthropods as plated, and the
+        // humanoids as woven cloth.
+        private const float SURFACE_SPECKLE = 0f;
+        private const float SURFACE_SCALES = 1f;
+        private const float SURFACE_PLATES = 2f;
+        private const float SURFACE_WEAVE = 3f;
         private const int GRID_COLUMNS = 10;
         private const float GRID_X_SPACING = 2f;
         private const float GRID_ROW_SPACING = 1.6f;
@@ -90,6 +100,7 @@ namespace PoRacer.Systems
         private readonly Systems_CameraDirector _cameraDirector;
         private readonly RaceModel _raceModel;
         private readonly Systems_TrackBuilder _trackBuilder;
+        private readonly Systems_AudioMix _audioMix;
         private readonly System.Random _rng = new();
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
@@ -109,7 +120,8 @@ namespace PoRacer.Systems
             Systems_Race race,
             Systems_CameraDirector cameraDirector,
             RaceModel raceModel,
-            Systems_TrackBuilder trackBuilder)
+            Systems_TrackBuilder trackBuilder,
+            Systems_AudioMix audioMix)
         {
             _catalog = catalog;
             _config = config;
@@ -118,6 +130,7 @@ namespace PoRacer.Systems
             _cameraDirector = cameraDirector;
             _raceModel = raceModel;
             _trackBuilder = trackBuilder;
+            _audioMix = audioMix;
         }
 
         public void Start()
@@ -433,6 +446,7 @@ namespace PoRacer.Systems
                     // the primitive bodies visible form under the sun.
                     Color tint = Color.HSVToRGB(gridIndex * TINT_HUE_STEP % 1f, 0.6f, 1f);
                     Color darkTint = new Color(tint.r * 0.78f, tint.g * 0.78f, tint.b * 0.78f);
+                    float surfaceId = SurfaceIdFor(entry.id);
                     Renderer[] tintRenderers = instance.GetComponentsInChildren<Renderer>();
                     for (int rendererIndex = 0; rendererIndex < tintRenderers.Length; rendererIndex++)
                     {
@@ -444,6 +458,7 @@ namespace PoRacer.Systems
                         _tintBlock.SetColor(SpecColorId, specTint);
                         _tintBlock.SetFloat(SmoothnessId, 0.72f);
                         _tintBlock.SetFloat(MetallicId, 0.22f);
+                        _tintBlock.SetFloat(SurfaceIdId, surfaceId);
                         tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
                     }
 
@@ -453,8 +468,10 @@ namespace PoRacer.Systems
                     // not this racer's own spawn row — otherwise back-row racers
                     // report inflated progress and corrupt the leader ranking.
                     view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds);
+                    instance.AddComponent<SpeedRibbonView>().Initialize(tint);
                     instance.AddComponent<DustTrailView>();
-                    instance.AddComponent<CreatureAudioView>();
+                    // Handed the buses at spawn: the view has no scope to inject from.
+                    instance.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     // After tinting on purpose: the eyes keep their own colors.
                     instance.AddComponent<EyesView>();
                     instance.AddComponent<SkidMarkView>().Initialize(_currentTrack);
@@ -533,6 +550,41 @@ namespace PoRacer.Systems
             }
             _raceModel.CountdownValue = 0;
             _race.StartRace(racers);
+        }
+
+        /// <summary>
+        /// Surface pattern for a creature id, consumed by SH_Creature. Unknown ids
+        /// fall through to the plain speckle rather than to an arbitrary skin, so
+        /// a newly added creature looks deliberate until it is classified here.
+        /// </summary>
+        private static float SurfaceIdFor(string creatureId)
+        {
+            // Catalog ids carry a version suffix ("Worm_v01"); the pattern is a
+            // property of the body plan, not of the brain revision.
+            int suffixIndex = creatureId.IndexOf('_');
+            string bodyPlan = suffixIndex > 0 ? creatureId.Substring(0, suffixIndex) : creatureId;
+            switch (bodyPlan.ToLowerInvariant())
+            {
+                case "worm":
+                case "snake":
+                case "centipede":
+                    return SURFACE_SCALES;
+                case "spider":
+                case "crab":
+                case "hexapod":
+                case "quad":
+                case "kangaroo":
+                    return SURFACE_PLATES;
+                case "grandma":
+                case "grandpa":
+                case "matt":
+                case "nick":
+                case "halfbiped":
+                case "biped":
+                    return SURFACE_WEAVE;
+                default:
+                    return SURFACE_SPECKLE;
+            }
         }
 
         private QuirkDef PickQuirk()

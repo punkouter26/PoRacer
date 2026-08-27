@@ -5,9 +5,20 @@ namespace PoRacer.Views
 {
     /// <summary>
     /// Single source of truth for the runtime UI: palette, spacing scale, corner
-    /// radius standard, font-size scale and the element styling helpers every
-    /// screen (menu, HUD, debug overlay) builds from. Screens never invent their
-    /// own numbers — if a value is missing here, add it here.
+    /// radius standard, font-size scale, elevation levels and the element styling
+    /// helpers every screen (menu, HUD, debug overlay) builds from. Screens never
+    /// invent their own numbers — if a value is missing here, add it here.
+    ///
+    /// Elevation. UI Toolkit has no box-shadow, so depth is built from an offset
+    /// rounded panel sitting behind the element plus the specular top edge the
+    /// glass style already draws. That pairing is what separates the three
+    /// background tiers (screen / panel / glass) into layers the eye can order,
+    /// instead of three flat rectangles of slightly different grey.
+    ///
+    /// Density. The panel is set to scale with screen width against a 540x960
+    /// reference, so a fixed value here means the same fraction of the screen on
+    /// any handset. <see cref="DensityFor"/> exists for the cases where scaling is
+    /// not enough and a layout genuinely needs to drop a column.
     /// </summary>
     internal static class UiTheme
     {
@@ -44,6 +55,14 @@ namespace PoRacer.Views
         public const float CONTROL_SM = 38f;
         public const float CONTROL_MD = 52f;
         public const float CONTROL_LG = 62f;
+
+        // ---- Elevation ----
+        // Vertical offset and opacity of the shadow plate behind a raised element.
+        // Higher levels sit further from their backdrop, so the shadow both drops
+        // further and softens (spreads wider, at lower opacity).
+        public const float ELEVATION_LOW = 2f;
+        public const float ELEVATION_MID = 5f;
+        public const float ELEVATION_HIGH = 10f;
 
         // ---- Scrollbar ----
         public const float SCROLLBAR_THICKNESS = 4f;
@@ -85,6 +104,38 @@ namespace PoRacer.Views
         // Retired / did-not-finish markers.
         public static readonly Color Dnf = new(0.42f, 0.44f, 0.48f);
         public static readonly Color ScrollThumb = new(1f, 1f, 1f, 0.22f);
+        // Shadow plate. Nearly black rather than a tinted grey: on a dark UI a
+        // tinted shadow reads as a coloured outline, not as depth.
+        public static readonly Color Shadow = new(0f, 0f, 0f, 0.45f);
+
+        /// <summary>Layout density, for the few places where scaling is not enough.</summary>
+        public enum Density
+        {
+            /// <summary>Narrow portrait: one column, fewer optional elements.</summary>
+            Compact = 0,
+            /// <summary>The reference 540x960 portrait the layout is designed for.</summary>
+            Regular = 1,
+            /// <summary>Tablet or a resized desktop window: room for more per row.</summary>
+            Wide = 2
+        }
+
+        /// <summary>
+        /// Density bucket for a resolved panel width, in reference units rather
+        /// than device pixels — the panel has already scaled by the time a layout
+        /// asks. The thresholds bracket the 540-unit reference width.
+        /// </summary>
+        public static Density DensityFor(float resolvedWidth)
+        {
+            if (float.IsNaN(resolvedWidth) || resolvedWidth <= 0f)
+            {
+                return Density.Regular;
+            }
+            if (resolvedWidth < 420f)
+            {
+                return Density.Compact;
+            }
+            return resolvedWidth > 760f ? Density.Wide : Density.Regular;
+        }
 
         public static void StylePanel(VisualElement panel)
         {
@@ -92,6 +143,7 @@ namespace PoRacer.Views
             SetRadius(panel, RADIUS_MD);
             SetBorder(panel, PanelBorder, 1f);
             SetPadding(panel, SPACE_SM, SPACE_MD);
+            AddElevation(panel, ELEVATION_MID);
         }
 
         /// <summary>Frosted glassmorphism container with translucent background and specular top border.</summary>
@@ -103,6 +155,8 @@ namespace PoRacer.Views
             panel.style.borderTopColor = GlassHighlight;
             panel.style.borderTopWidth = 1.5f;
             SetPadding(panel, SPACE_MD, SPACE_LG);
+            // Glass sits highest: it is the layer the player is meant to act on.
+            AddElevation(panel, ELEVATION_HIGH);
         }
 
         public static void StyleRow(VisualElement row)
@@ -140,6 +194,7 @@ namespace PoRacer.Views
             button.style.unityFontStyleAndWeight = FontStyle.Bold;
             SetRadius(button, RADIUS_SM);
             SetBorder(button, PanelBorder, 1f);
+            ApplyFont(button);
         }
 
         /// <summary>Recessed track that hosts <see cref="StyleSegment"/> buttons.</summary>
@@ -233,6 +288,54 @@ namespace PoRacer.Views
             }
         }
 
+        /// <summary>
+        /// Raises <paramref name="element"/> off its backdrop by drawing a shadow
+        /// plate behind it.
+        ///
+        /// The plate is a sibling rather than a child, because a child would be
+        /// clipped to the element's own rounded bounds and draw on top of its
+        /// background. It is inserted once the element is attached to a panel, so
+        /// this can be called during construction before there is a parent, and it
+        /// tracks the element's geometry so a reflow cannot leave it behind.
+        ///
+        /// The plate is never pickable, so it cannot intercept a touch aimed at
+        /// whatever sits under the raised element.
+        /// </summary>
+        public static void AddElevation(VisualElement element, float level)
+        {
+            element.RegisterCallback<AttachToPanelEvent>(_ => AttachShadow(element, level));
+        }
+
+        private static void AttachShadow(VisualElement element, float level)
+        {
+            VisualElement parent = element.parent;
+            if (parent == null || element.userData is VisualElement)
+            {
+                // No parent to draw into, or this element already owns a plate.
+                return;
+            }
+
+            var shadow = new VisualElement { pickingMode = PickingMode.Ignore };
+            shadow.style.position = Position.Absolute;
+            shadow.style.backgroundColor = new Color(
+                Shadow.r, Shadow.g, Shadow.b, Shadow.a * Mathf.Clamp01(ELEVATION_HIGH / (level + ELEVATION_HIGH)));
+            parent.Insert(parent.IndexOf(element), shadow);
+            element.userData = shadow;
+
+            // The plate mirrors the element's box, pushed down and spread out. Both
+            // grow with the level, which is what reads as "further from the page".
+            element.RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                float spread = level * 0.5f;
+                Rect box = evt.newRect;
+                shadow.style.left = element.layout.x - spread;
+                shadow.style.top = element.layout.y + level - spread;
+                shadow.style.width = box.width + spread * 2f;
+                shadow.style.height = box.height + spread * 2f;
+                SetRadius(shadow, RADIUS_MD + spread);
+            });
+        }
+
         public static void SetRadius(VisualElement element, float radius)
         {
             element.style.borderTopLeftRadius = radius;
@@ -269,6 +372,63 @@ namespace PoRacer.Views
             element.style.marginRight = horizontal;
         }
 
+        /// <summary>
+        /// Optional project font, loaded once from Resources.
+        ///
+        /// The project ships no font asset, so every screen currently renders in
+        /// Unity's built-in default. Dropping a .ttf at
+        /// Assets/Resources/UI/PoRacerFont.ttf is enough to re-face the whole UI:
+        /// every helper here routes through <see cref="ApplyFont"/>, so no screen
+        /// needs to know whether a custom face is present.
+        /// </summary>
+        private static Font _uiFont;
+        private static bool _uiFontLoaded;
+
+        private static Font UiFont()
+        {
+            if (!_uiFontLoaded)
+            {
+                _uiFontLoaded = true;
+                _uiFont = Resources.Load<Font>("UI/PoRacerFont");
+            }
+            return _uiFont;
+        }
+
+        /// <summary>
+        /// Applies the project font to an element, if one has been supplied. A
+        /// no-op otherwise, which is why callers never have to check first.
+        /// </summary>
+        public static void ApplyFont(VisualElement element)
+        {
+            Font font = UiFont();
+            if (font != null)
+            {
+                element.style.unityFont = font;
+            }
+        }
+
+        /// <summary>
+        /// Label for a value that changes every frame — a clock, a distance, an ELO
+        /// score.
+        ///
+        /// Unity's default face has proportional digits, so "11.1" is visibly
+        /// narrower than "88.8" and a running counter jitters, dragging whatever
+        /// sits beside it back and forth. Until a font with tabular figures is
+        /// supplied, the fix is to stop the label from resizing at all: reserve the
+        /// width the widest value needs and align inside it.
+        /// </summary>
+        public static Label MakeNumericLabel(float reservedWidth, float fontSize, Color color)
+        {
+            var label = new Label { pickingMode = PickingMode.Ignore };
+            label.style.width = reservedWidth;
+            label.style.flexShrink = 0f;
+            label.style.fontSize = fontSize;
+            label.style.color = color;
+            label.style.unityTextAlign = TextAnchor.MiddleRight;
+            ApplyFont(label);
+            return label;
+        }
+
         /// <summary>Uppercase, letter-spaced section label used above each block.</summary>
         public static Label MakeSectionHeader(string text)
         {
@@ -279,6 +439,7 @@ namespace PoRacer.Views
             label.style.letterSpacing = 1.5f;
             label.style.marginTop = SPACE_SM;
             label.style.marginBottom = SPACE_XS;
+            ApplyFont(label);
             return label;
         }
 

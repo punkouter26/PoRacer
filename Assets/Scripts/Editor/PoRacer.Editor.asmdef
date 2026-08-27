@@ -4,7 +4,10 @@
     "references": [
         "PoRacer.Runtime",
         "Unity.InferenceEngine",
-        "Unity.ML-Agents"
+        "Unity.ML-Agents",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.Editor",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [
         "Editor"

@@ -197,6 +197,14 @@ namespace PoRacer.Systems
 
         public void NextTarget() => CycleTarget(1);
 
+        /// <summary>
+        /// The racer the shot is currently built around, or null on the wide
+        /// overview and pack shots. Read by PostFxView to size the shadow range to
+        /// what the camera is actually looking at.
+        /// </summary>
+        public Transform ActiveShotTarget =>
+            _orbitCamera != null && _orbitCamera.Priority == ACTIVE_PRIORITY ? _orbitTarget : null;
+
         public void PrevTarget() => CycleTarget(-1);
 
         public void ShowOverview()

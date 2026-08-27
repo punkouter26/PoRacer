@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using PoRacer.Models;
+using PoRacer.Systems;
 using UnityEngine;
 
 namespace PoRacer.Views
@@ -18,6 +21,20 @@ namespace PoRacer.Views
     /// All three are fully spatial with doppler on: pan, attenuation and pitch bend
     /// come from the AudioListener on the camera. LimbContactView relays the
     /// collisions; this view owns the policy.
+    ///
+    /// Voice budget. Unity is configured for 32 real voices, and each racer builds
+    /// three sources — a 100-racer field asks for 300. Left alone, Unity virtualises
+    /// the excess by priority, and every source here would carry the same default
+    /// priority, so which 32 survive is arbitrary: the racer the camera is chasing
+    /// can fall silent while one off-screen keeps playing. Instead the live views
+    /// are ranked by distance to the listener a few times a second, the nearest few
+    /// keep their loop, and everything beyond audible range stops and is skipped by
+    /// the thud and chirp gates. Priority is written from the same ranking, so the
+    /// voices Unity does virtualise are the ones furthest away.
+    ///
+    /// The ranking is shared static state driven by whichever instance notices the
+    /// timer first, matching how the chirp budget below already works: one pass per
+    /// interval for the whole field rather than one per racer per frame.
     /// </summary>
     public sealed class CreatureAudioView : MonoBehaviour
     {
@@ -37,6 +54,16 @@ namespace PoRacer.Views
         // Four per second: enough for a gait, quiet enough for eight racers at once.
         private const float MIN_THUD_INTERVAL = 0.25f;
         private const int THUD_VARIANTS = 4;
+
+        // Voice budget. Twelve simultaneous loops leaves room under the 32-voice
+        // ceiling for the thuds, chirps, hazards and the non-spatial music bed.
+        private const int MAX_AUDIBLE_LOOPS = 12;
+        private const float AUDIBLE_RANGE = 50f;
+        private const float RANK_INTERVAL_SECONDS = 0.25f;
+        // Distance low-pass: air and distance eat the top end long before they eat
+        // the level, which is most of what makes a far sound read as far.
+        private const float LOWPASS_NEAR_HZ = 5000f;
+        private const float LOWPASS_FAR_HZ = 900f;
 
         // Idle voice chirps.
         private const float CHIRP_VOLUME = 0.2f;
@@ -59,6 +86,16 @@ namespace PoRacer.Views
         private static float ChirpWindowEndTime;
         private static int ChirpsThisWindow;
 
+        // Every enabled view in the scene, plus the scratch buffer the ranking
+        // sorts. Both are reused, so a re-rank allocates nothing after the field
+        // reaches its largest size.
+        private static readonly List<CreatureAudioView> Live = new();
+        private static readonly List<CreatureAudioView> RankBuffer = new();
+        private static readonly System.Comparison<CreatureAudioView> ByDistance =
+            (first, second) => first._listenerSqrDistance.CompareTo(second._listenerSqrDistance);
+        private static float NextRankTime;
+        private static Transform ListenerTransform;
+
         private AudioSource _source;
         private AudioSource _thudSource;
         private AudioSource _voiceSource;
@@ -69,6 +106,11 @@ namespace PoRacer.Views
         private float _nextChirpTime;
         private float _chirpPitch = 1f;
         private int _thudVariant;
+        private AudioLowPassFilter _lowPass;
+        private Systems_AudioMix _mix;
+        private float _listenerSqrDistance;
+        // Set by the shared ranking pass; gates the loop, the thuds and the chirps.
+        private bool _audible = true;
 
         private void Awake()
         {
@@ -87,9 +129,26 @@ namespace PoRacer.Views
             _source.volume = 0f;
             _source.pitch = 0.85f + (entityId & 15) * 0.02f;
 
+            // A filter applies to every source on its GameObject, so this covers
+            // the loop and the chirp but not the thud, which lives on a child.
+            // That split is the one we want: sustained layers read as distant
+            // through their tone, short transients through their level.
+            _lowPass = gameObject.AddComponent<AudioLowPassFilter>();
+            _lowPass.cutoffFrequency = LOWPASS_NEAR_HZ;
+
             BuildThudSource(entityId);
             BuildVoiceSource();
             AttachLimbRelays();
+        }
+
+        /// <summary>
+        /// Hands this racer the mix buses. Called by the spawner right after the
+        /// component is added; without it the view still works and simply plays at
+        /// its design volume, which is what happens in the training scenes.
+        /// </summary>
+        internal void Initialize(Systems_AudioMix mix)
+        {
+            _mix = mix;
         }
 
         private void Start()
@@ -102,6 +161,7 @@ namespace PoRacer.Views
 
         private void OnEnable()
         {
+            Live.Add(this);
             if (_source != null && _source.clip != null)
             {
                 _source.time = (GetEntityId().GetHashCode() & 7) * 0.11f;
@@ -111,6 +171,7 @@ namespace PoRacer.Views
 
         private void OnDisable()
         {
+            Live.Remove(this);
             if (_source != null)
             {
                 _source.Stop();
@@ -119,16 +180,115 @@ namespace PoRacer.Views
 
         private void Update()
         {
+            // Whichever instance gets here first past the interval re-ranks the
+            // whole field; the rest of that frame's instances read the result.
+            if (Time.time >= NextRankTime)
+            {
+                RankField();
+            }
+
             Vector3 position = _transform.position;
             float speed = (position - _lastPosition).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
             _lastPosition = position;
-            float target = Mathf.Clamp01(speed / FULL_VOLUME_SPEED) * MAX_VOLUME;
+
+            if (!_audible)
+            {
+                // Out of budget or out of range: hold the loop silent rather than
+                // leaving Unity to decide which 32 of 300 sources win.
+                if (_source.isPlaying)
+                {
+                    _source.Stop();
+                }
+                return;
+            }
+            if (!_source.isPlaying && _source.clip != null)
+            {
+                _source.Play();
+            }
+
+            float busGain = _mix != null ? _mix.Gain(AudioBus.Sfx) : 1f;
+            float target = Mathf.Clamp01(speed / FULL_VOLUME_SPEED) * MAX_VOLUME * busGain;
             _source.volume = Mathf.MoveTowards(_source.volume, target, Time.deltaTime * 1.5f);
             _source.pitch = Mathf.Lerp(0.85f, 1.28f, Mathf.Clamp01(speed / FULL_VOLUME_SPEED));
+
+            if (_lowPass != null)
+            {
+                // Distance rolls the top end off; the curve is on the raw distance
+                // rather than the squared one so it tracks how it sounds, not how
+                // it is stored.
+                float distance = Mathf.Sqrt(_listenerSqrDistance);
+                _lowPass.cutoffFrequency = Mathf.Lerp(
+                    LOWPASS_NEAR_HZ, LOWPASS_FAR_HZ, Mathf.Clamp01(distance / AUDIBLE_RANGE));
+            }
 
             if (Time.time >= _nextChirpTime)
             {
                 TryChirp();
+            }
+        }
+
+        /// <summary>
+        /// Sorts every live view by distance to the listener and hands out the loop
+        /// budget. Runs at most once per RANK_INTERVAL_SECONDS for the whole field.
+        /// </summary>
+        private static void RankField()
+        {
+            NextRankTime = Time.time + RANK_INTERVAL_SECONDS;
+
+            if (ListenerTransform == null)
+            {
+                AudioListener listener = FindAnyObjectByType<AudioListener>();
+                if (listener == null)
+                {
+                    return;
+                }
+                ListenerTransform = listener.transform;
+            }
+            Vector3 listenerPosition = ListenerTransform.position;
+
+            RankBuffer.Clear();
+            for (int liveIndex = 0; liveIndex < Live.Count; liveIndex++)
+            {
+                CreatureAudioView view = Live[liveIndex];
+                if (view == null)
+                {
+                    continue;
+                }
+                view._listenerSqrDistance =
+                    (view._transform.position - listenerPosition).sqrMagnitude;
+                RankBuffer.Add(view);
+            }
+            RankBuffer.Sort(ByDistance);
+
+            const float rangeSqr = AUDIBLE_RANGE * AUDIBLE_RANGE;
+            for (int rankIndex = 0; rankIndex < RankBuffer.Count; rankIndex++)
+            {
+                CreatureAudioView view = RankBuffer[rankIndex];
+                view._audible = rankIndex < MAX_AUDIBLE_LOOPS
+                    && view._listenerSqrDistance <= rangeSqr;
+                // 0 is the most important voice Unity will keep. Rank maps onto the
+                // priority range so that if Unity does have to virtualise, it drops
+                // the racers the camera is furthest from.
+                int priority = Mathf.Clamp(rankIndex * 4, 0, 255);
+                view.ApplyPriority(priority);
+            }
+        }
+
+        private void ApplyPriority(int priority)
+        {
+            if (_source != null)
+            {
+                _source.priority = priority;
+            }
+            if (_thudSource != null)
+            {
+                // Impacts are transient and carry the physicality of the race, so
+                // they outrank the sustained loop of the same racer.
+                _thudSource.priority = Mathf.Max(0, priority - 2);
+            }
+            if (_voiceSource != null)
+            {
+                _voiceSource.priority = priority;
             }
         }
 
@@ -139,7 +299,8 @@ namespace PoRacer.Views
         /// </summary>
         internal void ReportLimbImpact(float impactSpeed, Vector3 contactPoint)
         {
-            if (_thudSource == null || impactSpeed < MIN_IMPACT_SPEED || Time.time < _nextThudTime)
+            if (_thudSource == null || !_audible || impactSpeed < MIN_IMPACT_SPEED
+                || Time.time < _nextThudTime)
             {
                 return;
             }
@@ -159,7 +320,9 @@ namespace PoRacer.Views
             _thudSource.pitch = Mathf.Lerp(1.12f, 0.88f, loudness);
             // Floor the gain: a landing that just cleared the threshold should be
             // faint, not silent, or the gate would swallow every gentle step.
-            _thudSource.PlayOneShot(clip, Mathf.Lerp(MIN_THUD_VOLUME, MAX_THUD_VOLUME, loudness));
+            float thudGain = _mix != null ? _mix.Gain(AudioBus.Sfx) : 1f;
+            _thudSource.PlayOneShot(
+                clip, Mathf.Lerp(MIN_THUD_VOLUME, MAX_THUD_VOLUME, loudness) * thudGain);
 
             _thudVariant++;
             if (_thudVariant >= THUD_VARIANTS)
@@ -176,7 +339,7 @@ namespace PoRacer.Views
         private void TryChirp()
         {
             ScheduleNextChirp();
-            if (_voiceSource == null || _voiceSource.clip == null)
+            if (_voiceSource == null || _voiceSource.clip == null || !_audible)
             {
                 return;
             }
@@ -194,6 +357,7 @@ namespace PoRacer.Views
             }
             ChirpsThisWindow++;
             _voiceSource.pitch = _chirpPitch;
+            _voiceSource.volume = CHIRP_VOLUME * (_mix != null ? _mix.Gain(AudioBus.Voice) : 1f);
             _voiceSource.Play();
         }
 

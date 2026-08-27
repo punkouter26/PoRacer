@@ -152,6 +152,9 @@ namespace PoRacer.Views
                 _race.NotifyWipeout(_racerId, position, true);
                 _race.NotifyFailure(_racerId);
                 FxUtil.KnockoutPuff(position);
+            // Grit under the smoke: the puff alone reads as a vanish, the debris
+            // reads as a crash.
+            FxUtil.WipeoutDebris(position);
                 enabled = false;
                 gameObject.SetActive(false);
                 return;
@@ -301,6 +304,9 @@ namespace PoRacer.Views
                 body.angularVelocity = Vector3.zero;
             }
             FxUtil.KnockoutPuff(position);
+            // Grit under the smoke: the puff alone reads as a vanish, the debris
+            // reads as a crash.
+            FxUtil.WipeoutDebris(position);
         }
     }
 }

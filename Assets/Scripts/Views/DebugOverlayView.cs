@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.IO;
 using System.Text;
 using PoRacer.Models;
 using Unity.Profiling;
@@ -10,9 +12,19 @@ namespace PoRacer.Views
     /// <summary>
     /// Toggleable diagnostic overlay (DBG button, bottom-left), grouped into
     /// colored sections: PERF (fps, memory, GC), RENDER (draws, batches, tris),
-    /// SCENE (live object counts, sampled every 2 s), and RACE (state, leader,
-    /// field). Text refresh runs on a 250 ms schedule, not per frame; Update
-    /// only counts frames. Rich-text colors flag values that blow their budget.
+    /// PHYSICS (fixed-loop cost, step count, body and contact counts), SCENE
+    /// (live object counts, sampled every 2 s), and RACE (state, leader, field).
+    /// Text refresh runs on a 250 ms schedule, not per frame; Update only counts
+    /// frames. Rich-text colors flag values that blow their budget.
+    ///
+    /// A compact always-on strip (fps / frame ms / draws) sits top-center in every
+    /// build. The panel below it, the frame graph and the CSV recorder are
+    /// development-build only.
+    ///
+    /// The frame graph plots two series: total frame time against the 60 FPS
+    /// budget, and the fixed loop's own cost against the 20 ms step budget. For a
+    /// field of articulation bodies the second line is usually the one that
+    /// explains the first.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class DebugOverlayView : MonoBehaviour
@@ -23,7 +35,13 @@ namespace PoRacer.Views
         // Object counting walks the scene; do it on a slower beat than the text.
         private const int SCENE_SAMPLE_EVERY_N_REFRESHES = 8;
         private const float PANEL_WIDTH = 310f;
-        private const float GRAPH_HEIGHT = 42f;
+        private const float GRAPH_HEIGHT = 48f;
+        // The fixed loop gets one Time.fixedDeltaTime of wall clock before it
+        // starts stealing from the frame; 0.02 s is locked by the project rules.
+        private const float FIXED_BUDGET_MS = 20f;
+        // Rows are buffered and flushed together so a recording session does not
+        // put a file write in the middle of every refresh.
+        private const int CSV_FLUSH_EVERY_N_ROWS = 40;
 
         private const string HEADER_COLOR = "#E8C55A";
         private const string DIM_COLOR = "#9A9A9A";
@@ -39,10 +57,19 @@ namespace PoRacer.Views
         private VisualElement _panel;
         private Label _fpsLabel;
         private int _lastShownFps = -1;
+        // Second half of the always-on strip: frame time and draw count, which is
+        // enough to tell a CPU stall from a draw-call flood without opening the panel.
+        private Label _stripLabel;
+        private string _lastStripText = string.Empty;
         private Label _text;
         private VisualElement _graph;
+        private Button _recordButton;
         private readonly StringBuilder _builder = new();
+        private readonly StringBuilder _csvBuilder = new();
         private readonly float[] _frameMs = new float[FRAME_SAMPLES];
+        // Fixed-loop cost per frame, same cursor and length as _frameMs so the two
+        // series line up sample-for-sample on the graph.
+        private readonly float[] _fixedMs = new float[FRAME_SAMPLES];
         private int _frameCursor;
         private int _frameCount;
         private float _frameSeconds;
@@ -53,6 +80,16 @@ namespace PoRacer.Views
         private ProfilerRecorder _setPasses;
         private ProfilerRecorder _triangles;
         private ProfilerRecorder _gcPerFrame;
+        // Physics counter names differ between Unity versions and backends; each
+        // recorder is used only when it reports Valid, so a missing one degrades
+        // to a dash instead of throwing.
+        private ProfilerRecorder _activeBodies;
+        private ProfilerRecorder _physicsQueries;
+        private ProfilerRecorder _constraints;
+        private string _csvPath;
+        private int _csvRows;
+        private bool _recording;
+        private float _recordStartTime;
         private int _refreshCounter;
         private int _bodyCount;
         private int _particleSystemCount;
@@ -75,20 +112,32 @@ namespace PoRacer.Views
             root.pickingMode = PickingMode.Ignore;
             VisualElement safeRoot = UiTheme.BuildSafeRoot(root);
 
-            // Always-on FPS readout, top center — present in release builds too.
-            var fpsRow = new VisualElement { pickingMode = PickingMode.Ignore };
-            fpsRow.style.position = Position.Absolute;
-            fpsRow.style.top = UiTheme.SPACE_XS;
-            fpsRow.style.left = 0;
-            fpsRow.style.right = 0;
-            fpsRow.style.alignItems = Align.Center;
+            // Always-on telemetry strip, top center - present in release builds too.
+            var stripRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            stripRow.style.position = Position.Absolute;
+            stripRow.style.top = UiTheme.SPACE_XS;
+            stripRow.style.left = 0;
+            stripRow.style.right = 0;
+            stripRow.style.flexDirection = FlexDirection.Row;
+            stripRow.style.justifyContent = Justify.Center;
+            stripRow.style.alignItems = Align.Center;
             _fpsLabel = new Label { pickingMode = PickingMode.Ignore };
             _fpsLabel.style.fontSize = UiTheme.FONT_SM;
             _fpsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             _fpsLabel.style.color = FpsGood;
-            fpsRow.Add(_fpsLabel);
-            safeRoot.Add(fpsRow);
-            root.schedule.Execute(RefreshFps).Every(REFRESH_INTERVAL_MS);
+            stripRow.Add(_fpsLabel);
+            // Frame time and draw count ride alongside in one pre-formatted
+            // string, so a refresh rewrites at most two labels.
+            _stripLabel = new Label { pickingMode = PickingMode.Ignore };
+            _stripLabel.style.fontSize = UiTheme.FONT_XS;
+            _stripLabel.style.color = UiTheme.TextDim;
+            _stripLabel.style.marginLeft = UiTheme.SPACE_SM;
+            stripRow.Add(_stripLabel);
+            safeRoot.Add(stripRow);
+            root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
+
+            // The probe pair owns the fixed-loop timing the strip and panel read.
+            PhysicsProbeView.EnsureOn(gameObject);
 
             // The diagnostic panel below is editor/development-only; the component
             // itself stays enabled so Update keeps feeding the FPS counter.
@@ -108,6 +157,20 @@ namespace PoRacer.Views
             UiTheme.StyleButton(toggle);
             UiTheme.AddHover(toggle);
             safeRoot.Add(toggle);
+
+            // CSV capture: a long soak should leave a file behind, not a
+            // screenshot someone has to read numbers off.
+            _recordButton = new Button(ToggleRecording) { text = "REC" };
+            _recordButton.style.position = Position.Absolute;
+            _recordButton.style.bottom = UiTheme.SPACE_SM;
+            _recordButton.style.left = UiTheme.SPACE_SM + 44f + UiTheme.SPACE_XS;
+            _recordButton.style.width = 44;
+            _recordButton.style.height = UiTheme.CONTROL_SM;
+            _recordButton.style.fontSize = UiTheme.FONT_XS;
+            _recordButton.style.opacity = 0.75f;
+            UiTheme.StyleButton(_recordButton);
+            UiTheme.AddHover(_recordButton);
+            safeRoot.Add(_recordButton);
 
             _panel = new VisualElement { pickingMode = PickingMode.Ignore };
             _panel.style.position = Position.Absolute;
@@ -141,15 +204,25 @@ namespace PoRacer.Views
             _setPasses = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count");
             _triangles = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count");
             _gcPerFrame = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
+            _activeBodies = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Active Dynamic Bodies");
+            _physicsQueries = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Physics Queries");
+            _constraints = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Active Constraints");
         }
 
         private void OnDestroy()
         {
+            if (_recording)
+            {
+                StopRecording();
+            }
             _drawCalls.Dispose();
             _batches.Dispose();
             _setPasses.Dispose();
             _triangles.Dispose();
             _gcPerFrame.Dispose();
+            _activeBodies.Dispose();
+            _physicsQueries.Dispose();
+            _constraints.Dispose();
         }
 
         private void Update()
@@ -163,20 +236,141 @@ namespace PoRacer.Views
                 _frameSeconds = 0f;
             }
             _frameMs[_frameCursor] = Time.unscaledDeltaTime * 1000f;
+            // Scripts plus PhysX where PhysX was attributable; the probe returns
+            // -1 for single-step frames, where the two cannot be separated.
+            float physxMs = PhysicsProbeView.PhysxMsPerFrame;
+            _fixedMs[_frameCursor] = PhysicsProbeView.ScriptMsPerFrame + Mathf.Max(0f, physxMs);
             _frameCursor = (_frameCursor + 1) % FRAME_SAMPLES;
         }
 
-        /// <summary>Top-center FPS number; text/color only touched when it changes.</summary>
-        private void RefreshFps()
+        /// <summary>
+        /// Top-center telemetry strip. Both labels are compared against their last
+        /// value before being written, so a steady frame rate costs no text
+        /// regeneration and no layout pass.
+        /// </summary>
+        private void RefreshStrip()
         {
             int fps = Mathf.RoundToInt(_fps);
-            if (fps == _lastShownFps)
+            if (fps != _lastShownFps)
+            {
+                _lastShownFps = fps;
+                _fpsLabel.text = $"{fps} FPS";
+                _fpsLabel.style.color = fps >= 55 ? FpsGood : fps >= 30 ? FpsWarn : FpsBad;
+            }
+            if (_stripLabel == null)
             {
                 return;
             }
-            _lastShownFps = fps;
-            _fpsLabel.text = $"{fps} FPS";
-            _fpsLabel.style.color = fps >= 55 ? FpsGood : fps >= 30 ? FpsWarn : FpsBad;
+            float frameMs = 1000f / Mathf.Max(_fps, 0.01f);
+            long draws = _drawCalls.Valid ? _drawCalls.LastValue : 0L;
+            float fixedMs = PhysicsProbeView.ScriptMsPerFrame
+                + Mathf.Max(0f, PhysicsProbeView.PhysxMsPerFrame);
+            string stripText = draws > 0L
+                ? $"{frameMs:0.0} ms  |  fix {fixedMs:0.0}  |  {draws} draws"
+                : $"{frameMs:0.0} ms  |  fix {fixedMs:0.0}";
+            if (stripText == _lastStripText)
+            {
+                return;
+            }
+            _lastStripText = stripText;
+            _stripLabel.text = stripText;
+        }
+
+        /// <summary>
+        /// Starts or stops CSV capture. Each session writes its own file so two
+        /// runs never interleave rows, and the path is echoed to the console
+        /// because the persistent data folder is not somewhere anyone browses.
+        /// </summary>
+        private void ToggleRecording()
+        {
+            if (_recording)
+            {
+                StopRecording();
+                return;
+            }
+            _csvPath = Path.Combine(
+                Application.persistentDataPath,
+                $"telemetry-{System.DateTime.Now:yyyyMMdd-HHmmss}.csv");
+            _csvBuilder.Clear();
+            _csvBuilder.Append("t,fps,frame_ms,fixed_ms,steps,gc_kb,draws,batches,setpass,tris,")
+                .Append("bodies,active_bodies,particles,audio,race,racers,leader_mps\n");
+            _csvRows = 0;
+            _recordStartTime = Time.unscaledTime;
+            _recording = true;
+            _recordButton.text = "STOP";
+            _recordButton.style.color = FpsBad;
+            Debug.Log($"Telemetry recording to {_csvPath}");
+        }
+
+        private void StopRecording()
+        {
+            _recording = false;
+            FlushCsv();
+            if (_recordButton != null)
+            {
+                _recordButton.text = "REC";
+                _recordButton.style.color = UiTheme.Text;
+            }
+            Debug.Log($"Telemetry written: {_csvPath} ({_csvRows} rows)");
+        }
+
+        /// <summary>
+        /// One row per refresh tick. Values are invariant-culture formatted so a
+        /// machine with comma decimals still produces a parseable file.
+        /// </summary>
+        private void AppendCsvRow()
+        {
+            CultureInfo culture = CultureInfo.InvariantCulture;
+            float frameMs = 1000f / Mathf.Max(_fps, 0.01f);
+            float fixedMs = PhysicsProbeView.ScriptMsPerFrame
+                + Mathf.Max(0f, PhysicsProbeView.PhysxMsPerFrame);
+            float gcKb = _gcPerFrame.Valid ? _gcPerFrame.LastValue / 1024f : 0f;
+
+            _csvBuilder.Append((Time.unscaledTime - _recordStartTime).ToString("0.00", culture)).Append(',')
+                .Append(_fps.ToString("0.0", culture)).Append(',')
+                .Append(frameMs.ToString("0.00", culture)).Append(',')
+                .Append(fixedMs.ToString("0.00", culture)).Append(',')
+                .Append(PhysicsProbeView.StepsPerFrame).Append(',')
+                .Append(gcKb.ToString("0.00", culture)).Append(',')
+                .Append(_drawCalls.Valid ? _drawCalls.LastValue : 0L).Append(',')
+                .Append(_batches.Valid ? _batches.LastValue : 0L).Append(',')
+                .Append(_setPasses.Valid ? _setPasses.LastValue : 0L).Append(',')
+                .Append(_triangles.Valid ? _triangles.LastValue : 0L).Append(',')
+                .Append(_bodyCount).Append(',')
+                .Append(_activeBodies.Valid ? _activeBodies.LastValue : -1L).Append(',')
+                .Append(_particleSystemCount).Append(',')
+                .Append(_audioSourceCount).Append(',')
+                .Append(_raceModel != null ? _raceModel.RaceNumber : 0).Append(',')
+                .Append(_raceModel != null ? _raceModel.Racers.Count : 0).Append(',')
+                .Append(_leaderSpeed.ToString("0.00", culture)).Append('\n');
+
+            _csvRows++;
+            if (_csvRows % CSV_FLUSH_EVERY_N_ROWS == 0)
+            {
+                FlushCsv();
+            }
+        }
+
+        /// <summary>
+        /// Appends the buffer to disk and clears it. A failed write stops the
+        /// recording rather than throwing on every subsequent refresh.
+        /// </summary>
+        private void FlushCsv()
+        {
+            if (_csvBuilder.Length == 0 || string.IsNullOrEmpty(_csvPath))
+            {
+                return;
+            }
+            try
+            {
+                File.AppendAllText(_csvPath, _csvBuilder.ToString());
+                _csvBuilder.Clear();
+            }
+            catch (IOException exception)
+            {
+                _recording = false;
+                Debug.LogWarning($"Telemetry write failed ({exception.Message}); recording stopped.");
+            }
         }
 
         private void TogglePanel()
@@ -187,19 +381,34 @@ namespace PoRacer.Views
 
         private void Refresh()
         {
-            if (!_visible)
+            // Recording keeps ticking with the panel closed, but nothing here is
+            // worth doing when it is closed and idle - the scene walk below is a
+            // FindObjectsByType over a field that can be a hundred racers deep.
+            if (!_visible && !_recording)
             {
                 return;
             }
+
             _refreshCounter++;
             if (_refreshCounter % SCENE_SAMPLE_EVERY_N_REFRESHES == 1)
             {
                 SampleSceneCounts();
             }
 
+            if (_recording)
+            {
+                AppendCsvRow();
+            }
+            if (!_visible)
+            {
+                return;
+            }
+
             _builder.Clear();
             AppendPerf();
             AppendRender();
+            AppendPhysics();
+            AppendAudio();
             AppendBiomechanics();
             AppendScene();
             AppendRace();
@@ -268,6 +477,56 @@ namespace PoRacer.Views
                 .Append(" @").Append(Application.targetFrameRate).Append('\n');
         }
 
+        /// <summary>
+        /// The fixed loop, which for a field of articulation bodies is where the
+        /// frame actually goes. Script time is always measurable; PhysX time is
+        /// only separable on frames that ran more than one step, and prints as a
+        /// dash otherwise rather than being folded in silently.
+        /// </summary>
+        private void AppendPhysics()
+        {
+            float scriptMs = PhysicsProbeView.ScriptMsPerFrame;
+            float physxMs = PhysicsProbeView.PhysxMsPerFrame;
+            float totalMs = scriptMs + Mathf.Max(0f, physxMs);
+            string totalColor = totalMs <= FIXED_BUDGET_MS * 0.5f ? GOOD_COLOR
+                : totalMs <= FIXED_BUDGET_MS ? WARN_COLOR : BAD_COLOR;
+
+            AppendHeader("PHYSICS");
+            _builder.Append("Fixed   <color=").Append(totalColor).Append('>')
+                .Append(totalMs.ToString("0.00")).Append(" ms</color>/frame  budget ")
+                .Append(FIXED_BUDGET_MS.ToString("0")).Append(" ms\n");
+            _builder.Append("        scripts ").Append(scriptMs.ToString("0.00")).Append(" ms  physx ");
+            if (physxMs >= 0f)
+            {
+                _builder.Append(physxMs.ToString("0.00")).Append(" ms\n");
+            }
+            else
+            {
+                // Single-step frames leave rendering inside the same gap, so the
+                // honest answer is that it was not measured.
+                _builder.Append("<color=").Append(DIM_COLOR).Append(">- (1 step)</color>\n");
+            }
+            _builder.Append("Steps   ").Append(PhysicsProbeView.StepsPerFrame).Append("/frame");
+            if (_activeBodies.Valid)
+            {
+                _builder.Append("  active bodies ").Append(_activeBodies.LastValue);
+            }
+            _builder.Append('\n');
+            if (_constraints.Valid || _physicsQueries.Valid)
+            {
+                _builder.Append("        ");
+                if (_constraints.Valid)
+                {
+                    _builder.Append("constraints ").Append(_constraints.LastValue).Append("  ");
+                }
+                if (_physicsQueries.Valid)
+                {
+                    _builder.Append("queries ").Append(_physicsQueries.LastValue);
+                }
+                _builder.Append('\n');
+            }
+        }
+
         private void AppendBiomechanics()
         {
             AppendHeader("BIOMECHANICS & SOLVER");
@@ -278,6 +537,26 @@ namespace PoRacer.Views
                 .Append(Physics.gravity.z.ToString("0.0")).Append("] m/s² (1G)\n");
             _builder.Append("Joints  Articulations: ").Append(_bodyCount)
                 .Append("  Ground Contacts: ").Append(_limbContactCount).Append('\n');
+        }
+
+        /// <summary>
+        /// Mix health. Gain reduction is the limiter telling you the synthesized
+        /// layers are summing past the ceiling; a number pinned well below zero
+        /// means the design volumes need trimming, not that the limiter is broken.
+        /// </summary>
+        private void AppendAudio()
+        {
+            float reductionDb = MasterLimiterView.GainReductionDb;
+            string reductionColor = reductionDb > -1f ? DIM_COLOR
+                : reductionDb > -6f ? GOOD_COLOR
+                : reductionDb > -12f ? WARN_COLOR : BAD_COLOR;
+
+            AppendHeader("AUDIO");
+            _builder.Append("Sources ").Append(_audioSourceCount)
+                .Append("  real-voice cap ").Append(AudioSettings.GetConfiguration().numRealVoices)
+                .Append('\n');
+            _builder.Append("Limiter <color=").Append(reductionColor).Append('>')
+                .Append(reductionDb.ToString("0.0")).Append(" dB</color> reduction\n");
         }
 
         private void AppendScene()
@@ -380,6 +659,12 @@ namespace PoRacer.Views
             _lastLeaderSampleTime = now;
         }
 
+        /// <summary>
+        /// Two series on one vertical scale: total frame time in accent, the fixed
+        /// loop's own cost in cyan. Sharing the scale is the point — it shows at a
+        /// glance how much of a missed frame was physics. Two dim rules mark the
+        /// 60 FPS frame budget and the 20 ms fixed-step budget.
+        /// </summary>
         private void DrawFrameGraph(MeshGenerationContext context)
         {
             float width = _graph.resolvedStyle.width;
@@ -395,24 +680,42 @@ namespace PoRacer.Views
                 {
                     worst = _frameMs[sampleIndex];
                 }
+                if (_fixedMs[sampleIndex] > worst)
+                {
+                    worst = _fixedMs[sampleIndex];
+                }
             }
 
             Painter2D painter = context.painter2D;
+            DrawBudgetRule(painter, width, height, worst, FRAME_BUDGET_MS, 0.25f);
+            DrawBudgetRule(painter, width, height, worst, FIXED_BUDGET_MS, 0.14f);
+
+            DrawSeries(painter, _fixedMs, width, height, worst, UiTheme.NeonCyan, 1.2f);
+            DrawSeries(painter, _frameMs, width, height, worst, UiTheme.AccentSoft, 1.5f);
+        }
+
+        private static void DrawBudgetRule(Painter2D painter, float width, float height,
+            float worst, float budgetMs, float alpha)
+        {
             painter.lineWidth = 1f;
-            painter.strokeColor = new Color(1f, 1f, 1f, 0.25f);
-            float budgetY = height - FRAME_BUDGET_MS / worst * (height - 2f);
+            painter.strokeColor = new Color(1f, 1f, 1f, alpha);
+            float budgetY = height - budgetMs / worst * (height - 2f);
             painter.BeginPath();
             painter.MoveTo(new Vector2(0f, budgetY));
             painter.LineTo(new Vector2(width, budgetY));
             painter.Stroke();
+        }
 
-            painter.lineWidth = 1.5f;
-            painter.strokeColor = UiTheme.AccentSoft;
+        private void DrawSeries(Painter2D painter, float[] samples, float width, float height,
+            float worst, Color color, float lineWidth)
+        {
+            painter.lineWidth = lineWidth;
+            painter.strokeColor = color;
             painter.BeginPath();
             for (int sampleIndex = 0; sampleIndex < FRAME_SAMPLES; sampleIndex++)
             {
                 // Oldest sample first: the cursor points at the next overwrite slot.
-                float ms = _frameMs[(_frameCursor + sampleIndex) % FRAME_SAMPLES];
+                float ms = samples[(_frameCursor + sampleIndex) % FRAME_SAMPLES];
                 float x = width * sampleIndex / (FRAME_SAMPLES - 1);
                 float y = height - Mathf.Clamp01(ms / worst) * (height - 2f);
                 if (sampleIndex == 0)

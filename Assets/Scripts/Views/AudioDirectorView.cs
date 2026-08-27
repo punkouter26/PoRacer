@@ -26,8 +26,6 @@ namespace PoRacer.Views
     {
         private const int SAMPLE_RATE = 44100;
         private const float AMBIENCE_VOLUME = 0.17f;
-        private const float MENU_MIX = 0.5f;
-        private const float MENU_MIX_RATE = 1.5f;
         // One-shot levels. Every clip AudioLibrary hands back is peak-matched, so
         // these read as a straight mix balance.
         private const float HORN_VOLUME = 0.55f;
@@ -35,8 +33,6 @@ namespace PoRacer.Views
         private const float ROAR_VOLUME = 0.6f;
         private const float DNF_VOLUME = 0.5f;
         private const float COUNTDOWN_VOLUME = 0.4f;
-        private const float DUCK_DEPTH = 0.65f;
-        private const float DUCK_RECOVERY_SECONDS = 1.2f;
 
         // --- Music bed ---------------------------------------------------------
         // Per-stem gain trim under the master music level. The stems are individually
@@ -105,8 +101,7 @@ namespace PoRacer.Views
         private System.IDisposable _subscriptions;
         private readonly System.Collections.Generic.Dictionary<TrackKind, AudioClip> _ambienceByKind = new();
         private TrackKind _ambienceKind = (TrackKind)(-1);
-        private float _duck;
-        private float _menuMix = MENU_MIX;
+        private Systems_AudioMix _mix;
         private float _phasePollTimer;
         private float _musicPitch = 1f;
         private bool _finalStretch;
@@ -115,6 +110,7 @@ namespace PoRacer.Views
         public void Construct(
             RaceConfigModel config,
             RaceModel raceModel,
+            Systems_AudioMix mix,
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<LeadChangedMessage> leadChanged,
             ISubscriber<RacerFinishedMessage> racerFinished,
@@ -124,6 +120,7 @@ namespace PoRacer.Views
         {
             _config = config;
             _raceModel = raceModel;
+            _mix = mix;
             var bag = DisposableBag.CreateBuilder();
             raceStarted.Subscribe(OnRaceStarted).AddTo(bag);
             leadChanged.Subscribe(OnLeadChanged).AddTo(bag);
@@ -136,6 +133,10 @@ namespace PoRacer.Views
 
         private void Awake()
         {
+            // Everything below sums into one mix of individually peak-matched
+            // synthesized clips, which is exactly the case that clips.
+            MasterLimiterView.EnsureOnListener();
+
             _sfxSource = gameObject.AddComponent<AudioSource>();
             _sfxSource.playOnAwake = false;
             _sfxSource.spatialBlend = 0f;
@@ -146,7 +147,7 @@ namespace PoRacer.Views
             _ambienceSource.playOnAwake = false;
             _ambienceSource.spatialBlend = 0f;
             _ambienceSource.loop = true;
-            _ambienceSource.volume = AMBIENCE_VOLUME * MENU_MIX;
+            _ambienceSource.volume = 0f;
 
             // Track-sized reverb. The listener rides the camera, so a single zone
             // centred on the director covers the whole course; the preset is picked
@@ -183,13 +184,12 @@ namespace PoRacer.Views
             {
                 if (_raceModel.CountdownValue > 0)
                 {
-                    _sfxSource.PlayOneShot(_countdownBeep, COUNTDOWN_VOLUME);
+                    _sfxSource.PlayOneShot(_countdownBeep, COUNTDOWN_VOLUME * SfxGain());
                 }
                 _lastCountdown = _raceModel.CountdownValue;
             }
 
             float deltaTime = Time.deltaTime;
-            _duck = Mathf.MoveTowards(_duck, 0f, deltaTime / DUCK_RECOVERY_SECONDS);
 
             // Walking the racer list every frame would be wasted work: phases change
             // on the scale of seconds, so poll and cache the stem targets.
@@ -203,9 +203,11 @@ namespace PoRacer.Views
             _musicPitch = Mathf.MoveTowards(
                 _musicPitch, _finalStretch ? FINAL_STRETCH_PITCH : 1f, deltaTime * PITCH_RATE);
 
-            float menuTarget = _config != null && _config.MenuVisible ? MENU_MIX : 1f;
-            _menuMix = Mathf.MoveTowards(_menuMix, menuTarget, deltaTime * MENU_MIX_RATE);
-            float mix = (1f - DUCK_DEPTH * _duck) * _menuMix;
+            // Duck release and the menu-versus-race level are both envelopes on the
+            // mix model now, so the creature and hazard sources duck with the music
+            // instead of staying at full level through a start horn.
+            float musicMix = _mix != null ? _mix.Gain(AudioBus.Music) : 1f;
+            float ambienceMix = _mix != null ? _mix.Gain(AudioBus.Ambience) : 1f;
 
             float fadeStep = deltaTime / STEM_FADE_SECONDS;
             for (int stemIndex = 0; stemIndex < STEM_COUNT; stemIndex++)
@@ -217,13 +219,19 @@ namespace PoRacer.Views
                 }
                 _stemGain[stemIndex] = Mathf.MoveTowards(
                     _stemGain[stemIndex], _stemTarget[stemIndex], fadeStep);
-                stem.volume = MUSIC_VOLUME * StemLevel[stemIndex] * _stemGain[stemIndex] * mix;
+                stem.volume = MUSIC_VOLUME * StemLevel[stemIndex] * _stemGain[stemIndex] * musicMix;
                 // One pitch for every stem, written from one place: this is what
                 // keeps four independently-playing sources sample-locked.
                 stem.pitch = _musicPitch;
             }
-            _ambienceSource.volume = AMBIENCE_VOLUME * mix;
+            _ambienceSource.volume = AMBIENCE_VOLUME * ambienceMix;
         }
+
+        /// <summary>
+        /// SFX bus multiplier for a one-shot. Read at fire time rather than cached,
+        /// because the duck it folds in is moving while the race runs.
+        /// </summary>
+        private float SfxGain() => _mix != null ? _mix.Gain(AudioBus.Sfx) : 1f;
 
         private void OnDestroy()
         {
@@ -360,54 +368,54 @@ namespace PoRacer.Views
 
         private void OnRaceStarted(RaceStartedMessage message)
         {
-            _sfxSource.PlayOneShot(_startHorn, HORN_VOLUME);
+            _sfxSource.PlayOneShot(_startHorn, HORN_VOLUME * SfxGain());
             if (_subBassDrop != null)
             {
-                _sfxSource.PlayOneShot(_subBassDrop, 0.85f);
+                _sfxSource.PlayOneShot(_subBassDrop, 0.85f * SfxGain());
             }
-            _duck = 1f;
+            _mix?.Duck(1f);
             // Do not wait for the poll: the bass should arrive with the horn.
             UpdatePhaseTargets();
         }
 
         private void OnLeadChanged(LeadChangedMessage message)
         {
-            _sfxSource.PlayOneShot(_crowdCheer, CHEER_VOLUME);
-            _duck = Mathf.Max(_duck, 0.5f);
+            _sfxSource.PlayOneShot(_crowdCheer, CHEER_VOLUME * SfxGain());
+            _mix?.Duck(0.5f);
         }
 
         private void OnRacerFinished(RacerFinishedMessage message)
         {
             if (message.Place == 1)
             {
-                _sfxSource.PlayOneShot(_crowdRoar, ROAR_VOLUME);
+                _sfxSource.PlayOneShot(_crowdRoar, ROAR_VOLUME * SfxGain());
                 if (_subBassDrop != null)
                 {
-                    _sfxSource.PlayOneShot(_subBassDrop, 0.9f);
+                    _sfxSource.PlayOneShot(_subBassDrop, 0.9f * SfxGain());
                 }
-                _duck = 1f;
+                _mix?.Duck(1f);
             }
         }
 
         private void OnRacerDnf(RacerDnfMessage message)
         {
-            _sfxSource.PlayOneShot(_dnfBlip, DNF_VOLUME);
+            _sfxSource.PlayOneShot(_dnfBlip, DNF_VOLUME * SfxGain());
         }
 
         private void OnRacerWipeout(RacerWipeoutMessage message)
         {
-            _sfxSource.PlayOneShot(_crowdGasp, 0.45f);
+            _sfxSource.PlayOneShot(_crowdGasp, 0.45f * SfxGain());
             if (message.IsFatal)
             {
-                _sfxSource.PlayOneShot(_wipeoutSting, 0.6f);
+                _sfxSource.PlayOneShot(_wipeoutSting, 0.6f * SfxGain());
             }
-            _duck = Mathf.Max(_duck, 0.6f);
+            _mix?.Duck(0.6f);
         }
 
         private void OnPhotoFinish(PhotoFinishMessage message)
         {
-            _sfxSource.PlayOneShot(_photoFinishFanfare, 0.7f);
-            _duck = 1f;
+            _sfxSource.PlayOneShot(_photoFinishFanfare, 0.7f * SfxGain());
+            _mix?.Duck(1f);
         }
 
         // ====================================================================
