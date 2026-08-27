@@ -26,8 +26,8 @@ namespace PoRacer.Views
         private const int TOP_CHIP_COUNT = 3;
         // Rail dots are pooled: a 100+ racer field shows only the leading pack.
         private const int MAX_RAIL_DOTS = 32;
-        private const float RAIL_WIDTH = 7f;
-        private const float RAIL_DOT_SIZE = 9f;
+        private const float RAIL_WIDTH = 8f;
+        private const float RAIL_DOT_SIZE = 10f;
         // Percent of the rail a dot's top may reach, leaving room for its height.
         private const float RAIL_SPAN_PERCENT = 96f;
         private const float CHIP_SWATCH_SIZE = 8f;
@@ -188,7 +188,7 @@ namespace PoRacer.Views
             _podiumPanel.style.top = new Length(38f, LengthUnit.Percent);
             _podiumPanel.style.left = new Length(12f, LengthUnit.Percent);
             _podiumPanel.style.right = new Length(12f, LengthUnit.Percent);
-            UiTheme.StylePanel(_podiumPanel);
+            UiTheme.StyleGlassPanel(_podiumPanel, glowing: true);
             _podiumPanel.style.display = DisplayStyle.None;
             var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
             podiumTitle.style.color = UiTheme.Gold;
@@ -247,7 +247,7 @@ namespace PoRacer.Views
             menuButton.style.position = Position.Absolute;
             menuButton.style.top = UiTheme.SPACE_XS;
             menuButton.style.right = UiTheme.SPACE_SM;
-            menuButton.style.width = 64;
+            menuButton.style.width = 76;
             menuButton.style.height = UiTheme.CONTROL_SM;
             menuButton.style.fontSize = UiTheme.FONT_SM;
             UiTheme.StyleButton(menuButton);
@@ -270,7 +270,7 @@ namespace PoRacer.Views
             _introCard.style.left = UiTheme.SPACE_MD;
             _introCard.style.flexDirection = FlexDirection.Row;
             _introCard.style.alignItems = Align.Center;
-            UiTheme.StylePanel(_introCard);
+            UiTheme.StyleGlassPanel(_introCard);
             _introCard.style.display = DisplayStyle.None;
             safeRoot.Add(_introCard);
 

@@ -34,12 +34,16 @@ namespace PoRacer.Views
         public void Construct(
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<LeadChangedMessage> leadChanged,
-            ISubscriber<RacerFinishedMessage> racerFinished)
+            ISubscriber<RacerFinishedMessage> racerFinished,
+            ISubscriber<RacerWipeoutMessage> racerWipeout = null,
+            ISubscriber<PhotoFinishMessage> photoFinish = null)
         {
             var bag = DisposableBag.CreateBuilder();
             raceStarted.Subscribe(OnRaceStarted).AddTo(bag);
             leadChanged.Subscribe(OnLeadChanged).AddTo(bag);
             racerFinished.Subscribe(OnRacerFinished).AddTo(bag);
+            racerWipeout?.Subscribe(OnRacerWipeout).AddTo(bag);
+            photoFinish?.Subscribe(OnPhotoFinish).AddTo(bag);
             _subscriptions = bag.Build();
         }
 
@@ -100,6 +104,19 @@ namespace PoRacer.Views
         private void OnLeadChanged(LeadChangedMessage message)
         {
             _impulse.GenerateImpulse(LEAD_SHAKE);
+            CrowdMood.Excite();
+        }
+
+        private void OnRacerWipeout(RacerWipeoutMessage message)
+        {
+            _impulse.GenerateImpulse(message.IsFatal ? 0.45f : 0.22f);
+            CrowdMood.Excite();
+        }
+
+        private void OnPhotoFinish(PhotoFinishMessage message)
+        {
+            _impulse.GenerateImpulse(0.75f);
+            _slowMoUntil = Time.unscaledTime + 1.4f;
             CrowdMood.Excite();
         }
 

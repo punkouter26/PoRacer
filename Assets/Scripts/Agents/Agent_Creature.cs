@@ -217,10 +217,11 @@ namespace PoRacer.Agents
 
             float distance = DistanceToGoal();
             float normalizedTorque = ComputeNormalizedTorque();
+            float skateVelocity = ComputeSkateVelocity();
             UpdateStamina(normalizedTorque);
             ApplyFatigueToDrives();
             float uprightDot = Vector3.Dot(_root.transform.up, Vector3.up);
-            AddReward(_reward.Step(distance, normalizedTorque, uprightDot, actionJerk));
+            AddReward(_reward.Step(distance, normalizedTorque, uprightDot, actionJerk, skateVelocity));
             LogRewardComponents();
 
             if (_reward.ReachedGoal(distance))
@@ -261,6 +262,27 @@ namespace PoRacer.Agents
                     ? _gaitAmplitudes[jointIndex] * Mathf.Sin(angle + _gaitPhases[jointIndex]) + offset
                     : Mathf.Sin(angle - jointIndex * 1.1f);
             }
+        }
+
+        private float ComputeSkateVelocity()
+        {
+            if (_limbContacts == null || _joints == null)
+            {
+                return 0f;
+            }
+            float skateSum = 0f;
+            int groundedCount = 0;
+            for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
+            {
+                if (_limbContacts[jointIndex] != null && _limbContacts[jointIndex].IsGrounded)
+                {
+                    Vector3 linearVelocity = _joints[jointIndex].linearVelocity;
+                    linearVelocity.y = 0f;
+                    skateSum += linearVelocity.magnitude;
+                    groundedCount++;
+                }
+            }
+            return groundedCount > 0 ? skateSum / groundedCount : 0f;
         }
 
         private float ComputeNormalizedTorque()
@@ -362,6 +384,7 @@ namespace PoRacer.Agents
             stats.Add("Reward/EfficiencyPenalty", _reward.LastEfficiencyPenalty);
             stats.Add("Reward/UprightBonus", _reward.LastUprightBonus);
             stats.Add("Reward/JerkPenalty", _reward.LastJerkPenalty);
+            stats.Add("Reward/SkatePenalty", _reward.LastSkatePenalty);
             stats.Add("Reward/TimePenalty", -Reward_WormLoco.TIME_PENALTY);
             stats.Add("Fatigue/Stamina", _stamina);
         }

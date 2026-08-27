@@ -158,5 +158,58 @@ namespace PoRacer.Tests
 
             Assert.That(_model.FindRacer("worm#1").Status, Is.EqualTo(RacerStatus.Dnf));
         }
+
+        [Test]
+        public void PhotoFinish_PublishesMessageWhenMarginUnderThreshold()
+        {
+            var photoFinishPublisher = new FakePublisher<PhotoFinishMessage>();
+            var sut = new Systems_Race(
+                _model,
+                new FakePublisher<RaceStartedMessage>(),
+                new FakePublisher<RacerFinishedMessage>(),
+                new FakePublisher<RacerDnfMessage>(),
+                _raceFinished,
+                new FakePublisher<RacerWipeoutMessage>(),
+                photoFinishPublisher);
+
+            sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing },
+                new() { RacerId = "b", CreatureId = "spider", Status = RacerStatus.Racing }
+            });
+
+            sut.NotifyFinish("a");
+            sut.Advance(0.15f); // 0.15s margin < 0.35s threshold
+            sut.NotifyFinish("b");
+
+            Assert.That(photoFinishPublisher.Published, Has.Count.EqualTo(1));
+            Assert.That(photoFinishPublisher.Published[0].WinnerId, Is.EqualTo("a"));
+            Assert.That(photoFinishPublisher.Published[0].RunnerUpId, Is.EqualTo("b"));
+            Assert.That(photoFinishPublisher.Published[0].MarginSeconds, Is.EqualTo(0.15f).Within(0.01f));
+        }
+
+        [Test]
+        public void NotifyWipeout_PublishesWipeoutMessage()
+        {
+            var wipeoutPublisher = new FakePublisher<RacerWipeoutMessage>();
+            var sut = new Systems_Race(
+                _model,
+                new FakePublisher<RaceStartedMessage>(),
+                new FakePublisher<RacerFinishedMessage>(),
+                new FakePublisher<RacerDnfMessage>(),
+                _raceFinished,
+                wipeoutPublisher);
+
+            sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing }
+            });
+
+            sut.NotifyWipeout("a", UnityEngine.Vector3.up * 2f, isFatal: true);
+
+            Assert.That(wipeoutPublisher.Published, Has.Count.EqualTo(1));
+            Assert.That(wipeoutPublisher.Published[0].RacerId, Is.EqualTo("a"));
+            Assert.That(wipeoutPublisher.Published[0].IsFatal, Is.True);
+        }
     }
 }

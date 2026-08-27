@@ -27,6 +27,9 @@ namespace PoRacer.Systems
         private string _leaderId;
         private float _lastLeadChangeSeconds;
 
+        private readonly Random _rng = new();
+        private bool _commentedFinalStretch;
+
         public Systems_Commentary(
             RaceModel model,
             CommentaryModel commentary,
@@ -34,7 +37,9 @@ namespace PoRacer.Systems
             ISubscriber<RaceStartedMessage> started,
             ISubscriber<RacerFinishedMessage> racerFinished,
             ISubscriber<RacerDnfMessage> dnf,
-            ISubscriber<RaceFinishedMessage> raceFinished)
+            ISubscriber<RaceFinishedMessage> raceFinished,
+            ISubscriber<RacerWipeoutMessage> wipeout = null,
+            ISubscriber<PhotoFinishMessage> photoFinish = null)
         {
             _model = model;
             _commentary = commentary;
@@ -44,6 +49,8 @@ namespace PoRacer.Systems
             racerFinished.Subscribe(OnRacerFinished).AddTo(bag);
             dnf.Subscribe(OnRacerDnf).AddTo(bag);
             raceFinished.Subscribe(OnRaceFinished).AddTo(bag);
+            wipeout?.Subscribe(OnRacerWipeout).AddTo(bag);
+            photoFinish?.Subscribe(OnPhotoFinish).AddTo(bag);
             _subscriptions = bag.Build();
         }
 
@@ -63,24 +70,40 @@ namespace PoRacer.Systems
                     leader = racer;
                 }
             }
-            if (leader == null || leader.Progress < MIN_LEAD_PROGRESS_METERS || leader.RacerId == _leaderId)
+            if (leader == null || leader.Progress < MIN_LEAD_PROGRESS_METERS)
+            {
+                return;
+            }
+
+            // Final stretch announcement once per race
+            if (!_commentedFinalStretch && _model.TrackLengthMeters > 0f && leader.Progress >= _model.TrackLengthMeters * 0.8f)
+            {
+                _commentedFinalStretch = true;
+                _commentary.Add($"🏁 {ColoredName(leader)} hits the final stretch! The podium is in sight!");
+            }
+
+            if (leader.RacerId == _leaderId)
             {
                 return;
             }
 
             if (_leaderId == null)
             {
-                _commentary.Add($"{ColoredName(leader)} grabs the early lead!");
+                _commentary.Add($"⚡ {ColoredName(leader)} grabs the early lead!");
             }
             else if (_model.ElapsedSeconds - _lastLeadChangeSeconds >= LEAD_CHANGE_COOLDOWN_SECONDS)
             {
-                _commentary.Add($"{ColoredName(leader)} takes the lead!");
+                string[] leadLines =
+                {
+                    $"⚡ {ColoredName(leader)} surges into the lead!",
+                    $"🔥 {ColoredName(leader)} makes a bold move and takes 1st!",
+                    $"🚀 {ColoredName(leader)} hits the front with blistering pace!"
+                };
+                _commentary.Add(leadLines[_rng.Next(leadLines.Length)]);
                 _leadChangedPublisher.Publish(new LeadChangedMessage(leader.RacerId));
             }
             else
             {
-                // Too soon after the last call: swallow the line but still track
-                // the leader so the next call names the right racer.
                 _leaderId = leader.RacerId;
                 return;
             }
@@ -94,8 +117,36 @@ namespace PoRacer.Systems
         {
             _leaderId = null;
             _lastLeadChangeSeconds = 0f;
+            _commentedFinalStretch = false;
             _commentary.Clear();
-            _commentary.Add($"They're off! {message.RacerCount} racers charge for the finish!");
+            _commentary.Add($"🟢 They're off! {message.RacerCount} racers charge for the finish!");
+        }
+
+        private void OnRacerWipeout(RacerWipeoutMessage message)
+        {
+            if (_model.Racers.Count > MAX_RACERS_FOR_DNF_COMMENTS)
+            {
+                return;
+            }
+            RacerState racer = _model.FindRacer(message.RacerId);
+            string name = racer != null ? ColoredName(racer) : message.RacerId;
+            if (message.IsFatal)
+            {
+                _commentary.Add($"🚨 Catastrophic wipeout! {name} is knocked out!");
+            }
+            else
+            {
+                _commentary.Add($"💥 Big tumble for {name}! Marshal scrambling to assist!");
+            }
+        }
+
+        private void OnPhotoFinish(PhotoFinishMessage message)
+        {
+            RacerState winner = _model.FindRacer(message.WinnerId);
+            RacerState runnerUp = _model.FindRacer(message.RunnerUpId);
+            string winName = winner != null ? ColoredName(winner) : message.WinnerId;
+            string runName = runnerUp != null ? ColoredName(runnerUp) : message.RunnerUpId;
+            _commentary.Add($"📸 INCREDIBLE PHOTO FINISH! {winName} edges {runName} by just {message.MarginSeconds:0.00}s!");
         }
 
         private void OnRacerFinished(RacerFinishedMessage message)
@@ -108,9 +159,9 @@ namespace PoRacer.Systems
             string name = racer != null ? ColoredName(racer) : message.RacerId;
             string line = message.Place switch
             {
-                1 => $"{name} WINS in {message.Time:0.0}s!",
-                2 => $"{name} takes second place!",
-                _ => $"{name} takes third place!"
+                1 => $"🏆 {name} WINS in {message.Time:0.0}s!",
+                2 => $"🥈 {name} takes second place!",
+                _ => $"🥉 {name} takes third place!"
             };
             _commentary.Add(line);
         }
@@ -127,7 +178,7 @@ namespace PoRacer.Systems
 
         private void OnRaceFinished(RaceFinishedMessage message)
         {
-            _commentary.Add("Race complete!");
+            _commentary.Add("🏁 Race complete! What a battle!");
         }
 
         private static string ColoredName(RacerState racer)

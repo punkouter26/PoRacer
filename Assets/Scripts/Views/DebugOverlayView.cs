@@ -57,6 +57,7 @@ namespace PoRacer.Views
         private int _bodyCount;
         private int _particleSystemCount;
         private int _audioSourceCount;
+        private int _limbContactCount;
         private string _lastLeaderId;
         private float _lastLeaderProgress;
         private float _lastLeaderSampleTime;
@@ -199,6 +200,7 @@ namespace PoRacer.Views
             _builder.Clear();
             AppendPerf();
             AppendRender();
+            AppendBiomechanics();
             AppendScene();
             AppendRace();
             _text.text = _builder.ToString();
@@ -264,6 +266,18 @@ namespace PoRacer.Views
             }
             _builder.Append("screen ").Append(Screen.width).Append('x').Append(Screen.height)
                 .Append(" @").Append(Application.targetFrameRate).Append('\n');
+        }
+
+        private void AppendBiomechanics()
+        {
+            AppendHeader("BIOMECHANICS & SOLVER");
+            _builder.Append("Solver  PhysX Iterations: ").Append(Physics.defaultSolverIterations)
+                .Append("  Fixed Δt: ").Append(Time.fixedDeltaTime.ToString("0.000")).Append("s\n");
+            _builder.Append("Gravity [").Append(Physics.gravity.x.ToString("0.0")).Append(", ")
+                .Append(Physics.gravity.y.ToString("0.0")).Append(", ")
+                .Append(Physics.gravity.z.ToString("0.0")).Append("] m/s² (1G)\n");
+            _builder.Append("Joints  Articulations: ").Append(_bodyCount)
+                .Append("  Ground Contacts: ").Append(_limbContactCount).Append('\n');
         }
 
         private void AppendScene()
@@ -340,6 +354,7 @@ namespace PoRacer.Views
             _bodyCount = FindObjectsByType<ArticulationBody>(FindObjectsSortMode.None).Length;
             _particleSystemCount = FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None).Length;
             _audioSourceCount = FindObjectsByType<AudioSource>(FindObjectsSortMode.None).Length;
+            _limbContactCount = FindObjectsByType<LimbContactView>(FindObjectsSortMode.None).Length;
         }
 
         private void UpdateLeaderSpeed(RacerState leader)

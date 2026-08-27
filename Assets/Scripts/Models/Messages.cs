@@ -73,4 +73,46 @@ namespace PoRacer.Models
             Dnf = dnf;
         }
     }
+
+    public readonly struct RacerWipeoutMessage
+    {
+        public readonly string RacerId;
+        public readonly UnityEngine.Vector3 Position;
+        public readonly bool IsFatal;
+
+        public RacerWipeoutMessage(string racerId, UnityEngine.Vector3 position, bool isFatal)
+        {
+            RacerId = racerId;
+            Position = position;
+            IsFatal = isFatal;
+        }
+    }
+
+    public readonly struct RacerOvertakeMessage
+    {
+        public readonly string OvertakerId;
+        public readonly string OvertakenId;
+        public readonly int NewPlace;
+
+        public RacerOvertakeMessage(string overtakerId, string overtakenId, int newPlace)
+        {
+            OvertakerId = overtakerId;
+            OvertakenId = overtakenId;
+            NewPlace = newPlace;
+        }
+    }
+
+    public readonly struct PhotoFinishMessage
+    {
+        public readonly string WinnerId;
+        public readonly string RunnerUpId;
+        public readonly float MarginSeconds;
+
+        public PhotoFinishMessage(string winnerId, string runnerUpId, float marginSeconds)
+        {
+            WinnerId = winnerId;
+            RunnerUpId = runnerUpId;
+            MarginSeconds = marginSeconds;
+        }
+    }
 }

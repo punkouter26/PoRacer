@@ -124,6 +124,7 @@ namespace PoRacer.Views
             _lastPosition = position;
             float target = Mathf.Clamp01(speed / FULL_VOLUME_SPEED) * MAX_VOLUME;
             _source.volume = Mathf.MoveTowards(_source.volume, target, Time.deltaTime * 1.5f);
+            _source.pitch = Mathf.Lerp(0.85f, 1.28f, Mathf.Clamp01(speed / FULL_VOLUME_SPEED));
 
             if (Time.time >= _nextChirpTime)
             {

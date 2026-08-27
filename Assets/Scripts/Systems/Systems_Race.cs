@@ -33,18 +33,27 @@ namespace PoRacer.Systems
         private float _sameTimeStamp = -1f;
         private int _nextPlace;
 
+        private readonly IPublisher<RacerWipeoutMessage> _wipeoutPublisher;
+        private readonly IPublisher<PhotoFinishMessage> _photoFinishPublisher;
+        private float _firstPlaceTime = -1f;
+        private string _firstPlaceId;
+
         public Systems_Race(
             RaceModel model,
             IPublisher<RaceStartedMessage> startedPublisher,
             IPublisher<RacerFinishedMessage> racerFinishedPublisher,
             IPublisher<RacerDnfMessage> dnfPublisher,
-            IPublisher<RaceFinishedMessage> raceFinishedPublisher)
+            IPublisher<RaceFinishedMessage> raceFinishedPublisher,
+            IPublisher<RacerWipeoutMessage> wipeoutPublisher = null,
+            IPublisher<PhotoFinishMessage> photoFinishPublisher = null)
         {
             _model = model;
             _startedPublisher = startedPublisher;
             _racerFinishedPublisher = racerFinishedPublisher;
             _dnfPublisher = dnfPublisher;
             _raceFinishedPublisher = raceFinishedPublisher;
+            _wipeoutPublisher = wipeoutPublisher;
+            _photoFinishPublisher = photoFinishPublisher;
         }
 
         // Unscaled: the winner slow-mo (CameraFxView) must not stretch the race
@@ -70,6 +79,8 @@ namespace PoRacer.Systems
             _model.ElapsedSeconds = 0f;
             _model.RaceActive = true;
             _model.RaceNumber++;
+            _firstPlaceTime = -1f;
+            _firstPlaceId = null;
             _startedPublisher.Publish(new RaceStartedMessage(racers.Count));
         }
 
@@ -88,6 +99,11 @@ namespace PoRacer.Systems
             }
         }
 
+        public void NotifyWipeout(string racerId, UnityEngine.Vector3 position, bool isFatal)
+        {
+            _wipeoutPublisher?.Publish(new RacerWipeoutMessage(racerId, position, isFatal));
+        }
+
         public void NotifyFinish(string racerId, float overshootMeters = 0f)
         {
             RacerState racer = _model.FindRacer(racerId);
@@ -101,6 +117,20 @@ namespace PoRacer.Systems
             racer.FinishOvershoot = overshootMeters;
             ResolveSameFrameTie(racer);
             _racerFinishedPublisher.Publish(new RacerFinishedMessage(racerId, racer.Place, racer.FinishTime));
+
+            if (racer.Place == 1)
+            {
+                _firstPlaceTime = racer.FinishTime;
+                _firstPlaceId = racer.RacerId;
+            }
+            else if (racer.Place == 2 && _firstPlaceId != null && _firstPlaceTime >= 0f)
+            {
+                float margin = racer.FinishTime - _firstPlaceTime;
+                if (margin <= 0.35f)
+                {
+                    _photoFinishPublisher?.Publish(new PhotoFinishMessage(_firstPlaceId, racer.RacerId, margin));
+                }
+            }
 
             // Podium cutoff: with the top places decided there is nothing left to
             // win. Everyone still racing is scored as a non-finisher — quietly, no

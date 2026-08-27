@@ -88,13 +88,21 @@ namespace PoRacer.Views
             _lastZ = z;
             if (_flippedSeconds >= KNOCKDOWN_SECONDS)
             {
+                var cosmetic = GetComponent<CosmeticPropView>();
+                if (cosmetic != null && !cosmetic.IsEjected)
+                {
+                    cosmetic.Eject();
+                }
+
                 if (_rescuesUsed < MAX_RESCUES)
                 {
                     _rescuesUsed++;
                     _flippedSeconds = 0f;
+                    _race.NotifyWipeout(_racerId, position, false);
                     RescueFlip(position);
                     return;
                 }
+                _race.NotifyWipeout(_racerId, position, true);
                 _race.NotifyFailure(_racerId);
                 FxUtil.KnockoutPuff(position);
                 enabled = false;

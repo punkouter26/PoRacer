@@ -14,6 +14,7 @@ namespace PoRacer.Views
         private const float FULL_RATE_SPEED = 2.5f;
 
         private ParticleSystem _particles;
+        private ParticleSystem _sparks;
         private Transform _transform;
         private Vector3 _lastPosition;
 
@@ -22,13 +23,11 @@ namespace PoRacer.Views
             _transform = transform;
             _lastPosition = _transform.position;
             _particles = BuildParticles();
+            _sparks = BuildSparks();
         }
 
         private void Update()
         {
-            // A dead particle system just retires the trail. The module is
-            // fetched fresh each frame (cheap, allocation-free): a cached module
-            // struct goes invalid on domain reload and then throws forever.
             if (_particles == null)
             {
                 enabled = false;
@@ -37,8 +36,15 @@ namespace PoRacer.Views
             Vector3 position = _transform.position;
             float speed = (position - _lastPosition).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
             _lastPosition = position;
+
             ParticleSystem.EmissionModule emission = _particles.emission;
             emission.rateOverTime = Mathf.Clamp01(speed / FULL_RATE_SPEED) * MAX_RATE;
+
+            if (_sparks != null)
+            {
+                ParticleSystem.EmissionModule sparkEmission = _sparks.emission;
+                sparkEmission.rateOverTime = speed > 2.0f ? (speed - 2.0f) * 18f : 0f;
+            }
         }
 
         private ParticleSystem BuildParticles()
@@ -91,6 +97,42 @@ namespace PoRacer.Views
             if (sharedMaterial != null)
             {
                 particleRenderer.material = sharedMaterial;
+            }
+            particleRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            particleRenderer.receiveShadows = false;
+            return ps;
+        }
+
+        private ParticleSystem BuildSparks()
+        {
+            var go = new GameObject("SpeedSparks");
+            go.transform.SetParent(_transform, false);
+            var ps = go.AddComponent<ParticleSystem>();
+
+            ParticleSystem.MainModule main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.45f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 3.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.15f);
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(1f, 0.8f, 0.2f, 0.9f),
+                new Color(1f, 0.35f, 0.1f, 0.8f));
+            main.gravityModifier = 0.5f;
+            main.maxParticles = 50;
+
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.rateOverTime = 0f;
+
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 25f;
+            shape.rotation = new Vector3(-180f, 0f, 0f);
+
+            var particleRenderer = ps.GetComponent<ParticleSystemRenderer>();
+            Material glowMat = FxUtil.GlowParticleMaterial();
+            if (glowMat != null)
+            {
+                particleRenderer.material = glowMat;
             }
             particleRenderer.shadowCastingMode = ShadowCastingMode.Off;
             particleRenderer.receiveShadows = false;

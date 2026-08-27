@@ -1,0 +1,138 @@
+# ==============================================================================
+# Humanoids02_Biomechanical.yaml
+# Advanced Biomechanical Locomotion Training Configuration for PoRacer
+# Supports: Bipeds (Grandma, Grandpa, Matt, Nick) & Multi-limbed Creatures
+# ==============================================================================
+
+behaviors:
+  Grandma: &biped_biomech
+    trainer_type: ppo
+    threaded: true
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: true
+      hidden_units: 512
+      num_layers: 3
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+      gail:
+        gamma: 0.99
+        strength: 0.1
+        demo_path: Assets/Demonstrations/BipedWalk.demo
+    behavioral_cloning:
+      demo_path: Assets/Demonstrations/BipedWalk.demo
+      strength: 0.2
+      steps: 500000
+    max_steps: 30000000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 100000
+
+  Grandpa: *biped_biomech
+  Matt: *biped_biomech
+  Nick: *biped_biomech
+
+  Worm: &creature_sac
+    trainer_type: sac
+    hyperparameters:
+      learning_rate: 0.0003
+      learning_rate_schedule: constant
+      batch_size: 256
+      buffer_size: 500000
+      buffer_init_steps: 10000
+      tau: 0.005
+      steps_per_update: 1
+      save_replay_buffer: false
+      init_entcoef: 0.5
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    max_steps: 10000000
+    time_horizon: 500
+    summary_freq: 20000
+    keep_checkpoints: 5
+    checkpoint_interval: 100000
+
+  Spider: *creature_sac
+  Crab: *creature_sac
+  Hexapod: *creature_sac
+
+# ==============================================================================
+# Multi-Stage Curriculum Learning & Domain Randomization
+# ==============================================================================
+environment_parameters:
+  curriculum_stage:
+    curriculum:
+      - name: Stage1_FlatGround
+        completion_criteria:
+          measure: progress
+          behavior: Grandma
+          signal_smoothing: true
+          min_lesson_length: 100
+          threshold: 0.25
+        parameters:
+          track_kind: 0        # Flat
+          rough_amplitude: 0.0
+          goal_distance_max: 8.0
+          goal_angle_span: 0.0
+          hazard_level: 0.0
+          quirk_friction_span: 0.0
+
+      - name: Stage2_SlopeAndRough
+        completion_criteria:
+          measure: progress
+          behavior: Grandma
+          signal_smoothing: true
+          min_lesson_length: 100
+          threshold: 0.50
+        parameters:
+          track_kind: 1        # Lumpy
+          rough_amplitude: 0.15
+          goal_distance_max: 14.0
+          goal_angle_span: 15.0
+          hazard_level: 0.0
+          quirk_friction_span: 0.2
+
+      - name: Stage3_DomainRandomization
+        completion_criteria:
+          measure: progress
+          behavior: Grandma
+          signal_smoothing: true
+          min_lesson_length: 100
+          threshold: 0.75
+        parameters:
+          track_kind: 1        # Lumpy
+          rough_amplitude: 0.35
+          goal_distance_max: 20.0
+          goal_angle_span: 30.0
+          hazard_level: 0.3
+          quirk_power_span: 0.15
+          quirk_mass_span: 0.15
+          quirk_friction_span: 0.4
+
+      - name: Stage4_FullCourseHazards
+        parameters:
+          track_kind: 2        # Swamp & Full Hazards
+          rough_amplitude: 0.5
+          goal_distance_max: 30.0
+          goal_angle_span: 45.0
+          hazard_level: 1.0
+          quirk_power_span: 0.25
+          quirk_mass_span: 0.25
+          quirk_friction_span: 0.5

@@ -22,6 +22,8 @@ namespace PoRacer.Systems
             }
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = TARGET_FRAME_RATE;
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            Input.multiTouchEnabled = true;
         }
 
         public void Dispose() { }

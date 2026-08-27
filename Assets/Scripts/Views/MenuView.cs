@@ -315,7 +315,7 @@ namespace PoRacer.Views
         {
             _content.Add(UiTheme.MakeSectionHeader("STANDINGS (ELO)"));
             _standingsPanel = new VisualElement();
-            UiTheme.StylePanel(_standingsPanel);
+            UiTheme.StyleGlassPanel(_standingsPanel);
             _content.Add(_standingsPanel);
             RefreshStandings();
         }
@@ -421,6 +421,7 @@ namespace PoRacer.Views
             var footer = new VisualElement();
             footer.style.flexShrink = 0f;
             footer.style.marginTop = UiTheme.SPACE_SM;
+            UiTheme.StyleGlassPanel(footer, glowing: true);
             _content.Add(footer);
 
             _totalLabel = new Label();

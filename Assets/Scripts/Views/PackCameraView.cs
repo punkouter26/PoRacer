@@ -94,8 +94,11 @@ namespace PoRacer.Views
             float aspect = DEFAULT_ASPECT;
             if (_mainCamera != null)
             {
-                verticalTan = Mathf.Tan(_mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
                 aspect = _mainCamera.aspect;
+                // Adaptive vertical FOV: wider in portrait so the shot stays tight without excessive camera back-off
+                float targetFov = aspect < 1.0f ? Mathf.Lerp(54f, 42f, aspect) : 40f;
+                _mainCamera.fieldOfView = targetFov;
+                verticalTan = Mathf.Tan(targetFov * 0.5f * Mathf.Deg2Rad);
             }
             float horizontalTan = verticalTan * aspect;
             // Width must fit the narrow portrait frame; depth and height map

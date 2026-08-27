@@ -86,13 +86,17 @@ namespace PoRacer.Views
         private readonly AudioSource[] _stems = new AudioSource[STEM_COUNT];
         private readonly float[] _stemGain = new float[STEM_COUNT];
         private readonly float[] _stemTarget = new float[STEM_COUNT];
-
         private AudioSource _sfxSource;
         private AudioSource _ambienceSource;
         private AudioReverbZone _reverbZone;
+
         private AudioClip _startHorn;
         private AudioClip _crowdCheer;
         private AudioClip _crowdRoar;
+        private AudioClip _crowdGasp;
+        private AudioClip _wipeoutSting;
+        private AudioClip _photoFinishFanfare;
+        private AudioClip _subBassDrop;
         private AudioClip _dnfBlip;
         private AudioClip _countdownBeep;
         private RaceConfigModel _config;
@@ -114,7 +118,9 @@ namespace PoRacer.Views
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<LeadChangedMessage> leadChanged,
             ISubscriber<RacerFinishedMessage> racerFinished,
-            ISubscriber<RacerDnfMessage> racerDnf)
+            ISubscriber<RacerDnfMessage> racerDnf,
+            ISubscriber<RacerWipeoutMessage> racerWipeout = null,
+            ISubscriber<PhotoFinishMessage> photoFinish = null)
         {
             _config = config;
             _raceModel = raceModel;
@@ -123,6 +129,8 @@ namespace PoRacer.Views
             leadChanged.Subscribe(OnLeadChanged).AddTo(bag);
             racerFinished.Subscribe(OnRacerFinished).AddTo(bag);
             racerDnf.Subscribe(OnRacerDnf).AddTo(bag);
+            racerWipeout?.Subscribe(OnRacerWipeout).AddTo(bag);
+            photoFinish?.Subscribe(OnPhotoFinish).AddTo(bag);
             _subscriptions = bag.Build();
         }
 
@@ -149,8 +157,12 @@ namespace PoRacer.Views
             _reverbZone.reverbPreset = AudioReverbPreset.Plain;
 
             _startHorn = AudioLibrary.GetOrSynthesize("start_horn", SynthesizeStartHorn);
+            _subBassDrop = AudioLibrary.GetOrSynthesize("sub_bass_drop", SynthesizeSubBassDrop);
             _crowdCheer = AudioLibrary.GetOrSynthesize("crowd_cheer", SynthesizeCheer);
             _crowdRoar = AudioLibrary.GetOrSynthesize("crowd_roar", SynthesizeRoar);
+            _crowdGasp = AudioLibrary.GetOrSynthesize("crowd_gasp", SynthesizeCrowdGasp);
+            _wipeoutSting = AudioLibrary.GetOrSynthesize("wipeout_sting", SynthesizeWipeoutSting);
+            _photoFinishFanfare = AudioLibrary.GetOrSynthesize("photofinish_fanfare", SynthesizePhotoFinishFanfare);
             _dnfBlip = AudioLibrary.GetOrSynthesize("dnf_blip", SynthesizeDnfBlip);
             _countdownBeep = AudioLibrary.GetOrSynthesize("countdown_beep", SynthesizeCountdownBeep);
         }
@@ -349,6 +361,10 @@ namespace PoRacer.Views
         private void OnRaceStarted(RaceStartedMessage message)
         {
             _sfxSource.PlayOneShot(_startHorn, HORN_VOLUME);
+            if (_subBassDrop != null)
+            {
+                _sfxSource.PlayOneShot(_subBassDrop, 0.85f);
+            }
             _duck = 1f;
             // Do not wait for the poll: the bass should arrive with the horn.
             UpdatePhaseTargets();
@@ -365,6 +381,10 @@ namespace PoRacer.Views
             if (message.Place == 1)
             {
                 _sfxSource.PlayOneShot(_crowdRoar, ROAR_VOLUME);
+                if (_subBassDrop != null)
+                {
+                    _sfxSource.PlayOneShot(_subBassDrop, 0.9f);
+                }
                 _duck = 1f;
             }
         }
@@ -372,6 +392,22 @@ namespace PoRacer.Views
         private void OnRacerDnf(RacerDnfMessage message)
         {
             _sfxSource.PlayOneShot(_dnfBlip, DNF_VOLUME);
+        }
+
+        private void OnRacerWipeout(RacerWipeoutMessage message)
+        {
+            _sfxSource.PlayOneShot(_crowdGasp, 0.45f);
+            if (message.IsFatal)
+            {
+                _sfxSource.PlayOneShot(_wipeoutSting, 0.6f);
+            }
+            _duck = Mathf.Max(_duck, 0.6f);
+        }
+
+        private void OnPhotoFinish(PhotoFinishMessage message)
+        {
+            _sfxSource.PlayOneShot(_photoFinishFanfare, 0.7f);
+            _duck = 1f;
         }
 
         // ====================================================================
@@ -789,6 +825,95 @@ namespace PoRacer.Views
             var clip = AudioClip.Create($"Ambience_{kind}", samples, 1, SAMPLE_RATE, false);
             clip.SetData(data, 0);
             return clip;
+        }
+
+        private static AudioClip SynthesizeCrowdGasp()
+        {
+            const float seconds = 0.6f;
+            int samples = (int)(SAMPLE_RATE * seconds);
+            var data = new float[samples];
+            var rng = new System.Random(9021);
+            var formantLow = new SynthUtil.BandPass(600f, 3f, SAMPLE_RATE);
+            var formantMid = new SynthUtil.BandPass(1400f, 4f, SAMPLE_RATE);
+            float murmur = 0f;
+            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
+            {
+                float t = (float)sampleIndex / SAMPLE_RATE;
+                float white = SynthUtil.White(rng);
+                murmur += (white - murmur) * 0.4f;
+                // Quick rising then falling intake
+                float envelope = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / seconds));
+                float filterShift = 1f + 0.5f * Mathf.Sin(SynthUtil.TWO_PI * 1.5f * t);
+                float sound = (formantLow.Process(murmur) + 0.6f * formantMid.Process(murmur)) * envelope * filterShift;
+                data[sampleIndex] = sound * 0.5f;
+            }
+            return MakeClip("CrowdGasp", data);
+        }
+
+        private static AudioClip SynthesizeWipeoutSting()
+        {
+            const float seconds = 0.8f;
+            int samples = (int)(SAMPLE_RATE * seconds);
+            var data = new float[samples];
+            var rng = new System.Random(404);
+            float phase1 = 0f;
+            float phase2 = 0f;
+            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
+            {
+                float t = (float)sampleIndex / SAMPLE_RATE;
+                // Dissonant dramatic minor second brass chord drop
+                float freq1 = Mathf.Lerp(160f, 65f, Mathf.Clamp01(t / 0.4f));
+                float freq2 = Mathf.Lerp(170f, 69f, Mathf.Clamp01(t / 0.4f));
+                SynthUtil.AdvancePhase(ref phase1, freq1, SAMPLE_RATE);
+                SynthUtil.AdvancePhase(ref phase2, freq2, SAMPLE_RATE);
+                float envelope = Mathf.Min(1f, t * 500f) * Mathf.Exp(-4.5f * t);
+                float impact = SynthUtil.White(rng) * Mathf.Exp(-40f * t) * 0.4f;
+                float brass = (Mathf.Sin(phase1) + 0.8f * Mathf.Sin(phase2) + 0.4f * Mathf.Sin(2f * phase1)) * envelope;
+                data[sampleIndex] = (brass + impact) * 0.6f;
+            }
+            return MakeClip("WipeoutSting", data);
+        }
+
+        private static AudioClip SynthesizePhotoFinishFanfare()
+        {
+            float[] arpeggio = { 440f, 554.37f, 659.25f, 880f, 1108.73f };
+            const float noteSeconds = 0.08f;
+            int totalSamples = (int)(SAMPLE_RATE * noteSeconds * arpeggio.Length + SAMPLE_RATE * 0.4f);
+            var data = new float[totalSamples];
+            int noteSamples = (int)(SAMPLE_RATE * noteSeconds);
+            for (int n = 0; n < arpeggio.Length; n++)
+            {
+                float phase = 0f;
+                int start = n * noteSamples;
+                for (int sampleIndex = 0; sampleIndex < noteSamples * 3; sampleIndex++)
+                {
+                    int target = start + sampleIndex;
+                    if (target >= data.Length) break;
+                    float t = (float)sampleIndex / SAMPLE_RATE;
+                    SynthUtil.AdvancePhase(ref phase, arpeggio[n], SAMPLE_RATE);
+                    float envelope = Mathf.Min(1f, t * 800f) * Mathf.Exp(-6f * t);
+                    float shimmer = Mathf.Sin(2f * phase) * 0.3f;
+                    data[target] += (Mathf.Sin(phase) + shimmer) * envelope * 0.35f;
+                }
+            }
+            return MakeClip("PhotoFinishFanfare", data);
+        }
+
+        private static AudioClip SynthesizeSubBassDrop()
+        {
+            const float duration = 1.25f;
+            int totalSamples = (int)(SAMPLE_RATE * duration);
+            var data = new float[totalSamples];
+            float phase = 0f;
+            for (int sampleIndex = 0; sampleIndex < totalSamples; sampleIndex++)
+            {
+                float t = (float)sampleIndex / SAMPLE_RATE;
+                float freq = Mathf.Lerp(80f, 32f, t / duration);
+                SynthUtil.AdvancePhase(ref phase, freq, SAMPLE_RATE);
+                float envelope = Mathf.Exp(-2.2f * t);
+                data[sampleIndex] = Mathf.Sin(phase) * envelope * 0.75f;
+            }
+            return MakeClip("SubBassDrop", data);
         }
 
         private static AudioClip MakeClip(string name, float[] data)

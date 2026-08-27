@@ -64,6 +64,8 @@ namespace PoRacer.Systems
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int LegacyColorId = Shader.PropertyToID("_Color");
         private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
+        private static readonly int MetallicId = Shader.PropertyToID("_Metallic");
+        private static readonly int SpecColorId = Shader.PropertyToID("_SpecColor");
         private const int GRID_COLUMNS = 10;
         private const float GRID_X_SPACING = 2f;
         private const float GRID_ROW_SPACING = 1.6f;
@@ -421,10 +423,13 @@ namespace PoRacer.Systems
                     for (int rendererIndex = 0; rendererIndex < tintRenderers.Length; rendererIndex++)
                     {
                         Color segmentTint = rendererIndex % 2 == 0 ? tint : darkTint;
+                        Color specTint = Color.Lerp(segmentTint, Color.white, 0.45f);
                         _tintBlock.Clear();
                         _tintBlock.SetColor(BaseColorId, segmentTint);
                         _tintBlock.SetColor(LegacyColorId, segmentTint);
-                        _tintBlock.SetFloat(SmoothnessId, 0.5f);
+                        _tintBlock.SetColor(SpecColorId, specTint);
+                        _tintBlock.SetFloat(SmoothnessId, 0.72f);
+                        _tintBlock.SetFloat(MetallicId, 0.22f);
                         tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
                     }
 
@@ -439,6 +444,22 @@ namespace PoRacer.Systems
                     // After tinting on purpose: the eyes keep their own colors.
                     instance.AddComponent<EyesView>();
                     instance.AddComponent<SkidMarkView>().Initialize(_currentTrack);
+
+                    CosmeticType cosmeticType;
+                    if (quirk.Tag == "TURBO")
+                    {
+                        cosmeticType = CosmeticType.Jetpack;
+                    }
+                    else if (quirk.Tag == "MIGHTY")
+                    {
+                        cosmeticType = CosmeticType.VikingHorns;
+                    }
+                    else
+                    {
+                        CosmeticType[] types = (CosmeticType[])Enum.GetValues(typeof(CosmeticType));
+                        cosmeticType = types[_rng.Next(types.Length)];
+                    }
+                    instance.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
 
                     _spawned.Add(instance);
                     _racerRoots.Add(instance.transform);

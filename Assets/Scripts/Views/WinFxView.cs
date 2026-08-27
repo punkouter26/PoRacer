@@ -29,6 +29,8 @@ namespace PoRacer.Views
             _subscription = racerFinished.Subscribe(OnRacerFinished);
         }
 
+        private Light _winnerSpotlight;
+
         private void Awake()
         {
             _audioSource = gameObject.AddComponent<AudioSource>();
@@ -38,6 +40,21 @@ namespace PoRacer.Views
             _tick = SynthesizeTick();
             _confetti = BuildConfetti();
             _fireworks = BuildFireworks();
+            BuildSpotlight();
+        }
+
+        private void BuildSpotlight()
+        {
+            GameObject spotObj = new GameObject("WinnerSpotlight");
+            spotObj.transform.SetParent(transform, false);
+            _winnerSpotlight = spotObj.AddComponent<Light>();
+            _winnerSpotlight.type = LightType.Spot;
+            _winnerSpotlight.range = 25f;
+            _winnerSpotlight.spotAngle = 45f;
+            _winnerSpotlight.color = new Color(1f, 0.9f, 0.5f);
+            _winnerSpotlight.intensity = 0f;
+            _winnerSpotlight.shadows = LightShadows.Soft;
+            spotObj.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
         }
 
         private void OnDestroy() => _subscription?.Dispose();
@@ -48,12 +65,20 @@ namespace PoRacer.Views
             {
                 _confetti.transform.position = _finishLine.position + Vector3.up * 2f;
                 _fireworks.transform.position = _finishLine.position + Vector3.up * 5f;
+                if (_winnerSpotlight != null)
+                {
+                    _winnerSpotlight.transform.position = _finishLine.position + Vector3.up * 8f - Vector3.forward * 2f;
+                }
             }
             if (message.Place == 1)
             {
                 _confetti.Emit(CONFETTI_COUNT);
                 _fireworks.Emit(90);
                 _audioSource.PlayOneShot(_fanfare, 0.8f);
+                if (_winnerSpotlight != null)
+                {
+                    _winnerSpotlight.intensity = 5f;
+                }
             }
             else
             {

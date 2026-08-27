@@ -12,15 +12,20 @@ namespace PoRacer.Views
     internal static class UiTheme
     {
         // ---- Spacing scale (the only allowed gaps) ----
+        public const float SPACE_XXS = 2f;
         public const float SPACE_XS = 4f;
         public const float SPACE_SM = 8f;
         public const float SPACE_MD = 12f;
         public const float SPACE_LG = 16f;
+        public const float SPACE_XL = 24f;
+        public const float SPACE_XXL = 32f;
 
         // ---- Corner radius standard ----
+        public const float RADIUS_XS = 4f;
         public const float RADIUS_SM = 6f;
         public const float RADIUS_MD = 10f;
         public const float RADIUS_LG = 14f;
+        public const float RADIUS_XL = 18f;
 
         // ---- Font size scale ----
         public const float FONT_XS = 11f;
@@ -31,10 +36,10 @@ namespace PoRacer.Views
         public const float FONT_BANNER = 52f;
         public const float FONT_COUNTDOWN = 64f;
 
-        // ---- Control heights ----
-        public const float CONTROL_SM = 26f;
-        public const float CONTROL_MD = 34f;
-        public const float CONTROL_LG = 52f;
+        // ---- Control heights (touch-ergonomic standards) ----
+        public const float CONTROL_SM = 32f;
+        public const float CONTROL_MD = 44f;
+        public const float CONTROL_LG = 54f;
 
         // ---- Scrollbar ----
         public const float SCROLLBAR_THICKNESS = 4f;
@@ -54,9 +59,13 @@ namespace PoRacer.Views
         // podium and celebration moments.
         public static readonly Color Accent = new(0.95f, 0.5f, 0.15f);
         public static readonly Color AccentSoft = new(1f, 0.85f, 0.4f);
+        public static readonly Color AccentGlow = new(1f, 0.6f, 0.2f, 0.35f);
         public static readonly Color AccentFill = new(0.95f, 0.5f, 0.15f, 0.18f);
         public static readonly Color ScreenBg = new(0.06f, 0.07f, 0.09f, 0.97f);
         public static readonly Color PanelBg = new(0.07f, 0.08f, 0.1f, 0.82f);
+        public static readonly Color GlassBg = new(0.08f, 0.09f, 0.13f, 0.72f);
+        public static readonly Color GlassBorder = new(1f, 1f, 1f, 0.15f);
+        public static readonly Color GlassHighlight = new(1f, 1f, 1f, 0.28f);
         public static readonly Color PanelBorder = new(1f, 1f, 1f, 0.08f);
         public static readonly Color RowBg = new(0.12f, 0.13f, 0.16f, 0.9f);
         public static readonly Color TrackBg = new(0f, 0f, 0f, 0.35f);
@@ -67,6 +76,8 @@ namespace PoRacer.Views
         public static readonly Color Gold = new(1f, 0.84f, 0.3f);
         public static readonly Color Silver = new(0.8f, 0.83f, 0.88f);
         public static readonly Color Bronze = new(0.85f, 0.58f, 0.35f);
+        public static readonly Color NeonCyan = new(0.2f, 0.85f, 1f);
+        public static readonly Color NeonGreen = new(0.3f, 0.95f, 0.45f);
         // Retired / did-not-finish markers.
         public static readonly Color Dnf = new(0.42f, 0.44f, 0.48f);
         public static readonly Color ScrollThumb = new(1f, 1f, 1f, 0.22f);
@@ -77,6 +88,17 @@ namespace PoRacer.Views
             SetRadius(panel, RADIUS_MD);
             SetBorder(panel, PanelBorder, 1f);
             SetPadding(panel, SPACE_SM, SPACE_MD);
+        }
+
+        /// <summary>Frosted glassmorphism container with translucent background and specular top border.</summary>
+        public static void StyleGlassPanel(VisualElement panel, bool glowing = false)
+        {
+            panel.style.backgroundColor = GlassBg;
+            SetRadius(panel, RADIUS_LG);
+            SetBorder(panel, glowing ? AccentGlow : GlassBorder, 1f);
+            panel.style.borderTopColor = GlassHighlight;
+            panel.style.borderTopWidth = 1.5f;
+            SetPadding(panel, SPACE_MD, SPACE_LG);
         }
 
         public static void StyleRow(VisualElement row)
@@ -294,31 +316,40 @@ namespace PoRacer.Views
                 return;
             }
             Rect area = Screen.safeArea;
-            // Panel units per screen pixel; safeArea is reported in screen pixels
-            // with a bottom-left origin.
             float scale = rootWidth / Screen.width;
-            // Clamped at zero: an inset is a cut *into* the screen, never an
-            // expansion out of it. The Editor Game View can report a safeArea
-            // larger than Screen.width/height (it tracks the editor window, not
-            // the simulated resolution), and the raw subtraction then yields
-            // negative insets that stretch this container past the panel and
-            // push the header/title off-screen.
-            safe.style.left = Mathf.Max(0f, area.xMin * scale);
-            safe.style.right = Mathf.Max(0f, (Screen.width - area.xMax) * scale);
-            safe.style.top = Mathf.Max(0f, (Screen.height - area.yMax) * scale);
-            safe.style.bottom = Mathf.Max(0f, area.yMin * scale);
+            float leftInset = Mathf.Max(0f, area.xMin * scale);
+            float rightInset = Mathf.Max(0f, (Screen.width - area.xMax) * scale);
+            float topInset = Mathf.Max(0f, (Screen.height - area.yMax) * scale);
+            float bottomInset = Mathf.Max(0f, area.yMin * scale);
+
+            // Minimum notch / status padding on portrait phones
+            if (Screen.height > Screen.width)
+            {
+                topInset = Mathf.Max(topInset, 6f);
+                bottomInset = Mathf.Max(bottomInset, 8f);
+            }
+
+            safe.style.left = leftInset;
+            safe.style.right = rightInset;
+            safe.style.top = topInset;
+            safe.style.bottom = bottomInset;
         }
 
         /// <summary>
-        /// Pointer-over brightening for buttons whose background color is static.
-        /// Do not use on selection-tinted buttons — it would clobber their color.
+        /// Pointer-over brightening and tactile touch-press scale for buttons.
         /// </summary>
         public static void AddHover(Button button, bool accent = false)
         {
             Color baseColor = accent ? Accent : ButtonBg;
             Color hoverColor = Color.Lerp(baseColor, Color.white, 0.18f);
             button.RegisterCallback<PointerEnterEvent>(_ => button.style.backgroundColor = hoverColor);
-            button.RegisterCallback<PointerLeaveEvent>(_ => button.style.backgroundColor = baseColor);
+            button.RegisterCallback<PointerLeaveEvent>(_ =>
+            {
+                button.style.backgroundColor = baseColor;
+                button.style.scale = new Scale(Vector3.one);
+            });
+            button.RegisterCallback<PointerDownEvent>(_ => button.style.scale = new Scale(new Vector3(0.96f, 0.96f, 1f)));
+            button.RegisterCallback<PointerUpEvent>(_ => button.style.scale = new Scale(Vector3.one));
         }
 
         /// <summary>

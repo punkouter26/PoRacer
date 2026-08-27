@@ -227,7 +227,8 @@ namespace PoRacer.Views
             }
             UniversalAdditionalCameraData cameraData = mainCamera.GetUniversalAdditionalCameraData();
             cameraData.renderPostProcessing = true;
-            cameraData.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
+            cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            cameraData.antialiasingQuality = AntialiasingQuality.High;
         }
 
         private void SetupVolume()
@@ -235,27 +236,27 @@ namespace PoRacer.Views
             _profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
             Bloom bloom = _profile.Add<Bloom>(true);
-            bloom.threshold.value = 0.9f;
-            bloom.intensity.value = 0.55f;
-            bloom.scatter.value = 0.6f;
+            bloom.threshold.value = 0.85f;
+            bloom.intensity.value = 0.75f;
+            bloom.scatter.value = 0.65f;
 
             Tonemapping tonemapping = _profile.Add<Tonemapping>(true);
             tonemapping.mode.value = TonemappingMode.ACES;
 
             _vignette = _profile.Add<Vignette>(true);
-            _vignette.intensity.value = 0.22f;
-            _vignette.smoothness.value = 0.4f;
+            _vignette.intensity.value = 0.24f;
+            _vignette.smoothness.value = 0.45f;
 
             ChromaticAberration aberration = _profile.Add<ChromaticAberration>(true);
-            aberration.intensity.value = 0.06f;
+            aberration.intensity.value = 0.08f;
 
             MotionBlur motionBlur = _profile.Add<MotionBlur>(true);
-            motionBlur.intensity.value = 0.18f;
+            motionBlur.intensity.value = 0.22f;
 
             _colorAdjustments = _profile.Add<ColorAdjustments>(true);
             _colorAdjustments.postExposure.value = BASE_EXPOSURE;
-            _colorAdjustments.saturation.value = 10f;
-            _colorAdjustments.contrast.value = 8f;
+            _colorAdjustments.saturation.value = 12f;
+            _colorAdjustments.contrast.value = 10f;
             _colorAdjustments.colorFilter.overrideState = true;
 
             var volume = gameObject.AddComponent<Volume>();
@@ -308,8 +309,11 @@ namespace PoRacer.Views
             }
             _sun = sun;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.85f;
-            sun.intensity = 1.35f;
+            sun.shadowStrength = 0.9f;
+            sun.shadowBias = 0.02f;
+            sun.shadowNormalBias = 0.35f;
+            sun.shadowNearPlane = 0.1f;
+            sun.intensity = 1.4f;
             sun.useColorTemperature = true;
             sun.colorTemperature = 5600f;
             sun.transform.rotation = Quaternion.Euler(42f, -35f, 0f);
@@ -320,7 +324,7 @@ namespace PoRacer.Views
             _fillLight.type = LightType.Directional;
             _fillLight.shadows = LightShadows.None;
             _fillLight.useColorTemperature = true;
-            _fillLight.intensity = 0.34f;
+            _fillLight.intensity = 0.38f;
             _fillLight.colorTemperature = 7100f;
             _fillLight.transform.rotation = Quaternion.Euler(18f, 145f, 0f);
 
@@ -328,6 +332,7 @@ namespace PoRacer.Views
             if (pipeline != null)
             {
                 pipeline.shadowDistance = SHADOW_DISTANCE;
+                pipeline.shadowCascadeCount = 4;
             }
         }
 
