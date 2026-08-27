@@ -92,6 +92,8 @@ namespace PoRacer.Systems
         // director, which keeps the orbit shot out of it.
         private bool _hasFinishArchBounds;
         private Bounds _finishArchBounds;
+        private bool _hasGroundBounds;
+        private Bounds _groundBounds;
 
         /// <summary>
         /// World-space volume of the finish arch from the last <see cref="Build"/>,
@@ -101,6 +103,17 @@ namespace PoRacer.Systems
         {
             bounds = _finishArchBounds;
             return _hasFinishArchBounds;
+        }
+
+        /// <summary>
+        /// World-space footprint of the ground the last Build laid down. RacerView
+        /// bounds its runaway guard to this, so a racer that walks off the edge is
+        /// caught at the edge instead of being held up over open space.
+        /// </summary>
+        public bool TryGetGroundBounds(out Bounds bounds)
+        {
+            bounds = _groundBounds;
+            return _hasGroundBounds;
         }
 
         private readonly Material _groundMaterial;
@@ -129,6 +142,14 @@ namespace PoRacer.Systems
             }
 
             float sideMargin = decorate ? DECOR_MARGIN : 0f;
+            // Both ground builders lay the same footprint: full width across, and
+            // z from -backMargin to length + 1 so deep start grids stay on it.
+            float groundWidth = width + sideMargin * 2f;
+            float groundDepth = length + 1f + backMargin;
+            _groundBounds = new Bounds(
+                parent.TransformPoint(new Vector3(0f, 0f, (length + 1f - backMargin) * 0.5f)),
+                new Vector3(groundWidth, 1f, groundDepth));
+            _hasGroundBounds = true;
             if (kind == TrackKind.Hills || kind == TrackKind.Rough || kind == TrackKind.RoughBlocked || kind == TrackKind.Lumpy)
             {
                 BuildTerrainMesh(kind, parent, width, length, sideMargin, backMargin);

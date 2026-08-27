@@ -310,6 +310,13 @@ namespace PoRacer.Systems
             {
                 _raceModel.TrackLengthMeters = Mathf.Max(1f, _track.FinishLine.position.z - gridOrigin.z);
             }
+            // Bounds every racer's runaway guard. Falling back to a wide box
+            // matters: a zero-size Bounds would put every racer out of bounds on
+            // its first frame and rescue the whole grid in place, forever.
+            if (!_trackBuilder.TryGetGroundBounds(out Bounds groundBounds))
+            {
+                groundBounds = new Bounds(gridOrigin, new Vector3(120f, 1f, 120f));
+            }
 
             int gridIndex = 0;
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
@@ -438,7 +445,7 @@ namespace PoRacer.Systems
                     // Progress is measured from the common start line (grid row 0),
                     // not this racer's own spawn row — otherwise back-row racers
                     // report inflated progress and corrupt the leader ranking.
-                    view.Initialize(racerId, _race, gridOrigin.z, agent, finishZ);
+                    view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds);
                     instance.AddComponent<DustTrailView>();
                     instance.AddComponent<CreatureAudioView>();
                     // After tinting on purpose: the eyes keep their own colors.

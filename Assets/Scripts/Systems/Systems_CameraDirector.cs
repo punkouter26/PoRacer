@@ -33,6 +33,7 @@ namespace PoRacer.Systems
         private readonly List<Transform> _targets = new();
         private readonly Dictionary<string, Transform> _targetsByRacerId = new();
         private readonly IDisposable _subscription;
+        private readonly IDisposable _raceFinishedSubscription;
         private int _targetIndex = -1;
         private CinemachineCamera _orbitCamera;
         private OrbitCameraView _orbit;
@@ -43,11 +44,13 @@ namespace PoRacer.Systems
         private Bounds _keepOut;
         private bool _hasKeepOut;
 
-        public Systems_CameraDirector(RaceModel model, CameraRigView rig, ISubscriber<LeadChangedMessage> leadChanged)
+        public Systems_CameraDirector(RaceModel model, CameraRigView rig,
+            ISubscriber<LeadChangedMessage> leadChanged, ISubscriber<RaceFinishedMessage> raceFinished)
         {
             _model = model;
             _rig = rig;
             _subscription = leadChanged.Subscribe(OnLeadChanged);
+            _raceFinishedSubscription = raceFinished.Subscribe(OnRaceFinished);
             ShowOverview();
         }
 
@@ -156,6 +159,49 @@ namespace PoRacer.Systems
             OrbitAround(leader);
         }
 
+        /// <summary>
+        /// Race over: hold the shot on the winner while the results panel is up.
+        /// Tick() stops steering the moment RaceActive clears, so without this the
+        /// camera freezes on whatever it happened to be showing — and when nobody
+        /// reached the final stretch (an all-DNF field, or a timeout with the pack
+        /// still short of the line) that is the wide pack shot of a pile-up.
+        /// Results arrive in grid order rather than finishing order, so this scans
+        /// for the best placed racer that still has a live transform to frame; if
+        /// none survives, fall back to the field.
+        /// </summary>
+        private void OnRaceFinished(RaceFinishedMessage message)
+        {
+            Transform winner = null;
+            int bestPlace = int.MaxValue;
+            for (int resultIndex = 0; resultIndex < message.Results.Count; resultIndex++)
+            {
+                RaceResultEntry result = message.Results[resultIndex];
+                if (result.Place <= 0 || result.Place >= bestPlace)
+                {
+                    continue;
+                }
+                if (!_targetsByRacerId.TryGetValue(result.RacerId, out Transform target)
+                    || target == null || !target.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+                winner = target;
+                bestPlace = result.Place;
+            }
+            if (winner != null)
+            {
+                // Matches what the final-stretch watcher would have left behind,
+                // so the next SetTargets clears the same state either way.
+                _finalStretch = true;
+                OrbitAround(winner);
+                return;
+            }
+            if (_targets.Count > 0)
+            {
+                ShowPack();
+            }
+        }
+
         public void NextTarget() => CycleTarget(1);
 
         public void PrevTarget() => CycleTarget(-1);
@@ -183,7 +229,11 @@ namespace PoRacer.Systems
             }
         }
 
-        public void Dispose() => _subscription?.Dispose();
+        public void Dispose()
+        {
+            _subscription?.Dispose();
+            _raceFinishedSubscription?.Dispose();
+        }
 
         private void CycleTarget(int direction)
         {
