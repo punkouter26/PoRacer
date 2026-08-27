@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PoRacer.Views
+namespace PoRacer.Presentation
 {
     /// <summary>
     /// Memo table for PoRacer's code-synthesized clips. Every sound in the game is

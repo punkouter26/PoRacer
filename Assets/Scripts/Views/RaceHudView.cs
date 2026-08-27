@@ -1,4 +1,5 @@
 using PoRacer.Models;
+using PoRacer.Presentation;
 using PoRacer.Systems;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -457,13 +458,15 @@ namespace PoRacer.Views
             }
             _hudRoot.style.display = DisplayStyle.Flex;
 
-            // Only a racer who actually crossed (or was ranked in) counts for the
-            // celebration banner: an all-DNF race gets no "WINNER" fanfare.
+            // Only a racer who actually crossed, or led on distance when the clock
+            // ran out, counts for the celebration banner: an all-DNF race gets no
+            // "WINNER" fanfare.
             RacerState winner = null;
             for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
             {
                 RacerState racer = _raceModel.Racers[racerIndex];
-                if (racer.Place == 1 && racer.Status == RacerStatus.Finished)
+                if (racer.Place == 1
+                    && (racer.Status == RacerStatus.Finished || racer.Status == RacerStatus.TimedOut))
                 {
                     winner = racer;
                     break;
@@ -615,11 +618,22 @@ namespace PoRacer.Views
                     _podiumLabels[podiumIndex].text = "—";
                     continue;
                 }
-                // A knocked-out medalist got its place by distance, not by
-                // crossing — show DNF instead of a fictional finish time.
-                string timeText = medalist.Status == RacerStatus.Finished
-                    ? $"{medalist.FinishTime:0.0}s"
-                    : "DNF";
+                // Only a racer that crossed owns a finish time. One that ran out
+                // of clock is ranked on distance, so show the distance; one that
+                // was knocked out shows DNF.
+                string timeText;
+                if (medalist.Status == RacerStatus.Finished)
+                {
+                    timeText = $"{medalist.FinishTime:0.0}s";
+                }
+                else if (medalist.Status == RacerStatus.TimedOut)
+                {
+                    timeText = $"{medalist.Progress:0.0}m";
+                }
+                else
+                {
+                    timeText = "DNF";
+                }
                 if (delta == 0)
                 {
                     _podiumLabels[podiumIndex].text =
@@ -705,10 +719,10 @@ namespace PoRacer.Views
             return count;
         }
 
-        /// <summary>Finished racers outrank anything still on track, by place.</summary>
+        /// <summary>Placed racers outrank anything still on track, by place.</summary>
         private static float RankKey(RacerState racer)
         {
-            if (racer.Status == RacerStatus.Finished)
+            if (racer.Status == RacerStatus.Finished || racer.Status == RacerStatus.TimedOut)
             {
                 return 1000000f - racer.Place;
             }

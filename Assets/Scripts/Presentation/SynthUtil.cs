@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace PoRacer.Views
+namespace PoRacer.Presentation
 {
     /// <summary>
     /// Shared DSP primitives for the game's runtime synthesis. Nothing here touches

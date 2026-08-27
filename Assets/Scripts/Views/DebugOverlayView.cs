@@ -1,3 +1,4 @@
+using PoRacer.Presentation;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -108,11 +109,22 @@ namespace PoRacer.Views
 
         private void Start()
         {
+            // Nothing diagnostic belongs in a player's build. The strip below used
+            // to be exempt from this - a permanent fps / frame-ms / draw-call
+            // readout parked top-center over the race - which is a debug tool
+            // wearing a HUD's clothes. Release now builds no overlay at all and
+            // pays for no probes, no ProfilerRecorders and no 250 ms schedule.
+            if (!Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
+
             VisualElement root = GetComponent<UIDocument>().rootVisualElement;
             root.pickingMode = PickingMode.Ignore;
             VisualElement safeRoot = UiTheme.BuildSafeRoot(root);
 
-            // Always-on telemetry strip, top center - present in release builds too.
+            // Telemetry strip, top center.
             var stripRow = new VisualElement { pickingMode = PickingMode.Ignore };
             stripRow.style.position = Position.Absolute;
             stripRow.style.top = UiTheme.SPACE_XS;
@@ -138,13 +150,6 @@ namespace PoRacer.Views
 
             // The probe pair owns the fixed-loop timing the strip and panel read.
             PhysicsProbeView.EnsureOn(gameObject);
-
-            // The diagnostic panel below is editor/development-only; the component
-            // itself stays enabled so Update keeps feeding the FPS counter.
-            if (!Debug.isDebugBuild)
-            {
-                return;
-            }
 
             var toggle = new Button(TogglePanel) { text = "DBG" };
             toggle.style.position = Position.Absolute;
@@ -595,6 +600,7 @@ namespace PoRacer.Views
                 switch (racer.Status)
                 {
                     case RacerStatus.Finished:
+                    case RacerStatus.TimedOut:
                         finished++;
                         break;
                     case RacerStatus.Dnf:

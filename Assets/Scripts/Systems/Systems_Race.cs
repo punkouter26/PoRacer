@@ -207,9 +207,10 @@ namespace PoRacer.Systems
             if (_model.ElapsedSeconds >= RACE_TIMEOUT_SECONDS)
             {
                 // Full time: the race is decided by distance instead of ending
-                // with an empty podium. Everyone still racing finishes now, ranked
-                // by how far they got; the podium cutoff DNFs the rest as usual.
-                FinishByDistance();
+                // with an empty podium. Everyone still racing is ranked by how far
+                // they got, but as TimedOut rather than Finished - none of them
+                // crossed, so none of them owns a finish time.
+                RankByDistanceAtTimeout();
             }
             else
             {
@@ -230,12 +231,17 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
-        /// Timeout referee: finishes every still-racing racer in order of current
-        /// progress. NotifyFinish stamps them all with the same ElapsedSeconds, and
-        /// the same-frame tie resolver keeps this ordering because progress is
-        /// passed as the overshoot.
+        /// Timeout referee: ranks every still-racing racer by how far it got and
+        /// hands out the remaining places in that order.
+        ///
+        /// These racers are TimedOut, not Finished: the placing is real but the
+        /// crossing never happened, so FinishTime stays unset and the HUD prints
+        /// distance instead of a fictional lap time. Only the podium publishes a
+        /// RacerFinishedMessage - firing one per racer would set off the whole
+        /// win fanfare (flash, slow-mo, confetti, stinger) once per entrant in a
+        /// single frame.
         /// </summary>
-        private void FinishByDistance()
+        private void RankByDistanceAtTimeout()
         {
             while (true)
             {
@@ -253,7 +259,14 @@ namespace PoRacer.Systems
                 {
                     return;
                 }
-                NotifyFinish(farthest.RacerId, farthest.Progress);
+                farthest.Status = RacerStatus.TimedOut;
+                farthest.Place = _nextPlace++;
+                farthest.FinishOvershoot = farthest.Progress;
+                if (farthest.Place <= PODIUM_FINISHERS)
+                {
+                    _racerFinishedPublisher.Publish(
+                        new RacerFinishedMessage(farthest.RacerId, farthest.Place, farthest.FinishTime));
+                }
             }
         }
 

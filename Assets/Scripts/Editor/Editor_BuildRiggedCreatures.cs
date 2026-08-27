@@ -38,10 +38,10 @@ namespace PoRacer.Editor
 
         private static readonly string[] SourceModels =
         {
-            "Assets/RIGGED_Grandma.glb",
-            "Assets/RIGGED_Grandpa.glb",
-            "Assets/RIGGED_Matt.glb",
-            "Assets/RIGGED_Nick.glb"
+            "Assets/Art/Models/RIGGED_Grandma.glb",
+            "Assets/Art/Models/RIGGED_Grandpa.glb",
+            "Assets/Art/Models/RIGGED_Matt.glb",
+            "Assets/Art/Models/RIGGED_Nick.glb"
         };
 
         /// <summary>One driven bone: who it is, what it weighs, how far it bends.</summary>

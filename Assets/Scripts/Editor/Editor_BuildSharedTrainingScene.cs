@@ -99,6 +99,15 @@ namespace PoRacer.Editor
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");
         }
 
+        // Folded in from the old Editor_BuildWormEnv, whose other two menu items
+        // pointed at SCN_TRAIN_WORM and SCN_TRAIN_SPIDER - scenes that no longer
+        // exist. Every env build now lives here and names a scene that does.
+        [MenuItem("PoRacer/Build Worm Rough Training Env")]
+        public static void BuildWormRoughEnv()
+        {
+            BuildEnvFrom("Assets/Scenes/SCN_TRAIN_WORM_ROUGH.unity", "Builds/WormRoughEnv/WormRoughEnv.exe");
+        }
+
         private static void BuildEnvFrom(string scenePath, string outputPath)
         {
             var options = new BuildPlayerOptions

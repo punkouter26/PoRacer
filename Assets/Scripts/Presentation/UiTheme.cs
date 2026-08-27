@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace PoRacer.Views
+namespace PoRacer.Presentation
 {
     /// <summary>
     /// Single source of truth for the runtime UI: palette, spacing scale, corner

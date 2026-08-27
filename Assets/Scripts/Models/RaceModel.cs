@@ -6,6 +6,9 @@ namespace PoRacer.Models
     {
         Racing,
         Finished,
+        // Ranked by distance when the race clock ran out: a real placing, but the
+        // racer never crossed, so nothing may print a finish time for it.
+        TimedOut,
         Dnf
     }
 

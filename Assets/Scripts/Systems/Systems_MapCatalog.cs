@@ -14,8 +14,7 @@ namespace PoRacer.Systems
             public readonly TrackKind Kind;
             public readonly bool Available;
             public readonly string Blurb;
-            // Start line to finish line, meters. Longer than the old fixed 22 so
-            // races build drama; slower terrain gets a shorter trek.
+            // Start line to finish line, meters.
             public readonly float LengthMeters;
             // Extra hazards layered on the kind (boost pads, gusts, mud, gates).
             public readonly TrackFeatures Features;
@@ -37,18 +36,24 @@ namespace PoRacer.Systems
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
-            // Lengths sized to the current brains' training distribution (goals up
-            // to ~20 m): a winner should cross in roughly 1-2 minutes. The 4x
-            // "marathon" lengths produced all-DNF races. Width stays 24 m so the
-            // 10-wide grid still fills the lane visually.
-            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 34f),
-            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 26f),
-            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 28f),
+            // These are finish-line placements; the raced distance is ~2 m less,
+            // since the grid sits ahead of the origin.
+            //
+            // Sized off measured pace, not off the training goal distance: the
+            // fastest brain covers about 0.25 m/s, so the old 34 m Flat needed
+            // ~135 s and every race died on the 120 s clock with nobody across the
+            // line. 22 m puts the winner over at roughly 80 s and leaves room for
+            // a second and third to land inside the window. Slower terrain gets a
+            // shorter trek. Width stays 24 m so the 10-wide grid still fills the
+            // lane visually. Re-measure these whenever the brains are retrained.
+            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 22f),
+            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 18f),
+            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 18f),
             new MapEntry("Gale", TrackKind.Flat, available: true,
-                "Cross-winds shove the pack; boost pads reward a brave line", 30f,
+                "Cross-winds shove the pack; boost pads reward a brave line", 20f,
                 TrackFeatures.Gusts | TrackFeatures.BoostPads),
             new MapEntry("Roulette", TrackKind.Flat, available: true,
-                "The wheel spins: fresh terrain and hazards every race", 28f,
+                "The wheel spins: fresh terrain and hazards every race", 18f,
                 randomize: true)
         };
 

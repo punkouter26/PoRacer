@@ -1,13 +1,17 @@
 # Unattended 8-hour all-creatures training run with a timestamped run-id.
-# Usage: .\scripts\train_all_8h.ps1 [-ConfigPath Config\AllLoco8h01.yaml] [-Hours 8]
+# Usage: .\scripts\train_all_8h.ps1 [-ConfigPath Config\AllLoco8h02.yaml] [-Hours 8]
 # max_steps in the config (3.2M) is calibrated to finish near the 8 h mark; the
 # time box here is the hard stop. Starts TensorBoard first (project rule).
-# num-envs: this env holds 18 articulated areas per instance (9 creatures x 2
+# num-envs: this env holds 26 articulated areas per instance (13 creatures x 2
 # track variants), so instances are CPU-heavy; cores/3 capped at 4 leaves torch
-# its share (recorded per MLOps rule). The four .glb bipeds train separately via
-# scripts	rain_humanoids.ps1 - see Config\Humanoids01.yaml for why.
+# its share (recorded per MLOps rule). The four .glb bipeds train separately
+# via scripts/train_humanoids.ps1.
+#
+# Default config is AllLoco8h02: it declares all 13 behaviours AllEnv contains.
+# The old default AllLoco8h01 declared only 9, so mlagents-learn aborted the run
+# on the first unrecognised behaviour. It has been deleted.
 param(
-    [string]$ConfigPath = "Config\AllLoco8h01.yaml",
+    [string]$ConfigPath = "Config\AllLoco8h02.yaml",
     [string]$EnvExe = "Builds\AllEnv\AllEnv.exe",
     [double]$Hours = 8,
     # Continue an interrupted run toward max_steps: pass its existing run-id.

@@ -28,16 +28,6 @@ MonoBehaviour:
     prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}
     model: {fileID: 5022602860645237092, guid: 124878cf78be94f4ab8d2214668bef9c, type: 3}
     spawnHeight: 0.85
-  - id: HalfBiped_v01
-    displayName: Half-Biped
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
-  - id: Biped_v01
-    displayName: Biped
-    prefab: {fileID: 0}
-    model: {fileID: 0}
-    spawnHeight: 0.15
   - id: Snake_v01
     displayName: Snake
     prefab: {fileID: 3283885459884916767, guid: 5bf92e641629e1d498c76dd37e977eae, type: 3}
@@ -48,11 +38,6 @@ MonoBehaviour:
     prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
     model: {fileID: 5022602860645237092, guid: e201d9a2974be304f8b4fdbb9db60ec7, type: 3}
     spawnHeight: 0.75
-  - id: Blob_v01
-    displayName: Blob
-    prefab: {fileID: 2147714030585187011, guid: 035385e54ebde4949948a137b5470304, type: 3}
-    model: {fileID: 5022602860645237092, guid: 03f6a88b1c12dad4690c78cad2a5f136, type: 3}
-    spawnHeight: 0.4
   - id: Centipede_v01
     displayName: Centipede
     prefab: {fileID: 2521974577969091722, guid: 8a2c392fa95349348997b69b7bd62395, type: 3}
@@ -63,28 +48,3 @@ MonoBehaviour:
     prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
     model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
     spawnHeight: 0.75
-  - id: Kangaroo_v01
-    displayName: Kangaroo
-    prefab: {fileID: 620226553648130849, guid: 9d39baa9567176e448e88c85f7f729bd, type: 3}
-    model: {fileID: 5022602860645237092, guid: dd26ba802c2731b4eaab78645c2aaeb4, type: 3}
-    spawnHeight: 1.05
-  - id: Grandma_v01
-    displayName: Grandma
-    prefab: {fileID: 5968860914327035298, guid: 0bede39b6e5c87548a945de57315bfa3, type: 3}
-    model: {fileID: 5022602860645237092, guid: 0aa94ab6a5a087840b0da5d5bfe61297, type: 3}
-    spawnHeight: 0.94
-  - id: Grandpa_v01
-    displayName: Grandpa
-    prefab: {fileID: 6690032468228268047, guid: 268b0cfb7fbd9b9429ff1806b5d7583e, type: 3}
-    model: {fileID: 5022602860645237092, guid: e45fa630607bf214a9910c41455f9345, type: 3}
-    spawnHeight: 0.98
-  - id: Matt_v01
-    displayName: Matt
-    prefab: {fileID: 3045579408805537150, guid: 051b227b1673e114499a76d1e575e260, type: 3}
-    model: {fileID: 5022602860645237092, guid: 09d336b97ca3a9e45b0b40a85876bd65, type: 3}
-    spawnHeight: 0.93
-  - id: Nick_v01
-    displayName: Nick
-    prefab: {fileID: 8082396077218772856, guid: 88e86a4820159d0488db120672ef284e, type: 3}
-    model: {fileID: 5022602860645237092, guid: 537fd20e2064b7a41b210e920be23ece, type: 3}
-    spawnHeight: 0.99

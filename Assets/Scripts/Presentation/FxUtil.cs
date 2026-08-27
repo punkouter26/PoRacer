@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace PoRacer.Views
+namespace PoRacer.Presentation
 {
     /// <summary>
     /// Shared code-generated FX assets: one soft-circle sprite texture and one

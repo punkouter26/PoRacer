@@ -73,7 +73,10 @@ namespace PoRacer.Tests
             Assert.That(_model.RaceActive, Is.False);
             Assert.That(_raceFinished.Published, Has.Count.EqualTo(1));
             Assert.That(_model.FindRacer("worm#2").Place, Is.EqualTo(1));
-            Assert.That(_model.FindRacer("worm#2").Status, Is.EqualTo(RacerStatus.Finished));
+            // Ranked on distance, not a crossing: the status says so and no
+            // fictional finish time is stamped.
+            Assert.That(_model.FindRacer("worm#2").Status, Is.EqualTo(RacerStatus.TimedOut));
+            Assert.That(_model.FindRacer("worm#2").FinishTime, Is.EqualTo(0f));
             Assert.That(_model.FindRacer("worm#1").Place, Is.EqualTo(2));
         }
 

@@ -1,5 +1,5 @@
 # Training run for the four .glb bipeds, split off from the coded-gait fleet.
-# Usage: .\scripts\train_humanoids.ps1 [-Hours 0.75] [-ConfigPath Config\Humanoids01.yaml]
+# Usage: .\scripts\train_humanoids.ps1 [-Hours 0.75] [-ConfigPath Config\Humanoids02_Biomechanical.yaml]
 # max_steps in the config is deliberately far out of reach for one session; the
 # time box here is the real stop. Continue toward it with -ResumeRunId.
 # Starts TensorBoard first (project rule: no training run without it).
@@ -7,7 +7,7 @@
 # much lighter than AllEnv; cores/3 capped at 4 leaves torch its share
 # (recorded per MLOps rule).
 param(
-    [string]$ConfigPath = "Config\Humanoids01.yaml",
+    [string]$ConfigPath = "Config\Humanoids02_Biomechanical.yaml",
     [string]$EnvExe = "Builds\HumanoidEnv\HumanoidEnv.exe",
     [double]$Hours = 0.75,
     [string]$ResumeRunId = ""
