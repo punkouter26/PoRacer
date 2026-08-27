@@ -73,6 +73,13 @@ namespace PoRacer.Systems
         // upward, so the start is a glorious collapsing pile.
         private const int STACK_THRESHOLD = 30;
         private const int STACK_FOOTPRINT_ROWS = 3;
+        // How far the ground must reach behind the grid, independent of how many
+        // rows the grid needs. The pack camera sits 0.8x its framing distance
+        // behind the pack, and the bottom of a 9:16 frame from there lands about
+        // 0.42x that distance behind the pack centre — roughly 19 m at the 45 m
+        // the framing maths hits for a full-width grid. At the old 7 m the lower
+        // quarter of a portrait screen was empty black past the ground's edge.
+        private const float CAMERA_BACKDROP_MARGIN = 24f;
         private const float STACK_LAYER_HEIGHT = 1.5f;
         private const float STACK_JITTER = 0.35f;
 
@@ -278,7 +285,7 @@ namespace PoRacer.Systems
                 int gridRows = totalRequested > STACK_THRESHOLD
                     ? STACK_FOOTPRINT_ROWS
                     : (totalRequested + GRID_COLUMNS - 1) / GRID_COLUMNS;
-                float backMargin = Mathf.Max(7f, gridRows * GRID_ROW_SPACING + 4f);
+                float backMargin = Mathf.Max(CAMERA_BACKDROP_MARGIN, gridRows * GRID_ROW_SPACING + 4f);
                 _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
                     decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
                 // The finish arch has no collider, so the camera cannot discover
