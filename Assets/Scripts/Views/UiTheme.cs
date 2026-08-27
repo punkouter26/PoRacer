@@ -28,18 +28,22 @@ namespace PoRacer.Views
         public const float RADIUS_XL = 18f;
 
         // ---- Font size scale ----
-        public const float FONT_XS = 11f;
-        public const float FONT_SM = 12f;
-        public const float FONT_MD = 15f;
-        public const float FONT_LG = 18f;
-        public const float FONT_TITLE = 30f;
-        public const float FONT_BANNER = 52f;
-        public const float FONT_COUNTDOWN = 64f;
+        // Raised ~25% over the original scale for phone legibility: the panel is
+        // scaled on width, so on a 1080-wide handset held at arm's length the old
+        // 11-12 px steps were below comfortable reading size. Control heights move
+        // with them so text keeps its padding instead of crowding the button edge.
+        public const float FONT_XS = 14f;
+        public const float FONT_SM = 15f;
+        public const float FONT_MD = 19f;
+        public const float FONT_LG = 23f;
+        public const float FONT_TITLE = 37f;
+        public const float FONT_BANNER = 62f;
+        public const float FONT_COUNTDOWN = 78f;
 
         // ---- Control heights (touch-ergonomic standards) ----
-        public const float CONTROL_SM = 32f;
-        public const float CONTROL_MD = 44f;
-        public const float CONTROL_LG = 54f;
+        public const float CONTROL_SM = 38f;
+        public const float CONTROL_MD = 52f;
+        public const float CONTROL_LG = 62f;
 
         // ---- Scrollbar ----
         public const float SCROLLBAR_THICKNESS = 4f;

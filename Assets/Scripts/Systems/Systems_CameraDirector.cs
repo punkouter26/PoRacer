@@ -10,10 +10,11 @@ using VContainer.Unity;
 namespace PoRacer.Systems
 {
     /// <summary>
-    /// Presentation referee. The default race shot is a pack camera that frames
-    /// every active racer at once; once the front runner enters the final
-    /// stretch the shot tightens to an orbit around them, so the finish plays
-    /// on the star. InputView's NextTarget/PrevTarget switch to the orbit
+    /// Presentation referee. The pack camera frames the whole grid through the
+    /// countdown; once racing starts the shot tightens onto whoever is in front
+    /// and stays with the lead, handing over to a new leader as it changes.
+    /// OrbitCameraView cuts between broadcast angles on that target.
+    /// InputView's NextTarget/PrevTarget switch the orbit to a chosen racer
     /// manually, and Overview returns to the wide static shot. Both race rigs
     /// are built at runtime.
     /// </summary>
@@ -23,11 +24,6 @@ namespace PoRacer.Systems
         private const int INACTIVE_PRIORITY = 0;
         private const float NEAR_CLIP = 0.3f;
         private const float FAR_CLIP = 400f;
-        // Once the front runner passes this fraction of the track, feature them.
-        // Late on purpose: the wide pack shot owns most of the race, the
-        // close-up only owns the finish itself.
-        private const float FINAL_STRETCH_FRACTION = 0.9f;
-
         private readonly RaceModel _model;
         private readonly CameraRigView _rig;
         private readonly List<Transform> _targets = new();
@@ -40,7 +36,7 @@ namespace PoRacer.Systems
         private CinemachineCamera _packCamera;
         private PackCameraView _pack;
         private Transform _orbitTarget;
-        private bool _finalStretch;
+        private bool _followingLeader;
         private Bounds _keepOut;
         private bool _hasKeepOut;
 
@@ -55,9 +51,9 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
-        /// Final-stretch watcher: when the leading still-racing racer crosses the
-        /// threshold, hand the shot to the orbit camera and keep it aimed at
-        /// whoever is in front, so a last-second pass stays on screen.
+        /// Lead watcher: hands the shot to the orbit camera on the racer out in
+        /// front and re-aims it whenever the lead changes, so the coverage
+        /// follows the story rather than the whole field.
         /// </summary>
         public void Tick()
         {
@@ -79,14 +75,11 @@ namespace PoRacer.Systems
             {
                 return;
             }
-            float fraction = front.Progress / Mathf.Max(1f, _model.TrackLengthMeters);
-            if (!_finalStretch && fraction < FINAL_STRETCH_FRACTION)
-            {
-                return;
-            }
-            // Sticky until the next grid: flipping back to the pack shot when the
-            // front runner finishes would cut away from the podium chase.
-            _finalStretch = true;
+            // The leader owns the shot for the whole race, not just the finish.
+            // Re-aiming only when the front runner actually changes keeps the
+            // angle cycling in OrbitCameraView on its own clock instead of being
+            // reset every frame.
+            _followingLeader = true;
             if (_targetsByRacerId.TryGetValue(front.RacerId, out Transform target)
                 && target != null && target.gameObject.activeInHierarchy
                 && _orbitTarget != target)
@@ -104,7 +97,7 @@ namespace PoRacer.Systems
                 _targets.Add(targets[targetIndex]);
             }
             _targetIndex = -1;
-            _finalStretch = false;
+            _followingLeader = false;
             _orbitTarget = null;
             if (_targets.Count > 0)
             {
@@ -162,9 +155,9 @@ namespace PoRacer.Systems
         /// <summary>
         /// Race over: hold the shot on the winner while the results panel is up.
         /// Tick() stops steering the moment RaceActive clears, so without this the
-        /// camera freezes on whatever it happened to be showing — and when nobody
-        /// reached the final stretch (an all-DNF field, or a timeout with the pack
-        /// still short of the line) that is the wide pack shot of a pile-up.
+        /// camera freezes on whatever it happened to be showing — and in an
+        /// all-DNF field, where no racer was ever "in front" and racing, that is
+        /// the wide pack shot of a pile-up.
         /// Results arrive in grid order rather than finishing order, so this scans
         /// for the best placed racer that still has a live transform to frame; if
         /// none survives, fall back to the field.
@@ -190,9 +183,9 @@ namespace PoRacer.Systems
             }
             if (winner != null)
             {
-                // Matches what the final-stretch watcher would have left behind,
-                // so the next SetTargets clears the same state either way.
-                _finalStretch = true;
+                // Matches what the lead watcher would have left behind, so the
+                // next SetTargets clears the same state either way.
+                _followingLeader = true;
                 OrbitAround(winner);
                 return;
             }
