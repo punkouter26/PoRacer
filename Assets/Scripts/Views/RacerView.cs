@@ -136,12 +136,6 @@ namespace PoRacer.Views
             _lastZ = z;
             if (_flippedSeconds >= KNOCKDOWN_SECONDS)
             {
-                var cosmetic = GetComponent<CosmeticPropView>();
-                if (cosmetic != null && !cosmetic.IsEjected)
-                {
-                    cosmetic.Eject();
-                }
-
                 if (_rescuesUsed < MAX_RESCUES)
                 {
                     _rescuesUsed++;

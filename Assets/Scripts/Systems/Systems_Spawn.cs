@@ -493,31 +493,7 @@ namespace PoRacer.Systems
                     creatureRoot.AddComponent<DustTrailView>();
                     // Handed the buses at spawn: the view has no scope to inject from.
                     creatureRoot.AddComponent<CreatureAudioView>().Initialize(_audioMix);
-                    // After tinting on purpose: the eyes keep their own colors.
-                    if (!bareBody)
-                    {
-                        creatureRoot.AddComponent<EyesView>();
-                    }
                     creatureRoot.AddComponent<SkidMarkView>().Initialize(_currentTrack);
-
-                    CosmeticType cosmeticType;
-                    if (quirk.Tag == "TURBO")
-                    {
-                        cosmeticType = CosmeticType.Jetpack;
-                    }
-                    else if (quirk.Tag == "MIGHTY")
-                    {
-                        cosmeticType = CosmeticType.VikingHorns;
-                    }
-                    else
-                    {
-                        CosmeticType[] types = (CosmeticType[])Enum.GetValues(typeof(CosmeticType));
-                        cosmeticType = types[_rng.Next(types.Length)];
-                    }
-                    if (!bareBody)
-                    {
-                        creatureRoot.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
-                    }
 
                     _spawned.Add(instance);
                     _racerRoots.Add(creatureRoot.transform);
