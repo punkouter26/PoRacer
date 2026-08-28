@@ -21,6 +21,9 @@ namespace PoRacer.Views
     public sealed class RaceHudView : MonoBehaviour
     {
         private const long REFRESH_INTERVAL_MS = 250;
+        private Label _fpsLabel;
+        private int _fpsFrames;
+        private float _fpsSeconds;
         private const float GO_BANNER_SECONDS = 1.5f;
         private const float WINNER_BANNER_SECONDS = 3f;
         private const int PODIUM_ROWS = 3;
@@ -155,16 +158,41 @@ namespace PoRacer.Views
             _hudRoot = root;
             VisualElement safeRoot = UiTheme.BuildSafeRoot(root);
 
+            // Corner layout: game name top-left, fps top-centre, MENU top-right,
+            // DBG bottom-left (debug builds), version bottom-right.
+            var titleLabel = new Label("PoRacer") { pickingMode = PickingMode.Ignore };
+            titleLabel.style.position = Position.Absolute;
+            titleLabel.style.top = UiTheme.SPACE_XS;
+            titleLabel.style.left = UiTheme.SPACE_SM;
+            titleLabel.style.color = UiTheme.Accent;
+            titleLabel.style.fontSize = UiTheme.FONT_MD;
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            safeRoot.Add(titleLabel);
+
             var versionLabel = new Label($"v{Application.version}")
             {
                 pickingMode = PickingMode.Ignore
             };
             versionLabel.style.position = Position.Absolute;
-            versionLabel.style.top = UiTheme.SPACE_XS;
-            versionLabel.style.left = UiTheme.SPACE_SM;
+            versionLabel.style.bottom = UiTheme.SPACE_SM;
+            versionLabel.style.right = UiTheme.SPACE_SM;
             versionLabel.style.color = UiTheme.TextDim;
             versionLabel.style.fontSize = UiTheme.FONT_SM;
             safeRoot.Add(versionLabel);
+
+            if (!Debug.isDebugBuild)
+            {
+                // Release builds have no debug strip, so the HUD carries the fps readout itself.
+                _fpsLabel = new Label("-- FPS") { pickingMode = PickingMode.Ignore };
+                _fpsLabel.style.position = Position.Absolute;
+                _fpsLabel.style.top = UiTheme.SPACE_XS;
+                _fpsLabel.style.left = 0;
+                _fpsLabel.style.right = 0;
+                _fpsLabel.style.unityTextAlign = TextAnchor.UpperCenter;
+                _fpsLabel.style.color = UiTheme.TextDim;
+                _fpsLabel.style.fontSize = UiTheme.FONT_SM;
+                safeRoot.Add(_fpsLabel);
+            }
 
             BuildTopChips(safeRoot);
             BuildProgressRail(safeRoot);
@@ -445,8 +473,24 @@ namespace PoRacer.Views
             }
         }
 
+        private void Update()
+        {
+            if (_fpsLabel == null)
+            {
+                return;
+            }
+            _fpsFrames++;
+            _fpsSeconds += Time.unscaledDeltaTime;
+        }
+
         private void Refresh()
         {
+            if (_fpsLabel != null && _fpsSeconds > 0f)
+            {
+                _fpsLabel.text = $"{_fpsFrames / _fpsSeconds:0} FPS";
+                _fpsFrames = 0;
+                _fpsSeconds = 0f;
+            }
             if (_raceModel == null)
             {
                 return;

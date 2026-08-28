@@ -1,0 +1,22 @@
+{
+    "name": "IsaacSpider.Runtime",
+    "rootNamespace": "IsaacSpider",
+    "references": [
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "2.0.0",
+            "define": "ISAAC_SPIDER_INFERENCE"
+        }
+    ],
+    "noEngineReferences": false
+}

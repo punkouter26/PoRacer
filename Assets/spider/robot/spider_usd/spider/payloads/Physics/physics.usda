@@ -1,0 +1,671 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    defaultPrim = "spider"
+    doc = """Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\tmpeby0glzf\\spider.usdc
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\urdf_import_spider_xwqx2h3c\\usdex_spider\\spider.usdc
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\urdf_import_spider_xwqx2h3c\\temp_spider\\spider.usd
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\Downloads\\isaaclab\\spider\\assets\\spider_usd\\spider\\payloads\\base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "spider"
+{
+    over "Geometry"
+    {
+        over "body" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsArticulationRootAPI", "NewtonArticulationRootAPI", "PhysicsMassAPI"]
+        )
+        {
+            bool newton:selfCollisionEnabled = 0
+            float3 physics:diagonalInertia = (0.008, 0.008, 0.008)
+            float physics:mass = 2
+            quatf physics:principalAxes = (1, 0, 0, 0)
+
+            over "L1_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "L1_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "L2_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "L2_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "L3_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "L3_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "L4_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "L4_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "R1_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "R1_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "R2_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "R2_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "R3_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "R3_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "R4_femur" (
+                prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+            )
+            {
+                point3f physics:centerOfMass = (0.0655, 0, 0.0459)
+                float3 physics:diagonalInertia = (0.00002, 0.0002233, 0.0002233)
+                float physics:mass = 0.1
+                quatf physics:principalAxes = (0.2126315, 0.6743796, 0.6743796, 0.2126315)
+
+                over "R4_tibia" (
+                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                )
+                {
+                    point3f physics:centerOfMass = (0.065, 0, -0.1126)
+                    float3 physics:diagonalInertia = (0.0000135, 0.0006828, 0.0006828)
+                    float physics:mass = 0.12
+                    quatf physics:principalAxes = (-0.35355222, 0.6123731, 0.6123731, -0.35355222)
+
+                    over "cylinder_1" (
+                        prepend apiSchemas = ["NewtonCollisionAPI"]
+                    )
+                    {
+                    }
+                }
+
+                over "cylinder_1" (
+                    prepend apiSchemas = ["NewtonCollisionAPI"]
+                )
+                {
+                }
+            }
+
+            over "sphere_1" (
+                prepend apiSchemas = ["NewtonCollisionAPI"]
+            )
+            {
+            }
+        }
+    }
+
+    over "Physics"
+    {
+        def PhysicsRevoluteJoint "L1_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L1_femur>
+            point3f physics:localPos0 = (0.0779, 0.045, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.9659257, 0, 0, 0.25881955)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L1_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/L1_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L1_femur/L1_tibia>
+            point3f physics:localPos0 = (0.1311, 0, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L2_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L2_femur>
+            point3f physics:localPos0 = (0.0308, 0.0846, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.8191522, 0, 0, 0.5735763)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L2_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/L2_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L2_femur/L2_tibia>
+            point3f physics:localPos0 = (0.1311, 1.734554e-17, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L3_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L3_femur>
+            point3f physics:localPos0 = (-0.0308, 0.0846, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.57357734, 0, 0, 0.8191514)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L3_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/L3_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L3_femur/L3_tibia>
+            point3f physics:localPos0 = (0.1311, 6.9372e-18, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L4_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L4_femur>
+            point3f physics:localPos0 = (-0.0779, 0.045, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.25882092, 0, 0, 0.96592534)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "L4_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/L4_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/L4_femur/L4_tibia>
+            point3f physics:localPos0 = (0.1311, 6.938894e-18, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R1_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R1_femur>
+            point3f physics:localPos0 = (0.0779, -0.045, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.9659257, 0, 0, -0.25881955)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R1_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/R1_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R1_femur/R1_tibia>
+            point3f physics:localPos0 = (0.1311, 0, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R2_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R2_femur>
+            point3f physics:localPos0 = (0.0308, -0.0846, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.8191522, 0, 0, -0.5735763)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R2_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/R2_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R2_femur/R2_tibia>
+            point3f physics:localPos0 = (0.1311, -1.734554e-17, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R3_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R3_femur>
+            point3f physics:localPos0 = (-0.0308, -0.0846, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (-0.57357734, 0, 0, 0.8191514)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R3_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/R3_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R3_femur/R3_tibia>
+            point3f physics:localPos0 = (0.1311, -3.469447e-18, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R4_hip" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Z"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R4_femur>
+            point3f physics:localPos0 = (-0.0779, -0.045, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (-0.25882092, 0, 0, 0.96592534)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -45.836624
+            float physics:upperLimit = 45.836624
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+
+        def PhysicsRevoluteJoint "R4_knee" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0.017453292
+            float drive:angular:physics:maxForce = 15
+            float drive:angular:physics:stiffness = 0.43633232
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            custom rel physics:body0
+            prepend rel physics:body0 = </spider/Geometry/body/R4_femur>
+            custom rel physics:body1
+            prepend rel physics:body1 = </spider/Geometry/body/R4_femur/R4_tibia>
+            point3f physics:localPos0 = (0.1311, -3.3881318e-21, 0.0918)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -57.29578
+            float physics:upperLimit = 57.29578
+            custom float urdf:limit:effort = 15
+            custom float urdf:limit:velocity = 12
+        }
+    }
+}
+

@@ -1,6 +1,4 @@
 using PoRacer.Presentation;
-using System.Globalization;
-using System.IO;
 using System.Text;
 using PoRacer.Models;
 using Unity.Profiling;
@@ -42,7 +40,6 @@ namespace PoRacer.Views
         private const float FIXED_BUDGET_MS = 20f;
         // Rows are buffered and flushed together so a recording session does not
         // put a file write in the middle of every refresh.
-        private const int CSV_FLUSH_EVERY_N_ROWS = 40;
 
         private const string HEADER_COLOR = "#E8C55A";
         private const string DIM_COLOR = "#9A9A9A";
@@ -64,9 +61,7 @@ namespace PoRacer.Views
         private string _lastStripText = string.Empty;
         private Label _text;
         private VisualElement _graph;
-        private Button _recordButton;
         private readonly StringBuilder _builder = new();
-        private readonly StringBuilder _csvBuilder = new();
         private readonly float[] _frameMs = new float[FRAME_SAMPLES];
         // Fixed-loop cost per frame, same cursor and length as _frameMs so the two
         // series line up sample-for-sample on the graph.
@@ -87,10 +82,6 @@ namespace PoRacer.Views
         private ProfilerRecorder _activeBodies;
         private ProfilerRecorder _physicsQueries;
         private ProfilerRecorder _constraints;
-        private string _csvPath;
-        private int _csvRows;
-        private bool _recording;
-        private float _recordStartTime;
         private int _refreshCounter;
         private int _bodyCount;
         private int _particleSystemCount;
@@ -163,19 +154,6 @@ namespace PoRacer.Views
             UiTheme.AddHover(toggle);
             safeRoot.Add(toggle);
 
-            // CSV capture: a long soak should leave a file behind, not a
-            // screenshot someone has to read numbers off.
-            _recordButton = new Button(ToggleRecording) { text = "REC" };
-            _recordButton.style.position = Position.Absolute;
-            _recordButton.style.bottom = UiTheme.SPACE_SM;
-            _recordButton.style.left = UiTheme.SPACE_SM + 44f + UiTheme.SPACE_XS;
-            _recordButton.style.width = 44;
-            _recordButton.style.height = UiTheme.CONTROL_SM;
-            _recordButton.style.fontSize = UiTheme.FONT_XS;
-            _recordButton.style.opacity = 0.75f;
-            UiTheme.StyleButton(_recordButton);
-            UiTheme.AddHover(_recordButton);
-            safeRoot.Add(_recordButton);
 
             _panel = new VisualElement { pickingMode = PickingMode.Ignore };
             _panel.style.position = Position.Absolute;
@@ -216,10 +194,6 @@ namespace PoRacer.Views
 
         private void OnDestroy()
         {
-            if (_recording)
-            {
-                StopRecording();
-            }
             _drawCalls.Dispose();
             _batches.Dispose();
             _setPasses.Dispose();
@@ -281,103 +255,6 @@ namespace PoRacer.Views
             _stripLabel.text = stripText;
         }
 
-        /// <summary>
-        /// Starts or stops CSV capture. Each session writes its own file so two
-        /// runs never interleave rows, and the path is echoed to the console
-        /// because the persistent data folder is not somewhere anyone browses.
-        /// </summary>
-        private void ToggleRecording()
-        {
-            if (_recording)
-            {
-                StopRecording();
-                return;
-            }
-            _csvPath = Path.Combine(
-                Application.persistentDataPath,
-                $"telemetry-{System.DateTime.Now:yyyyMMdd-HHmmss}.csv");
-            _csvBuilder.Clear();
-            _csvBuilder.Append("t,fps,frame_ms,fixed_ms,steps,gc_kb,draws,batches,setpass,tris,")
-                .Append("bodies,active_bodies,particles,audio,race,racers,leader_mps\n");
-            _csvRows = 0;
-            _recordStartTime = Time.unscaledTime;
-            _recording = true;
-            _recordButton.text = "STOP";
-            _recordButton.style.color = FpsBad;
-            Debug.Log($"Telemetry recording to {_csvPath}");
-        }
-
-        private void StopRecording()
-        {
-            _recording = false;
-            FlushCsv();
-            if (_recordButton != null)
-            {
-                _recordButton.text = "REC";
-                _recordButton.style.color = UiTheme.Text;
-            }
-            Debug.Log($"Telemetry written: {_csvPath} ({_csvRows} rows)");
-        }
-
-        /// <summary>
-        /// One row per refresh tick. Values are invariant-culture formatted so a
-        /// machine with comma decimals still produces a parseable file.
-        /// </summary>
-        private void AppendCsvRow()
-        {
-            CultureInfo culture = CultureInfo.InvariantCulture;
-            float frameMs = 1000f / Mathf.Max(_fps, 0.01f);
-            float fixedMs = PhysicsProbeView.ScriptMsPerFrame
-                + Mathf.Max(0f, PhysicsProbeView.PhysxMsPerFrame);
-            float gcKb = _gcPerFrame.Valid ? _gcPerFrame.LastValue / 1024f : 0f;
-
-            _csvBuilder.Append((Time.unscaledTime - _recordStartTime).ToString("0.00", culture)).Append(',')
-                .Append(_fps.ToString("0.0", culture)).Append(',')
-                .Append(frameMs.ToString("0.00", culture)).Append(',')
-                .Append(fixedMs.ToString("0.00", culture)).Append(',')
-                .Append(PhysicsProbeView.StepsPerFrame).Append(',')
-                .Append(gcKb.ToString("0.00", culture)).Append(',')
-                .Append(_drawCalls.Valid ? _drawCalls.LastValue : 0L).Append(',')
-                .Append(_batches.Valid ? _batches.LastValue : 0L).Append(',')
-                .Append(_setPasses.Valid ? _setPasses.LastValue : 0L).Append(',')
-                .Append(_triangles.Valid ? _triangles.LastValue : 0L).Append(',')
-                .Append(_bodyCount).Append(',')
-                .Append(_activeBodies.Valid ? _activeBodies.LastValue : -1L).Append(',')
-                .Append(_particleSystemCount).Append(',')
-                .Append(_audioSourceCount).Append(',')
-                .Append(_raceModel != null ? _raceModel.RaceNumber : 0).Append(',')
-                .Append(_raceModel != null ? _raceModel.Racers.Count : 0).Append(',')
-                .Append(_leaderSpeed.ToString("0.00", culture)).Append('\n');
-
-            _csvRows++;
-            if (_csvRows % CSV_FLUSH_EVERY_N_ROWS == 0)
-            {
-                FlushCsv();
-            }
-        }
-
-        /// <summary>
-        /// Appends the buffer to disk and clears it. A failed write stops the
-        /// recording rather than throwing on every subsequent refresh.
-        /// </summary>
-        private void FlushCsv()
-        {
-            if (_csvBuilder.Length == 0 || string.IsNullOrEmpty(_csvPath))
-            {
-                return;
-            }
-            try
-            {
-                File.AppendAllText(_csvPath, _csvBuilder.ToString());
-                _csvBuilder.Clear();
-            }
-            catch (IOException exception)
-            {
-                _recording = false;
-                Debug.LogWarning($"Telemetry write failed ({exception.Message}); recording stopped.");
-            }
-        }
-
         private void TogglePanel()
         {
             _visible = !_visible;
@@ -386,10 +263,10 @@ namespace PoRacer.Views
 
         private void Refresh()
         {
-            // Recording keeps ticking with the panel closed, but nothing here is
+            // With the panel closed nothing here is
             // worth doing when it is closed and idle - the scene walk below is a
             // FindObjectsByType over a field that can be a hundred racers deep.
-            if (!_visible && !_recording)
+            if (!_visible)
             {
                 return;
             }
@@ -400,10 +277,6 @@ namespace PoRacer.Views
                 SampleSceneCounts();
             }
 
-            if (_recording)
-            {
-                AppendCsvRow();
-            }
             if (!_visible)
             {
                 return;

@@ -398,24 +398,29 @@ namespace PoRacer.Systems
                     string racerId = $"{entry.id}#{generation}.{gridIndex + 1}";
                     instance.name = racerId;
 
-                    var agent = instance.GetComponentInChildren<Unity.MLAgents.Agent>() as ICreatureAgent;
+                    // Any ICreatureAgent races: ML-Agents creatures carry BehaviorParameters,
+                    // Inference-Engine creatures (Isaac spider) drive their own policy.
+                    ICreatureAgent agent = FindCreatureAgent(instance);
                     BehaviorParameters behavior = instance.GetComponentInChildren<BehaviorParameters>();
-                    if (agent == null || behavior == null)
+                    if (agent == null || (agent is Unity.MLAgents.Agent && behavior == null))
                     {
                         Debug.LogWarning($"Creature '{entry.id}' prefab lacks an ICreatureAgent; skipping.");
                         UnityEngine.Object.Destroy(instance);
                         continue;
                     }
-                    if (scripted || entry.model == null)
+                    if (behavior != null)
                     {
-                        // Coded gait instead of a brain: Heuristic() drives the joints.
-                        behavior.BehaviorType = BehaviorType.HeuristicOnly;
-                    }
-                    else
-                    {
-                        behavior.Model = entry.model;
-                        behavior.BehaviorType = BehaviorType.InferenceOnly;
-                        behavior.InferenceDevice = InferenceDevice.Burst;
+                        if (scripted || entry.model == null)
+                        {
+                            // Coded gait instead of a brain: Heuristic() drives the joints.
+                            behavior.BehaviorType = BehaviorType.HeuristicOnly;
+                        }
+                        else
+                        {
+                            behavior.Model = entry.model;
+                            behavior.BehaviorType = BehaviorType.InferenceOnly;
+                            behavior.InferenceDevice = InferenceDevice.Burst;
+                        }
                     }
                     agent.MaxStep = 0;
                     agent.SetGoal(_track.FinishLine);
@@ -436,9 +441,15 @@ namespace PoRacer.Systems
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
                     string funName = RacerNames.Get(_nameOrder, gridIndex);
 
+                    // The Isaac spider ships its own URDF-shaped body: no connective
+                    // links, eyes or props on it (they float off its small 0.2 m body).
+                    bool bareBody = instance.GetComponent<Agent_IsaacSpider>() != null;
                     // Connective limb visuals must exist before tinting so the
                     // links pick up this racer's color along with its parts.
-                    instance.AddComponent<BodyLinkView>();
+                    if (!bareBody)
+                    {
+                        instance.AddComponent<BodyLinkView>();
+                    }
 
                     // Unique tint per racer via property block: shared material
                     // stays shared, so batching is not broken by material clones.
@@ -473,7 +484,10 @@ namespace PoRacer.Systems
                     // Handed the buses at spawn: the view has no scope to inject from.
                     instance.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     // After tinting on purpose: the eyes keep their own colors.
-                    instance.AddComponent<EyesView>();
+                    if (!bareBody)
+                    {
+                        instance.AddComponent<EyesView>();
+                    }
                     instance.AddComponent<SkidMarkView>().Initialize(_currentTrack);
 
                     CosmeticType cosmeticType;
@@ -490,7 +504,10 @@ namespace PoRacer.Systems
                         CosmeticType[] types = (CosmeticType[])Enum.GetValues(typeof(CosmeticType));
                         cosmeticType = types[_rng.Next(types.Length)];
                     }
-                    instance.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
+                    if (!bareBody)
+                    {
+                        instance.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
+                    }
 
                     _spawned.Add(instance);
                     _racerRoots.Add(instance.transform);
@@ -637,11 +654,25 @@ namespace PoRacer.Systems
             }
             // Fatigue captures its full-power baseline lazily; the quirked drives
             // must be what it captures, not the prefab's authored values.
-            var agent = instance.GetComponentInChildren<Unity.MLAgents.Agent>() as ICreatureAgent;
+            ICreatureAgent agent = FindCreatureAgent(instance);
             if (agent != null)
             {
                 agent.NotifyDrivesChanged();
             }
+        }
+
+        /// <summary>First ICreatureAgent under the instance, whatever MonoBehaviour implements it.</summary>
+        private static ICreatureAgent FindCreatureAgent(GameObject instance)
+        {
+            MonoBehaviour[] behaviours = instance.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int index = 0; index < behaviours.Length; index++)
+            {
+                if (behaviours[index] is ICreatureAgent creature)
+                {
+                    return creature;
+                }
+            }
+            return null;
         }
 
         private void Despawn()

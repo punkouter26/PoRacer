@@ -48,3 +48,8 @@ MonoBehaviour:
     prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
     model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
     spawnHeight: 0.75
+  - id: IsaacSpider_v01
+    displayName: Isaac Spider
+    prefab: {fileID: 8403439250134436600, guid: f0f5aa0652aa2024a894ff6dd3fba4f8, type: 3}
+    model: {fileID: 5022602860645237092, guid: a8423705548225a45b39d3d14e9c28ed, type: 3}
+    spawnHeight: 0.18

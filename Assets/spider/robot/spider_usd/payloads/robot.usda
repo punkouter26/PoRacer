@@ -1,0 +1,225 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    defaultPrim = "spider"
+    doc = """Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\tmpeby0glzf\\spider.usdc
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\urdf_import_spider_xwqx2h3c\\usdex_spider\\spider.usdc
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\AppData\\Local\\Temp\\urdf_import_spider_xwqx2h3c\\temp_spider\\spider.usd
+
+
+Generated from Composed Stage of root layer C:\\Users\\punko\\Downloads\\isaaclab\\spider\\assets\\spider_usd\\spider\\payloads\\base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "spider" (
+    prepend apiSchemas = ["IsaacRobotAPI"]
+)
+{
+    custom rel isaac:physics:robotJoints
+    custom rel isaac:physics:robotLinks
+
+    over "Physics"
+    {
+        over "L1_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L2_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L3_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L4_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R1_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R2_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R3_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R4_hip" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L1_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L2_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L3_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "L4_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R1_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R2_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R3_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "R4_knee" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+    }
+
+    over "Geometry"
+    {
+        over "body" (
+            prepend apiSchemas = ["IsaacLinkAPI"]
+        )
+        {
+            over "L1_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "L1_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "L2_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "L2_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "L3_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "L3_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "L4_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "L4_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "R1_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "R1_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "R2_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "R2_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "R3_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "R3_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+
+            over "R4_femur" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "R4_tibia" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+            }
+        }
+    }
+}
+

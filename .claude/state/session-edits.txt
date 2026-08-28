@@ -1,6 +1,0 @@
-C:\Users\punko\.claude\projects\c--Users-punko-Downloads-PoRacer\memory\poracer-gen4-overhaul.md
-C:\Users\punko\.claude\projects\c--Users-punko-Downloads-PoRacer\memory\MEMORY.md
-c:\Users\punko\Downloads\PoRacer\Assets\Scripts\Editor\Editor_BuildRiggedCreatures.cs
-c:\Users\punko\Downloads\PoRacer\Config\Humanoids01.yaml
-c:\Users\punko\Downloads\PoRacer\scripts\train_humanoids.ps1
-C:\Users\punko\.claude\projects\c--Users-punko-Downloads-PoRacer\memory\poracer-master-only-git.md

@@ -19,8 +19,8 @@ namespace PoRacer.Views
     public sealed class MenuView : MonoBehaviour
     {
         private const float MAP_CARD_WIDTH = 148f;
-        private const float MAP_STRIP_HEIGHT = 104f;
-        private const float AVATAR_SIZE = 28f;
+        private const float MAP_STRIP_HEIGHT = 72f;
+        private const float AVATAR_SIZE = 26f;
         private const int STANDINGS_ROWS = 5;
 
         private CreatureCatalog _catalog;
@@ -108,10 +108,10 @@ namespace PoRacer.Views
             _root.style.backgroundColor = UiTheme.ScreenBg;
             _content = UiTheme.BuildSafeRoot(_root);
             _content.pickingMode = PickingMode.Position;
-            _content.style.paddingTop = UiTheme.SPACE_LG + UiTheme.SPACE_SM;
+            _content.style.paddingTop = UiTheme.SPACE_LG;
             _content.style.paddingLeft = UiTheme.SPACE_LG;
             _content.style.paddingRight = UiTheme.SPACE_LG;
-            _content.style.paddingBottom = UiTheme.SPACE_LG;
+            _content.style.paddingBottom = UiTheme.SPACE_SM;
 
             var versionLabel = new Label($"v{Application.version}") { pickingMode = PickingMode.Ignore };
             versionLabel.style.position = Position.Absolute;
@@ -207,7 +207,7 @@ namespace PoRacer.Views
             {
                 text = _config.UseScriptedBrains ? "Brains: Scripted gaits" : "Brains: RL (trained)"
             };
-            brainToggle.style.height = UiTheme.CONTROL_MD;
+            brainToggle.style.height = UiTheme.CONTROL_SM;
             brainToggle.style.fontSize = UiTheme.FONT_SM;
             UiTheme.SetMargin(brainToggle, 0f, 0f);
             UiTheme.StyleButton(brainToggle);
@@ -266,14 +266,6 @@ namespace PoRacer.Views
                 name.style.marginBottom = UiTheme.SPACE_XS;
                 card.Add(name);
 
-                var blurb = new Label(map.Blurb) { pickingMode = PickingMode.Ignore };
-                blurb.style.fontSize = UiTheme.FONT_XS;
-                blurb.style.color = UiTheme.TextDim;
-                blurb.style.unityTextAlign = TextAnchor.UpperLeft;
-                blurb.style.whiteSpace = WhiteSpace.Normal;
-                blurb.style.flexGrow = 1f;
-                card.Add(blurb);
-
                 var lengthLabel = new Label($"{map.LengthMeters:0} m") { pickingMode = PickingMode.Ignore };
                 lengthLabel.style.fontSize = UiTheme.FONT_XS;
                 lengthLabel.style.color = UiTheme.AccentSoft;
@@ -289,7 +281,9 @@ namespace PoRacer.Views
             _mapBlurbLabel.style.color = UiTheme.TextDim;
             _mapBlurbLabel.style.fontSize = UiTheme.FONT_XS;
             _mapBlurbLabel.style.whiteSpace = WhiteSpace.Normal;
-            _mapBlurbLabel.style.marginTop = UiTheme.SPACE_XS;
+            _mapBlurbLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _mapBlurbLabel.style.overflow = Overflow.Hidden;
+            _mapBlurbLabel.style.textOverflow = TextOverflow.Ellipsis;
             _content.Add(_mapBlurbLabel);
 
             RefreshMapButtons();
@@ -344,34 +338,23 @@ namespace PoRacer.Views
                 _eloModel.GetRating(second.id).CompareTo(_eloModel.GetRating(first.id)));
 
             int rows = _ranked.Count < STANDINGS_ROWS ? _ranked.Count : STANDINGS_ROWS;
+            // One wrapping row of "rank name rating" chips: the five-line table was the
+            // single biggest reason the creature list needed scrolling on a phone.
+            var chips = new VisualElement();
+            chips.style.flexDirection = FlexDirection.Row;
+            chips.style.flexWrap = Wrap.Wrap;
+            chips.style.justifyContent = Justify.SpaceBetween;
+            _standingsPanel.Add(chips);
             for (int rankIndex = 0; rankIndex < rows; rankIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _ranked[rankIndex];
-                var line = new VisualElement();
-                line.style.flexDirection = FlexDirection.Row;
-                line.style.alignItems = Align.Center;
-                line.style.marginBottom = UiTheme.SPACE_XS * 0.5f;
-
-                var rank = new Label((rankIndex + 1).ToString());
-                rank.style.fontSize = UiTheme.FONT_XS;
-                rank.style.width = UiTheme.SPACE_LG;
-                rank.style.color = rankIndex == 0 ? UiTheme.Gold : UiTheme.TextDim;
-                rank.style.unityFontStyleAndWeight = FontStyle.Bold;
-                line.Add(rank);
-
-                var name = new Label(entry.displayName);
-                name.style.fontSize = UiTheme.FONT_SM;
-                name.style.color = rankIndex == 0 ? UiTheme.Gold : UiTheme.Text;
-                name.style.flexGrow = 1f;
-                line.Add(name);
-
-                var rating = new Label($"{_eloModel.GetRating(entry.id):0}");
-                rating.style.fontSize = UiTheme.FONT_SM;
-                rating.style.color = rankIndex == 0 ? UiTheme.Gold : UiTheme.TextDim;
-                rating.style.unityTextAlign = TextAnchor.MiddleRight;
-                line.Add(rating);
-
-                _standingsPanel.Add(line);
+                Color tone = rankIndex == 0 ? UiTheme.Gold : UiTheme.Text;
+                var chip = new Label($"{rankIndex + 1}  {entry.displayName}  {_eloModel.GetRating(entry.id):0}");
+                chip.style.fontSize = UiTheme.FONT_XS;
+                chip.style.color = tone;
+                chip.style.unityFontStyleAndWeight = rankIndex == 0 ? FontStyle.Bold : FontStyle.Normal;
+                chip.style.marginRight = UiTheme.SPACE_SM;
+                chips.Add(chip);
             }
             if (rows == 0)
             {
@@ -398,7 +381,7 @@ namespace PoRacer.Views
         {
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
-            row.style.marginBottom = UiTheme.SPACE_SM;
+            row.style.marginBottom = UiTheme.SPACE_XS;
             string[] labels = { "All x1", "All x10", "Clear" };
             int[] counts = { 1, 10, 0 };
             for (int presetIndex = 0; presetIndex < labels.Length; presetIndex++)
@@ -421,7 +404,7 @@ namespace PoRacer.Views
         {
             var footer = new VisualElement();
             footer.style.flexShrink = 0f;
-            footer.style.marginTop = UiTheme.SPACE_SM;
+            footer.style.marginTop = UiTheme.SPACE_XS;
             UiTheme.StyleGlassPanel(footer, glowing: true);
             _content.Add(footer);
 
@@ -429,11 +412,11 @@ namespace PoRacer.Views
             _totalLabel.style.color = UiTheme.AccentSoft;
             _totalLabel.style.fontSize = UiTheme.FONT_SM;
             _totalLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _totalLabel.style.marginBottom = UiTheme.SPACE_SM;
+            _totalLabel.style.marginBottom = UiTheme.SPACE_XS;
             footer.Add(_totalLabel);
 
             _startButton = new Button(() => _spawn.BeginRacing()) { text = "START RACING" };
-            _startButton.style.height = UiTheme.CONTROL_LG;
+            _startButton.style.height = UiTheme.CONTROL_MD;
             _startButton.style.fontSize = UiTheme.FONT_LG;
             UiTheme.SetMargin(_startButton, 0f, 0f);
             UiTheme.StyleButton(_startButton, accent: true);
@@ -487,14 +470,22 @@ namespace PoRacer.Views
 
         private VisualElement BuildRow(CreatureCatalog.CreatureEntry entry)
         {
+            // One line per creature: avatar | name over ELO | count segments. The
+            // previous two-line card fit only three creatures above the START button.
             var card = new VisualElement();
-            card.style.marginBottom = UiTheme.SPACE_SM;
+            card.style.marginBottom = UiTheme.SPACE_XXS;
             UiTheme.StyleCard(card, selected: false);
+            card.style.flexDirection = FlexDirection.Row;
+            card.style.alignItems = Align.Center;
+            card.style.paddingTop = UiTheme.SPACE_XXS;
+            card.style.paddingBottom = UiTheme.SPACE_XXS;
 
             var titleRow = new VisualElement();
             titleRow.style.flexDirection = FlexDirection.Row;
             titleRow.style.alignItems = Align.Center;
-            titleRow.style.marginBottom = UiTheme.SPACE_SM;
+            titleRow.style.flexGrow = 1f;
+            titleRow.style.flexShrink = 1f;
+            titleRow.style.minWidth = 0f;
             card.Add(titleRow);
 
             // Round avatar chip: creature initial on a per-creature hue, so rows
@@ -515,22 +506,36 @@ namespace PoRacer.Views
             avatar.Add(initial);
             titleRow.Add(avatar);
 
+            // Name and ELO on one line: a second text line per row is what pushed the
+            // eighth creature under the START panel on 9:20 phones.
+            var nameColumn = new VisualElement();
+            nameColumn.style.flexDirection = FlexDirection.Row;
+            nameColumn.style.alignItems = Align.Center;
+            nameColumn.style.flexGrow = 1f;
+            nameColumn.style.flexShrink = 1f;
+            nameColumn.style.minWidth = 0f;
+            titleRow.Add(nameColumn);
+
             var name = new Label(entry.displayName);
             name.style.color = UiTheme.Text;
-            name.style.fontSize = UiTheme.FONT_MD;
-            name.style.flexGrow = 1f;
-            titleRow.Add(name);
+            name.style.fontSize = UiTheme.FONT_SM;
+            name.style.overflow = Overflow.Hidden;
+            name.style.textOverflow = TextOverflow.Ellipsis;
+            nameColumn.Add(name);
 
             var eloLabel = new Label($"ELO {_eloModel.GetRating(entry.id):0}");
             eloLabel.style.color = UiTheme.TextDim;
             eloLabel.style.fontSize = UiTheme.FONT_XS;
+            eloLabel.style.marginLeft = UiTheme.SPACE_SM;
             eloLabel.style.flexShrink = 0f;
-            titleRow.Add(eloLabel);
+            nameColumn.Add(eloLabel);
             _ratingLabels.Add(eloLabel);
             _ratingCreatureIds.Add(entry.id);
 
             var segments = new VisualElement();
             UiTheme.StyleSegmentGroup(segments);
+            segments.style.width = Length.Percent(58f);
+            segments.style.flexShrink = 0f;
             card.Add(segments);
 
             int[] options = RaceConfigModel.COUNT_OPTIONS;

@@ -1,0 +1,29 @@
+{
+    "name": "IsaacSpider.Tests",
+    "rootNamespace": "IsaacSpider.Tests",
+    "references": [
+        "IsaacSpider.Runtime",
+        "Unity.InferenceEngine",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "2.0.0",
+            "define": "ISAAC_SPIDER_INFERENCE"
+        }
+    ],
+    "noEngineReferences": false
+}
