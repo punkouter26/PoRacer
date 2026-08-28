@@ -111,7 +111,15 @@ namespace PoRacer.Views
                 return;
             }
 
-            VisualElement root = GetComponent<UIDocument>().rootVisualElement;
+            var document = GetComponent<UIDocument>();
+            // RaceHud and DebugOverlay both shipped at sortingOrder 0, which is a tie:
+            // the draw order between them was arbitrary, and on device RaceHud won.
+            // That put the top-centre FPS readout BEHIND the top-3 chips and buried
+            // the DBG button under the commentary ticker. A diagnostic layer belongs
+            // above the HUD it is diagnosing, so claim a band of its own. (Menu is 10.)
+            document.sortingOrder = 20;
+
+            VisualElement root = document.rootVisualElement;
             root.pickingMode = PickingMode.Ignore;
             VisualElement safeRoot = UiTheme.BuildSafeRoot(root);
 
@@ -146,8 +154,12 @@ namespace PoRacer.Views
             toggle.style.position = Position.Absolute;
             toggle.style.bottom = UiTheme.SPACE_SM;
             toggle.style.left = UiTheme.SPACE_SM;
-            toggle.style.width = 44;
-            toggle.style.height = UiTheme.CONTROL_SM;
+            // 62 reference px is Android's 48 dp minimum touch target on the phone
+            // this was verified against (scale 1.778, density 2.25): 62 * 1.778 /
+            // 2.25 = 49 dp. At the old 44 x 38 it measured 35 x 30 dp - comfortably
+            // under, and it is the one control a thumb has to find in a corner.
+            toggle.style.width = 62;
+            toggle.style.height = 62;
             toggle.style.fontSize = UiTheme.FONT_XS;
             toggle.style.opacity = 0.75f;
             UiTheme.StyleButton(toggle);

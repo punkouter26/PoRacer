@@ -389,7 +389,10 @@ namespace PoRacer.Views
         {
             _chipRow = new VisualElement { pickingMode = PickingMode.Ignore };
             _chipRow.style.position = Position.Absolute;
-            _chipRow.style.top = UiTheme.SPACE_LG + UiTheme.SPACE_SM;
+            // Clear of the top-centre FPS readout, which sits at SPACE_XS with a
+            // FONT_SM line box. At the old SPACE_LG + SPACE_SM the chip backgrounds
+            // clipped the bottom of "60 FPS" on device.
+            _chipRow.style.top = UiTheme.SPACE_XXL + UiTheme.SPACE_XS;
             _chipRow.style.left = 0;
             _chipRow.style.right = 0;
             _chipRow.style.flexDirection = FlexDirection.Row;

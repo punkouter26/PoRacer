@@ -43,8 +43,17 @@ namespace PoRacer.Presentation
         // scaled on width, so on a 1080-wide handset held at arm's length the old
         // 11-12 px steps were below comfortable reading size. Control heights move
         // with them so text keeps its padding instead of crowding the button edge.
-        public const float FONT_XS = 14f;
-        public const float FONT_SM = 15f;
+        //
+        // These are REFERENCE pixels against the 540 x 960 PanelSettings reference,
+        // matched on width. To read them as Android sp:
+        //     sp = ref * (screenWidthPx / 540) / (densityDpi / 160)
+        // Measured on the Pixel 9 Pro this was verified against (960 x 2142 at
+        // density 360, i.e. scale 1.778 / density 2.25), that factor is 0.79. XS and
+        // SM were 14 and 15, which land at 11.1 sp and 11.9 sp - both under Android's
+        // 12 sp floor for body text, and they carry the version stamp and the debug
+        // strip. 16 and 18 put them at 12.6 sp and 14.2 sp.
+        public const float FONT_XS = 16f;
+        public const float FONT_SM = 18f;
         public const float FONT_MD = 19f;
         public const float FONT_LG = 23f;
         public const float FONT_TITLE = 37f;

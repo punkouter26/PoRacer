@@ -371,7 +371,9 @@ namespace PoRacer.Views
         {
             for (int labelIndex = 0; labelIndex < _ratingLabels.Count; labelIndex++)
             {
-                _ratingLabels[labelIndex].text = $"ELO {_eloModel.GetRating(_ratingCreatureIds[labelIndex]):0}";
+                // Same bare-number format BuildRow uses; re-adding the "ELO " prefix
+                // here would put the truncation back the first time a race finished.
+                _ratingLabels[labelIndex].text = $"{_eloModel.GetRating(_ratingCreatureIds[labelIndex]):0}";
             }
             RefreshStandings();
         }
@@ -514,6 +516,9 @@ namespace PoRacer.Views
             nameColumn.style.flexGrow = 1f;
             nameColumn.style.flexShrink = 1f;
             nameColumn.style.minWidth = 0f;
+            // Clip rather than spill: without this, an over-long row pushes its ELO
+            // out over the count buttons instead of being cut at the card edge.
+            nameColumn.style.overflow = Overflow.Hidden;
             titleRow.Add(nameColumn);
 
             var name = new Label(entry.displayName);
@@ -521,9 +526,18 @@ namespace PoRacer.Views
             name.style.fontSize = UiTheme.FONT_SM;
             name.style.overflow = Overflow.Hidden;
             name.style.textOverflow = TextOverflow.Ellipsis;
+            // UI Toolkit defaults flex-shrink to 0, NOT to 1 as web CSS does. Without
+            // these two lines the ellipsis never triggers: the name keeps its full
+            // width, the row overflows, and it is the ELO label beside it that gets
+            // cut off ("Quadruped ELO 121"). Verified on device.
+            name.style.flexShrink = 1f;
+            name.style.minWidth = 0f;
             nameColumn.Add(name);
 
-            var eloLabel = new Label($"ELO {_eloModel.GetRating(entry.id):0}");
+            // Bare number, not "ELO 1201". The section above is already headed
+            // "STANDINGS (ELO)", and the four characters the prefix costs are what
+            // pushed "Quadruped" and "Isaac Spider" into an ellipsis on a 427 dp phone.
+            var eloLabel = new Label($"{_eloModel.GetRating(entry.id):0}");
             eloLabel.style.color = UiTheme.TextDim;
             eloLabel.style.fontSize = UiTheme.FONT_XS;
             eloLabel.style.marginLeft = UiTheme.SPACE_SM;
