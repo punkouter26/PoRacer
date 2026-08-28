@@ -473,22 +473,32 @@ namespace PoRacer.Systems
                         tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
                     }
 
-                    RacerView view = instance.AddComponent<RacerView>();
+                    // Every body-tracking view and the camera must follow the creature's
+                    // ARTICULATION root, not the prefab root. For eight of the nine catalog
+                    // creatures those are the same GameObject, so this resolves to `instance`
+                    // and nothing changes. IsaacH1 is the exception: its prefab root is a
+                    // plain container and the articulation starts at the `pelvis` child, so
+                    // the container transform never moves. Keyed off `instance`, an H1 would
+                    // race perfectly while the camera framed the empty start line and its
+                    // progress, standings, flip check and dust trail all read grid row 0.
+                    GameObject creatureRoot = agent.Root != null ? agent.Root.gameObject : instance;
+
+                    RacerView view = creatureRoot.AddComponent<RacerView>();
                     float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : float.PositiveInfinity;
                     // Progress is measured from the common start line (grid row 0),
                     // not this racer's own spawn row — otherwise back-row racers
                     // report inflated progress and corrupt the leader ranking.
                     view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds);
-                    instance.AddComponent<SpeedRibbonView>().Initialize(tint);
-                    instance.AddComponent<DustTrailView>();
+                    creatureRoot.AddComponent<SpeedRibbonView>().Initialize(tint);
+                    creatureRoot.AddComponent<DustTrailView>();
                     // Handed the buses at spawn: the view has no scope to inject from.
-                    instance.AddComponent<CreatureAudioView>().Initialize(_audioMix);
+                    creatureRoot.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     // After tinting on purpose: the eyes keep their own colors.
                     if (!bareBody)
                     {
-                        instance.AddComponent<EyesView>();
+                        creatureRoot.AddComponent<EyesView>();
                     }
-                    instance.AddComponent<SkidMarkView>().Initialize(_currentTrack);
+                    creatureRoot.AddComponent<SkidMarkView>().Initialize(_currentTrack);
 
                     CosmeticType cosmeticType;
                     if (quirk.Tag == "TURBO")
@@ -506,11 +516,11 @@ namespace PoRacer.Systems
                     }
                     if (!bareBody)
                     {
-                        instance.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
+                        creatureRoot.AddComponent<CosmeticPropView>().Initialize(cosmeticType, tint);
                     }
 
                     _spawned.Add(instance);
-                    _racerRoots.Add(instance.transform);
+                    _racerRoots.Add(creatureRoot.transform);
                     racers.Add(new RacerState
                     {
                         RacerId = racerId,

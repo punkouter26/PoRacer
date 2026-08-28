@@ -53,3 +53,8 @@ MonoBehaviour:
     prefab: {fileID: 8403439250134436600, guid: f0f5aa0652aa2024a894ff6dd3fba4f8, type: 3}
     model: {fileID: 5022602860645237092, guid: a8423705548225a45b39d3d14e9c28ed, type: 3}
     spawnHeight: 0.18
+  - id: IsaacH1_v01
+    displayName: Isaac H1
+    prefab: {fileID: 2078622320464831490, guid: 7bd9f2667f5c873429387b345f7d3ed2, type: 3}
+    model: {fileID: 5022602860645237092, guid: 1c9374e3f334dbd4c98f2880c8239f4d, type: 3}
+    spawnHeight: 1

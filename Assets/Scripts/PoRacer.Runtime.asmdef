@@ -5,6 +5,7 @@
         "Unity.ML-Agents",
         "Unity.InferenceEngine",
         "IsaacSpider.Runtime",
+        "IsaacH1.Runtime",
         "VContainer",
         "MessagePipe",
         "MessagePipe.VContainer",

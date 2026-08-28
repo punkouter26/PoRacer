@@ -1,0 +1,29 @@
+{
+  "name": "IsaacH1.Tests",
+  "rootNamespace": "IsaacH1.Tests",
+  "references": [
+    "IsaacH1.Runtime",
+    "Unity.InferenceEngine",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.ai.inference",
+      "expression": "2.0.0",
+      "define": "ISAACH1_HAS_INFERENCE"
+    }
+  ],
+  "noEngineReferences": false
+}

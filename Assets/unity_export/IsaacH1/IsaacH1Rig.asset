@@ -1,0 +1,744 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aed8d165fcd3c4c47a27d49012615ce2, type: 3}
+  m_Name: IsaacH1Rig
+  m_EditorClassIdentifier: IsaacH1.Runtime::IsaacH1.IsaacH1RigAsset
+  sourceTask: Isaac-Velocity-Flat-H1-Play-v0
+  jointOrder:
+  - left_hip_yaw
+  - right_hip_yaw
+  - torso
+  - left_hip_roll
+  - right_hip_roll
+  - left_shoulder_pitch
+  - right_shoulder_pitch
+  - left_hip_pitch
+  - right_hip_pitch
+  - left_shoulder_roll
+  - right_shoulder_roll
+  - left_knee
+  - right_knee
+  - left_shoulder_yaw
+  - right_shoulder_yaw
+  - left_ankle
+  - right_ankle
+  - left_elbow
+  - right_elbow
+  bodyOrder:
+  - pelvis
+  - left_hip_yaw_link
+  - right_hip_yaw_link
+  - torso_link
+  - left_hip_roll_link
+  - right_hip_roll_link
+  - left_shoulder_pitch_link
+  - right_shoulder_pitch_link
+  - left_hip_pitch_link
+  - right_hip_pitch_link
+  - left_shoulder_roll_link
+  - right_shoulder_roll_link
+  - left_knee_link
+  - right_knee_link
+  - left_shoulder_yaw_link
+  - right_shoulder_yaw_link
+  - left_ankle_link
+  - right_ankle_link
+  - left_elbow_link
+  - right_elbow_link
+  obsDim: 69
+  actDim: 19
+  actionScale: 0.5
+  useDefaultOffset: 1
+  policyDt: 0.02
+  isaacPhysicsDt: 0.005
+  isaacDecimation: 4
+  spawnPosIsaac: {x: 0, y: 0, z: 1.05}
+  physics:
+    gravityIsaac: {x: 0, y: 0, z: -9.81}
+    groundStaticFriction: 1
+    groundDynamicFriction: 1
+    groundRestitution: 0
+    robotStaticFriction: 0.8
+    robotDynamicFriction: 0.6
+    robotRestitution: 0
+    frictionCombineMode: multiply
+    maxLinearVelocity: 1000
+    maxAngularVelocity: 1000
+    maxDepenetrationVelocity: 1
+    linearDamping: 0
+    angularDamping: 0
+    jointFriction: 0
+    solverPositionIterations: 4
+    solverVelocityIterations: 4
+    enabledSelfCollisions: 0
+    contactOffset: 0.02
+    restOffset: 0
+    isaacSolverType: TGS
+  bodies:
+  - name: pelvis
+    parent: 
+    isRoot: 1
+    mass: 5.39
+    comIsaac: {x: -0.0002, y: 0.00004, z: -0.04522}
+    inertiaDiagIsaac: {x: 0.0490211, y: 0.0445821, z: 0.00824619}
+    urdfMass: 5.983
+    urdfInertiaDiagIsaac: {x: 0.04916841, y: 0.009025844, z: 0.05315589}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 0
+    joint:
+      name: 
+      index: 0
+      axisInChildIsaac: {x: 0, y: 0, z: 0}
+      lowerRad: 0
+      upperRad: 0
+      stiffness: 0
+      damping: 0
+      effortLimit: 0
+      defaultPosRad: 0
+      armature: 0
+      urdfVelocityLimit: 0
+      urdfEffortLimit: 0
+    colliders: []
+    visuals:
+    - kind: sphere
+      originIsaac: {x: 0, y: 0, z: 0}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.05
+      length: 0
+  - name: left_hip_yaw_link
+    parent: pelvis
+    isRoot: 0
+    mass: 2.244
+    comIsaac: {x: -0.04923, y: 0.0001, z: 0.0072}
+    inertiaDiagIsaac: {x: 0.00304494, y: 0.00296885, z: 0.00189201}
+    urdfMass: 2.965
+    urdfInertiaDiagIsaac: {x: 0.005321009, y: 0.005017692, z: 0.004100851}
+    localPosIsaac: {x: 0, y: 0.0875, z: -0.1742}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_hip_yaw
+      index: 0
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -0.42999998
+      upperRad: 0.42999998
+      stiffness: 150
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0.02, y: 0, z: 0}
+      rpy: {x: 0, y: 1.5707964, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.01
+      length: 0.02
+  - name: right_hip_yaw_link
+    parent: pelvis
+    isRoot: 0
+    mass: 2.244
+    comIsaac: {x: -0.04923, y: -0.0001, z: 0.0072}
+    inertiaDiagIsaac: {x: 0.00304494, y: 0.00296885, z: 0.00189201}
+    urdfMass: 2.965
+    urdfInertiaDiagIsaac: {x: 0.005321009, y: 0.005017692, z: 0.004100851}
+    localPosIsaac: {x: 0, y: -0.0875, z: -0.1742}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_hip_yaw
+      index: 1
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -0.42999998
+      upperRad: 0.42999998
+      stiffness: 150
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0.02, y: 0, z: 0}
+      rpy: {x: 0, y: 1.5707964, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.01
+      length: 0.02
+  - name: torso_link
+    parent: pelvis
+    isRoot: 0
+    mass: 17.789
+    comIsaac: {x: 0.000489, y: 0.002797, z: 0.20484}
+    inertiaDiagIsaac: {x: 0.487315, y: 0.409628, z: 0.127837}
+    urdfMass: 17.789
+    urdfInertiaDiagIsaac: {x: 0.4873, y: 0.40963, z: 0.12785}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: torso
+      index: 2
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -2.3499997
+      upperRad: 2.3499997
+      stiffness: 200
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders:
+    - centerIsaac: {x: 0.025902037, y: 0, z: 0.37697515}
+      sizeIsaac: {x: 0.19780406, y: 0.34409544, z: 0.7539503}
+      sourceApproximation: convexHull
+      sourceVertexCount: 140358
+    visuals:
+    - kind: box
+      originIsaac: {x: 0, y: 0, z: 0.15}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0.08, y: 0.16, z: 0.1}
+      radius: 0
+      length: 0
+  - name: left_hip_roll_link
+    parent: left_hip_yaw_link
+    isRoot: 0
+    mass: 2.232
+    comIsaac: {x: -0.0058, y: -0.00319, z: -0.00009}
+    inertiaDiagIsaac: {x: 0.00243264, y: 0.00225325, z: 0.00205492}
+    urdfMass: 2.715
+    urdfInertiaDiagIsaac: {x: 0.003080049, y: 0.004367226, z: 0.003475582}
+    localPosIsaac: {x: 0.039468, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_hip_roll
+      index: 3
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.42999998
+      upperRad: 0.42999998
+      stiffness: 150
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0.06, z: 0}
+      rpy: {x: 1.5707964, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.02
+      length: 0.01
+  - name: right_hip_roll_link
+    parent: right_hip_yaw_link
+    isRoot: 0
+    mass: 2.232
+    comIsaac: {x: -0.0058, y: 0.00319, z: -0.00009}
+    inertiaDiagIsaac: {x: 0.00243264, y: 0.00225325, z: 0.00205492}
+    urdfMass: 2.715
+    urdfInertiaDiagIsaac: {x: 0.003080049, y: 0.004367226, z: 0.003475582}
+    localPosIsaac: {x: 0.039468, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_hip_roll
+      index: 4
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.42999998
+      upperRad: 0.42999998
+      stiffness: 150
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: -0.06, z: 0}
+      rpy: {x: 1.5707964, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.02
+      length: 0.01
+  - name: left_shoulder_pitch_link
+    parent: torso_link
+    isRoot: 0
+    mass: 1.033
+    comIsaac: {x: 0.005045, y: 0.053657, z: -0.015715}
+    inertiaDiagIsaac: {x: 0.00129936, y: 0.000987113, z: 0.000858198}
+    urdfMass: 1.142
+    urdfInertiaDiagIsaac: {x: 0.0012985, y: 0.00087279, z: 0.00097338}
+    localPosIsaac: {x: 0.0055, y: 0.15535, z: 0.42998993}
+    localRotIsaacWxyz: {x: 0.97629637, y: 0.21643807, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_shoulder_pitch
+      index: 5
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -2.8699996
+      upperRad: 2.8699996
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0.28
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: -0.05, z: 0}
+      rpy: {x: 1.5707964, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.03
+      length: 0.04
+  - name: right_shoulder_pitch_link
+    parent: torso_link
+    isRoot: 0
+    mass: 1.033
+    comIsaac: {x: 0.005045, y: -0.053657, z: -0.015715}
+    inertiaDiagIsaac: {x: 0.00129936, y: 0.000987113, z: 0.000858198}
+    urdfMass: 1.142
+    urdfInertiaDiagIsaac: {x: 0.0012985, y: 0.00087279, z: 0.00097338}
+    localPosIsaac: {x: 0.0055, y: -0.15535, z: 0.42998993}
+    localRotIsaacWxyz: {x: 0.97629637, y: -0.21643807, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_shoulder_pitch
+      index: 6
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -2.8699996
+      upperRad: 2.8699996
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0.28
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0.05, z: 0}
+      rpy: {x: -1.5707964, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.03
+      length: 0.04
+  - name: left_hip_pitch_link
+    parent: left_hip_roll_link
+    isRoot: 0
+    mass: 4.152
+    comIsaac: {x: 0.00746, y: -0.02346, z: -0.08193}
+    inertiaDiagIsaac: {x: 0.0829503, y: 0.0821457, z: 0.00510909}
+    urdfMass: 4.953
+    urdfInertiaDiagIsaac: {x: 0.09626879, y: 0.09531156, z: 0.008309394}
+    localPosIsaac: {x: 0, y: 0.11536, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_hip_pitch
+      index: 7
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1.57
+      upperRad: 1.57
+      stiffness: 200
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: -0.28
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.2}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.05
+      length: 0.2
+  - name: right_hip_pitch_link
+    parent: right_hip_roll_link
+    isRoot: 0
+    mass: 4.152
+    comIsaac: {x: 0.00746, y: 0.02346, z: -0.08193}
+    inertiaDiagIsaac: {x: 0.0829503, y: 0.0821457, z: 0.00510909}
+    urdfMass: 4.953
+    urdfInertiaDiagIsaac: {x: 0.09626879, y: 0.09531156, z: 0.008309394}
+    localPosIsaac: {x: 0, y: -0.11536, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_hip_pitch
+      index: 8
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1.57
+      upperRad: 1.57
+      stiffness: 200
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: -0.28
+      armature: 0.1
+      urdfVelocityLimit: 23
+      urdfEffortLimit: 200
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.2}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.05
+      length: 0.2
+  - name: left_shoulder_roll_link
+    parent: left_shoulder_pitch_link
+    isRoot: 0
+    mass: 0.793
+    comIsaac: {x: 0.000679, y: 0.00115, z: -0.094076}
+    inertiaDiagIsaac: {x: 0.00170388, y: 0.00158256, z: 0.00100336}
+    urdfMass: 0.852
+    urdfInertiaDiagIsaac: {x: 0.0015742, y: 0.0016973, z: 0.0010183}
+    localPosIsaac: {x: -0.0055, y: 0.056499988, z: -0.016500017}
+    localRotIsaacWxyz: {x: 0.97629637, y: -0.21643807, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_shoulder_roll
+      index: 9
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.33999997
+      upperRad: 3.11
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.04}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      length: 0.01
+  - name: right_shoulder_roll_link
+    parent: right_shoulder_pitch_link
+    isRoot: 0
+    mass: 0.793
+    comIsaac: {x: 0.000679, y: -0.00115, z: -0.094076}
+    inertiaDiagIsaac: {x: 0.00170388, y: 0.00158256, z: 0.00100336}
+    urdfMass: 0.852
+    urdfInertiaDiagIsaac: {x: 0.0015742, y: 0.0016973, z: 0.0010183}
+    localPosIsaac: {x: -0.0055, y: -0.056499988, z: -0.016500017}
+    localRotIsaacWxyz: {x: 0.97629637, y: 0.21643807, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_shoulder_roll
+      index: 10
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -3.11
+      upperRad: 0.33999997
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.04}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      length: 0.01
+  - name: left_knee_link
+    parent: left_hip_pitch_link
+    isRoot: 0
+    mass: 1.721
+    comIsaac: {x: -0.00136, y: -0.00512, z: -0.1384}
+    inertiaDiagIsaac: {x: 0.0125237, y: 0.0123104, z: 0.0019428}
+    urdfMass: 2.824
+    urdfInertiaDiagIsaac: {x: 0.023792187, y: 0.024505066, z: 0.003235744}
+    localPosIsaac: {x: 0, y: 0, z: -0.40000004}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_knee
+      index: 11
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.26
+      upperRad: 2.05
+      stiffness: 200
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0.79
+      armature: 0.1
+      urdfVelocityLimit: 14
+      urdfEffortLimit: 300
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.2}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.05
+      length: 0.2
+  - name: right_knee_link
+    parent: right_hip_pitch_link
+    isRoot: 0
+    mass: 1.721
+    comIsaac: {x: -0.00136, y: 0.00512, z: -0.1384}
+    inertiaDiagIsaac: {x: 0.0125237, y: 0.0123104, z: 0.0019428}
+    urdfMass: 2.824
+    urdfInertiaDiagIsaac: {x: 0.023792187, y: 0.024505066, z: 0.003235744}
+    localPosIsaac: {x: 0, y: 0, z: -0.40000004}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_knee
+      index: 12
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.26
+      upperRad: 2.05
+      stiffness: 200
+      damping: 5
+      effortLimit: 300
+      defaultPosRad: 0.79
+      armature: 0.1
+      urdfVelocityLimit: 14
+      urdfEffortLimit: 300
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.2}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.05
+      length: 0.2
+  - name: left_shoulder_yaw_link
+    parent: left_shoulder_roll_link
+    isRoot: 0
+    mass: 0.839
+    comIsaac: {x: 0.01365, y: 0.002767, z: -0.16266}
+    inertiaDiagIsaac: {x: 0.00408038, y: 0.00370367, z: 0.000622687}
+    urdfMass: 0.862
+    urdfInertiaDiagIsaac: {x: 0.003664, y: 0.0040789, z: 0.00066383}
+    localPosIsaac: {x: 0, y: 0, z: -0.1343}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_shoulder_yaw
+      index: 13
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -1.2999998
+      upperRad: 4.4499993
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 20
+      urdfEffortLimit: 18
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.11}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      length: 0.01
+  - name: right_shoulder_yaw_link
+    parent: right_shoulder_roll_link
+    isRoot: 0
+    mass: 0.839
+    comIsaac: {x: 0.01365, y: -0.002767, z: -0.16266}
+    inertiaDiagIsaac: {x: 0.00408038, y: 0.00370367, z: 0.000622687}
+    urdfMass: 0.862
+    urdfInertiaDiagIsaac: {x: 0.003664, y: 0.0040789, z: 0.00066383}
+    localPosIsaac: {x: 0, y: 0, z: -0.1343}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_shoulder_yaw
+      index: 14
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -4.4499993
+      upperRad: 1.2999998
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0
+      armature: 0.1
+      urdfVelocityLimit: 20
+      urdfEffortLimit: 18
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0, y: 0, z: -0.11}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      length: 0.01
+  - name: left_ankle_link
+    parent: left_knee_link
+    isRoot: 0
+    mass: 0.446
+    comIsaac: {x: 0.06722, y: 0.00015, z: -0.04497}
+    inertiaDiagIsaac: {x: 0.00220848, y: 0.00218961, z: 0.000214202}
+    urdfMass: 0.725
+    urdfInertiaDiagIsaac: {x: 0.000236702, y: 0.003296133, z: 0.003145554}
+    localPosIsaac: {x: 0, y: 0, z: -0.4}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_ankle
+      index: 15
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.87
+      upperRad: 0.52
+      stiffness: 20
+      damping: 4
+      effortLimit: 100
+      defaultPosRad: -0.52
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders:
+    - centerIsaac: {x: 0.05500113, y: 0, z: -0.029540999}
+      sizeIsaac: {x: 0.23999773, y: 0.08, z: 0.080918014}
+      sourceApproximation: convexHull
+      sourceVertexCount: 12996
+    visuals:
+    - kind: box
+      originIsaac: {x: 0.05, y: 0, z: -0.05}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0.28, y: 0.03, z: 0.024}
+      radius: 0
+      length: 0
+  - name: right_ankle_link
+    parent: right_knee_link
+    isRoot: 0
+    mass: 0.446
+    comIsaac: {x: 0.06722, y: -0.00015, z: -0.04497}
+    inertiaDiagIsaac: {x: 0.00220848, y: 0.00218961, z: 0.000214202}
+    urdfMass: 0.725
+    urdfInertiaDiagIsaac: {x: 0.000236702, y: 0.003296133, z: 0.003145554}
+    localPosIsaac: {x: 0, y: 0, z: -0.4}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_ankle
+      index: 16
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.87
+      upperRad: 0.52
+      stiffness: 20
+      damping: 4
+      effortLimit: 100
+      defaultPosRad: -0.52
+      armature: 0.1
+      urdfVelocityLimit: 9
+      urdfEffortLimit: 40
+    colliders:
+    - centerIsaac: {x: 0.05500113, y: 0, z: -0.029540999}
+      sizeIsaac: {x: 0.23999773, y: 0.08, z: 0.080918014}
+      sourceApproximation: convexHull
+      sourceVertexCount: 12972
+    visuals:
+    - kind: box
+      originIsaac: {x: 0.05, y: 0, z: -0.05}
+      rpy: {x: 0, y: 0, z: 0}
+      size: {x: 0.28, y: 0.03, z: 0.024}
+      radius: 0
+      length: 0
+  - name: left_elbow_link
+    parent: left_shoulder_yaw_link
+    isRoot: 0
+    mass: 0.669
+    comIsaac: {x: 0.15908, y: -0.000144, z: -0.015776}
+    inertiaDiagIsaac: {x: 0.00601829, y: 0.00600579, z: 0.000408305}
+    urdfMass: 0.745
+    urdfInertiaDiagIsaac: {x: 0.00042388, y: 0.0060062, z: 0.0060023}
+    localPosIsaac: {x: 0.0185, y: 0, z: -0.19799995}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: left_elbow
+      index: 17
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1.2499999
+      upperRad: 2.61
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0.52
+      armature: 0.1
+      urdfVelocityLimit: 20
+      urdfEffortLimit: 18
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0.125, y: 0, z: 0}
+      rpy: {x: 0, y: 1.57, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.03
+      length: 0.09
+  - name: right_elbow_link
+    parent: right_shoulder_yaw_link
+    isRoot: 0
+    mass: 0.669
+    comIsaac: {x: 0.15908, y: 0.000144, z: -0.015776}
+    inertiaDiagIsaac: {x: 0.00601829, y: 0.00600579, z: 0.000408305}
+    urdfMass: 0.745
+    urdfInertiaDiagIsaac: {x: 0.00042388, y: 0.0060062, z: 0.0060023}
+    localPosIsaac: {x: 0.0185, y: 0, z: -0.19799995}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: right_elbow
+      index: 18
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1.2499999
+      upperRad: 2.61
+      stiffness: 40
+      damping: 10
+      effortLimit: 300
+      defaultPosRad: 0.52
+      armature: 0.1
+      urdfVelocityLimit: 20
+      urdfEffortLimit: 18
+    colliders: []
+    visuals:
+    - kind: cylinder
+      originIsaac: {x: 0.125, y: 0, z: 0}
+      rpy: {x: 0, y: 1.57, z: 0}
+      size: {x: 0, y: 0, z: 0}
+      radius: 0.03
+      length: 0.09
+  isaacMeanSpeed: 0.51002634
+  isaacMeanLinVelTrackingError: 0.11699846
+  isaacFallsPerRobotPerMinute: 0.125
+  referenceCommand: {x: 1, y: 0, z: 0}
+  torsoMassNominal: 17.789
+  torsoMassInReferenceRecording: 15.332636
