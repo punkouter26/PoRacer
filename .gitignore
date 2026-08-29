@@ -31,9 +31,6 @@
 *.booproj
 *.svd
 *.pdb
-# ...except the ones that ship inside the embedded ML-Agents package: ignoring
-# them would leave their tracked .meta files orphaned on a fresh clone.
-!Packages/com.unity.ml-agents/**/*.pdb
 *.mdb
 *.opendb
 *.VC.db

@@ -136,6 +136,19 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
 * **Version Alignment:** Enforce exact version parity between C# and Python `mlagents` packages to prevent comms API handshake rejections.
 * **Asset Integrity:** Overwrite `.onnx` files in place to preserve Unity `.meta` GUID references.
 * **Headless Execution:** Pass `--env --no-graphics` and explicit `--base-port` flags (allocate consecutive ports to avoid collision hangs). Run 4–8 envs to leave CPU cores for PyTorch execution. Record `--num-envs` since it alters batching behavior.
+* **Known upstream bug — do not vendor the package to fix it.** `TensorProxy`'s
+  finalizer dereferences `data.dataOnBackend` with no null check (the next line
+  uses `data?.`, so null was expected). `ModelRunner.FetchSentisOutputs` makes a
+  fresh proxy per output every decision, wrapping a worker-owned tensor from
+  `PeekOutput()`; once the worker releases that store, the discarded proxies
+  throw when finalized. On a Pixel 9 Pro: **3,553 NullReferenceExceptions in
+  ~2 minutes**, ~30/sec, each with a stack trace. It does **not** reproduce in
+  the Editor — GC timing differs.
+  It is harmless: the guarded body is a no-op here, because `SentisModelInfo`
+  builds its `Worker` with `DeviceType.CPU`. The only harm is log noise, so
+  filter it — `adb logcat | grep -v TensorProxy` — and report it upstream.
+  Embedding the package to patch it costs 40 MB and a fork to maintain; that was
+  tried on 2026-08-29 and reverted as a bad trade. Do not redo it without asking.
 * **TensorBoard is not optional:** **start `.venv\Scripts\tensorboard.exe --logdir results --port 6006` BEFORE every `mlagents-learn` launch, without exception — no training run without it.** It goes up first, before the trainer, so the run is observable from step 0; a run you cannot watch is a run you cannot judge. Launch scripts must start it themselves rather than assume it is already running. Kill TensorBoard before `--force` wipes (Windows file handles will silently fail the wipe).
 * **Telemetry & Shutdown:** Output telemetry via HTTP *and* `StatsRecorder`. Tear down in strict order: trainer → envs → TensorBoard.
 * **Model Evaluation:** Evaluate self-play policies using ELO ratings, not mean reward metrics.
