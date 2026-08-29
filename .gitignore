@@ -31,6 +31,9 @@
 *.booproj
 *.svd
 *.pdb
+# ...except the ones that ship inside the embedded ML-Agents package: ignoring
+# them would leave their tracked .meta files orphaned on a fresh clone.
+!Packages/com.unity.ml-agents/**/*.pdb
 *.mdb
 *.opendb
 *.VC.db
@@ -57,6 +60,10 @@ results/
 *.aab
 *.unitypackage
 *.app
+
+# Written into Assets/ by the performance-testing package on every run.
+Assets/Resources/PerformanceTestRun*.json
+Assets/Resources/PerformanceTestRun*.json.meta
 
 # Scratch capture folder used by editor tooling.
 Assets/Temp/

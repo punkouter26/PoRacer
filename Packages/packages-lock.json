@@ -130,16 +130,15 @@
       "dependencies": {}
     },
     "com.unity.ml-agents": {
-      "version": "4.1.0",
+      "version": "file:com.unity.ml-agents",
       "depth": 0,
-      "source": "registry",
+      "source": "embedded",
       "dependencies": {
         "com.unity.ai.inference": "2.6.1",
-        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0",
-        "com.unity.modules.imageconversion": "1.0.0"
-      },
-      "url": "https://packages.unity.com"
+        "com.unity.modules.physics": "1.0.0"
+      }
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",

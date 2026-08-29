@@ -113,10 +113,13 @@ namespace PoRacer.Views
             _content.style.paddingRight = UiTheme.SPACE_LG;
             _content.style.paddingBottom = UiTheme.SPACE_SM;
 
+            // Bottom-right, matching the race HUD. This sat top-left until 2026-08-29,
+            // which is where the game name belongs - the two were stacked on the same
+            // corner and the version won the top line.
             var versionLabel = new Label($"v{Application.version}") { pickingMode = PickingMode.Ignore };
             versionLabel.style.position = Position.Absolute;
-            versionLabel.style.top = UiTheme.SPACE_XS;
-            versionLabel.style.left = UiTheme.SPACE_SM;
+            versionLabel.style.bottom = UiTheme.SPACE_SM;
+            versionLabel.style.right = UiTheme.SPACE_SM;
             versionLabel.style.fontSize = UiTheme.FONT_SM;
             versionLabel.style.color = UiTheme.TextDim;
             _content.Add(versionLabel);

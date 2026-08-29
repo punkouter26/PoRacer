@@ -53,6 +53,7 @@ namespace PoRacer.Views
 
         private RaceModel _raceModel;
         private VisualElement _panel;
+        private bool _diagnosticsActive;
         private Label _fpsLabel;
         private int _lastShownFps = -1;
         // Second half of the always-on strip: frame time and draw count, which is
@@ -100,16 +101,15 @@ namespace PoRacer.Views
 
         private void Start()
         {
-            // Nothing diagnostic belongs in a player's build. The strip below used
-            // to be exempt from this - a permanent fps / frame-ms / draw-call
-            // readout parked top-center over the race - which is a debug tool
-            // wearing a HUD's clothes. Release now builds no overlay at all and
-            // pays for no probes, no ProfilerRecorders and no 250 ms schedule.
-            if (!Debug.isDebugBuild)
-            {
-                enabled = false;
-                return;
-            }
+            // This used to build nothing at all in release, on the argument that
+            // "nothing diagnostic belongs in a player's build". The objection was
+            // really about cost - probes, ProfilerRecorders and a 250 ms schedule
+            // running forever for a readout nobody asked for. So pay for them on
+            // demand instead of refusing to ship them: the DBG button and the fps
+            // readout cost nothing beyond a frame counter, and the recorders and the
+            // physics probe pair only start the first time someone opens the panel
+            // (see ActivateDiagnostics). A release player now gets the button, and
+            // an unopened panel still costs what it did before: nothing.
 
             var document = GetComponent<UIDocument>();
             // RaceHud and DebugOverlay both shipped at sortingOrder 0, which is a tie:
@@ -143,23 +143,25 @@ namespace PoRacer.Views
             _stripLabel.style.fontSize = UiTheme.FONT_XS;
             _stripLabel.style.color = UiTheme.TextDim;
             _stripLabel.style.marginLeft = UiTheme.SPACE_SM;
+            // Frame time, fixed-loop cost and draw counts need the recorders and the
+            // probe pair, so this half stays dark until the panel is first opened.
+            // The fps label beside it does not - it reads a plain frame counter.
+            _stripLabel.style.display = DisplayStyle.None;
             stripRow.Add(_stripLabel);
             safeRoot.Add(stripRow);
             root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
-
-            // The probe pair owns the fixed-loop timing the strip and panel read.
-            PhysicsProbeView.EnsureOn(gameObject);
 
             var toggle = new Button(TogglePanel) { text = "DBG" };
             toggle.style.position = Position.Absolute;
             toggle.style.bottom = UiTheme.SPACE_SM;
             toggle.style.left = UiTheme.SPACE_SM;
-            // 62 reference px is Android's 48 dp minimum touch target on the phone
-            // this was verified against (scale 1.778, density 2.25): 62 * 1.778 /
-            // 2.25 = 49 dp. At the old 44 x 38 it measured 35 x 30 dp - comfortably
-            // under, and it is the one control a thumb has to find in a corner.
-            toggle.style.width = 62;
-            toggle.style.height = 62;
+            // CONTROL_SM is Android's 48 dp minimum touch target: the panel now
+            // references a 420 dp-wide screen, so one UI unit is ~1 dp on a phone
+            // and the token is the dp figure directly. This used to hard-code 62 to
+            // work around the old 540 dp reference, which made every other button
+            // in the app 30 dp.
+            toggle.style.width = UiTheme.CONTROL_SM;
+            toggle.style.height = UiTheme.CONTROL_SM;
             toggle.style.fontSize = UiTheme.FONT_XS;
             toggle.style.opacity = 0.75f;
             UiTheme.StyleButton(toggle);
@@ -193,6 +195,27 @@ namespace PoRacer.Views
             _panel.Add(_graph);
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
+        }
+
+        /// <summary>
+        /// Starts the machinery the panel needs, once, the first time it is opened.
+        /// Everything in here has a standing per-frame cost, which is why none of it
+        /// runs for a player who never presses DBG.
+        /// </summary>
+        private void ActivateDiagnostics()
+        {
+            if (_diagnosticsActive)
+            {
+                return;
+            }
+            _diagnosticsActive = true;
+
+            // The probe pair owns the fixed-loop timing the strip and panel read.
+            PhysicsProbeView.EnsureOn(gameObject);
+            if (_stripLabel != null)
+            {
+                _stripLabel.style.display = DisplayStyle.Flex;
+            }
 
             _drawCalls = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
             _batches = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count");
@@ -206,6 +229,10 @@ namespace PoRacer.Views
 
         private void OnDestroy()
         {
+            if (!_diagnosticsActive)
+            {
+                return;
+            }
             _drawCalls.Dispose();
             _batches.Dispose();
             _setPasses.Dispose();
@@ -269,6 +296,7 @@ namespace PoRacer.Views
 
         private void TogglePanel()
         {
+            ActivateDiagnostics();
             _visible = !_visible;
             _panel.style.display = _visible ? DisplayStyle.Flex : DisplayStyle.None;
         }

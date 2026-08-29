@@ -21,9 +21,6 @@ namespace PoRacer.Views
     public sealed class RaceHudView : MonoBehaviour
     {
         private const long REFRESH_INTERVAL_MS = 250;
-        private Label _fpsLabel;
-        private int _fpsFrames;
-        private float _fpsSeconds;
         private const float GO_BANNER_SECONDS = 1.5f;
         private const float WINNER_BANNER_SECONDS = 3f;
         private const int PODIUM_ROWS = 3;
@@ -180,19 +177,9 @@ namespace PoRacer.Views
             versionLabel.style.fontSize = UiTheme.FONT_SM;
             safeRoot.Add(versionLabel);
 
-            if (!Debug.isDebugBuild)
-            {
-                // Release builds have no debug strip, so the HUD carries the fps readout itself.
-                _fpsLabel = new Label("-- FPS") { pickingMode = PickingMode.Ignore };
-                _fpsLabel.style.position = Position.Absolute;
-                _fpsLabel.style.top = UiTheme.SPACE_XS;
-                _fpsLabel.style.left = 0;
-                _fpsLabel.style.right = 0;
-                _fpsLabel.style.unityTextAlign = TextAnchor.UpperCenter;
-                _fpsLabel.style.color = UiTheme.TextDim;
-                _fpsLabel.style.fontSize = UiTheme.FONT_SM;
-                safeRoot.Add(_fpsLabel);
-            }
+            // The fps readout lives on DebugOverlayView's strip, which now ships in
+            // release builds too, so the HUD no longer needs a fallback copy of it -
+            // two labels at the same top-centre anchor drew over each other.
 
             BuildTopChips(safeRoot);
             BuildProgressRail(safeRoot);
@@ -476,24 +463,8 @@ namespace PoRacer.Views
             }
         }
 
-        private void Update()
-        {
-            if (_fpsLabel == null)
-            {
-                return;
-            }
-            _fpsFrames++;
-            _fpsSeconds += Time.unscaledDeltaTime;
-        }
-
         private void Refresh()
         {
-            if (_fpsLabel != null && _fpsSeconds > 0f)
-            {
-                _fpsLabel.text = $"{_fpsFrames / _fpsSeconds:0} FPS";
-                _fpsFrames = 0;
-                _fpsSeconds = 0f;
-            }
             if (_raceModel == null)
             {
                 return;

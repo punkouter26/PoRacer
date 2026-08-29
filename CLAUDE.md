@@ -104,8 +104,24 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
 ## 3. Display
 * **UI Architecture:** C# UI Toolkit at runtime exclusively — no UGUI, IMGUI, `.uxml`, or `.uss` assets.
 * **Framerate & Orientation:** Target Portrait 9:16 aspect ratio at 60 FPS (`vSyncCount = 0` to ensure `targetFrameRate` is honored).
-* **Version Stamp:** Display `Application.version` anchored at the top-left of the opening scene (inset layer, non-pickable, outside ScrollViews).
-* **Panel Scaling:** Scale panel UI on width and validate dimensions against a live device capture.
+* **Screen furniture (fixed, 2026-08-29):** five anchors, the same on every screen —
+  game name **upper-left**, FPS **top-centre**, MENU button **upper-right**,
+  `Application.version` **lower-right**, DBG button **lower-left**. All on the inset
+  safe layer, non-pickable where they are not controls, and outside ScrollViews.
+  The version stamp used to be specified top-left; it moved because that is where
+  the game name belongs, and `MenuView` was stacking the two in one corner.
+* **Diagnostics ship in release.** `DebugOverlayView` builds in every build type.
+  It costs a frame counter until someone presses DBG; the ProfilerRecorders and the
+  physics probe pair only start on first open (`ActivateDiagnostics`). It owns the
+  top-centre FPS readout — do not add a second one to `RaceHudView`, they share an
+  anchor and draw over each other.
+* **Panel Scaling:** Scale panel UI on width, against a **420 dp reference width**
+  (`RaceHudPanelSettings`), and validate against a live device capture. 420 is
+  chosen so one UI unit is ~1 dp on a real phone — handsets are 400–430 dp wide,
+  so the previous 540 reference silently rendered every token ~21% smaller in dp
+  than its number. Because of that, **`UiTheme` size tokens read as dp**: keep
+  fonts at or above 14 (Android's body-text minimum) and any control a finger
+  touches at or above `CONTROL_SM` = 48 (Android's touch-target minimum).
 
 ## 4. MLOps
 * **Version Alignment:** Enforce exact version parity between C# and Python `mlagents` packages to prevent comms API handshake rejections.

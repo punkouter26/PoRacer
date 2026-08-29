@@ -61,9 +61,14 @@ namespace PoRacer.Presentation
         public const float FONT_COUNTDOWN = 78f;
 
         // ---- Control heights (touch-ergonomic standards) ----
-        public const float CONTROL_SM = 38f;
-        public const float CONTROL_MD = 52f;
-        public const float CONTROL_LG = 62f;
+        // Android's minimum touch target is 48 dp. With the panel's 420 dp reference
+        // width, one UI unit is ~1 dp on a phone, so these numbers are dp directly.
+        // CONTROL_SM was 38 (30 dp on a Pixel 9 Pro) and CONTROL_MD was 52 (41 dp) -
+        // both under spec - back when the panel referenced a 540 dp-wide screen that
+        // no phone actually has.
+        public const float CONTROL_SM = 48f;
+        public const float CONTROL_MD = 56f;
+        public const float CONTROL_LG = 64f;
 
         // ---- Elevation ----
         // Vertical offset and opacity of the shadow plate behind a raised element.
