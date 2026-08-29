@@ -4,9 +4,7 @@
     "references": [
         "Unity.ML-Agents",
         "Unity.InferenceEngine",
-        "IsaacSpider.Runtime",
-        "IsaacH1.Runtime",
-        "IsaacBiped2.Runtime",
+        "PoRacer.IsaacPorts.Runtime",
         "VContainer",
         "MessagePipe",
         "MessagePipe.VContainer",

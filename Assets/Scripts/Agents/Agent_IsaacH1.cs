@@ -2,6 +2,8 @@ using System;
 using IsaacH1;
 using UnityEngine;
 
+using PoRacer.IsaacPorts;
+
 namespace PoRacer.Agents
 {
     /// <summary>

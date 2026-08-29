@@ -1,0 +1,31 @@
+{
+    "name": "PoRacer.IsaacPorts.Editor",
+    "rootNamespace": "PoRacer.IsaacPorts.EditorTools",
+    "references": [
+        "PoRacer.IsaacPorts.Runtime",
+        "Unity.InferenceEngine",
+        "Unity.InferenceEngine.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "2.0.0",
+            "define": "ISAACPORTS_HAS_INFERENCE"
+        },
+        {
+            "name": "com.unity.robotics.urdf-importer",
+            "expression": "",
+            "define": "ISAACPORTS_HAS_URDF_IMPORTER"
+        }
+    ],
+    "noEngineReferences": false
+}

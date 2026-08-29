@@ -1,5 +1,7 @@
 using UnityEngine;
 
+using PoRacer.IsaacPorts;
+
 namespace MujocoBiped
 {
     /// <summary>Adapts a plain Transform to <see cref="ITargetProvider"/>.</summary>

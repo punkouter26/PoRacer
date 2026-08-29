@@ -4,6 +4,8 @@ using UnityEngine;
 using Unity.InferenceEngine;
 #endif
 
+using PoRacer.IsaacPorts;
+
 namespace IsaacBiped2
 {
     /// <summary>
@@ -558,9 +560,9 @@ namespace IsaacBiped2
             {
                 return _target.position;
             }
-            if (_targetProvider != null)
+            if (_targetProvider != null && _targetProvider.TryGetTarget(out Vector3 provided))
             {
-                return _targetProvider.GetTargetWorld();
+                return provided;
             }
             return _root.transform.position + _root.transform.forward * 5f;
         }

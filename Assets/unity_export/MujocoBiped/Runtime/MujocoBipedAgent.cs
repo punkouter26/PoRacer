@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
 using Unity.InferenceEngine;
 #endif
+
+using PoRacer.IsaacPorts;
 
 namespace MujocoBiped
 {
@@ -134,7 +136,7 @@ namespace MujocoBiped
 
         // ------------------------------------------------------------------ setup --
         [Header("Policy")]
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
         [Tooltip("MujocoBiped.onnx - obs float32[1,49] -> action float32[1,12].")]
         public ModelAsset modelAsset;
 #endif
@@ -223,10 +225,12 @@ namespace MujocoBiped
         float _wallTime;
         float _unhealthyFor;
         int _recoveries;
+        Vector3 _homePosition;
+        bool _homeCaptured;
         bool _ready;
         bool _hierarchyOk;
 
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
         Model _model;
         Worker _worker;
         Tensor<float> _input;
@@ -538,7 +542,12 @@ namespace MujocoBiped
         void Start()
         {
             ComputeDecimation();
-#if MUJOCOBIPED_HAS_INFERENCE
+            if (_root != null)
+            {
+                _homePosition = _root.transform.position;
+                _homeCaptured = true;
+            }
+#if ISAACPORTS_HAS_INFERENCE
             if (modelAsset == null)
             {
                 Debug.LogError($"[{name}] no ModelAsset assigned; the creature will not move.", this);
@@ -624,7 +633,7 @@ namespace MujocoBiped
 
             Vector3 p = _root.transform.position;
             float yaw = _root.transform.eulerAngles.y;
-            RespawnAt(new Vector3(p.x, rig.SpawnHeight, p.z), Quaternion.Euler(0f, yaw, 0f));
+            RespawnAt(GroundedRespawnPoint(p), Quaternion.Euler(0f, yaw, 0f));
 
             Debug.LogWarning($"[{name}] left the healthy band (height {TorsoHeight:F2} m, " +
                              $"upright {Uprightness:F2}); stood back up. Recovery " +
@@ -743,7 +752,7 @@ namespace MujocoBiped
 
         void RunPolicy()
         {
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             _input.Upload(_obs);
             _worker.Schedule(_input);
             var output = _worker.PeekOutput() as Tensor<float>;
@@ -862,6 +871,39 @@ namespace MujocoBiped
         }
 
         /// <summary>Teleports the whole articulation without the solver fighting it.</summary>
+        /// <summary>
+        /// Where to stand the creature back up. Recovery used to keep the planar position
+        /// and only reset the height, which is right for a creature that fell over on the
+        /// track - but a creature that walked off the edge of the ground has no floor under
+        /// that position, so it free-fell, respawned mid-air at the same x/z, and fell
+        /// again forever. Observed in SCN_RACE_FLAT: 24 consecutive recoveries at -6.9 m,
+        /// one every 1.26 s, which is exactly free fall plus fallGraceSeconds.
+        ///
+        /// So probe for ground first, and fall back to where the rig started if there is
+        /// none. Only the planar position falls back - the height always comes from the
+        /// rig's own spawn height.
+        /// </summary>
+        Vector3 GroundedRespawnPoint(Vector3 current)
+        {
+            const float PROBE_START_HEIGHT = 50f;
+            const float PROBE_DISTANCE = 200f;
+
+            var above = new Vector3(current.x, PROBE_START_HEIGHT, current.z);
+            if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, PROBE_DISTANCE,
+                                ~0, QueryTriggerInteraction.Ignore)
+                && !hit.transform.IsChildOf(transform))
+            {
+                return new Vector3(current.x, hit.point.y + rig.SpawnHeight, current.z);
+            }
+
+            if (_homeCaptured)
+            {
+                return new Vector3(_homePosition.x, rig.SpawnHeight, _homePosition.z);
+            }
+
+            return new Vector3(current.x, rig.SpawnHeight, current.z);
+        }
+
         public void RespawnAt(Vector3 position, Quaternion rotation)
         {
             if (_root == null) return;
@@ -988,7 +1030,7 @@ namespace MujocoBiped
         /// </summary>
         public float RunReferenceCheck(float[][] recordedObs, float[][] recordedActions)
         {
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             if (!_ready)
             {
                 if (modelAsset == null) return float.NaN;
@@ -1052,7 +1094,7 @@ namespace MujocoBiped
 
         public void ReleaseWorker()
         {
-#if MUJOCOBIPED_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             _worker?.Dispose();
             _worker = null;
             _input?.Dispose();

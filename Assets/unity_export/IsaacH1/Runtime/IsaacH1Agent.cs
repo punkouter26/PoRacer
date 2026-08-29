@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
 using Unity.InferenceEngine;
 #endif
+
+using PoRacer.IsaacPorts;
 
 namespace IsaacH1
 {
@@ -126,7 +128,7 @@ namespace IsaacH1
 
         // ------------------------------------------------------------------ setup --
         [Header("Policy")]
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
         [Tooltip("IsaacH1.onnx - obs float32[1,69] -> actions float32[1,19].")]
         public ModelAsset modelAsset;
 #endif
@@ -238,8 +240,10 @@ namespace IsaacH1
         float _fallenFor;
         int _recoveries;
         bool _ready;
+        Vector3 _homePosition;
+        bool _homeCaptured;
 
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
         Model _model;
         Worker _worker;
         Tensor<float> _input;
@@ -579,7 +583,12 @@ namespace IsaacH1
         void Start()
         {
             ComputeDecimation();
-#if ISAACH1_HAS_INFERENCE
+            if (_root != null)
+            {
+                _homePosition = _root.transform.position;
+                _homeCaptured = true;
+            }
+#if ISAACPORTS_HAS_INFERENCE
             if (modelAsset == null)
             {
                 Debug.LogError($"[{name}] no ModelAsset assigned; the creature will not move.", this);
@@ -657,6 +666,39 @@ namespace IsaacH1
         }
 
         /// <summary>
+        /// Where to stand the creature back up. Recovery used to keep the planar position
+        /// and only reset the height, which is right for a creature that fell over on the
+        /// track - but a creature that walked off the edge of the ground has no floor under
+        /// that position, so it respawns mid-air at the same x/z and falls again. The sister
+        /// port MujocoBiped did exactly that in SCN_RACE_FLAT: 24 consecutive recoveries at
+        /// -6.9 m, one every 1.26 s, which is free fall plus fallGraceSeconds.
+        ///
+        /// So probe for ground first, and fall back to where the rig started if there is
+        /// none. Only the planar position falls back - the height still comes from the
+        /// rig's Isaac spawn pose.
+        /// </summary>
+        Vector3 GroundedRespawnPoint(Vector3 current)
+        {
+            const float PROBE_START_HEIGHT = 50f;
+            const float PROBE_DISTANCE = 200f;
+
+            var above = new Vector3(current.x, PROBE_START_HEIGHT, current.z);
+            if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, PROBE_DISTANCE,
+                                ~0, QueryTriggerInteraction.Ignore)
+                && !hit.transform.IsChildOf(transform))
+            {
+                return new Vector3(current.x, hit.point.y + rig.spawnPosIsaac.z, current.z);
+            }
+
+            if (_homeCaptured)
+            {
+                return new Vector3(_homePosition.x, rig.spawnPosIsaac.z, _homePosition.z);
+            }
+
+            return new Vector3(current.x, rig.spawnPosIsaac.z, current.z);
+        }
+
+        /// <summary>
         /// Stands the creature back up after a fall, the way Isaac's `base_contact`
         /// termination resets an episode. Keeps the planar position and the heading, so
         /// the creature carries on from where it went down rather than teleporting home.
@@ -678,7 +720,7 @@ namespace IsaacH1
 
             Vector3 p = _root.transform.position;
             float yaw = _root.transform.eulerAngles.y;
-            Vector3 stand = new Vector3(p.x, rig.spawnPosIsaac.z, p.z);
+            Vector3 stand = GroundedRespawnPoint(p);
             var rot = Quaternion.Euler(0f, yaw, 0f);
 
             // TeleportRoot moves the whole articulation without the solver fighting it.
@@ -799,7 +841,7 @@ namespace IsaacH1
 
         void RunPolicy()
         {
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             _input.Upload(_obs);
             _worker.Schedule(_input);
             var output = _worker.PeekOutput() as Tensor<float>;
@@ -916,7 +958,7 @@ namespace IsaacH1
         /// </summary>
         public float RunReferenceCheck(float[][] recordedObs, float[][] recordedActions)
         {
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             if (!_ready)
             {
                 if (modelAsset == null) return float.NaN;
@@ -1005,7 +1047,7 @@ namespace IsaacH1
         /// <summary>Disposes the Inference Engine worker and input tensor. Idempotent.</summary>
         public void ReleaseWorker()
         {
-#if ISAACH1_HAS_INFERENCE
+#if ISAACPORTS_HAS_INFERENCE
             _worker?.Dispose();
             _worker = null;
             _input?.Dispose();

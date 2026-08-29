@@ -1,0 +1,29 @@
+{
+    "name": "PoRacer.IsaacPorts.Tests",
+    "rootNamespace": "PoRacer.IsaacPorts.Tests",
+    "references": [
+        "PoRacer.IsaacPorts.Runtime",
+        "Unity.InferenceEngine",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "2.0.0",
+            "define": "ISAACPORTS_HAS_INFERENCE"
+        }
+    ],
+    "noEngineReferences": false
+}

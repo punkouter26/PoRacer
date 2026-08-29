@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
+using PoRacer.IsaacPorts;
+
 namespace MujocoBiped
 {
     /// <summary>
@@ -27,7 +29,7 @@ namespace MujocoBiped
         /// correct YAML and gets a .meta, but the importer does not claim the extension,
         /// so it lands as a DefaultAsset and every LoadAssetAtPath&lt;PhysicsMaterial&gt;
         /// returns null - silently, with the colliders falling back to PhysX defaults.
-        /// (Assets/unity_export/spider/PM_IsaacSpider.physicsMaterial has this problem in
+        /// (Assets/unity_export/IsaacSpider/PM_IsaacSpider.physicsMaterial has this problem in
         /// this project today; fixing it belongs to that creature's owner, not here.)
         /// </summary>
         public const string Material = Root + "PM_MujocoBiped.physicMaterial";
