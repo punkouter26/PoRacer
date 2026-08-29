@@ -6,7 +6,7 @@ using UnityEngine;
 namespace PoRacer.Editor
 {
     /// <summary>
-    /// Read-only companion to Editor_AutoBake: lists Assets/Agents/&lt;Name&gt;_vNN
+    /// Lists Assets/Agents/&lt;Name&gt;_vNN
     /// folders that have no CreatureCatalog entry at all (a failed or abandoned
     /// bake, not a superseded-but-still-ELO-racing version — those are kept on
     /// purpose so old and new brains can compare). Never deletes anything; the

@@ -1,0 +1,52 @@
+{
+  "algorithm": "PPO (stable-baselines3)",
+  "policy": "MlpPolicy",
+  "total_timesteps_trained": 14499768,
+  "gamma": 0.995,
+  "gae_lambda": 0.95,
+  "n_steps": 512,
+  "batch_size": 1024,
+  "n_epochs": 10,
+  "ent_coef": 0.003,
+  "vf_coef": 0.5,
+  "max_grad_norm": 0.5,
+  "net_arch": {
+    "pi": [
+      256,
+      256
+    ],
+    "vf": [
+      256,
+      256
+    ]
+  },
+  "activation": "Tanh",
+  "n_envs_used": 24,
+  "observation_normalisation": "VecNormalize (baked into the ONNX graph)",
+  "reward_terms": {
+    "forward_reward_weight": 4.0,
+    "heading_reward_weight": 0.1,
+    "healthy_reward": 0.5,
+    "fall_penalty": 25.0,
+    "ctrl_cost_weight": 0.1,
+    "reach_bonus": 40.0,
+    "reach_radius_m": 0.6,
+    "healthy_z_range": [
+      0.55,
+      1.1
+    ],
+    "min_uprightness": 0.4,
+    "target_distance_range_m": [
+      3.0,
+      6.0
+    ],
+    "target_angle_range_rad": 2.4,
+    "max_speed_reward": 2.0,
+    "max_episode_steps": 1000
+  },
+  "training_stages": [
+    "0-2.5M   forward 1.5 / alive 1.0 -- converged to standing still",
+    "2.5-3.5M forward 4.0 / alive 0.25 + log_std reset -- converged to lunging",
+    "3.5-14.5M forward 4.0 / alive 0.5 / fall_penalty 25 / gamma 0.995 -- walking"
+  ]
+}

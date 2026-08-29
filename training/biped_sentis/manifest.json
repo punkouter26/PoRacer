@@ -1,0 +1,28 @@
+{
+  "created_utc": "2026-08-28T18:26:25.193234+00:00",
+  "policy_steps": 14499768,
+  "versions": {
+    "python": "3.10.11",
+    "torch": "2.13.0+cpu",
+    "onnx": "1.22.0",
+    "onnxruntime": "1.23.2",
+    "mujoco": "3.12.0"
+  },
+  "files": [
+    "README.md",
+    "checkpoint/policy_ppo.zip",
+    "checkpoint/policy_wrapper.pt",
+    "checkpoint/vecnormalize.pkl",
+    "evaluation.json",
+    "model/MESHES.md",
+    "model/biped.xml",
+    "onnx_verification.json",
+    "policy.onnx",
+    "reference_trajectory.json",
+    "robot_spec.json",
+    "src/__init__.py",
+    "src/env.py",
+    "src/export_unity.py",
+    "training_config.json"
+  ]
+}

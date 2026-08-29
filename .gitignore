@@ -44,6 +44,8 @@ sysinfo.txt
 crashlytics-build.properties
 
 # Python / ML-Agents
+# Timer reports are rewritten on every play session — generated, not source.
+Assets/ML-Agents/Timers/
 .venv/
 Packages/manifest.json.bak
 __pycache__/
@@ -56,10 +58,7 @@ results/
 *.unitypackage
 *.app
 
-# Litter from the Unity-Skills package's own test suite, which writes into
-# Assets/ on every unfiltered test run.
-Assets/InitTestScene*
+# Scratch capture folder used by editor tooling.
 Assets/Temp/
 Assets/Temp.meta
-Assets/ML-Agents/Timers/InitTestScene*
 test-results.xml

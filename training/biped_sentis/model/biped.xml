@@ -1,0 +1,107 @@
+<mujoco model="biped_target">
+  <compiler angle="degree" inertiafromgeom="true"/>
+  <option timestep="0.005" integrator="implicitfast" iterations="50" solver="Newton"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="140" elevation="-20" offwidth="1280" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture name="groundplane" type="2d" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4"
+             rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.1"/>
+    <material name="body" rgba="0.75 0.65 0.55 1"/>
+  </asset>
+
+  <default>
+    <joint armature="0.02" damping="1.0" limited="true" stiffness="0"/>
+    <geom condim="3" friction="0.9 0.1 0.1" density="1000" material="body"/>
+    <motor ctrllimited="true" ctrlrange="-1 1"/>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" type="plane" size="0 0 0.05" material="groundplane" condim="3"
+          friction="1.0 0.1 0.1"/>
+
+    <!-- Goal marker: moved from Python via data.mocap_pos -->
+    <body name="target" mocap="true" pos="4 0 0.02">
+      <geom name="target_geom" type="cylinder" size="0.35 0.02" rgba="0.9 0.2 0.2 0.55"
+            contype="0" conaffinity="0" density="0"/>
+      <geom name="target_pole" type="capsule" fromto="0 0 0 0 0 0.9" size="0.03"
+            rgba="0.9 0.2 0.2 0.5" contype="0" conaffinity="0" density="0"/>
+    </body>
+
+    <body name="torso" pos="0 0 0.88">
+      <freejoint name="root"/>
+      <camera name="track" mode="trackcom" pos="0 -3.5 1.2" xyaxes="1 0 0 0 0.4 1"/>
+      <site name="torso_site" pos="0 0 0.2" size="0.02"/>
+      <site name="bone_pelvis" pos="0 0 0" size="0.025" group="4" rgba="1 0.8 0 1"/>
+      <site name="bone_chest" pos="0 0 0.36" size="0.025" group="4" rgba="1 0.8 0 1"/>
+      <site name="bone_head" pos="0 0 0.50" size="0.025" group="4" rgba="1 0.8 0 1"/>
+      <geom group="3" name="pelvis" type="capsule" fromto="0 -0.09 0 0 0.09 0" size="0.085"/>
+      <geom group="3" name="chest" type="capsule" fromto="0 0 0.06 0 0 0.36" size="0.09"/>
+      <geom group="3" name="head" type="sphere" pos="0 0 0.50" size="0.09"/>
+
+      <body name="thigh_l" pos="0 0.09 -0.02">
+        <joint name="hip_z_l" axis="0 0 1" range="-45 45"/>
+        <joint name="hip_x_l" axis="1 0 0" range="-30 15"/>
+        <joint name="hip_y_l" axis="0 1 0" range="-110 45"/>
+        <site name="bone_hip_l" pos="0 0 0" size="0.025" group="4" rgba="0.3 0.8 1 1"/>
+        <geom group="3" name="thigh_l" type="capsule" fromto="0 0 0 0 0.01 -0.38" size="0.06"/>
+        <body name="shin_l" pos="0 0.01 -0.40">
+          <joint name="knee_l" axis="0 1 0" range="-150 -2"/>
+          <site name="bone_knee_l" pos="0 0 0" size="0.025" group="4" rgba="0.3 0.8 1 1"/>
+          <geom group="3" name="shin_l" type="capsule" fromto="0 0 0 0 0 -0.38" size="0.049"/>
+          <body name="foot_l" pos="0 0 -0.40">
+            <joint name="ankle_y_l" axis="0 1 0" range="-45 35"/>
+            <joint name="ankle_x_l" axis="1 0 0" range="-25 25"/>
+            <site name="bone_ankle_l" pos="0 0 0" size="0.025" group="4" rgba="0.3 0.8 1 1"/>
+            <site name="bone_toe_l" pos="0.16 0 -0.035" size="0.02" group="4" rgba="0.3 0.8 1 1"/>
+            <geom group="3" name="foot_l" type="box" pos="0.045 0 -0.035" size="0.115 0.05 0.03"
+                  friction="1.2 0.1 0.1"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="thigh_r" pos="0 -0.09 -0.02">
+        <joint name="hip_z_r" axis="0 0 1" range="-45 45"/>
+        <joint name="hip_x_r" axis="1 0 0" range="-15 30"/>
+        <joint name="hip_y_r" axis="0 1 0" range="-110 45"/>
+        <site name="bone_hip_r" pos="0 0 0" size="0.025" group="4" rgba="1 0.4 0.4 1"/>
+        <geom group="3" name="thigh_r" type="capsule" fromto="0 0 0 0 -0.01 -0.38" size="0.06"/>
+        <body name="shin_r" pos="0 -0.01 -0.40">
+          <joint name="knee_r" axis="0 1 0" range="-150 -2"/>
+          <site name="bone_knee_r" pos="0 0 0" size="0.025" group="4" rgba="1 0.4 0.4 1"/>
+          <geom group="3" name="shin_r" type="capsule" fromto="0 0 0 0 0 -0.38" size="0.049"/>
+          <body name="foot_r" pos="0 0 -0.40">
+            <joint name="ankle_y_r" axis="0 1 0" range="-45 35"/>
+            <joint name="ankle_x_r" axis="1 0 0" range="-25 25"/>
+            <site name="bone_ankle_r" pos="0 0 0" size="0.025" group="4" rgba="1 0.4 0.4 1"/>
+            <site name="bone_toe_r" pos="0.16 0 -0.035" size="0.02" group="4" rgba="1 0.4 0.4 1"/>
+            <geom group="3" name="foot_r" type="box" pos="0.045 0 -0.035" size="0.115 0.05 0.03"
+                  friction="1.2 0.1 0.1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="hip_z_l"   joint="hip_z_l"   gear="60"/>
+    <motor name="hip_x_l"   joint="hip_x_l"   gear="80"/>
+    <motor name="hip_y_l"   joint="hip_y_l"   gear="130"/>
+    <motor name="knee_l"    joint="knee_l"    gear="110"/>
+    <motor name="ankle_y_l" joint="ankle_y_l" gear="70"/>
+    <motor name="ankle_x_l" joint="ankle_x_l" gear="40"/>
+    <motor name="hip_z_r"   joint="hip_z_r"   gear="60"/>
+    <motor name="hip_x_r"   joint="hip_x_r"   gear="80"/>
+    <motor name="hip_y_r"   joint="hip_y_r"   gear="130"/>
+    <motor name="knee_r"    joint="knee_r"    gear="110"/>
+    <motor name="ankle_y_r" joint="ankle_y_r" gear="70"/>
+    <motor name="ankle_x_r" joint="ankle_x_r" gear="40"/>
+  </actuator>
+</mujoco>

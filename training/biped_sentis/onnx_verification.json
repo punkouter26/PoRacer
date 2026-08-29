@@ -1,0 +1,67 @@
+{
+  "checker_passed": true,
+  "max_abs_diff_vs_pytorch": 7.450580596923828e-07,
+  "tolerance": 0.0001,
+  "numerically_equivalent": true,
+  "samples_compared": 256,
+  "opset": {
+    "ai.onnx": 15
+  },
+  "ir_version": 8,
+  "input": {
+    "name": "obs",
+    "shape": [
+      1,
+      49
+    ],
+    "dtype": "float32"
+  },
+  "output": {
+    "name": "action",
+    "shape": [
+      1,
+      12
+    ],
+    "dtype": "float32"
+  },
+  "operators": [
+    "Clip",
+    "Constant",
+    "Gemm",
+    "Mul",
+    "Sub",
+    "Tanh"
+  ],
+  "unsupported_by_sentis": [],
+  "has_dynamic_axes": false,
+  "initializers": 8,
+  "file_bytes": 328776,
+  "coordinate_conversion": {
+    "requested (-x,  z, -y,  w)": {
+      "max_error": 1.999671889554292,
+      "consistent_with_our_position_map": false,
+      "compatible_position_maps": []
+    },
+    "verified  ( y, -z, -x,  w)": {
+      "max_error": 0.0,
+      "consistent_with_our_position_map": true,
+      "compatible_position_maps": [
+        "unity = (-mujoco.y, +mujoco.z, +mujoco.x)"
+      ]
+    },
+    "sign-fix  (-x, -z, -y,  w)": {
+      "max_error": 1.965692663392638,
+      "consistent_with_our_position_map": false,
+      "compatible_position_maps": [
+        "unity = (+mujoco.x, +mujoco.z, +mujoco.y)"
+      ]
+    },
+    "w-negated (-x,  z, -y, -w)": {
+      "max_error": 1.9814639895336743,
+      "consistent_with_our_position_map": false,
+      "compatible_position_maps": [
+        "unity = (-mujoco.x, +mujoco.z, -mujoco.y)"
+      ]
+    }
+  }
+}

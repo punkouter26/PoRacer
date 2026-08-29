@@ -1,0 +1,1158 @@
+{
+  "joints": [
+    {
+      "index": 0,
+      "name": "root",
+      "type": "free",
+      "body": "torso",
+      "axis": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_index": 0,
+      "dof_index": 0,
+      "limited": false,
+      "range_rad": null,
+      "range_deg": null,
+      "damping": 0.0,
+      "armature": 0.0,
+      "stiffness": 0.0
+    },
+    {
+      "index": 1,
+      "name": "hip_z_l",
+      "type": "hinge",
+      "body": "thigh_l",
+      "axis": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_index": 7,
+      "dof_index": 6,
+      "limited": true,
+      "range_rad": [
+        -0.785398,
+        0.785398
+      ],
+      "range_deg": [
+        -45.0,
+        45.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 2,
+      "name": "hip_x_l",
+      "type": "hinge",
+      "body": "thigh_l",
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_index": 8,
+      "dof_index": 7,
+      "limited": true,
+      "range_rad": [
+        -0.523599,
+        0.261799
+      ],
+      "range_deg": [
+        -30.0,
+        15.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 3,
+      "name": "hip_y_l",
+      "type": "hinge",
+      "body": "thigh_l",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 9,
+      "dof_index": 8,
+      "limited": true,
+      "range_rad": [
+        -1.919862,
+        0.785398
+      ],
+      "range_deg": [
+        -110.0,
+        45.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 4,
+      "name": "knee_l",
+      "type": "hinge",
+      "body": "shin_l",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 10,
+      "dof_index": 9,
+      "limited": true,
+      "range_rad": [
+        -2.617994,
+        -0.034907
+      ],
+      "range_deg": [
+        -150.0,
+        -2.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 5,
+      "name": "ankle_y_l",
+      "type": "hinge",
+      "body": "foot_l",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 11,
+      "dof_index": 10,
+      "limited": true,
+      "range_rad": [
+        -0.785398,
+        0.610865
+      ],
+      "range_deg": [
+        -45.0,
+        35.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 6,
+      "name": "ankle_x_l",
+      "type": "hinge",
+      "body": "foot_l",
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_index": 12,
+      "dof_index": 11,
+      "limited": true,
+      "range_rad": [
+        -0.436332,
+        0.436332
+      ],
+      "range_deg": [
+        -25.0,
+        25.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 7,
+      "name": "hip_z_r",
+      "type": "hinge",
+      "body": "thigh_r",
+      "axis": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_index": 13,
+      "dof_index": 12,
+      "limited": true,
+      "range_rad": [
+        -0.785398,
+        0.785398
+      ],
+      "range_deg": [
+        -45.0,
+        45.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 8,
+      "name": "hip_x_r",
+      "type": "hinge",
+      "body": "thigh_r",
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_index": 14,
+      "dof_index": 13,
+      "limited": true,
+      "range_rad": [
+        -0.261799,
+        0.523599
+      ],
+      "range_deg": [
+        -15.0,
+        30.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 9,
+      "name": "hip_y_r",
+      "type": "hinge",
+      "body": "thigh_r",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 15,
+      "dof_index": 14,
+      "limited": true,
+      "range_rad": [
+        -1.919862,
+        0.785398
+      ],
+      "range_deg": [
+        -110.0,
+        45.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 10,
+      "name": "knee_r",
+      "type": "hinge",
+      "body": "shin_r",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 16,
+      "dof_index": 15,
+      "limited": true,
+      "range_rad": [
+        -2.617994,
+        -0.034907
+      ],
+      "range_deg": [
+        -150.0,
+        -2.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 11,
+      "name": "ankle_y_r",
+      "type": "hinge",
+      "body": "foot_r",
+      "axis": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_index": 17,
+      "dof_index": 16,
+      "limited": true,
+      "range_rad": [
+        -0.785398,
+        0.610865
+      ],
+      "range_deg": [
+        -45.0,
+        35.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    },
+    {
+      "index": 12,
+      "name": "ankle_x_r",
+      "type": "hinge",
+      "body": "foot_r",
+      "axis": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_index": 18,
+      "dof_index": 17,
+      "limited": true,
+      "range_rad": [
+        -0.436332,
+        0.436332
+      ],
+      "range_deg": [
+        -25.0,
+        25.0
+      ],
+      "damping": 1.0,
+      "armature": 0.02,
+      "stiffness": 0.0
+    }
+  ],
+  "bodies": [
+    {
+      "index": 0,
+      "name": "world",
+      "parent": null,
+      "mass": 0.0,
+      "subtree_mass": 40.285605464741636,
+      "local_pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "com_local": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "index": 1,
+      "name": "target",
+      "parent": "world",
+      "mass": 0.0,
+      "subtree_mass": 0.0,
+      "local_pos": [
+        4.0,
+        0.0,
+        0.02
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "com_local": [
+        4.0,
+        0.0,
+        0.02
+      ]
+    },
+    {
+      "index": 2,
+      "name": "torso",
+      "parent": "world",
+      "mass": 20.399408297309726,
+      "subtree_mass": 40.285605464741636,
+      "local_pos": [
+        0.0,
+        0.0,
+        0.88
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.79111663,
+        0.75186894,
+        0.11214692
+      ],
+      "com_local": [
+        0.0,
+        0.0,
+        0.18487
+      ]
+    },
+    {
+      "index": 3,
+      "name": "thigh_l",
+      "parent": "torso",
+      "mass": 5.203965299630785,
+      "subtree_mass": 9.943098583715955,
+      "local_pos": [
+        0.0,
+        0.09,
+        -0.02
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.09736519,
+        0.09736519,
+        0.00904142
+      ],
+      "com_local": [
+        0.0,
+        0.005,
+        -0.19
+      ]
+    },
+    {
+      "index": 4,
+      "name": "shin_l",
+      "parent": "thigh_l",
+      "mass": 3.35913328408517,
+      "subtree_mass": 4.73913328408517,
+      "local_pos": [
+        0.0,
+        0.01,
+        -0.4
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.05791662,
+        0.05791662,
+        0.00391432
+      ],
+      "com_local": [
+        0.0,
+        0.0,
+        -0.19
+      ]
+    },
+    {
+      "index": 5,
+      "name": "foot_l",
+      "parent": "shin_l",
+      "mass": 1.3800000000000001,
+      "subtree_mass": 1.3800000000000001,
+      "local_pos": [
+        0.0,
+        0.0,
+        -0.4
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.001564,
+        0.0064975,
+        0.0072335
+      ],
+      "com_local": [
+        0.045,
+        0.0,
+        -0.035
+      ]
+    },
+    {
+      "index": 6,
+      "name": "thigh_r",
+      "parent": "torso",
+      "mass": 5.203965299630785,
+      "subtree_mass": 9.943098583715955,
+      "local_pos": [
+        0.0,
+        -0.09,
+        -0.02
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.09736519,
+        0.09736519,
+        0.00904142
+      ],
+      "com_local": [
+        0.0,
+        -0.005,
+        -0.19
+      ]
+    },
+    {
+      "index": 7,
+      "name": "shin_r",
+      "parent": "thigh_r",
+      "mass": 3.35913328408517,
+      "subtree_mass": 4.73913328408517,
+      "local_pos": [
+        0.0,
+        -0.01,
+        -0.4
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.05791662,
+        0.05791662,
+        0.00391432
+      ],
+      "com_local": [
+        0.0,
+        0.0,
+        -0.19
+      ]
+    },
+    {
+      "index": 8,
+      "name": "foot_r",
+      "parent": "shin_r",
+      "mass": 1.3800000000000001,
+      "subtree_mass": 1.3800000000000001,
+      "local_pos": [
+        0.0,
+        0.0,
+        -0.4
+      ],
+      "local_quat_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_diag": [
+        0.001564,
+        0.0064975,
+        0.0072335
+      ],
+      "com_local": [
+        0.045,
+        0.0,
+        -0.035
+      ]
+    }
+  ],
+  "actuators": [
+    {
+      "index": 0,
+      "name": "hip_z_l",
+      "joint": "hip_z_l",
+      "type": "motor (direct torque)",
+      "gear": 60.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 60.0
+    },
+    {
+      "index": 1,
+      "name": "hip_x_l",
+      "joint": "hip_x_l",
+      "type": "motor (direct torque)",
+      "gear": 80.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 80.0
+    },
+    {
+      "index": 2,
+      "name": "hip_y_l",
+      "joint": "hip_y_l",
+      "type": "motor (direct torque)",
+      "gear": 130.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 130.0
+    },
+    {
+      "index": 3,
+      "name": "knee_l",
+      "joint": "knee_l",
+      "type": "motor (direct torque)",
+      "gear": 110.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 110.0
+    },
+    {
+      "index": 4,
+      "name": "ankle_y_l",
+      "joint": "ankle_y_l",
+      "type": "motor (direct torque)",
+      "gear": 70.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 70.0
+    },
+    {
+      "index": 5,
+      "name": "ankle_x_l",
+      "joint": "ankle_x_l",
+      "type": "motor (direct torque)",
+      "gear": 40.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 40.0
+    },
+    {
+      "index": 6,
+      "name": "hip_z_r",
+      "joint": "hip_z_r",
+      "type": "motor (direct torque)",
+      "gear": 60.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 60.0
+    },
+    {
+      "index": 7,
+      "name": "hip_x_r",
+      "joint": "hip_x_r",
+      "type": "motor (direct torque)",
+      "gear": 80.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 80.0
+    },
+    {
+      "index": 8,
+      "name": "hip_y_r",
+      "joint": "hip_y_r",
+      "type": "motor (direct torque)",
+      "gear": 130.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 130.0
+    },
+    {
+      "index": 9,
+      "name": "knee_r",
+      "joint": "knee_r",
+      "type": "motor (direct torque)",
+      "gear": 110.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 110.0
+    },
+    {
+      "index": 10,
+      "name": "ankle_y_r",
+      "joint": "ankle_y_r",
+      "type": "motor (direct torque)",
+      "gear": 70.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 70.0
+    },
+    {
+      "index": 11,
+      "name": "ankle_x_r",
+      "joint": "ankle_x_r",
+      "type": "motor (direct torque)",
+      "gear": 40.0,
+      "ctrlrange": [
+        -1.0,
+        1.0
+      ],
+      "ctrl_limited": true,
+      "gainprm": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "biasprm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "peak_torque_Nm": 40.0
+    }
+  ],
+  "geoms": [
+    {
+      "name": "floor",
+      "body": "world",
+      "group": 0,
+      "friction": [
+        1.0,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.0,
+        0.0,
+        0.05
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "target_geom",
+      "body": "target",
+      "group": 0,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.35,
+        0.02,
+        0.0
+      ],
+      "contype": 0,
+      "conaffinity": 0
+    },
+    {
+      "name": "target_pole",
+      "body": "target",
+      "group": 0,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.03,
+        0.45,
+        0.0
+      ],
+      "contype": 0,
+      "conaffinity": 0
+    },
+    {
+      "name": "pelvis",
+      "body": "torso",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.085,
+        0.09,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "chest",
+      "body": "torso",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.09,
+        0.15,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "head",
+      "body": "torso",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.09,
+        0.0,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "thigh_l",
+      "body": "thigh_l",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.06,
+        0.190066,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "shin_l",
+      "body": "shin_l",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.049,
+        0.19,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "foot_l",
+      "body": "foot_l",
+      "group": 3,
+      "friction": [
+        1.2,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.115,
+        0.05,
+        0.03
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "thigh_r",
+      "body": "thigh_r",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.06,
+        0.190066,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "shin_r",
+      "body": "shin_r",
+      "group": 3,
+      "friction": [
+        0.9,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.049,
+        0.19,
+        0.0
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    },
+    {
+      "name": "foot_r",
+      "body": "foot_r",
+      "group": 3,
+      "friction": [
+        1.2,
+        0.1,
+        0.1
+      ],
+      "condim": 3,
+      "size": [
+        0.115,
+        0.05,
+        0.03
+      ],
+      "contype": 1,
+      "conaffinity": 1
+    }
+  ],
+  "simulation": {
+    "physics_timestep": 0.005,
+    "frame_skip": 5,
+    "control_timestep": 0.025,
+    "control_frequency_hz": 40.0,
+    "physics_frequency_hz": 200.0,
+    "gravity": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "integrator": 3,
+    "integrator_name": "mjINT_IMPLICITFAST",
+    "solver": "mjSOL_NEWTON",
+    "iterations": 50,
+    "nq": 19,
+    "nv": 18,
+    "nu": 12
+  },
+  "reset_state": {
+    "init_qpos": [
+      0.0,
+      0.0,
+      0.88,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "init_qvel": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "reset_noise_scale": 0.02,
+    "note": "root yaw is randomised uniformly in [-pi, pi] on reset"
+  },
+  "task": {
+    "forward_reward_weight": 4.0,
+    "heading_reward_weight": 0.1,
+    "healthy_reward": 0.5,
+    "fall_penalty": 25.0,
+    "ctrl_cost_weight": 0.1,
+    "reach_bonus": 40.0,
+    "reach_radius_m": 0.6,
+    "healthy_z_range": [
+      0.55,
+      1.1
+    ],
+    "min_uprightness": 0.4,
+    "target_distance_range_m": [
+      3.0,
+      6.0
+    ],
+    "target_angle_range_rad": 2.4,
+    "max_speed_reward": 2.0,
+    "max_episode_steps": 1000
+  }
+}

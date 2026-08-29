@@ -1,0 +1,113 @@
+{
+  "episodes": 10,
+  "deterministic": true,
+  "return": {
+    "mean": 3014.76570184364,
+    "std": 2266.641751967135,
+    "min": 518.1369829866322,
+    "max": 6546.2481557995025
+  },
+  "episode_length_steps": {
+    "mean": 515.5,
+    "std": 332.267738427913,
+    "min": 161.0,
+    "max": 1000.0
+  },
+  "episode_length_seconds": {
+    "mean": 12.8875,
+    "std": 8.306693460697824,
+    "min": 4.025,
+    "max": 25.0
+  },
+  "targets_reached_per_episode": {
+    "mean": 4.0,
+    "std": 2.9664793948382653,
+    "min": 1.0,
+    "max": 9.0
+  },
+  "final_distance_to_target_m": {
+    "mean": 3.903257810454259,
+    "std": 1.4434206119251947,
+    "min": 0.6630262844145633,
+    "max": 6.2269563720448735
+  },
+  "mean_closing_speed_mps": {
+    "mean": 1.1521897334728401,
+    "std": 0.2276856941936672,
+    "min": 0.6514859273894477,
+    "max": 1.40484080503426
+  },
+  "survived_full_episode_pct": 30.0,
+  "per_episode": [
+    {
+      "episode": 0,
+      "return": 6080.5,
+      "steps": 1000,
+      "targets_reached": 8,
+      "final_distance_m": 0.663
+    },
+    {
+      "episode": 1,
+      "return": 824.717,
+      "steps": 195,
+      "targets_reached": 1,
+      "final_distance_m": 4.017
+    },
+    {
+      "episode": 2,
+      "return": 1746.941,
+      "steps": 329,
+      "targets_reached": 2,
+      "final_distance_m": 5.327
+    },
+    {
+      "episode": 3,
+      "return": 6546.248,
+      "steps": 1000,
+      "targets_reached": 9,
+      "final_distance_m": 3.16
+    },
+    {
+      "episode": 4,
+      "return": 6406.703,
+      "steps": 1000,
+      "targets_reached": 8,
+      "final_distance_m": 2.894
+    },
+    {
+      "episode": 5,
+      "return": 2902.119,
+      "steps": 535,
+      "targets_reached": 4,
+      "final_distance_m": 3.738
+    },
+    {
+      "episode": 6,
+      "return": 1790.737,
+      "steps": 283,
+      "targets_reached": 2,
+      "final_distance_m": 3.983
+    },
+    {
+      "episode": 7,
+      "return": 518.137,
+      "steps": 161,
+      "targets_reached": 1,
+      "final_distance_m": 3.987
+    },
+    {
+      "episode": 8,
+      "return": 1338.671,
+      "steps": 254,
+      "targets_reached": 2,
+      "final_distance_m": 6.227
+    },
+    {
+      "episode": 9,
+      "return": 1992.883,
+      "steps": 398,
+      "targets_reached": 3,
+      "final_distance_m": 5.036
+    }
+  ]
+}
