@@ -1,0 +1,107 @@
+<mujoco model="creature">
+  <!-- Canonical creature definition. Single source of truth:
+       - MJX training reads this file (mjx_training/creature_env.py)
+       - Unity imports it via Assets > Import MuJoCo Scene
+       Keep it MJX-compatible: hinge/free joints, capsule/box/plane geoms,
+       motor actuators, condim 3, pyramidal friction cone. -->
+
+  <compiler angle="degree" autolimits="true"/>
+
+  <option timestep="0.004" integrator="implicitfast" solver="Newton"
+          iterations="4" ls_iterations="8" cone="pyramidal"/>
+
+  <default>
+    <geom condim="3" friction="0.8 0.02 0.01" density="1000" rgba="0.82 0.55 0.30 1"/>
+    <joint type="hinge" damping="0.6" armature="0.02" limited="true"/>
+    <motor ctrllimited="true" ctrlrange="-1 1"/>
+
+    <default class="thigh">
+      <geom type="capsule" size="0.030"/>
+    </default>
+    <default class="shin">
+      <geom type="capsule" size="0.024" rgba="0.55 0.38 0.22 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="skybox" type="skybox" builtin="gradient"
+             rgb1="0.35 0.45 0.60" rgb2="0.08 0.10 0.14" width="256" height="256"/>
+    <texture name="grid" type="2d" builtin="checker"
+             rgb1="0.20 0.24 0.30" rgb2="0.14 0.17 0.21" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="12 12" reflectance="0.05"/>
+  </asset>
+
+  <worldbody>
+    <light name="sun" pos="0 0 5" dir="0 0 -1" directional="true" diffuse="0.8 0.8 0.8"/>
+    <geom name="floor" type="plane" size="0 0 0.05" material="grid"
+          condim="3" friction="0.8 0.02 0.01"/>
+
+    <body name="torso" pos="0 0 0.34">
+      <freejoint name="root"/>
+      <!-- Nothing but the torso carries the free joint; qpos[0:7] is its pose. -->
+      <geom name="torso" type="box" size="0.18 0.09 0.045" rgba="0.90 0.60 0.30 1"/>
+      <geom name="head" type="sphere" size="0.055" pos="0.21 0 0.02" rgba="0.90 0.60 0.30 1"/>
+      <site name="imu" pos="0 0 0" size="0.01"/>
+
+      <!-- ===== front left ===== -->
+      <body name="fl_thigh" pos="0.15 0.10 -0.02">
+        <joint name="fl_hip" axis="0 1 0" range="-50 50"/>
+        <geom class="thigh" fromto="0 0 0 0 0 -0.15"/>
+        <body name="fl_shin" pos="0 0 -0.15">
+          <joint name="fl_knee" axis="0 1 0" range="-90 20"/>
+          <geom class="shin" fromto="0 0 0 0 0 -0.17"/>
+        </body>
+      </body>
+
+      <!-- ===== front right ===== -->
+      <body name="fr_thigh" pos="0.15 -0.10 -0.02">
+        <joint name="fr_hip" axis="0 1 0" range="-50 50"/>
+        <geom class="thigh" fromto="0 0 0 0 0 -0.15"/>
+        <body name="fr_shin" pos="0 0 -0.15">
+          <joint name="fr_knee" axis="0 1 0" range="-90 20"/>
+          <geom class="shin" fromto="0 0 0 0 0 -0.17"/>
+        </body>
+      </body>
+
+      <!-- ===== back left ===== -->
+      <body name="bl_thigh" pos="-0.15 0.10 -0.02">
+        <joint name="bl_hip" axis="0 1 0" range="-50 50"/>
+        <geom class="thigh" fromto="0 0 0 0 0 -0.15"/>
+        <body name="bl_shin" pos="0 0 -0.15">
+          <joint name="bl_knee" axis="0 1 0" range="-90 20"/>
+          <geom class="shin" fromto="0 0 0 0 0 -0.17"/>
+        </body>
+      </body>
+
+      <!-- ===== back right ===== -->
+      <body name="br_thigh" pos="-0.15 -0.10 -0.02">
+        <joint name="br_hip" axis="0 1 0" range="-50 50"/>
+        <geom class="thigh" fromto="0 0 0 0 0 -0.15"/>
+        <body name="br_shin" pos="0 0 -0.15">
+          <joint name="br_knee" axis="0 1 0" range="-90 20"/>
+          <geom class="shin" fromto="0 0 0 0 0 -0.17"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- ORDER IS THE CONTRACT: Unity's CreatureAgent applies actions in this
+         exact order. Do not reorder without re-exporting the policy. -->
+    <motor name="fl_hip"  joint="fl_hip"  gear="18"/>
+    <motor name="fl_knee" joint="fl_knee" gear="18"/>
+    <motor name="fr_hip"  joint="fr_hip"  gear="18"/>
+    <motor name="fr_knee" joint="fr_knee" gear="18"/>
+    <motor name="bl_hip"  joint="bl_hip"  gear="18"/>
+    <motor name="bl_knee" joint="bl_knee" gear="18"/>
+    <motor name="br_hip"  joint="br_hip"  gear="18"/>
+    <motor name="br_knee" joint="br_knee" gear="18"/>
+  </actuator>
+
+  <keyframe>
+    <!-- home: slight crouch so the knees are off their singular straight pose -->
+    <key name="home"
+         qpos="0 0 0.34 1 0 0 0  0.25 -0.45  0.25 -0.45  0.25 -0.45  0.25 -0.45"
+         ctrl="0 0 0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

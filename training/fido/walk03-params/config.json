@@ -1,0 +1,47 @@
+{
+  "run": "walk03",
+  "obs_size": 33,
+  "action_size": 8,
+  "obs_layout": [
+    [
+      "gravity_local",
+      3
+    ],
+    [
+      "linvel_local",
+      3
+    ],
+    [
+      "angvel_local",
+      3
+    ],
+    [
+      "joint_pos",
+      8
+    ],
+    [
+      "joint_vel",
+      8
+    ],
+    [
+      "last_action",
+      8
+    ]
+  ],
+  "policy_hidden": [
+    128,
+    128,
+    128
+  ],
+  "value_hidden": [
+    256,
+    256,
+    256
+  ],
+  "ctrl_dt": 0.02,
+  "sim_dt": 0.004,
+  "n_substeps": 5,
+  "num_timesteps": 60000000,
+  "num_envs": 4096,
+  "seed": 0
+}

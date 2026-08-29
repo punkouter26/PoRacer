@@ -1,0 +1,14 @@
+{
+    "name": "Creature.Editor",
+    "rootNamespace": "CreatureEditor",
+    "references": ["Mujoco.Runtime", "Mujoco.Editor", "Creature"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

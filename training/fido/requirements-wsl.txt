@@ -1,0 +1,24 @@
+# Training environment -- installs into WSL2 Ubuntu 24.04, NOT Windows.
+# JAX publishes no CUDA wheels for Windows, so GPU MJX must run under WSL.
+#
+#   wsl -d Ubuntu-24.04
+#   python3 -m venv ~/venvs/mjx && source ~/venvs/mjx/bin/activate
+#   pip install -r /mnt/c/Users/punko/Downloads/MujocoTest/mjx_training/requirements-wsl.txt
+#
+# NOTE ON BRAX: the 0.14.2 release on PyPI calls jax.device_put_replicated,
+# which JAX 0.11 removed -- PPO crashes at startup. Brax main already replaced
+# it with jax.device_put + NamedSharding but has not cut a release, so we pin
+# to git. Swap this for a normal version pin once a release past 0.14.2 lands.
+
+jax[cuda13]==0.11.1
+mujoco==3.12.0
+mujoco-mjx==3.12.0
+playground==0.2.0
+brax @ git+https://github.com/google/brax.git@main
+
+# training conveniences
+mediapy==1.2.7
+tensorboard==2.21.0
+tqdm==4.70.0
+matplotlib==3.11.1
+etils[epath]==1.14.0
