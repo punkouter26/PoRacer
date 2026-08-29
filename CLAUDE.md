@@ -123,7 +123,16 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   fonts at or above 14 (Android's body-text minimum) and any control a finger
   touches at or above `CONTROL_SM` = 48 (Android's touch-target minimum).
 
-## 4. MLOps
+## 4. Source Control
+* **`master` only. Never create a branch.** Commit directly to `master` — no
+  feature branches, no `cleanup/*`, no work branches, however tidy the intent.
+  This overrides the usual "branch before committing on the default branch"
+  habit: in this project that habit is wrong, and any branch that does get made
+  must be merged back and deleted in the same session.
+* Commit real, working increments. Verify before committing — compile clean, and
+  for anything touching runtime, a play-mode check as well.
+
+## 5. MLOps
 * **Version Alignment:** Enforce exact version parity between C# and Python `mlagents` packages to prevent comms API handshake rejections.
 * **Asset Integrity:** Overwrite `.onnx` files in place to preserve Unity `.meta` GUID references.
 * **Headless Execution:** Pass `--env --no-graphics` and explicit `--base-port` flags (allocate consecutive ports to avoid collision hangs). Run 4–8 envs to leave CPU cores for PyTorch execution. Record `--num-envs` since it alters batching behavior.
