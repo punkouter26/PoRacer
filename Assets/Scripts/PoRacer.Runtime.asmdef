@@ -12,7 +12,9 @@
         "Unity.InputSystem",
         "Unity.Cinemachine",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.RenderPipelines.Core.Runtime",
+        "Mujoco.Runtime",
+        "Creature"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

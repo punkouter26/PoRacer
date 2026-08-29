@@ -63,3 +63,9 @@ MonoBehaviour:
     prefab: {fileID: 4313217411317115453, guid: 103e23b58a742534695be79ce01dfead, type: 3}
     model: {fileID: 5022602860645237092, guid: 3d5e75225e07d5c4699ea4604c187e0e, type: 3}
     spawnHeight: 0.68
+  - id: Fido_v01
+    displayName: Fido
+    prefab: {fileID: 1855124412564560699, guid: 2b95672e9a7531241b89d450d6a3e6df, type: 3}
+    model: {fileID: 0}
+    spawnHeight: 0
+    brainInPrefab: 1

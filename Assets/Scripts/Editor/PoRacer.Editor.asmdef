@@ -7,7 +7,10 @@
         "Unity.ML-Agents",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Universal.Editor",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.RenderPipelines.Core.Runtime",
+        "Mujoco.Runtime",
+        "Mujoco.Editor",
+        "Creature"
     ],
     "includePlatforms": [
         "Editor"

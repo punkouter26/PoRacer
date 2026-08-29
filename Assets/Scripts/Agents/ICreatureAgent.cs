@@ -11,6 +11,21 @@ namespace PoRacer.Agents
     {
         bool Failed { get; }
         ArticulationBody Root { get; }
+
+        /// <summary>
+        /// The transform that actually travels down the track — what the camera frames and
+        /// what progress, standings and the trail views are measured from.
+        ///
+        /// For most creatures this is the articulation root's transform. Two exceptions
+        /// make it worth naming separately from <see cref="Root"/>: IsaacH1's prefab root
+        /// is an inert container with the articulation starting at its `pelvis` child, and
+        /// Fido has no ArticulationBody at all — MuJoCo moves his torso and leaves the
+        /// imported container standing at the start line. Keyed off the prefab root, either
+        /// would race perfectly while the camera framed an empty grid slot and every
+        /// standing read row 0.
+        /// </summary>
+        Transform Body { get; }
+
         int MaxStep { get; set; }
         /// <summary>
         /// The prefab's authored root orientation — the pose whose joint chain

@@ -46,6 +46,9 @@ namespace PoRacer.Agents
 
         public ArticulationBody Root => _agent != null ? _agent.Root : GetComponentInChildren<ArticulationBody>();
 
+        /// <summary>Articulation root's transform; the prefab root only when there is no articulation.</summary>
+        public Transform Body => Root != null ? Root.transform : transform;
+
         public int MaxStep { get; set; }
 
         /// <summary>The H1 is authored upright, so its rest pose is the identity.</summary>

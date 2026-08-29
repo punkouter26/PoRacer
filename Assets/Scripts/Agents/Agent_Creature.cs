@@ -94,6 +94,9 @@ namespace PoRacer.Agents
 
         public ArticulationBody Root => _root;
 
+        /// <summary>Articulation root's transform; the prefab root only when there is no articulation.</summary>
+        public Transform Body => _root != null ? _root.transform : transform;
+
         public void SetGoal(Transform goal) => _goal = goal;
 
         public void SetAreaResetCallback(System.Action areaReset) => _areaReset = areaReset;

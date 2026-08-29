@@ -18,6 +18,9 @@ namespace PoRacer.Agents
 
         public bool Failed => _agent != null && _agent.IsFlipped;
         public ArticulationBody Root => _agent != null ? _agent.Root : GetComponentInChildren<ArticulationBody>();
+
+        /// <summary>Articulation root's transform; the prefab root only when there is no articulation.</summary>
+        public Transform Body => Root != null ? Root.transform : transform;
         public int MaxStep { get; set; }
         public Quaternion RestRotation => Quaternion.identity;
 

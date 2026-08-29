@@ -144,7 +144,7 @@ namespace PoRacer.Views
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
                 // Scripted mode races the coded gait, so a missing brain is fine.
-                if (entry.prefab != null && (entry.model != null || _config.UseScriptedBrains))
+                if (entry.prefab != null && (entry.HasBrain || _config.UseScriptedBrains))
                 {
                     creatureScroll.Add(BuildRow(entry));
                 }
@@ -453,7 +453,7 @@ namespace PoRacer.Views
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && (entry.model != null || scripted))
+                if (entry.prefab != null && (entry.HasBrain || scripted))
                 {
                     _config.SetCount(entry.id, count);
                 }

@@ -140,7 +140,7 @@ namespace PoRacer.Systems
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && entry.model != null)
+                if (entry.prefab != null && entry.HasBrain)
                 {
                     _config.SetCount(entry.id, 1);
                 }
@@ -338,6 +338,18 @@ namespace PoRacer.Systems
                 groundBounds = new Bounds(gridOrigin, new Vector3(120f, 1f, 120f));
             }
 
+            // The MuJoCo world has to stand before the first Fido is instantiated, not
+            // after: every MjComponent's OnEnable reads MjScene.Instance, and that getter
+            // creates an MjScene when none exists. Build ours second and MjScene.Awake
+            // throws "singleton, yet multiple instances found". Its model compiles in
+            // Start, at the end of this frame, which for any field small enough to skip
+            // the per-25 yield below is after every racer is placed; larger fields land
+            // their stragglers through the plug-in's own scene-recreation request.
+            if (RosterNeedsMujoco())
+            {
+                Systems_MujocoWorld.Build();
+            }
+
             int gridIndex = 0;
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
@@ -348,7 +360,7 @@ namespace PoRacer.Systems
                     continue;
                 }
                 bool scripted = _config.UseScriptedBrains;
-                if (entry.prefab == null || (entry.model == null && !scripted))
+                if (entry.prefab == null || (!entry.HasBrain && !scripted))
                 {
                     Debug.LogWarning($"Creature '{entry.id}' has no trained brain yet; skipping its {requested} racers.");
                     continue;
@@ -441,9 +453,13 @@ namespace PoRacer.Systems
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
                     string funName = RacerNames.Get(_nameOrder, gridIndex);
 
+                    bool isMujoco = instance.GetComponent<Agent_Fido>() != null;
+
                     // The Isaac spider ships its own URDF-shaped body: no connective
                     // links, eyes or props on it (they float off its small 0.2 m body).
-                    bool bareBody = instance.GetComponent<Agent_IsaacSpider>() != null;
+                    // Fido is bare for a different reason: BodyLinkView draws links
+                    // between ArticulationBodies, and he has none to link.
+                    bool bareBody = instance.GetComponent<Agent_IsaacSpider>() != null || isMujoco;
                     // Connective limb visuals must exist before tinting so the
                     // links pick up this racer's color along with its parts.
                     if (!bareBody)
@@ -473,15 +489,16 @@ namespace PoRacer.Systems
                         tintRenderers[rendererIndex].SetPropertyBlock(_tintBlock);
                     }
 
-                    // Every body-tracking view and the camera must follow the creature's
-                    // ARTICULATION root, not the prefab root. For eight of the nine catalog
-                    // creatures those are the same GameObject, so this resolves to `instance`
-                    // and nothing changes. IsaacH1 is the exception: its prefab root is a
-                    // plain container and the articulation starts at the `pelvis` child, so
-                    // the container transform never moves. Keyed off `instance`, an H1 would
-                    // race perfectly while the camera framed the empty start line and its
-                    // progress, standings, flip check and dust trail all read grid row 0.
-                    GameObject creatureRoot = agent.Root != null ? agent.Root.gameObject : instance;
+                    // Every body-tracking view and the camera must follow the transform the
+                    // creature actually moves, which the agent names via Body. For most of
+                    // the catalog that is the prefab root and nothing changes. Two are not:
+                    // IsaacH1's prefab root is a container with the articulation starting at
+                    // its `pelvis` child, and Fido is stepped by MuJoCo, which moves his
+                    // torso and leaves the imported container at the start line. Keyed off
+                    // `instance`, either would race perfectly while the camera framed an
+                    // empty grid slot and progress, standings, flip check and dust trail all
+                    // read grid row 0.
+                    GameObject creatureRoot = agent.Body != null ? agent.Body.gameObject : instance;
 
                     RacerView view = creatureRoot.AddComponent<RacerView>();
                     float finishZ = _track.FinishLine != null ? _track.FinishLine.position.z : float.PositiveInfinity;
@@ -560,6 +577,28 @@ namespace PoRacer.Systems
         /// fall through to the plain speckle rather than to an arbitrary skin, so
         /// a newly added creature looks deliberate until it is classified here.
         /// </summary>
+        /// <summary>
+        /// True when the roster about to be spawned contains a creature MuJoCo has to
+        /// step. Asked of the prefabs before any of them exists in the scene, because the
+        /// MuJoCo world has to be standing before the first one is instantiated.
+        /// </summary>
+        private bool RosterNeedsMujoco()
+        {
+            for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
+            {
+                CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
+                if (entry.prefab == null || _config.GetCount(entry.id) <= 0)
+                {
+                    continue;
+                }
+                if (entry.prefab.GetComponent<Agent_Fido>() != null)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static float SurfaceIdFor(string creatureId)
         {
             // Catalog ids carry a version suffix ("Worm_v01"); the pattern is a
@@ -672,6 +711,9 @@ namespace PoRacer.Systems
             }
             _spawned.Clear();
             _racerRoots.Clear();
+            // After the racers, not before: MjScene.OnDestroy frees the native model that
+            // any surviving CreatureAgent would still be stepping.
+            Systems_MujocoWorld.Teardown();
         }
     }
 }
