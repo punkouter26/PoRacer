@@ -1,0 +1,345 @@
+{
+  "task": "Isaac-Biped-Direct-v0",
+  "checkpoint": "logs\\rsl_rl\\biped_direct\\2026-08-28_12-30-02\\model_1300.pt",
+  "run_dir": "logs\\rsl_rl\\biped_direct\\2026-08-28_12-30-02",
+  "onnx": {
+    "file": "biped.onnx",
+    "opset": {
+      "ai.onnx": 15
+    },
+    "ir_version": 8,
+    "operators": [
+      "Div",
+      "Elu",
+      "Gemm",
+      "Sub"
+    ],
+    "io": {
+      "inputs": [
+        [
+          "obs",
+          [
+            1,
+            42
+          ],
+          "tensor(float)"
+        ]
+      ],
+      "outputs": [
+        [
+          "actions",
+          [
+            1,
+            10
+          ],
+          "tensor(float)"
+        ]
+      ]
+    },
+    "fixed_batch_size_1": true,
+    "bytes": 212884,
+    "external_data": false,
+    "checker_passed": true,
+    "vs_pytorch_max_abs_diff": 9.5367431640625e-06,
+    "obs_normalization": "baked into the graph",
+    "note": "output is the Gaussian mean action; clamp to [-1,1] before use"
+  },
+  "spaces": {
+    "obs_dim": 42,
+    "act_dim": 10,
+    "obs_layout": [
+      {
+        "name": "joint_pos",
+        "start": 0,
+        "end": 9,
+        "size": 10,
+        "description": "joint positions minus the standing pose [rad], joint_order below"
+      },
+      {
+        "name": "joint_vel",
+        "start": 10,
+        "end": 19,
+        "size": 10,
+        "description": "joint velocities [rad/s] x 0.1"
+      },
+      {
+        "name": "root_lin_vel_b",
+        "start": 20,
+        "end": 22,
+        "size": 3,
+        "description": "torso linear velocity in the torso frame [m/s]"
+      },
+      {
+        "name": "root_ang_vel_b",
+        "start": 23,
+        "end": 25,
+        "size": 3,
+        "description": "torso angular velocity in the torso frame [rad/s] x 0.25"
+      },
+      {
+        "name": "projected_gravity_b",
+        "start": 26,
+        "end": 28,
+        "size": 3,
+        "description": "gravity unit vector in the torso frame; (0,0,-1) upright"
+      },
+      {
+        "name": "target_dir_b",
+        "start": 29,
+        "end": 30,
+        "size": 2,
+        "description": "unit vector to the target in the torso yaw-only frame; x fwd, y left"
+      },
+      {
+        "name": "target_dist",
+        "start": 31,
+        "end": 31,
+        "size": 1,
+        "description": "horizontal distance to the target [m] / 5, clamped to 1"
+      },
+      {
+        "name": "prev_actions",
+        "start": 32,
+        "end": 41,
+        "size": 10,
+        "description": "previous action, clamped to [-1,1]"
+      }
+    ]
+  },
+  "joints": [
+    {
+      "index": 0,
+      "name": "L_hip_yaw",
+      "default_rad": 0.0,
+      "lower_rad": -0.6000000238418579,
+      "upper_rad": 0.6000000238418579,
+      "stiffness_nm_per_rad": 100.0,
+      "damping_nms_per_rad": 4.0,
+      "effort_limit_nm": 100.0,
+      "velocity_limit_rad_per_s": 12.0
+    },
+    {
+      "index": 1,
+      "name": "L_hip_roll",
+      "default_rad": 0.0,
+      "lower_rad": -0.5,
+      "upper_rad": 0.5,
+      "stiffness_nm_per_rad": 100.0,
+      "damping_nms_per_rad": 4.0,
+      "effort_limit_nm": 100.0,
+      "velocity_limit_rad_per_s": 12.0
+    },
+    {
+      "index": 2,
+      "name": "L_hip_pitch",
+      "default_rad": -0.25,
+      "lower_rad": -1.5,
+      "upper_rad": 1.0,
+      "stiffness_nm_per_rad": 150.0,
+      "damping_nms_per_rad": 5.0,
+      "effort_limit_nm": 150.0,
+      "velocity_limit_rad_per_s": 15.0
+    },
+    {
+      "index": 3,
+      "name": "L_knee",
+      "default_rad": 0.5,
+      "lower_rad": 0.0,
+      "upper_rad": 2.200000047683716,
+      "stiffness_nm_per_rad": 150.0,
+      "damping_nms_per_rad": 5.0,
+      "effort_limit_nm": 150.0,
+      "velocity_limit_rad_per_s": 15.0
+    },
+    {
+      "index": 4,
+      "name": "L_ankle",
+      "default_rad": -0.25,
+      "lower_rad": -0.800000011920929,
+      "upper_rad": 0.800000011920929,
+      "stiffness_nm_per_rad": 80.0,
+      "damping_nms_per_rad": 3.0,
+      "effort_limit_nm": 80.0,
+      "velocity_limit_rad_per_s": 15.0
+    },
+    {
+      "index": 5,
+      "name": "R_hip_yaw",
+      "default_rad": 0.0,
+      "lower_rad": -0.6000000238418579,
+      "upper_rad": 0.6000000238418579,
+      "stiffness_nm_per_rad": 100.0,
+      "damping_nms_per_rad": 4.0,
+      "effort_limit_nm": 100.0,
+      "velocity_limit_rad_per_s": 12.0
+    },
+    {
+      "index": 6,
+      "name": "R_hip_roll",
+      "default_rad": 0.0,
+      "lower_rad": -0.5,
+      "upper_rad": 0.5,
+      "stiffness_nm_per_rad": 100.0,
+      "damping_nms_per_rad": 4.0,
+      "effort_limit_nm": 100.0,
+      "velocity_limit_rad_per_s": 12.0
+    },
+    {
+      "index": 7,
+      "name": "R_hip_pitch",
+      "default_rad": -0.25,
+      "lower_rad": -1.5,
+      "upper_rad": 1.0,
+      "stiffness_nm_per_rad": 150.0,
+      "damping_nms_per_rad": 5.0,
+      "effort_limit_nm": 150.0,
+      "velocity_limit_rad_per_s": 15.0
+    },
+    {
+      "index": 8,
+      "name": "R_knee",
+      "default_rad": 0.5,
+      "lower_rad": 0.0,
+      "upper_rad": 2.200000047683716,
+      "stiffness_nm_per_rad": 150.0,
+      "damping_nms_per_rad": 5.0,
+      "effort_limit_nm": 150.0,
+      "velocity_limit_rad_per_s": 15.0
+    },
+    {
+      "index": 9,
+      "name": "R_ankle",
+      "default_rad": -0.25,
+      "lower_rad": -0.800000011920929,
+      "upper_rad": 0.800000011920929,
+      "stiffness_nm_per_rad": 80.0,
+      "damping_nms_per_rad": 3.0,
+      "effort_limit_nm": 80.0,
+      "velocity_limit_rad_per_s": 15.0
+    }
+  ],
+  "joint_order": [
+    "L_hip_yaw",
+    "L_hip_roll",
+    "L_hip_pitch",
+    "L_knee",
+    "L_ankle",
+    "R_hip_yaw",
+    "R_hip_roll",
+    "R_hip_pitch",
+    "R_knee",
+    "R_ankle"
+  ],
+  "bodies": [
+    {
+      "name": "torso",
+      "mass_kg": 6.0
+    },
+    {
+      "name": "L_hip_yaw_link",
+      "mass_kg": 0.15000000596046448
+    },
+    {
+      "name": "R_hip_yaw_link",
+      "mass_kg": 0.15000000596046448
+    },
+    {
+      "name": "L_hip_roll_link",
+      "mass_kg": 0.15000000596046448
+    },
+    {
+      "name": "R_hip_roll_link",
+      "mass_kg": 0.15000000596046448
+    },
+    {
+      "name": "L_thigh",
+      "mass_kg": 2.0
+    },
+    {
+      "name": "R_thigh",
+      "mass_kg": 2.0
+    },
+    {
+      "name": "L_shank",
+      "mass_kg": 1.5
+    },
+    {
+      "name": "R_shank",
+      "mass_kg": 1.5
+    },
+    {
+      "name": "L_foot",
+      "mass_kg": 0.6000000238418579
+    },
+    {
+      "name": "R_foot",
+      "mass_kg": 0.6000000238418579
+    }
+  ],
+  "total_mass_kg": 14.800000071525574,
+  "timing": {
+    "physics_dt_s": 0.005,
+    "physics_hz": 200.0,
+    "decimation": 4,
+    "policy_dt_s": 0.02,
+    "policy_hz": 50.0,
+    "episode_length_s": 20.0
+  },
+  "gravity_m_s2": [
+    0.0,
+    0.0,
+    -9.81
+  ],
+  "ground_material": {
+    "static_friction": 0.5,
+    "dynamic_friction": 0.5,
+    "restitution": 0.0,
+    "friction_combine_mode": null,
+    "restitution_combine_mode": null
+  },
+  "spawn": {
+    "root_pos_isaac_m": [
+      0.0,
+      0.0,
+      0.68
+    ],
+    "root_quat_wxyz": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "joint_pos_rad": {
+      ".*_hip_yaw": 0.0,
+      ".*_hip_roll": 0.0,
+      ".*_hip_pitch": -0.25,
+      ".*_knee": 0.5,
+      ".*_ankle": -0.25
+    },
+    "standing_hip_height_m": 0.66,
+    "note": "the torso link origin sits on the hip line, so root z is the hip height"
+  },
+  "task_params": {
+    "action_scale_rad": 0.5,
+    "action_to_target": "joint_target[i] = default_joint_pos[i] + action_scale * clamp(action[i], -1, 1)",
+    "target_radius_range_m": [
+      2.0,
+      4.5
+    ],
+    "reach_threshold_m": 0.4,
+    "min_height_m": 0.4,
+    "max_tilt_projected_gravity_z": -0.4,
+    "air_time_target_s": 0.35,
+    "foot_contact_height_m": 0.05
+  },
+  "evaluation": {
+    "num_envs": 256,
+    "seconds": 30.0,
+    "targets_reached": 4532,
+    "targets_per_biped_per_minute": 35.40625,
+    "lucky_spawn_fraction": 0.02736098852603707,
+    "falls": 0,
+    "falls_per_biped_per_minute": 0.0,
+    "mean_speed_m_s": 2.797228976059705
+  }
+}

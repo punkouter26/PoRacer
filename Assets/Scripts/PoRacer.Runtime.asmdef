@@ -6,6 +6,7 @@
         "Unity.InferenceEngine",
         "IsaacSpider.Runtime",
         "IsaacH1.Runtime",
+        "IsaacBiped2.Runtime",
         "VContainer",
         "MessagePipe",
         "MessagePipe.VContainer",

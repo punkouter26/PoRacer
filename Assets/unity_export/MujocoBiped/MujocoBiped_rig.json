@@ -1,0 +1,856 @@
+{
+ "source": "biped_sentis (MuJoCo 3.12.0, PPO 14,499,768 steps)",
+ "note": "All vectors are MuJoCo: right-handed, Z-up, X-forward, metres, radians. Quaternions are (w, x, y, z) - verified against the recorded observations.",
+ "jointOrder": [
+  "hip_z_l",
+  "hip_x_l",
+  "hip_y_l",
+  "knee_l",
+  "ankle_y_l",
+  "ankle_x_l",
+  "hip_z_r",
+  "hip_x_r",
+  "hip_y_r",
+  "knee_r",
+  "ankle_y_r",
+  "ankle_x_r"
+ ],
+ "obsDim": 49,
+ "actDim": 12,
+ "timing": {
+  "policyDt": 0.025,
+  "mujocoPhysicsDt": 0.005,
+  "mujocoFrameSkip": 5,
+  "controlHz": 40.0
+ },
+ "spawn": {
+  "posMuj": [
+   0.0,
+   0.0,
+   0.88
+  ],
+  "quatMujWxyz": [
+   1.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "observation": {
+  "clipLinVel": 10.0,
+  "clipAngVel": 10.0,
+  "clipJointVel": 20.0,
+  "maxTargetDistance": 10.0,
+  "angularVelocityIsDoubleRotated": true,
+  "angularVelocityNote": "MuJoCo's free joint stores qvel[3:6] in the BODY-LOCAL frame (proven in RIG_AUDIT section D) and env.py's _get_obs applies rot.T to it anyway, so obs[7:10] is R^T R^T w_world. Reproduce it, do not fix it - the policy was trained on this.",
+  "linearVelocityReference": "bodyFrameOrigin"
+ },
+ "task": {
+  "reachRadiusM": 0.6,
+  "targetDistanceRangeM": [
+   3.0,
+   6.0
+  ],
+  "targetAngleRangeRad": 2.4,
+  "targetHeightMuj": 0.02,
+  "healthyZRange": [
+   0.55,
+   1.1
+  ],
+  "minUprightness": 0.4,
+  "maxEpisodeSteps": 1000
+ },
+ "physics": {
+  "gravityMuj": [
+   0.0,
+   0.0,
+   -9.81
+  ],
+  "floorFriction": 1.0,
+  "footFriction": 1.2,
+  "bodyFriction": 0.9,
+  "effectiveFootGroundFriction": 1.2,
+  "mujocoFrictionCombine": "maximum",
+  "mujocoSolver": "mjSOL_NEWTON",
+  "mujocoIntegrator": "mjINT_IMPLICITFAST",
+  "mujocoIterations": 50,
+  "maxJointVelocity": 200.0,
+  "maxAngularVelocity": 200.0,
+  "maxLinearVelocity": 200.0,
+  "maxDepenetrationVelocity": 1.0,
+  "linearDamping": 0.0,
+  "angularDamping": 0.0,
+  "jointFriction": 0.0,
+  "solverPositionIterations": 12,
+  "solverVelocityIterations": 4,
+  "contactOffset": 0.01,
+  "restOffset": 0.0,
+  "selfCollisionExcludesParentChildOnly": true,
+  "dummyLinkMass": 0.01,
+  "inertiaFloor": 0.0001
+ },
+ "eval": {
+  "targetsReachedPerEpisode": 4.0,
+  "episodeLengthSteps": 516.0,
+  "meanClosingSpeed": 1.15,
+  "survivedFullEpisodeFraction": 0.3
+ },
+ "links": [
+  {
+   "name": "torso",
+   "parent": "",
+   "isRoot": true,
+   "isDummy": false,
+   "mjBody": "torso",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 20.399408297309726,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.18487
+   ],
+   "inertiaDiagMuj": [
+    0.79111663,
+    0.75186894,
+    0.11214692
+   ],
+   "joint": null,
+   "geoms": [
+    {
+     "name": "pelvis",
+     "kind": "capsule",
+     "a": [
+      0,
+      -0.09,
+      0
+     ],
+     "b": [
+      0,
+      0.09,
+      0
+     ],
+     "r": 0.085
+    },
+    {
+     "name": "chest",
+     "kind": "capsule",
+     "a": [
+      0,
+      0,
+      0.06
+     ],
+     "b": [
+      0,
+      0,
+      0.36
+     ],
+     "r": 0.09
+    },
+    {
+     "name": "head",
+     "kind": "sphere",
+     "pos": [
+      0,
+      0,
+      0.5
+     ],
+     "r": 0.09
+    }
+   ],
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.0
+  },
+  {
+   "name": "j_hip_z_l",
+   "parent": "torso",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "thigh_l",
+   "localPosMuj": [
+    0.0,
+    0.09,
+    -0.02
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "hip_z_l",
+    "index": 0,
+    "axisInChildMuj": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "lowerRad": -0.785398,
+    "upperRad": 0.785398,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 60.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 60.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_x_l",
+   "parent": "j_hip_z_l",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "thigh_l",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "hip_x_l",
+    "index": 1,
+    "axisInChildMuj": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lowerRad": -0.523599,
+    "upperRad": 0.261799,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 80.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 80.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "thigh_l",
+   "parent": "j_hip_x_l",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "thigh_l",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 5.203965299630785,
+   "comMuj": [
+    0.0,
+    0.005,
+    -0.19
+   ],
+   "inertiaDiagMuj": [
+    0.09736519,
+    0.09736519,
+    0.00904142
+   ],
+   "geoms": [
+    {
+     "name": "thigh_l",
+     "kind": "capsule",
+     "a": [
+      0,
+      0,
+      0
+     ],
+     "b": [
+      0,
+      0.01,
+      -0.38
+     ],
+     "r": 0.06
+    }
+   ],
+   "joint": {
+    "name": "hip_y_l",
+    "index": 2,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -1.919862,
+    "upperRad": 0.785398,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 130.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 130.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "shin_l",
+   "parent": "thigh_l",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "shin_l",
+   "localPosMuj": [
+    0.0,
+    0.01,
+    -0.4
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.35913328408517,
+   "comMuj": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "inertiaDiagMuj": [
+    0.05791662,
+    0.05791662,
+    0.00391432
+   ],
+   "geoms": [
+    {
+     "name": "shin_l",
+     "kind": "capsule",
+     "a": [
+      0,
+      0,
+      0
+     ],
+     "b": [
+      0,
+      0,
+      -0.38
+     ],
+     "r": 0.049
+    }
+   ],
+   "joint": {
+    "name": "knee_l",
+    "index": 3,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -2.617994,
+    "upperRad": -0.034907,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 110.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 110.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_ankle_y_l",
+   "parent": "shin_l",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "foot_l",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    -0.4
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "ankle_y_l",
+    "index": 4,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -0.785398,
+    "upperRad": 0.610865,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 70.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 70.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "foot_l",
+   "parent": "j_ankle_y_l",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "foot_l",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 1.3800000000000001,
+   "comMuj": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "inertiaDiagMuj": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "geoms": [
+    {
+     "name": "foot_l",
+     "kind": "box",
+     "pos": [
+      0.045,
+      0,
+      -0.035
+     ],
+     "half": [
+      0.115,
+      0.05,
+      0.03
+     ]
+    }
+   ],
+   "joint": {
+    "name": "ankle_x_l",
+    "index": 5,
+    "axisInChildMuj": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lowerRad": -0.436332,
+    "upperRad": 0.436332,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 40.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 40.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_z_r",
+   "parent": "torso",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "thigh_r",
+   "localPosMuj": [
+    0.0,
+    -0.09,
+    -0.02
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "hip_z_r",
+    "index": 6,
+    "axisInChildMuj": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "lowerRad": -0.785398,
+    "upperRad": 0.785398,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 60.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 60.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_x_r",
+   "parent": "j_hip_z_r",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "thigh_r",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "hip_x_r",
+    "index": 7,
+    "axisInChildMuj": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lowerRad": -0.261799,
+    "upperRad": 0.523599,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 80.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 80.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "thigh_r",
+   "parent": "j_hip_x_r",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "thigh_r",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 5.203965299630785,
+   "comMuj": [
+    0.0,
+    -0.005,
+    -0.19
+   ],
+   "inertiaDiagMuj": [
+    0.09736519,
+    0.09736519,
+    0.00904142
+   ],
+   "geoms": [
+    {
+     "name": "thigh_r",
+     "kind": "capsule",
+     "a": [
+      0,
+      0,
+      0
+     ],
+     "b": [
+      0,
+      -0.01,
+      -0.38
+     ],
+     "r": 0.06
+    }
+   ],
+   "joint": {
+    "name": "hip_y_r",
+    "index": 8,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -1.919862,
+    "upperRad": 0.785398,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 130.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 130.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "shin_r",
+   "parent": "thigh_r",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "shin_r",
+   "localPosMuj": [
+    0.0,
+    -0.01,
+    -0.4
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.35913328408517,
+   "comMuj": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "inertiaDiagMuj": [
+    0.05791662,
+    0.05791662,
+    0.00391432
+   ],
+   "geoms": [
+    {
+     "name": "shin_r",
+     "kind": "capsule",
+     "a": [
+      0,
+      0,
+      0
+     ],
+     "b": [
+      0,
+      0,
+      -0.38
+     ],
+     "r": 0.049
+    }
+   ],
+   "joint": {
+    "name": "knee_r",
+    "index": 9,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -2.617994,
+    "upperRad": -0.034907,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 110.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 110.0
+   },
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_ankle_y_r",
+   "parent": "shin_r",
+   "isRoot": false,
+   "isDummy": true,
+   "mjBody": "foot_r",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    -0.4
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 0.0,
+   "comMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "inertiaDiagMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "geoms": [],
+   "joint": {
+    "name": "ankle_y_r",
+    "index": 10,
+    "axisInChildMuj": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "lowerRad": -0.785398,
+    "upperRad": 0.610865,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 70.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 70.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "foot_r",
+   "parent": "j_ankle_y_r",
+   "isRoot": false,
+   "isDummy": false,
+   "mjBody": "foot_r",
+   "localPosMuj": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "localRotMujWxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 1.3800000000000001,
+   "comMuj": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "inertiaDiagMuj": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "geoms": [
+    {
+     "name": "foot_r",
+     "kind": "box",
+     "pos": [
+      0.045,
+      0,
+      -0.035
+     ],
+     "half": [
+      0.115,
+      0.05,
+      0.03
+     ]
+    }
+   ],
+   "joint": {
+    "name": "ankle_x_r",
+    "index": 11,
+    "axisInChildMuj": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "lowerRad": -0.436332,
+    "upperRad": 0.436332,
+    "damping": 1.0,
+    "armature": 0.02,
+    "gear": 40.0,
+    "ctrlLower": -1.0,
+    "ctrlUpper": 1.0,
+    "peakTorqueNm": 40.0
+   },
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  }
+ ]
+}

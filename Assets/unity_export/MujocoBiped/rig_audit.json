@@ -1,0 +1,1060 @@
+{
+ "sectionA": [
+  {
+   "name": "torso",
+   "isDummy": false,
+   "mass": 20.399408297309726,
+   "heaviestNeighbourMass": 0.01,
+   "massRatio": 2039.9408297309726,
+   "light": false,
+   "rawInertiaMin": 0.11214692,
+   "foldedInertiaMin": 0.11214692,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.0
+  },
+  {
+   "name": "j_hip_z_l",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 20.399408297309726,
+   "massRatio": 0.0004902102969976242,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_x_l",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 5.203965299630785,
+   "massRatio": 0.0019216115835187233,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "thigh_l",
+   "isDummy": false,
+   "mass": 5.203965299630785,
+   "heaviestNeighbourMass": 3.35913328408517,
+   "massRatio": 1.5491988139577613,
+   "light": false,
+   "rawInertiaMin": 0.00904142,
+   "foldedInertiaMin": 0.00904142,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "shin_l",
+   "isDummy": false,
+   "mass": 3.35913328408517,
+   "heaviestNeighbourMass": 5.203965299630785,
+   "massRatio": 0.6454949429281353,
+   "light": false,
+   "rawInertiaMin": 0.00391432,
+   "foldedInertiaMin": 0.00391432,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_ankle_y_l",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 3.35913328408517,
+   "massRatio": 0.0029769583860747018,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "foot_l",
+   "isDummy": false,
+   "mass": 1.3800000000000001,
+   "heaviestNeighbourMass": 0.01,
+   "massRatio": 138.0,
+   "light": false,
+   "rawInertiaMin": 0.001564,
+   "foldedInertiaMin": 0.0064975,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_z_r",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 20.399408297309726,
+   "massRatio": 0.0004902102969976242,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_hip_x_r",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 5.203965299630785,
+   "massRatio": 0.0019216115835187233,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "thigh_r",
+   "isDummy": false,
+   "mass": 5.203965299630785,
+   "heaviestNeighbourMass": 3.35913328408517,
+   "massRatio": 1.5491988139577613,
+   "light": false,
+   "rawInertiaMin": 0.00904142,
+   "foldedInertiaMin": 0.00904142,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "shin_r",
+   "isDummy": false,
+   "mass": 3.35913328408517,
+   "heaviestNeighbourMass": 5.203965299630785,
+   "massRatio": 0.6454949429281353,
+   "light": false,
+   "rawInertiaMin": 0.00391432,
+   "foldedInertiaMin": 0.00391432,
+   "smallInertia": false,
+   "armatureFoldExact": 0.0,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "j_ankle_y_r",
+   "isDummy": true,
+   "mass": 0.01,
+   "heaviestNeighbourMass": 3.35913328408517,
+   "massRatio": 0.0029769583860747018,
+   "light": true,
+   "rawInertiaMin": 0.0,
+   "foldedInertiaMin": 0.0001,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  },
+  {
+   "name": "foot_r",
+   "isDummy": false,
+   "mass": 1.3800000000000001,
+   "heaviestNeighbourMass": 0.01,
+   "massRatio": 138.0,
+   "light": false,
+   "rawInertiaMin": 0.001564,
+   "foldedInertiaMin": 0.0064975,
+   "smallInertia": false,
+   "armatureFoldExact": 0.02,
+   "armatureFoldNaive": 0.02
+  }
+ ],
+ "sectionB": [
+  {
+   "joint": "hip_z_l",
+   "index": 0,
+   "maxAbsRadPerSec": 13.22693979,
+   "p99AbsRadPerSec": 10.742835253199994,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 60.0,
+   "peakTorqueNm": 60.0,
+   "rangeDeg": [
+    -44.99999063801583,
+    44.99999063801583
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "hip_x_l",
+   "index": 1,
+   "maxAbsRadPerSec": 6.36949561,
+   "p99AbsRadPerSec": 5.656592258699991,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 80.0,
+   "peakTorqueNm": 80.0,
+   "rangeDeg": [
+    -30.000012857270395,
+    14.99997778074544
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "hip_y_l",
+   "index": 2,
+   "maxAbsRadPerSec": 8.38301962,
+   "p99AbsRadPerSec": 6.075901128799991,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 130.0,
+   "peakTorqueNm": 130.0,
+   "rangeDeg": [
+    -109.99998984754525,
+    44.99999063801583
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "knee_l",
+   "index": 3,
+   "maxAbsRadPerSec": 7.57927337,
+   "p99AbsRadPerSec": 5.2208333959999855,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 110.0,
+   "peakTorqueNm": 110.0,
+   "rangeDeg": [
+    -150.00000699057244,
+    -2.0000237754631645
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "ankle_y_l",
+   "index": 4,
+   "maxAbsRadPerSec": 34.04476426,
+   "p99AbsRadPerSec": 31.846122264599995,
+   "observationClip": 20.0,
+   "clippedInObservation": true,
+   "mujocoVelocityLimit": null,
+   "gear": 70.0,
+   "peakTorqueNm": 70.0,
+   "rangeDeg": [
+    -44.99999063801583,
+    34.999986352259036
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "ankle_x_l",
+   "index": 5,
+   "maxAbsRadPerSec": 20.15831509,
+   "p99AbsRadPerSec": 16.718528555899994,
+   "observationClip": 20.0,
+   "clippedInObservation": true,
+   "mujocoVelocityLimit": null,
+   "gear": 40.0,
+   "peakTorqueNm": 40.0,
+   "rangeDeg": [
+    -24.999982066502238,
+    24.999982066502238
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "hip_z_r",
+   "index": 6,
+   "maxAbsRadPerSec": 18.96139108,
+   "p99AbsRadPerSec": 17.297600691199975,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 60.0,
+   "peakTorqueNm": 60.0,
+   "rangeDeg": [
+    -44.99999063801583,
+    44.99999063801583
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "hip_x_r",
+   "index": 7,
+   "maxAbsRadPerSec": 11.55583125,
+   "p99AbsRadPerSec": 9.311947461499997,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 80.0,
+   "peakTorqueNm": 80.0,
+   "rangeDeg": [
+    -14.99997778074544,
+    30.000012857270395
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "hip_y_r",
+   "index": 8,
+   "maxAbsRadPerSec": 10.78744907,
+   "p99AbsRadPerSec": 7.428932034599982,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 130.0,
+   "peakTorqueNm": 130.0,
+   "rangeDeg": [
+    -109.99998984754525,
+    44.99999063801583
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "knee_r",
+   "index": 9,
+   "maxAbsRadPerSec": 5.65568948,
+   "p99AbsRadPerSec": 3.2799392822999947,
+   "observationClip": 20.0,
+   "clippedInObservation": false,
+   "mujocoVelocityLimit": null,
+   "gear": 110.0,
+   "peakTorqueNm": 110.0,
+   "rangeDeg": [
+    -150.00000699057244,
+    -2.0000237754631645
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "ankle_y_r",
+   "index": 10,
+   "maxAbsRadPerSec": 37.141694,
+   "p99AbsRadPerSec": 33.06802543169994,
+   "observationClip": 20.0,
+   "clippedInObservation": true,
+   "mujocoVelocityLimit": null,
+   "gear": 70.0,
+   "peakTorqueNm": 70.0,
+   "rangeDeg": [
+    -44.99999063801583,
+    34.999986352259036
+   ],
+   "unityMaxJointVelocity": 200.0
+  },
+  {
+   "joint": "ankle_x_r",
+   "index": 11,
+   "maxAbsRadPerSec": 22.76961194,
+   "p99AbsRadPerSec": 15.190732413499997,
+   "observationClip": 20.0,
+   "clippedInObservation": true,
+   "mujocoVelocityLimit": null,
+   "gear": 40.0,
+   "peakTorqueNm": 40.0,
+   "rangeDeg": [
+    -24.999982066502238,
+    24.999982066502238
+   ],
+   "unityMaxJointVelocity": 200.0
+  }
+ ],
+ "sectionC": [
+  {
+   "joint": "hip_z_l",
+   "none": {
+    "inertia": 0.023888752460899294,
+    "ratios": {
+     "project (0.005)": 0.2093035209010565,
+     "1/60": 0.6976784030035216,
+     "1/120": 0.3488392015017608,
+     "1/240": 0.1744196007508804,
+     "1/480": 0.0872098003754402,
+     "1/960": 0.0436049001877201
+    }
+   },
+   "exact": {
+    "inertia": 0.043888752460899294,
+    "ratios": {
+     "project (0.005)": 0.11392440476531031,
+     "1/60": 0.3797480158843677,
+     "1/120": 0.18987400794218384,
+     "1/240": 0.09493700397109192,
+     "1/480": 0.04746850198554596,
+     "1/960": 0.02373425099277298
+    }
+   },
+   "naive": {
+    "inertia": 0.043888752460899294,
+    "ratios": {
+     "project (0.005)": 0.11392440476531031,
+     "1/60": 0.3797480158843677,
+     "1/120": 0.18987400794218384,
+     "1/240": 0.09493700397109192,
+     "1/480": 0.04746850198554596,
+     "1/960": 0.02373425099277298
+    }
+   }
+  },
+  {
+   "joint": "hip_x_l",
+   "none": {
+    "inertia": 2.4833987659676184,
+    "ratios": {
+     "project (0.005)": 0.0020133697690921685,
+     "1/60": 0.0067112325636405614,
+     "1/120": 0.0033556162818202807,
+     "1/240": 0.0016778081409101404,
+     "1/480": 0.0008389040704550702,
+     "1/960": 0.0004194520352275351
+    }
+   },
+   "exact": {
+    "inertia": 2.503398765967619,
+    "ratios": {
+     "project (0.005)": 0.0019972846787225246,
+     "1/60": 0.006657615595741748,
+     "1/120": 0.003328807797870874,
+     "1/240": 0.001664403898935437,
+     "1/480": 0.0008322019494677185,
+     "1/960": 0.00041610097473385925
+    }
+   },
+   "naive": {
+    "inertia": 2.5233987659676185,
+    "ratios": {
+     "project (0.005)": 0.001981454563358601,
+     "1/60": 0.0066048485445286695,
+     "1/120": 0.0033024242722643348,
+     "1/240": 0.0016512121361321674,
+     "1/480": 0.0008256060680660837,
+     "1/960": 0.00041280303403304184
+    }
+   }
+  },
+  {
+   "joint": "hip_y_l",
+   "none": {
+    "inertia": 2.4904217535067197,
+    "ratios": {
+     "project (0.005)": 0.002007692067803209,
+     "1/60": 0.006692306892677364,
+     "1/120": 0.003346153446338682,
+     "1/240": 0.001673076723169341,
+     "1/480": 0.0008365383615846705,
+     "1/960": 0.00041826918079233523
+    }
+   },
+   "exact": {
+    "inertia": 2.5104217535067197,
+    "ratios": {
+     "project (0.005)": 0.0019916972090509,
+     "1/60": 0.006638990696836333,
+     "1/120": 0.0033194953484181667,
+     "1/240": 0.0016597476742090834,
+     "1/480": 0.0008298738371045417,
+     "1/960": 0.00041493691855227084
+    }
+   },
+   "naive": {
+    "inertia": 2.5504217535067197,
+    "ratios": {
+     "project (0.005)": 0.001960460066310686,
+     "1/60": 0.006534866887702287,
+     "1/120": 0.0032674334438511435,
+     "1/240": 0.0016337167219255717,
+     "1/480": 0.0008168583609627859,
+     "1/960": 0.00040842918048139294
+    }
+   }
+  },
+  {
+   "joint": "knee_l",
+   "none": {
+    "inertia": 0.45130383155547477,
+    "ratios": {
+     "project (0.005)": 0.011079010747076705,
+     "1/60": 0.036930035823589016,
+     "1/120": 0.018465017911794508,
+     "1/240": 0.009232508955897254,
+     "1/480": 0.004616254477948627,
+     "1/960": 0.0023081272389743135
+    }
+   },
+   "exact": {
+    "inertia": 0.4713038315554748,
+    "ratios": {
+     "project (0.005)": 0.010608867709600777,
+     "1/60": 0.03536289236533592,
+     "1/120": 0.01768144618266796,
+     "1/240": 0.00884072309133398,
+     "1/480": 0.00442036154566699,
+     "1/960": 0.002210180772833495
+    }
+   },
+   "naive": {
+    "inertia": 0.49130383155547475,
+    "ratios": {
+     "project (0.005)": 0.010177001844601803,
+     "1/60": 0.03392333948200601,
+     "1/120": 0.016961669741003004,
+     "1/240": 0.008480834870501502,
+     "1/480": 0.004240417435250751,
+     "1/960": 0.0021202087176253755
+    }
+   }
+  },
+  {
+   "joint": "ankle_y_l",
+   "none": {
+    "inertia": 0.011082500000000002,
+    "ratios": {
+     "project (0.005)": 0.45116174148432203,
+     "1/60": 1.5038724716144067,
+     "1/120": 0.7519362358072034,
+     "1/240": 0.3759681179036017,
+     "1/480": 0.18798405895180084,
+     "1/960": 0.09399202947590042
+    }
+   },
+   "exact": {
+    "inertia": 0.031082500000000002,
+    "ratios": {
+     "project (0.005)": 0.160862221507279,
+     "1/60": 0.5362074050242633,
+     "1/120": 0.26810370251213167,
+     "1/240": 0.13405185125606583,
+     "1/480": 0.06702592562803292,
+     "1/960": 0.03351296281401646
+    }
+   },
+   "naive": {
+    "inertia": 0.031082500000000002,
+    "ratios": {
+     "project (0.005)": 0.160862221507279,
+     "1/60": 0.5362074050242633,
+     "1/120": 0.26810370251213167,
+     "1/240": 0.13405185125606583,
+     "1/480": 0.06702592562803292,
+     "1/960": 0.03351296281401646
+    }
+   }
+  },
+  {
+   "joint": "ankle_x_l",
+   "none": {
+    "inertia": 0.003254500000000003,
+    "ratios": {
+     "project (0.005)": 1.5363343063450592,
+     "1/60": 5.121114354483531,
+     "1/120": 2.5605571772417655,
+     "1/240": 1.2802785886208827,
+     "1/480": 0.6401392943104414,
+     "1/960": 0.3200696471552207
+    }
+   },
+   "exact": {
+    "inertia": 0.023254500000000004,
+    "ratios": {
+     "project (0.005)": 0.2150121481863725,
+     "1/60": 0.7167071606212416,
+     "1/120": 0.3583535803106208,
+     "1/240": 0.1791767901553104,
+     "1/480": 0.0895883950776552,
+     "1/960": 0.0447941975388276
+    }
+   },
+   "naive": {
+    "inertia": 0.023254500000000004,
+    "ratios": {
+     "project (0.005)": 0.2150121481863725,
+     "1/60": 0.7167071606212416,
+     "1/120": 0.3583535803106208,
+     "1/240": 0.1791767901553104,
+     "1/480": 0.0895883950776552,
+     "1/960": 0.0447941975388276
+    }
+   }
+  },
+  {
+   "joint": "hip_z_r",
+   "none": {
+    "inertia": 0.023888752460899294,
+    "ratios": {
+     "project (0.005)": 0.2093035209010565,
+     "1/60": 0.6976784030035216,
+     "1/120": 0.3488392015017608,
+     "1/240": 0.1744196007508804,
+     "1/480": 0.0872098003754402,
+     "1/960": 0.0436049001877201
+    }
+   },
+   "exact": {
+    "inertia": 0.043888752460899294,
+    "ratios": {
+     "project (0.005)": 0.11392440476531031,
+     "1/60": 0.3797480158843677,
+     "1/120": 0.18987400794218384,
+     "1/240": 0.09493700397109192,
+     "1/480": 0.04746850198554596,
+     "1/960": 0.02373425099277298
+    }
+   },
+   "naive": {
+    "inertia": 0.043888752460899294,
+    "ratios": {
+     "project (0.005)": 0.11392440476531031,
+     "1/60": 0.3797480158843677,
+     "1/120": 0.18987400794218384,
+     "1/240": 0.09493700397109192,
+     "1/480": 0.04746850198554596,
+     "1/960": 0.02373425099277298
+    }
+   }
+  },
+  {
+   "joint": "hip_x_r",
+   "none": {
+    "inertia": 2.4833987659676184,
+    "ratios": {
+     "project (0.005)": 0.0020133697690921685,
+     "1/60": 0.0067112325636405614,
+     "1/120": 0.0033556162818202807,
+     "1/240": 0.0016778081409101404,
+     "1/480": 0.0008389040704550702,
+     "1/960": 0.0004194520352275351
+    }
+   },
+   "exact": {
+    "inertia": 2.503398765967619,
+    "ratios": {
+     "project (0.005)": 0.0019972846787225246,
+     "1/60": 0.006657615595741748,
+     "1/120": 0.003328807797870874,
+     "1/240": 0.001664403898935437,
+     "1/480": 0.0008322019494677185,
+     "1/960": 0.00041610097473385925
+    }
+   },
+   "naive": {
+    "inertia": 2.5233987659676185,
+    "ratios": {
+     "project (0.005)": 0.001981454563358601,
+     "1/60": 0.0066048485445286695,
+     "1/120": 0.0033024242722643348,
+     "1/240": 0.0016512121361321674,
+     "1/480": 0.0008256060680660837,
+     "1/960": 0.00041280303403304184
+    }
+   }
+  },
+  {
+   "joint": "hip_y_r",
+   "none": {
+    "inertia": 2.4904217535067197,
+    "ratios": {
+     "project (0.005)": 0.002007692067803209,
+     "1/60": 0.006692306892677364,
+     "1/120": 0.003346153446338682,
+     "1/240": 0.001673076723169341,
+     "1/480": 0.0008365383615846705,
+     "1/960": 0.00041826918079233523
+    }
+   },
+   "exact": {
+    "inertia": 2.5104217535067197,
+    "ratios": {
+     "project (0.005)": 0.0019916972090509,
+     "1/60": 0.006638990696836333,
+     "1/120": 0.0033194953484181667,
+     "1/240": 0.0016597476742090834,
+     "1/480": 0.0008298738371045417,
+     "1/960": 0.00041493691855227084
+    }
+   },
+   "naive": {
+    "inertia": 2.5504217535067197,
+    "ratios": {
+     "project (0.005)": 0.001960460066310686,
+     "1/60": 0.006534866887702287,
+     "1/120": 0.0032674334438511435,
+     "1/240": 0.0016337167219255717,
+     "1/480": 0.0008168583609627859,
+     "1/960": 0.00040842918048139294
+    }
+   }
+  },
+  {
+   "joint": "knee_r",
+   "none": {
+    "inertia": 0.45130383155547477,
+    "ratios": {
+     "project (0.005)": 0.011079010747076705,
+     "1/60": 0.036930035823589016,
+     "1/120": 0.018465017911794508,
+     "1/240": 0.009232508955897254,
+     "1/480": 0.004616254477948627,
+     "1/960": 0.0023081272389743135
+    }
+   },
+   "exact": {
+    "inertia": 0.4713038315554748,
+    "ratios": {
+     "project (0.005)": 0.010608867709600777,
+     "1/60": 0.03536289236533592,
+     "1/120": 0.01768144618266796,
+     "1/240": 0.00884072309133398,
+     "1/480": 0.00442036154566699,
+     "1/960": 0.002210180772833495
+    }
+   },
+   "naive": {
+    "inertia": 0.49130383155547475,
+    "ratios": {
+     "project (0.005)": 0.010177001844601803,
+     "1/60": 0.03392333948200601,
+     "1/120": 0.016961669741003004,
+     "1/240": 0.008480834870501502,
+     "1/480": 0.004240417435250751,
+     "1/960": 0.0021202087176253755
+    }
+   }
+  },
+  {
+   "joint": "ankle_y_r",
+   "none": {
+    "inertia": 0.011082500000000002,
+    "ratios": {
+     "project (0.005)": 0.45116174148432203,
+     "1/60": 1.5038724716144067,
+     "1/120": 0.7519362358072034,
+     "1/240": 0.3759681179036017,
+     "1/480": 0.18798405895180084,
+     "1/960": 0.09399202947590042
+    }
+   },
+   "exact": {
+    "inertia": 0.031082500000000002,
+    "ratios": {
+     "project (0.005)": 0.160862221507279,
+     "1/60": 0.5362074050242633,
+     "1/120": 0.26810370251213167,
+     "1/240": 0.13405185125606583,
+     "1/480": 0.06702592562803292,
+     "1/960": 0.03351296281401646
+    }
+   },
+   "naive": {
+    "inertia": 0.031082500000000002,
+    "ratios": {
+     "project (0.005)": 0.160862221507279,
+     "1/60": 0.5362074050242633,
+     "1/120": 0.26810370251213167,
+     "1/240": 0.13405185125606583,
+     "1/480": 0.06702592562803292,
+     "1/960": 0.03351296281401646
+    }
+   }
+  },
+  {
+   "joint": "ankle_x_r",
+   "none": {
+    "inertia": 0.003254500000000003,
+    "ratios": {
+     "project (0.005)": 1.5363343063450592,
+     "1/60": 5.121114354483531,
+     "1/120": 2.5605571772417655,
+     "1/240": 1.2802785886208827,
+     "1/480": 0.6401392943104414,
+     "1/960": 0.3200696471552207
+    }
+   },
+   "exact": {
+    "inertia": 0.023254500000000004,
+    "ratios": {
+     "project (0.005)": 0.2150121481863725,
+     "1/60": 0.7167071606212416,
+     "1/120": 0.3583535803106208,
+     "1/240": 0.1791767901553104,
+     "1/480": 0.0895883950776552,
+     "1/960": 0.0447941975388276
+    }
+   },
+   "naive": {
+    "inertia": 0.023254500000000004,
+    "ratios": {
+     "project (0.005)": 0.2150121481863725,
+     "1/60": 0.7167071606212416,
+     "1/120": 0.3583535803106208,
+     "1/240": 0.1791767901553104,
+     "1/480": 0.0895883950776552,
+     "1/960": 0.0447941975388276
+    }
+   }
+  }
+ ],
+ "sectionD": {
+  "quaternionOrder": "wxyz",
+  "quaternionIndices": {
+   "w": 0,
+   "x": 1,
+   "y": 2,
+   "z": 3
+  },
+  "residuals": {
+   "wxyz": 7.958637038285588e-08,
+   "xyzw": 8.747929999435645
+  },
+  "angularVelocityFrame": "bodyLocal",
+  "angularVelocityEvidence": {
+   "samples": 146,
+   "dt": 0.025,
+   "medianAxisErrorIfBodyLocalDeg": 20.076750300724903,
+   "medianAxisErrorIfWorldDeg": 62.404062915654904,
+   "verdict": "bodyLocal"
+  },
+  "linearVelocityFrame": "world",
+  "linearVelocityReference": "bodyFrameOrigin"
+ },
+ "sectionE": [
+  {
+   "name": "torso",
+   "massSpec": 20.399408297309726,
+   "massRecomputed": 20.39940829730972,
+   "massErrorPct": 3.483153655264631e-14,
+   "comSpec": [
+    0.0,
+    0.0,
+    0.18487
+   ],
+   "comRecomputed": [
+    0.0,
+    0.0,
+    0.18486960985626283
+   ],
+   "comErrorMm": 0.00039014373717782824,
+   "inertiaSpec": [
+    0.79111663,
+    0.75186894,
+    0.11214692
+   ],
+   "inertiaPrincipal": [
+    0.7911166337424984,
+    0.751868942523173,
+    0.11214691801222212
+   ],
+   "inertiaErrorPct": 1.7724765627609832e-06,
+   "maxOffDiagonal": 0.0,
+   "maxOffDiagonalRelative": 0.0,
+   "axisMisalignmentDeg": 0.0,
+   "diagonalApproximationErrorPct": 0.0
+  },
+  {
+   "name": "thigh_l",
+   "massSpec": 5.203965299630785,
+   "massRecomputed": 5.2039652996307835,
+   "massErrorPct": 3.4134678790542295e-14,
+   "comSpec": [
+    0.0,
+    0.005,
+    -0.19
+   ],
+   "comRecomputed": [
+    0.0,
+    0.005,
+    -0.19
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.09736519,
+    0.09736519,
+    0.00904142
+   ],
+   "inertiaPrincipal": [
+    0.09736518729522126,
+    0.09736518729522127,
+    0.009041417213011209
+   ],
+   "inertiaErrorPct": 3.0824680092175564e-05,
+   "maxOffDiagonal": 0.0023227012201550053,
+   "maxOffDiagonalRelative": 0.02385556156855464,
+   "axisMisalignmentDeg": 14.314731643685974,
+   "diagonalApproximationErrorPct": 0.676041320512304
+  },
+  {
+   "name": "shin_l",
+   "massSpec": 3.35913328408517,
+   "massRecomputed": 3.3591332840851695,
+   "massErrorPct": 1.322035097428432e-14,
+   "comSpec": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "comRecomputed": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.05791662,
+    0.05791662,
+    0.00391432
+   ],
+   "inertiaPrincipal": [
+    0.05791662072502768,
+    0.05791662072502768,
+    0.0039143165519336665
+   ],
+   "inertiaErrorPct": 8.808851430960922e-05,
+   "maxOffDiagonal": 0.0,
+   "maxOffDiagonalRelative": 0.0,
+   "axisMisalignmentDeg": 0.0,
+   "diagonalApproximationErrorPct": 0.0
+  },
+  {
+   "name": "foot_l",
+   "massSpec": 1.3800000000000001,
+   "massRecomputed": 1.38,
+   "massErrorPct": 1.6090188762683425e-14,
+   "comSpec": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "comRecomputed": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "inertiaPrincipal": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "inertiaErrorPct": 0.0,
+   "maxOffDiagonal": 0.0,
+   "maxOffDiagonalRelative": 0.0,
+   "axisMisalignmentDeg": 0.0,
+   "diagonalApproximationErrorPct": 0.0
+  },
+  {
+   "name": "thigh_r",
+   "massSpec": 5.203965299630785,
+   "massRecomputed": 5.2039652996307835,
+   "massErrorPct": 3.4134678790542295e-14,
+   "comSpec": [
+    0.0,
+    -0.005,
+    -0.19
+   ],
+   "comRecomputed": [
+    0.0,
+    -0.005,
+    -0.19
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.09736519,
+    0.09736519,
+    0.00904142
+   ],
+   "inertiaPrincipal": [
+    0.09736518729522126,
+    0.09736518729522127,
+    0.009041417213011209
+   ],
+   "inertiaErrorPct": 3.0824680092175564e-05,
+   "maxOffDiagonal": 0.0023227012201550053,
+   "maxOffDiagonalRelative": 0.02385556156855464,
+   "axisMisalignmentDeg": 14.314731643685974,
+   "diagonalApproximationErrorPct": 0.676041320512304
+  },
+  {
+   "name": "shin_r",
+   "massSpec": 3.35913328408517,
+   "massRecomputed": 3.3591332840851695,
+   "massErrorPct": 1.322035097428432e-14,
+   "comSpec": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "comRecomputed": [
+    0.0,
+    0.0,
+    -0.19
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.05791662,
+    0.05791662,
+    0.00391432
+   ],
+   "inertiaPrincipal": [
+    0.05791662072502768,
+    0.05791662072502768,
+    0.0039143165519336665
+   ],
+   "inertiaErrorPct": 8.808851430960922e-05,
+   "maxOffDiagonal": 0.0,
+   "maxOffDiagonalRelative": 0.0,
+   "axisMisalignmentDeg": 0.0,
+   "diagonalApproximationErrorPct": 0.0
+  },
+  {
+   "name": "foot_r",
+   "massSpec": 1.3800000000000001,
+   "massRecomputed": 1.38,
+   "massErrorPct": 1.6090188762683425e-14,
+   "comSpec": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "comRecomputed": [
+    0.045,
+    0.0,
+    -0.035
+   ],
+   "comErrorMm": 0.0,
+   "inertiaSpec": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "inertiaPrincipal": [
+    0.001564,
+    0.0064975,
+    0.0072335
+   ],
+   "inertiaErrorPct": 0.0,
+   "maxOffDiagonal": 0.0,
+   "maxOffDiagonalRelative": 0.0,
+   "axisMisalignmentDeg": 0.0,
+   "diagonalApproximationErrorPct": 0.0
+  }
+ ],
+ "inertiaFloor": 0.0001,
+ "lightLinkRatio": 0.1,
+ "timesteps": {
+  "project (0.005)": 0.005,
+  "1/60": 0.016666666666666666,
+  "1/120": 0.008333333333333333,
+  "1/240": 0.004166666666666667,
+  "1/480": 0.0020833333333333333,
+  "1/960": 0.0010416666666666667
+ }
+}

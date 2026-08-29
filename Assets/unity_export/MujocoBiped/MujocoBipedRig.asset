@@ -1,0 +1,468 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b118f8538ad365449e48809857abe6f, type: 3}
+  m_Name: MujocoBipedRig
+  m_EditorClassIdentifier: MujocoBiped.Runtime::MujocoBiped.MujocoBipedRigAsset
+  source: biped_sentis (MuJoCo 3.12.0, PPO 14,499,768 steps)
+  jointOrder:
+  - hip_z_l
+  - hip_x_l
+  - hip_y_l
+  - knee_l
+  - ankle_y_l
+  - ankle_x_l
+  - hip_z_r
+  - hip_x_r
+  - hip_y_r
+  - knee_r
+  - ankle_y_r
+  - ankle_x_r
+  obsDim: 49
+  actDim: 12
+  policyDt: 0.025
+  mujocoPhysicsDt: 0.005
+  mujocoFrameSkip: 5
+  spawnPosMuj: {x: 0, y: 0, z: 0.88}
+  clipLinVel: 10
+  clipAngVel: 10
+  clipJointVel: 20
+  maxTargetDistance: 10
+  angularVelocityIsDoubleRotated: 1
+  reachRadiusM: 0.6
+  targetDistanceRangeM: {x: 3, y: 6}
+  targetAngleRangeRad: 2.4
+  targetHeightMuj: 0.02
+  healthyZRange: {x: 0.55, y: 1.1}
+  minUprightness: 0.4
+  maxEpisodeSteps: 1000
+  physics:
+    gravityMuj: {x: 0, y: 0, z: -9.81}
+    floorFriction: 1
+    footFriction: 1.2
+    bodyFriction: 0.9
+    effectiveFootGroundFriction: 1.2
+    maxJointVelocity: 200
+    maxAngularVelocity: 200
+    maxLinearVelocity: 200
+    maxDepenetrationVelocity: 1
+    linearDamping: 0
+    angularDamping: 0
+    jointFriction: 0
+    solverPositionIterations: 12
+    solverVelocityIterations: 4
+    contactOffset: 0.01
+    restOffset: 0
+    selfCollisionExcludesParentChildOnly: 1
+    dummyLinkMass: 0.01
+    inertiaFloor: 0.0001
+  links:
+  - name: torso
+    parent: 
+    isRoot: 1
+    isDummy: 0
+    mjBody: torso
+    mass: 20.399408
+    comMuj: {x: 0, y: 0, z: 0.18487}
+    inertiaDiagMuj: {x: 0.79111665, y: 0.75186896, z: 0.11214692}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 0
+    joint:
+      name: 
+      index: 0
+      axisInChildMuj: {x: 0, y: 0, z: 0}
+      lowerRad: 0
+      upperRad: 0
+      damping: 0
+      armature: 0
+      gear: 0
+      ctrlLower: 0
+      ctrlUpper: 0
+    geoms:
+    - kind: capsule
+      a: {x: 0, y: -0.09, z: 0}
+      b: {x: 0, y: 0.09, z: 0}
+      radius: 0.085
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: pelvis
+    - kind: capsule
+      a: {x: 0, y: 0, z: 0.06}
+      b: {x: 0, y: 0, z: 0.36}
+      radius: 0.09
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: chest
+    - kind: sphere
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0, z: 0}
+      radius: 0.09
+      pos: {x: 0, y: 0, z: 0.5}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: head
+    armatureFoldExact: 0
+    armatureFoldNaive: 0
+  - name: j_hip_z_l
+    parent: torso
+    isRoot: 0
+    isDummy: 1
+    mjBody: thigh_l
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: 0.09, z: -0.02}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_z_l
+      index: 0
+      axisInChildMuj: {x: 0, y: 0, z: 1}
+      lowerRad: -0.785398
+      upperRad: 0.785398
+      damping: 1
+      armature: 0.02
+      gear: 60
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  - name: j_hip_x_l
+    parent: j_hip_z_l
+    isRoot: 0
+    isDummy: 1
+    mjBody: thigh_l
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_x_l
+      index: 1
+      axisInChildMuj: {x: 1, y: 0, z: 0}
+      lowerRad: -0.523599
+      upperRad: 0.261799
+      damping: 1
+      armature: 0.02
+      gear: 80
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: thigh_l
+    parent: j_hip_x_l
+    isRoot: 0
+    isDummy: 0
+    mjBody: thigh_l
+    mass: 5.203965
+    comMuj: {x: 0, y: 0.005, z: -0.19}
+    inertiaDiagMuj: {x: 0.09736519, y: 0.09736519, z: 0.00904142}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_y_l
+      index: 2
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -1.919862
+      upperRad: 0.785398
+      damping: 1
+      armature: 0.02
+      gear: 130
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: capsule
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0.01, z: -0.38}
+      radius: 0.06
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: thigh_l
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: shin_l
+    parent: thigh_l
+    isRoot: 0
+    isDummy: 0
+    mjBody: shin_l
+    mass: 3.3591332
+    comMuj: {x: 0, y: 0, z: -0.19}
+    inertiaDiagMuj: {x: 0.05791662, y: 0.05791662, z: 0.00391432}
+    localPosMuj: {x: 0, y: 0.01, z: -0.4}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: knee_l
+      index: 3
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -2.617994
+      upperRad: -0.034907
+      damping: 1
+      armature: 0.02
+      gear: 110
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: capsule
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0, z: -0.38}
+      radius: 0.049
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: shin_l
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: j_ankle_y_l
+    parent: shin_l
+    isRoot: 0
+    isDummy: 1
+    mjBody: foot_l
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: 0, z: -0.4}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_y_l
+      index: 4
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -0.785398
+      upperRad: 0.610865
+      damping: 1
+      armature: 0.02
+      gear: 70
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  - name: foot_l
+    parent: j_ankle_y_l
+    isRoot: 0
+    isDummy: 0
+    mjBody: foot_l
+    mass: 1.38
+    comMuj: {x: 0.045, y: 0, z: -0.035}
+    inertiaDiagMuj: {x: 0.001564, y: 0.0064975, z: 0.0072335}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_x_l
+      index: 5
+      axisInChildMuj: {x: 1, y: 0, z: 0}
+      lowerRad: -0.436332
+      upperRad: 0.436332
+      damping: 1
+      armature: 0.02
+      gear: 40
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: box
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0, z: 0}
+      radius: 0
+      pos: {x: 0.045, y: 0, z: -0.035}
+      half: {x: 0.115, y: 0.05, z: 0.03}
+      friction: 1.2
+      name: foot_l
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  - name: j_hip_z_r
+    parent: torso
+    isRoot: 0
+    isDummy: 1
+    mjBody: thigh_r
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: -0.09, z: -0.02}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_z_r
+      index: 6
+      axisInChildMuj: {x: 0, y: 0, z: 1}
+      lowerRad: -0.785398
+      upperRad: 0.785398
+      damping: 1
+      armature: 0.02
+      gear: 60
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  - name: j_hip_x_r
+    parent: j_hip_z_r
+    isRoot: 0
+    isDummy: 1
+    mjBody: thigh_r
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_x_r
+      index: 7
+      axisInChildMuj: {x: 1, y: 0, z: 0}
+      lowerRad: -0.261799
+      upperRad: 0.523599
+      damping: 1
+      armature: 0.02
+      gear: 80
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: thigh_r
+    parent: j_hip_x_r
+    isRoot: 0
+    isDummy: 0
+    mjBody: thigh_r
+    mass: 5.203965
+    comMuj: {x: 0, y: -0.005, z: -0.19}
+    inertiaDiagMuj: {x: 0.09736519, y: 0.09736519, z: 0.00904142}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_y_r
+      index: 8
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -1.919862
+      upperRad: 0.785398
+      damping: 1
+      armature: 0.02
+      gear: 130
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: capsule
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: -0.01, z: -0.38}
+      radius: 0.06
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: thigh_r
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: shin_r
+    parent: thigh_r
+    isRoot: 0
+    isDummy: 0
+    mjBody: shin_r
+    mass: 3.3591332
+    comMuj: {x: 0, y: 0, z: -0.19}
+    inertiaDiagMuj: {x: 0.05791662, y: 0.05791662, z: 0.00391432}
+    localPosMuj: {x: 0, y: -0.01, z: -0.4}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: knee_r
+      index: 9
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -2.617994
+      upperRad: -0.034907
+      damping: 1
+      armature: 0.02
+      gear: 110
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: capsule
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0, z: -0.38}
+      radius: 0.049
+      pos: {x: 0, y: 0, z: 0}
+      half: {x: 0, y: 0, z: 0}
+      friction: 0.9
+      name: shin_r
+    armatureFoldExact: 0
+    armatureFoldNaive: 0.02
+  - name: j_ankle_y_r
+    parent: shin_r
+    isRoot: 0
+    isDummy: 1
+    mjBody: foot_r
+    mass: 0
+    comMuj: {x: 0, y: 0, z: 0}
+    inertiaDiagMuj: {x: 0, y: 0, z: 0}
+    localPosMuj: {x: 0, y: 0, z: -0.4}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_y_r
+      index: 10
+      axisInChildMuj: {x: 0, y: 1, z: 0}
+      lowerRad: -0.785398
+      upperRad: 0.610865
+      damping: 1
+      armature: 0.02
+      gear: 70
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms: []
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  - name: foot_r
+    parent: j_ankle_y_r
+    isRoot: 0
+    isDummy: 0
+    mjBody: foot_r
+    mass: 1.38
+    comMuj: {x: 0.045, y: 0, z: -0.035}
+    inertiaDiagMuj: {x: 0.001564, y: 0.0064975, z: 0.0072335}
+    localPosMuj: {x: 0, y: 0, z: 0}
+    localRotMujWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_x_r
+      index: 11
+      axisInChildMuj: {x: 1, y: 0, z: 0}
+      lowerRad: -0.436332
+      upperRad: 0.436332
+      damping: 1
+      armature: 0.02
+      gear: 40
+      ctrlLower: -1
+      ctrlUpper: 1
+    geoms:
+    - kind: box
+      a: {x: 0, y: 0, z: 0}
+      b: {x: 0, y: 0, z: 0}
+      radius: 0
+      pos: {x: 0.045, y: 0, z: -0.035}
+      half: {x: 0.115, y: 0.05, z: 0.03}
+      friction: 1.2
+      name: foot_r
+    armatureFoldExact: 0.02
+    armatureFoldNaive: 0.02
+  mujocoTargetsReachedPerEpisode: 4
+  mujocoEpisodeLengthSteps: 516
+  mujocoMeanClosingSpeed: 1.15
+  mujocoSurvivedFullEpisodeFraction: 0.3
