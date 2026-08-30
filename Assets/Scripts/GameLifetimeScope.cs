@@ -45,7 +45,6 @@ namespace PoRacer
             builder.RegisterComponentInHierarchy<RaceTrackView>();
             builder.RegisterComponentInHierarchy<CameraRigView>();
             builder.RegisterComponentInHierarchy<FinishLineView>();
-            builder.RegisterComponentInHierarchy<AudioDirectorView>();
             builder.RegisterComponentInHierarchy<CameraFxView>();
             builder.RegisterComponentInHierarchy<DebugOverlayView>();
             builder.RegisterComponentInHierarchy<PostFxView>();

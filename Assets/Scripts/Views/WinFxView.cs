@@ -7,9 +7,13 @@ using VContainer;
 namespace PoRacer.Views
 {
     /// <summary>
-    /// Finish-line celebration: confetti burst and a synthesized fanfare when a
-    /// racer takes first place, small tick for later places. All effects are
-    /// generated in code — no audio or particle asset files.
+    /// Finish-line celebration: confetti burst and a spotlight when a racer takes
+    /// first place, a smaller puff for the podium. All effects are generated in
+    /// code — no particle asset files.
+    ///
+    /// Silent by design. The fanfare and the placing tick were removed with the
+    /// rest of the non-creature mix; the only sounds the game makes now come from
+    /// the creatures themselves.
     /// </summary>
     public sealed class WinFxView : MonoBehaviour
     {
@@ -19,9 +23,6 @@ namespace PoRacer.Views
 
         private ParticleSystem _confetti;
         private ParticleSystem _fireworks;
-        private AudioSource _audioSource;
-        private AudioClip _fanfare;
-        private AudioClip _tick;
         private System.IDisposable _subscription;
 
         [Inject]
@@ -34,11 +35,6 @@ namespace PoRacer.Views
 
         private void Awake()
         {
-            _audioSource = gameObject.AddComponent<AudioSource>();
-            _audioSource.playOnAwake = false;
-            _audioSource.spatialBlend = 0f;
-            _fanfare = SynthesizeFanfare();
-            _tick = SynthesizeTick();
             _confetti = BuildConfetti();
             _fireworks = BuildFireworks();
             BuildSpotlight();
@@ -75,7 +71,6 @@ namespace PoRacer.Views
             {
                 _confetti.Emit(CONFETTI_COUNT);
                 _fireworks.Emit(90);
-                _audioSource.PlayOneShot(_fanfare, 0.8f);
                 if (_winnerSpotlight != null)
                 {
                     _winnerSpotlight.intensity = 5f;
@@ -88,7 +83,6 @@ namespace PoRacer.Views
                 {
                     _confetti.Emit(CONFETTI_COUNT / 4);
                 }
-                _audioSource.PlayOneShot(_tick, 0.5f);
             }
         }
 
@@ -172,42 +166,6 @@ namespace PoRacer.Views
             return ps;
         }
 
-        private static AudioClip SynthesizeFanfare()
-        {
-            // Three-note rising arpeggio (C5 E5 G5), 0.6 s total.
-            const int sampleRate = 44100;
-            float[] notes = { 523.25f, 659.25f, 783.99f };
-            const float noteSeconds = 0.2f;
-            int samplesPerNote = (int)(sampleRate * noteSeconds);
-            var data = new float[samplesPerNote * notes.Length];
-            for (int noteIndex = 0; noteIndex < notes.Length; noteIndex++)
-            {
-                for (int sampleIndex = 0; sampleIndex < samplesPerNote; sampleIndex++)
-                {
-                    float t = (float)sampleIndex / sampleRate;
-                    float envelope = Mathf.Exp(-3f * t / noteSeconds);
-                    data[noteIndex * samplesPerNote + sampleIndex] =
-                        Mathf.Sin(2f * Mathf.PI * notes[noteIndex] * t) * envelope * 0.5f;
-                }
-            }
-            var clip = AudioClip.Create("Fanfare", data.Length, 1, sampleRate, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
 
-        private static AudioClip SynthesizeTick()
-        {
-            const int sampleRate = 44100;
-            int samples = (int)(sampleRate * 0.08f);
-            var data = new float[samples];
-            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
-            {
-                float t = (float)sampleIndex / sampleRate;
-                data[sampleIndex] = Mathf.Sin(2f * Mathf.PI * 880f * t) * Mathf.Exp(-40f * t) * 0.4f;
-            }
-            var clip = AudioClip.Create("Tick", samples, 1, sampleRate, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
     }
 }

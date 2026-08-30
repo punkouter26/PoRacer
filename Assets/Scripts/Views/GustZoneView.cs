@@ -8,8 +8,9 @@ namespace PoRacer.Views
     /// Hazard trigger stripe built by Systems_TrackBuilder: cross-wind gusts
     /// shove every ArticulationBody inside sideways on a slow cycle. Bodies are
     /// collected in OnTriggerStay and forced once per FixedUpdate so
-    /// multi-collider limbs are never double-pushed. Streaking particles and a
-    /// wind loop rise and fall with the gust. All assets are generated in code.
+    /// multi-collider limbs are never double-pushed. Streaking particles rise and
+    /// fall with the gust; the wind loop that used to ride alongside them went with
+    /// the rest of the non-creature mix. All assets are generated in code.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     public sealed class GustZoneView : MonoBehaviour
@@ -17,16 +18,13 @@ namespace PoRacer.Views
         // Sideways acceleration at full gust; enough to bend a line, not flip a racer.
         private const float GUST_ACCEL = 3.5f;
         private const float GUST_CYCLE_SECONDS = 6f;
-        private const float MAX_WIND_VOLUME = 0.3f;
         private const float STREAK_RATE = 50f;
 
-        private static AudioClip SharedWind;
 
         private readonly List<ArticulationBody> _bodiesInZone = new();
         private float _direction = 1f;
         private float _phaseOffset;
         private ParticleSystem _streaks;
-        private AudioSource _windSource;
         private float _gust;
 
         /// <summary>Called by the track builder right after AddComponent.</summary>
@@ -48,16 +46,6 @@ namespace PoRacer.Views
         private void Awake()
         {
             _streaks = BuildStreaks();
-            _windSource = gameObject.AddComponent<AudioSource>();
-            _windSource.clip = GetSharedWind();
-            _windSource.loop = true;
-            _windSource.playOnAwake = false;
-            _windSource.spatialBlend = 1f;
-            _windSource.dopplerLevel = 0f;
-            _windSource.minDistance = 4f;
-            _windSource.maxDistance = 40f;
-            _windSource.volume = 0f;
-            _windSource.Play();
         }
 
         private void OnTriggerStay(Collider other)
@@ -91,7 +79,6 @@ namespace PoRacer.Views
             _gust = GustFactor(Time.time);
             ParticleSystem.EmissionModule emission = _streaks.emission;
             emission.rateOverTime = _gust * STREAK_RATE;
-            _windSource.volume = Mathf.MoveTowards(_windSource.volume, _gust * MAX_WIND_VOLUME, Time.deltaTime * 0.8f);
         }
 
         /// <summary>0 in the lull, 1 at full gust; clipped sine so gusts come in waves.</summary>
@@ -139,29 +126,5 @@ namespace PoRacer.Views
             return ps;
         }
 
-        private static AudioClip GetSharedWind()
-        {
-            if (SharedWind != null)
-            {
-                return SharedWind;
-            }
-            // Steady filtered-noise wind bed; the source volume carries the gusting.
-            const int sampleRate = 44100;
-            const float seconds = 4f;
-            int samples = (int)(sampleRate * seconds);
-            var data = new float[samples];
-            var rng = new System.Random(9090);
-            float low = 0f;
-            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
-            {
-                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
-                low += (white - low) * 0.06f;
-                data[sampleIndex] = low * 1.4f;
-            }
-            var clip = AudioClip.Create("GustWind", samples, 1, sampleRate, false);
-            clip.SetData(data, 0);
-            SharedWind = clip;
-            return clip;
-        }
     }
 }

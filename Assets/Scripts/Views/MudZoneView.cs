@@ -9,9 +9,9 @@ namespace PoRacer.Views
     /// part inside gets a viscous drag force, so creatures wade slowly through
     /// mud. Bodies are collected in OnTriggerStay and forced once per
     /// FixedUpdate so multi-collider limbs are never double-damped.
-    /// Entering the pit splashes mud particles; a looping spatial squelch rises
-    /// with the number of bodies wading. The squelch is a recorded CC0 loop with a
-    /// synthesized fallback; the particles and their material are built in code.
+    /// Entering the pit splashes mud particles. The looping squelch that used to
+    /// rise with the number of bodies wading went with the rest of the
+    /// non-creature mix; the particles and their material are built in code.
     /// </summary>
     [RequireComponent(typeof(BoxCollider))]
     public sealed class MudZoneView : MonoBehaviour
@@ -20,30 +20,16 @@ namespace PoRacer.Views
         private const float MUD_DRAG_PER_SPEED = 2f;
         private const float MIN_SPLASH_SPEED = 0.3f;
         private const int SPLASH_PARTICLES = 10;
-        private const float SQUELCH_VOLUME_PER_BODY = 0.06f;
-        private const float MAX_SQUELCH_VOLUME = 0.4f;
 
         private static readonly Color MudColor = new(0.4f, 0.28f, 0.13f);
 
         private readonly List<ArticulationBody> _bodiesInMud = new();
         private ParticleSystem _splash;
         private ParticleSystem.EmitParams _emitParams;
-        private AudioSource _squelchSource;
-        private int _wadingBodies;
 
         private void Awake()
         {
             _splash = BuildSplash();
-            _squelchSource = gameObject.AddComponent<AudioSource>();
-            _squelchSource.clip = AudioLibrary.GetOrSynthesize("mud_squelch", SynthesizeSquelch);
-            _squelchSource.loop = true;
-            _squelchSource.playOnAwake = false;
-            _squelchSource.spatialBlend = 1f;
-            _squelchSource.dopplerLevel = 0f;
-            _squelchSource.minDistance = 3f;
-            _squelchSource.maxDistance = 35f;
-            _squelchSource.volume = 0f;
-            _squelchSource.Play();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -76,14 +62,7 @@ namespace PoRacer.Views
                     body.AddForce(-body.linearVelocity * (MUD_DRAG_PER_SPEED * body.mass));
                 }
             }
-            _wadingBodies = _bodiesInMud.Count;
             _bodiesInMud.Clear();
-        }
-
-        private void Update()
-        {
-            float target = Mathf.Min(_wadingBodies * SQUELCH_VOLUME_PER_BODY, MAX_SQUELCH_VOLUME);
-            _squelchSource.volume = Mathf.MoveTowards(_squelchSource.volume, target, Time.deltaTime * 1.2f);
         }
 
         private ParticleSystem BuildSplash()
@@ -127,29 +106,5 @@ namespace PoRacer.Views
             return ps;
         }
 
-        /// <summary>
-        /// Fallback squelch bed for when the recorded loop is absent: slow wet
-        /// blorps from low-passed noise gated by an irregular LFO.
-        /// </summary>
-        private static AudioClip SynthesizeSquelch()
-        {
-            const int sampleRate = 44100;
-            const float seconds = 2f;
-            int samples = (int)(sampleRate * seconds);
-            var data = new float[samples];
-            var rng = new System.Random(4242);
-            float low = 0f;
-            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
-            {
-                float t = (float)sampleIndex / sampleRate;
-                float white = (float)(rng.NextDouble() * 2.0 - 1.0);
-                low += (white - low) * 0.05f;
-                float gate = Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 2.3f * t) + 0.4f * Mathf.Sin(2f * Mathf.PI * 3.7f * t) - 0.3f);
-                data[sampleIndex] = low * gate * 1.6f;
-            }
-            var clip = AudioClip.Create("Squelch", samples, 1, sampleRate, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
     }
 }

@@ -29,18 +29,18 @@ namespace PoRacer.Views
     /// nothing reaches the relays — there is no contact for them to hear.
     ///
     /// Voice budget. Unity is configured for 32 real voices, and each racer builds
-    /// three sources — a 100-racer field asks for 300. Left alone, Unity virtualises
+    /// two sources — a 100-racer field asks for 200. Left alone, Unity virtualises
     /// the excess by priority, and every source here would carry the same default
     /// priority, so which 32 survive is arbitrary: the racer the camera is chasing
     /// can fall silent while one off-screen keeps playing. Instead the live views
     /// are ranked by distance to the listener a few times a second, the nearest few
     /// keep their loop, and everything beyond audible range stops and is skipped by
-    /// the thud and chirp gates. Priority is written from the same ranking, so the
+    /// the thud and clash gates. Priority is written from the same ranking, so the
     /// voices Unity does virtualise are the ones furthest away.
     ///
     /// The ranking is shared static state driven by whichever instance notices the
-    /// timer first, matching how the chirp budget below already works: one pass per
-    /// interval for the whole field rather than one per racer per frame.
+    /// timer first: one pass per interval for the whole field rather than one per
+    /// racer per frame.
     /// </summary>
     public sealed class CreatureAudioView : MonoBehaviour
     {
