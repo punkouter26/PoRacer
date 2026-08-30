@@ -7,12 +7,18 @@ namespace PoRacer.Views
     /// Collision relay attached at runtime to every solid limb collider of a
     /// creature. Unity only delivers collision messages to the GameObject that owns
     /// the collider, so the racer root cannot hear its own footfalls without one of
-    /// these per limb. Reports ground contacts up to the racer's CreatureAudioView,
-    /// which owns the rate limiting and the actual playback.
+    /// these per limb. Reports contacts up to the racer's CreatureAudioView, which
+    /// owns the rate limiting and the actual playback.
     ///
-    /// Contacts against anything carrying a body — other limbs, other racers — are
-    /// dropped here, so self-collision inside an articulated creature never reaches
-    /// the audio path.
+    /// Three kinds of contact, told apart here:
+    ///
+    ///   * Static geometry — no rigidbody, no articulation body. The ground and the
+    ///     scenery: a footstep.
+    ///   * Another racer's limb — a body whose relay reports a different owner.
+    ///     A clash.
+    ///   * This creature's own limbs — a body whose relay reports the same owner.
+    ///     Dropped, or an articulated creature would rattle constantly against
+    ///     itself as its own segments jostle.
     ///
     /// The same contact also drives the impact sparks. Those keep their own gate
     /// rather than borrowing the audio one: a spark is worth showing at a lower
@@ -51,18 +57,53 @@ namespace PoRacer.Views
             {
                 return;
             }
-            // Ground and scenery are static: no rigidbody, no articulation body.
-            // Anything else is a limb (ours or a rival's) and stays silent.
             Collider other = collision.collider;
-            if (other == null || other.attachedRigidbody != null || other.attachedArticulationBody != null)
+            if (other == null)
             {
                 return;
             }
             // GetContact avoids the array allocation that collision.contacts makes.
             ContactPoint contact = collision.GetContact(0);
             float impactSpeed = collision.relativeVelocity.magnitude;
-            _owner.ReportLimbImpact(impactSpeed, contact.point);
+
+            // Ground and scenery are static: no rigidbody, no articulation body.
+            bool staticGeometry =
+                other.attachedRigidbody == null && other.attachedArticulationBody == null;
+            if (staticGeometry)
+            {
+                _owner.ReportLimbImpact(impactSpeed, contact.point);
+            }
+            else if (IsRival(other))
+            {
+                _owner.ReportRivalImpact(impactSpeed, contact.point);
+            }
+            else
+            {
+                // Our own limb. Silent, and not worth sparks either.
+                return;
+            }
             TrySparks(impactSpeed, contact);
+        }
+
+        /// <summary>
+        /// True when <paramref name="other"/> belongs to a different racer.
+        ///
+        /// Every solid limb of every racer carries one of these relays, so the
+        /// cheap answer is to read the other collider's relay and compare owners.
+        /// The GetComponentInParent fallback covers a collider that never got a
+        /// relay — a prop, or a limb added after the spawner's pass — and only runs
+        /// when the direct lookup misses, keeping the hierarchy walk out of the
+        /// common case.
+        /// </summary>
+        private bool IsRival(Collider other)
+        {
+            if (other.TryGetComponent(out LimbContactView relay))
+            {
+                return relay._owner != _owner;
+            }
+            CreatureAudioView owner = other.GetComponentInParent<CreatureAudioView>();
+            // No owner at all is scenery with a body — a loose prop. Not a rival.
+            return owner != null && owner != _owner;
         }
 
         private void TrySparks(float impactSpeed, ContactPoint contact)

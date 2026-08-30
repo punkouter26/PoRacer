@@ -7,21 +7,26 @@ using UnityEngine;
 namespace PoRacer.Views
 {
     /// <summary>
-    /// Per-creature 3D sound. Three layers, all synthesized in code:
+    /// Per-creature 3D sound, and — since the music, crowd and hazard layers were
+    /// removed — the only sound the game makes. Three layers, all synthesized in
+    /// code:
     ///
     /// 1. A looping scuttle bed whose volume follows the creature's actual speed,
     ///    with per-instance pitch offsets so the shared clip never phases.
     /// 2. Contact thuds fired when a limb lands on the ground hard enough,
     ///    positioned at the contact point and rate limited so a scrabbling creature
     ///    cannot machine-gun the mix.
-    /// 3. An occasional two-note voice chirp. Its pitch scales inversely with the
-    ///    creature's total articulated mass — a 135 kg worm calls low, a 38 kg
-    ///    spider calls high — and a global rate cap keeps a 90-racer field from
-    ///    turning into a chorus.
+    /// 3. Clashes, fired when a limb strikes *another racer* rather than the
+    ///    ground. Harder and brighter than a thud so a pile-up reads differently
+    ///    from a gallop, and gated separately: two creatures grinding against each
+    ///    other would otherwise spend the footstep budget and mute the gait.
     ///
     /// All three are fully spatial with doppler on: pan, attenuation and pitch bend
     /// come from the AudioListener on the camera. LimbContactView relays the
-    /// collisions; this view owns the policy.
+    /// collisions and tells the two apart; this view owns the policy.
+    ///
+    /// Fido is silent. He is simulated by MuJoCo and carries no Unity colliders, so
+    /// nothing reaches the relays — there is no contact for them to hear.
     ///
     /// Voice budget. Unity is configured for 32 real voices, and each racer builds
     /// three sources — a 100-racer field asks for 300. Left alone, Unity virtualises
@@ -56,8 +61,19 @@ namespace PoRacer.Views
         private const float MIN_THUD_INTERVAL = 0.25f;
         private const int THUD_VARIANTS = 4;
 
+        // Racer-on-racer clashes. Harder to trigger than a footstep — a limb
+        // brushing a rival is not worth a sound — and louder when it does land.
+        private const float MIN_CLASH_SPEED = 1.4f;
+        private const float FULL_CLASH_SPEED = 6f;
+        private const float MIN_CLASH_VOLUME = 0.14f;
+        private const float MAX_CLASH_VOLUME = 0.5f;
+        // Its own gate, deliberately not the thud's: a scrum holds contact for
+        // whole seconds, and sharing the footstep budget would silence the gait
+        // of both creatures for as long as they leaned on each other.
+        private const float MIN_CLASH_INTERVAL = 0.18f;
+
         // Voice budget. Twelve simultaneous loops leaves room under the 32-voice
-        // ceiling for the thuds, chirps, hazards and the non-spatial music bed.
+        // ceiling for the thuds and the clashes.
         private const int MAX_AUDIBLE_LOOPS = 12;
         private const float AUDIBLE_RANGE = 50f;
         private const float RANK_INTERVAL_SECONDS = 0.25f;
@@ -66,26 +82,10 @@ namespace PoRacer.Views
         private const float LOWPASS_NEAR_HZ = 5000f;
         private const float LOWPASS_FAR_HZ = 900f;
 
-        // Idle voice chirps.
-        private const float CHIRP_VOLUME = 0.2f;
-        private const float CHIRP_MIN_INTERVAL = 6f;
-        private const float CHIRP_MAX_INTERVAL = 15f;
-        // Global throttle: the whole field shares this budget, so a full grid
-        // chirps at a conversational rate instead of all at once.
-        private const int MAX_CHIRPS_PER_WINDOW = 3;
-        private const float CHIRP_WINDOW_SECONDS = 1f;
-        // Mass that plays the chirp at its recorded pitch; heavier creatures drop
-        // below it, lighter ones rise above, on a square-root curve.
-        private const float REFERENCE_MASS_KG = 60f;
-        private const float MIN_CHIRP_PITCH = 0.55f;
-        private const float MAX_CHIRP_PITCH = 1.6f;
-
         private static readonly System.Func<int, AudioClip> ThudFactory = SynthesizeThud;
         private static readonly AudioClip[] ThudClips = new AudioClip[THUD_VARIANTS];
         private static AudioClip SharedScuttle;
-        private static AudioClip SharedChirp;
-        private static float ChirpWindowEndTime;
-        private static int ChirpsThisWindow;
+        private static AudioClip SharedClash;
 
         // Every enabled view in the scene, plus the scratch buffer the ranking
         // sorts. Both are reused, so a re-rank allocates nothing after the field
@@ -99,18 +99,16 @@ namespace PoRacer.Views
 
         private AudioSource _source;
         private AudioSource _thudSource;
-        private AudioSource _voiceSource;
         private Transform _transform;
         private Transform _thudTransform;
         private Vector3 _lastPosition;
         private float _nextThudTime;
-        private float _nextChirpTime;
-        private float _chirpPitch = 1f;
+        private float _nextClashTime;
         private int _thudVariant;
         private AudioLowPassFilter _lowPass;
         private Systems_AudioMix _mix;
         private float _listenerSqrDistance;
-        // Set by the shared ranking pass; gates the loop, the thuds and the chirps.
+        // Set by the shared ranking pass; gates the loop, the thuds and the clashes.
         private bool _audible = true;
 
         private void Awake()
@@ -131,14 +129,13 @@ namespace PoRacer.Views
             _source.pitch = 0.85f + (entityId & 15) * 0.02f;
 
             // A filter applies to every source on its GameObject, so this covers
-            // the loop and the chirp but not the thud, which lives on a child.
-            // That split is the one we want: sustained layers read as distant
-            // through their tone, short transients through their level.
+            // the loop but not the thud or the clash, which live on a child. That
+            // split is the one we want: sustained layers read as distant through
+            // their tone, short transients through their level.
             _lowPass = gameObject.AddComponent<AudioLowPassFilter>();
             _lowPass.cutoffFrequency = LOWPASS_NEAR_HZ;
 
             BuildThudSource(entityId);
-            BuildVoiceSource();
             AttachLimbRelays();
         }
 
@@ -150,14 +147,6 @@ namespace PoRacer.Views
         internal void Initialize(Systems_AudioMix mix)
         {
             _mix = mix;
-        }
-
-        private void Start()
-        {
-            // Mass is read here rather than in Awake: the spawner applies quirk mass
-            // scaling after it adds this component, and Start runs after that pass.
-            _chirpPitch = ComputeChirpPitch();
-            ScheduleNextChirp();
         }
 
         private void OnEnable()
@@ -221,11 +210,6 @@ namespace PoRacer.Views
                 _lowPass.cutoffFrequency = Mathf.Lerp(
                     LOWPASS_NEAR_HZ, LOWPASS_FAR_HZ, Mathf.Clamp01(distance / AUDIBLE_RANGE));
             }
-
-            if (Time.time >= _nextChirpTime)
-            {
-                TryChirp();
-            }
         }
 
         /// <summary>
@@ -287,10 +271,6 @@ namespace PoRacer.Views
                 // they outrank the sustained loop of the same racer.
                 _thudSource.priority = Mathf.Max(0, priority - 2);
             }
-            if (_voiceSource != null)
-            {
-                _voiceSource.priority = priority;
-            }
         }
 
         /// <summary>
@@ -333,64 +313,36 @@ namespace PoRacer.Views
         }
 
         /// <summary>
-        /// Fires an idle call if this creature's timer is up and the field has not
-        /// already spent its chirp budget for the current window. The timer is
-        /// rescheduled either way, so a throttled creature simply waits its turn.
+        /// A limb struck another racer. Relayed by LimbContactView, which has
+        /// already established that the other collider belongs to a different
+        /// creature — a creature's own limbs knocking together stay silent.
+        ///
+        /// Shares the thud emitter (it is already the child that gets moved onto the
+        /// contact point) but keeps its own rate gate, so a sustained shove cannot
+        /// starve the footsteps of the racers involved.
         /// </summary>
-        private void TryChirp()
+        internal void ReportRivalImpact(float impactSpeed, Vector3 contactPoint)
         {
-            ScheduleNextChirp();
-            if (_voiceSource == null || _voiceSource.clip == null || !_audible)
+            if (_thudSource == null || !_audible || impactSpeed < MIN_CLASH_SPEED
+                || Time.time < _nextClashTime)
             {
                 return;
             }
-            float now = Time.time;
-            // The second test catches a stale window left behind by entering play
-            // mode without a domain reload, which would otherwise mute every chirp.
-            if (now >= ChirpWindowEndTime || ChirpWindowEndTime - now > CHIRP_WINDOW_SECONDS)
-            {
-                ChirpWindowEndTime = now + CHIRP_WINDOW_SECONDS;
-                ChirpsThisWindow = 0;
-            }
-            if (ChirpsThisWindow >= MAX_CHIRPS_PER_WINDOW)
+            AudioClip clip = GetSharedClash();
+            if (clip == null)
             {
                 return;
             }
-            ChirpsThisWindow++;
-            _voiceSource.pitch = _chirpPitch;
-            _voiceSource.volume = CHIRP_VOLUME * (_mix != null ? _mix.Gain(AudioBus.Voice) : 1f);
-            _voiceSource.Play();
-        }
+            _nextClashTime = Time.time + MIN_CLASH_INTERVAL;
 
-        private void ScheduleNextChirp()
-        {
-            _nextChirpTime = Time.time + Random.Range(CHIRP_MIN_INTERVAL, CHIRP_MAX_INTERVAL);
-        }
-
-        /// <summary>
-        /// Total articulated mass sets the voice: big bodies resonate low. Square
-        /// root keeps the spread musical — a 3.5x mass ratio becomes a touch under
-        /// two octaves of pitch, not five.
-        /// </summary>
-        private float ComputeChirpPitch()
-        {
-            // One allocation at spawn, never in a hot path (same as AttachLimbRelays).
-            ArticulationBody[] bodies = GetComponentsInChildren<ArticulationBody>(true);
-            float totalMass = 0f;
-            for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
-            {
-                ArticulationBody body = bodies[bodyIndex];
-                if (body != null)
-                {
-                    totalMass += body.mass;
-                }
-            }
-            if (totalMass <= 0.01f)
-            {
-                return 1f;
-            }
-            return Mathf.Clamp(
-                Mathf.Sqrt(REFERENCE_MASS_KG / totalMass), MIN_CHIRP_PITCH, MAX_CHIRP_PITCH);
+            float force = Mathf.Clamp01(
+                (impactSpeed - MIN_CLASH_SPEED) / (FULL_CLASH_SPEED - MIN_CLASH_SPEED));
+            _thudTransform.position = contactPoint;
+            // Harder hits ring lower and longer, the way a bigger collision does.
+            _thudSource.pitch = Mathf.Lerp(1.25f, 0.8f, force);
+            float clashGain = _mix != null ? _mix.Gain(AudioBus.Sfx) : 1f;
+            _thudSource.PlayOneShot(
+                clip, Mathf.Lerp(MIN_CLASH_VOLUME, MAX_CLASH_VOLUME, force) * clashGain);
         }
 
         private void BuildThudSource(int entityId)
@@ -415,20 +367,6 @@ namespace PoRacer.Views
             _thudSource.maxDistance = 30f;
             // Stagger the starting variant so same-gait racers do not land in unison.
             _thudVariant = (entityId & 7) % THUD_VARIANTS;
-        }
-
-        private void BuildVoiceSource()
-        {
-            _voiceSource = gameObject.AddComponent<AudioSource>();
-            _voiceSource.clip = GetSharedChirp();
-            _voiceSource.playOnAwake = false;
-            _voiceSource.loop = false;
-            _voiceSource.spatialBlend = 1f;
-            _voiceSource.dopplerLevel = DOPPLER_LEVEL;
-            _voiceSource.spread = 40f;
-            _voiceSource.minDistance = 3f;
-            _voiceSource.maxDistance = 45f;
-            _voiceSource.volume = CHIRP_VOLUME;
         }
 
         /// <summary>
@@ -485,55 +423,44 @@ namespace PoRacer.Views
         }
 
         /// <summary>
-        /// Two-note call: a rising interval with a formant-filtered noise breath
-        /// under it, which is what stops a pair of sine tones sounding like a
-        /// menu beep. One shared clip for the whole field — the per-creature size
-        /// difference is carried by AudioSource.pitch, not by 90 separate clips.
+        /// Body-on-body clash: a broadband slap over a short mid-frequency ring.
+        /// Deliberately brighter and harder-edged than the thud, because the two
+        /// fire into the same emitter and a listener should be able to tell a
+        /// bodycheck from a footfall without seeing it. One shared clip for the
+        /// whole field; force is carried by AudioSource.pitch and volume.
         /// </summary>
-        private static AudioClip GetSharedChirp()
+        private static AudioClip GetSharedClash()
         {
-            if (SharedChirp != null)
+            if (SharedClash != null)
             {
-                return SharedChirp;
+                return SharedClash;
             }
-            float[] notes = { 430f, 645f };
-            float[] lengths = { 0.11f, 0.17f };
-            const float gapSeconds = 0.04f;
-            int totalSamples = 0;
-            for (int noteIndex = 0; noteIndex < notes.Length; noteIndex++)
+            const float seconds = 0.19f;
+            int samples = (int)(SAMPLE_RATE * seconds);
+            var data = new float[samples];
+            var rng = new System.Random(24601);
+            // The ring: two detuned partials, high enough to read as a knock rather
+            // than the thud's settling mass.
+            float phaseLow = 0f;
+            float phaseHigh = 0f;
+            // The slap: filtered noise with a fast decay, which is the transient
+            // the ear actually uses to place the hit.
+            var body = new SynthUtil.BandPass(420f, 2.2f, SAMPLE_RATE);
+            for (int sampleIndex = 0; sampleIndex < samples; sampleIndex++)
             {
-                totalSamples += (int)(SAMPLE_RATE * (lengths[noteIndex] + gapSeconds));
+                float t = (float)sampleIndex / SAMPLE_RATE;
+                float progress = t / seconds;
+                SynthUtil.AdvancePhase(ref phaseLow, 196f, SAMPLE_RATE);
+                SynthUtil.AdvancePhase(ref phaseHigh, 293f, SAMPLE_RATE);
+                float ring = (Mathf.Sin(phaseLow) + 0.6f * Mathf.Sin(phaseHigh))
+                    * Mathf.Exp(-11f * progress);
+                float slap = body.Process(SynthUtil.White(rng)) * Mathf.Exp(-34f * progress);
+                float envelope = Mathf.Min(1f, t * 900f);
+                data[sampleIndex] = (ring * 0.45f + slap * 1.1f) * envelope;
             }
-            var data = new float[totalSamples];
-            var rng = new System.Random(60613);
-            int cursor = 0;
-            for (int noteIndex = 0; noteIndex < notes.Length; noteIndex++)
-            {
-                float length = lengths[noteIndex];
-                int noteSamples = (int)(SAMPLE_RATE * length);
-                int gapSamples = (int)(SAMPLE_RATE * gapSeconds);
-                float phase = 0f;
-                // Vowel: the call opens on a low formant and brightens as it lands.
-                var throat = new SynthUtil.BandPass(700f + noteIndex * 250f, 5f, SAMPLE_RATE);
-                for (int sampleIndex = 0; sampleIndex < noteSamples; sampleIndex++)
-                {
-                    float t = (float)sampleIndex / SAMPLE_RATE;
-                    float progress = t / length;
-                    // Each note bends up a little, the way a small animal's call does.
-                    float frequency = notes[noteIndex] * (1f + 0.05f * progress);
-                    SynthUtil.AdvancePhase(ref phase, frequency, SAMPLE_RATE);
-                    float envelope = Mathf.Min(1f, t * 200f) * Mathf.Exp(-4.5f * progress);
-                    float voice = Mathf.Sin(phase)
-                        + 0.3f * Mathf.Sin(2f * phase)
-                        + 0.12f * Mathf.Sin(3f * phase) * Mathf.Exp(-8f * progress);
-                    float breath = throat.Process(SynthUtil.White(rng)) * 0.35f * Mathf.Exp(-9f * progress);
-                    data[cursor + sampleIndex] = (voice + breath) * envelope * 0.4f;
-                }
-                cursor += noteSamples + gapSamples;
-            }
-            var clip = AudioClip.Create("CreatureChirp", data.Length, 1, SAMPLE_RATE, false);
+            var clip = AudioClip.Create("CreatureClash", samples, 1, SAMPLE_RATE, false);
             clip.SetData(data, 0);
-            SharedChirp = clip;
+            SharedClash = clip;
             return clip;
         }
 
