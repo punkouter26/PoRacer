@@ -1,0 +1,23 @@
+# Dependencies for Tools/play_publish.py ONLY.
+#
+# Install into a DEDICATED venv, never into the project's .venv:
+#
+#   py -3 -m venv Tools/publish-venv
+#   Tools/publish-venv/Scripts/python.exe -m pip install -r Tools/requirements-publish.txt
+#
+# .venv carries load-bearing pins (mlagents 1.1.0, torch 2.4.1, numpy 1.23.5,
+# protobuf 3.20.3) that a stray resolve would happily walk over, and the C#/Python
+# ml-agents versions must stay in exact parity or the comms handshake is rejected.
+# Publishing an app bundle has nothing to do with training and must not be able to
+# break it.
+#
+# google-auth is the only direct dependency: the Play Developer API itself is
+# plain REST over urllib, but the service-account assertion has to be RS256-signed
+# and the standard library has no RSA.
+#
+# The [requests] extra is NOT optional despite the API calls using urllib.
+# `google.auth.transport.requests.Request` — the transport the credential refresh
+# needs — imports `requests`, which base google-auth does not pull in. Installing
+# plain google-auth gets you a package that imports fine and then raises
+# ImportError at the first refresh.
+google-auth[requests]>=2.28,<3
