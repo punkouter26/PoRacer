@@ -66,3 +66,7 @@ Assets/Resources/PerformanceTestRun*.json.meta
 Assets/Temp/
 Assets/Temp.meta
 test-results.xml
+
+# Play publishing tooling venv. Kept out of .venv on purpose: that one carries
+# load-bearing ml-agents/torch pins a stray resolve would walk over.
+Tools/publish-venv/
