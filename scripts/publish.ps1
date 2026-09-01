@@ -4,13 +4,14 @@
 #   .\Scripts\publish.ps1 -DryRun      # full rehearsal, nothing lands in the console
 #   .\Scripts\publish.ps1 -SkipBuild   # upload the existing Builds\Android\PoRacer.aab
 #
-# Before a new version: bump bundleVersionCode in ProjectSettings (Player > Android),
-# or Play will reject the upload as a duplicate versionCode.
+# bundleVersionCode is bumped automatically before each build (Play rejects
+# duplicate versionCodes); pass -NoBump to keep the current one.
 # The Unity editor must NOT have this project open, or the headless build fails on
-# the project lock.
+# the project lock — the script checks and refuses up front.
 param(
     [switch]$SkipBuild,
     [switch]$DryRun,
+    [switch]$NoBump,
     [string]$Track = 'internal',
     [string]$Status = 'draft'
 )
@@ -26,6 +27,31 @@ if (-not (Test-Path $Python)) { Write-Error "Publish venv python not found at $P
 if (-not (Test-Path $Creds)) { Write-Error "Service account key not found at $Creds" }
 
 if (-not $SkipBuild) {
+    # Fail fast if the project is open in the editor — the headless build would
+    # only discover the project lock after ~30s of Unity startup.
+    $open = Get-Process Unity -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle -like "$App -*" }
+    if ($open) {
+        Write-Error "$App is open in the Unity editor (PID $($open[0].Id)). Close it and retry."
+    }
+
+    # Play refuses a versionCode it has seen before, so bump it every build.
+    $settings = Join-Path $Proj 'ProjectSettings\ProjectSettings.asset'
+    $raw = Get-Content $settings -Raw
+    if ($raw -match 'AndroidBundleVersionCode: (\d+)') {
+        $current = [int]$Matches[1]
+        if ($NoBump) {
+            Write-Host "bundleVersionCode: $current (kept, -NoBump)"
+        } else {
+            $next = $current + 1
+            ($raw -replace 'AndroidBundleVersionCode: \d+', "AndroidBundleVersionCode: $next") |
+                Set-Content $settings -NoNewline
+            Write-Host "bundleVersionCode: $current -> $next"
+        }
+    } else {
+        Write-Warning 'AndroidBundleVersionCode not found in ProjectSettings.asset; not bumping.'
+    }
+
     $ver = (Select-String -Path (Join-Path $Proj 'ProjectSettings\ProjectVersion.txt') `
             -Pattern 'm_EditorVersion: (.+)').Matches[0].Groups[1].Value.Trim()
     $unity = "C:\Program Files\Unity\Hub\Editor\$ver\Editor\Unity.exe"
@@ -39,11 +65,14 @@ if (-not $SkipBuild) {
     $log = Join-Path $Proj 'Builds\publish-build.log'
     Write-Host "Building $App AAB headlessly (log: $log)..."
     $proc = Start-Process -FilePath $unity -PassThru -Wait -ArgumentList `
-        '-batchmode', '-quit', '-projectPath', $Proj, '-executeMethod', $BuildMethod, '-logFile', $log
+        '-batchmode', '-nographics', '-quit', '-projectPath', $Proj, `
+        '-executeMethod', $BuildMethod, '-logFile', $log
     $result = Select-String -Path $log -Pattern 'AAB BUILD RESULT:' | Select-Object -Last 1
     if ($result) { Write-Host $result.Line }
     if ($proc.ExitCode -ne 0 -or -not $result -or $result.Line -notmatch 'Succeeded') {
-        Write-Error "Build failed (Unity exit $($proc.ExitCode)). If this project is open in the Unity editor, close it and retry. Details: $log"
+        Select-String -Path $log -Pattern 'error CS|Error building|BuildFailedException|Aborted|could not be found' |
+            Select-Object -Last 5 | ForEach-Object { Write-Host "  $($_.Line)" }
+        Write-Error "Build failed (Unity exit $($proc.ExitCode)). Full log: $log"
     }
 }
 
