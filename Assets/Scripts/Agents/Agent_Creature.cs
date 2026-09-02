@@ -112,6 +112,9 @@ namespace PoRacer.Agents
             // Captured before the first episode reset can move it: this is the
             // authored rest pose the whole rig was laid out around.
             _restRotation = _root.transform.localRotation;
+            // The reward's stall limit and shaping terms are per physics step and
+            // were tuned at 0.02 s; tell it the step it is really running at.
+            _reward.ConfigureTimestep(Time.fixedDeltaTime);
             _root.maxAngularVelocity = MAX_ANGULAR_VELOCITY;
             _previousActions = new float[_joints.Length];
             _limbContacts = new Sensor_LimbContact[_joints.Length];

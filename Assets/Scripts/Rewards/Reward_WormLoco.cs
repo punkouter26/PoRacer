@@ -14,7 +14,15 @@ namespace PoRacer.Rewards
         public const float GOAL_REWARD = 10f;
         public const float OUT_OF_BOUNDS_REWARD = -1f;
         public const float GOAL_RADIUS_METERS = 0.5f;
-        public const int NO_PROGRESS_LIMIT_STEPS = 1000; // 20 s at 0.02 s per step
+        // Every per-step constant below was tuned at a 0.02 s physics step. The
+        // project moved to 0.005 s on 2026-08-29 and Step() runs every FixedUpdate,
+        // so without ConfigureTimestep() the stall limit fires after 5 s instead
+        // of 20 and every shaping term lands four times per simulated second.
+        // Measured 2026-09-02: fine-tune episodes lasted 50-85 decisions instead
+        // of 340-380. Agent_Creature calls ConfigureTimestep(Time.fixedDeltaTime).
+        public const float REFERENCE_STEP_SECONDS = 0.02f;
+        public const float NO_PROGRESS_LIMIT_SECONDS = 20f;
+        public const int NO_PROGRESS_LIMIT_STEPS = 1000; // NO_PROGRESS_LIMIT_SECONDS at the reference step
         // Giving up must never be reward-neutral: without this, freezing beats
         // trying-and-falling (-1) in expectation, which trains passive brains.
         // Milder than OUT_OF_BOUNDS_REWARD so trying stays the better gamble.
@@ -35,8 +43,26 @@ namespace PoRacer.Rewards
         private float _previousDistance;
         private float _bestDistance;
         private int _stepsSinceImprovement;
+        private int _noProgressLimitSteps = NO_PROGRESS_LIMIT_STEPS;
+        // Scales the per-step shaping terms so their per-second magnitude matches
+        // what they were tuned at. Progress is a telescoping sum and needs no scaling.
+        private float _stepScale = 1f;
 
-        public bool NoProgressExceeded => _stepsSinceImprovement >= NO_PROGRESS_LIMIT_STEPS;
+        public bool NoProgressExceeded => _stepsSinceImprovement >= _noProgressLimitSteps;
+
+        /// <summary>
+        /// Adapts the per-step limits and shaping terms to the physics step that
+        /// Step() is actually called at. Defaults assume the 0.02 s reference step.
+        /// </summary>
+        public void ConfigureTimestep(float fixedDeltaTime)
+        {
+            if (float.IsNaN(fixedDeltaTime) || fixedDeltaTime <= 0f)
+            {
+                return;
+            }
+            _noProgressLimitSteps = (int)System.Math.Round(NO_PROGRESS_LIMIT_SECONDS / fixedDeltaTime);
+            _stepScale = fixedDeltaTime / REFERENCE_STEP_SECONDS;
+        }
 
         /// <summary>Reward components from the last Step() call, for StatsRecorder logging.</summary>
         public float LastProgressReward { get; private set; }
@@ -132,12 +158,13 @@ namespace PoRacer.Rewards
 
             LastProgressReward = delta * PROGRESS_SCALE;
             // Torque-squared physiological energy penalty (tau^2)
-            LastEfficiencyPenalty = -ENERGY_PENALTY_SCALE * (clampedTorque * clampedTorque);
-            LastUprightBonus = UPRIGHT_BONUS_SCALE * uprightPositive;
-            LastJerkPenalty = -JERK_PENALTY_SCALE * clampedJerk;
-            LastSkatePenalty = -SKATE_PENALTY_SCALE * clampedSkate;
+            LastEfficiencyPenalty = -ENERGY_PENALTY_SCALE * (clampedTorque * clampedTorque) * _stepScale;
+            LastUprightBonus = UPRIGHT_BONUS_SCALE * uprightPositive * _stepScale;
+            LastJerkPenalty = -JERK_PENALTY_SCALE * clampedJerk * _stepScale;
+            LastSkatePenalty = -SKATE_PENALTY_SCALE * clampedSkate * _stepScale;
 
-            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus + LastJerkPenalty + LastSkatePenalty - TIME_PENALTY;
+            return LastProgressReward + LastEfficiencyPenalty + LastUprightBonus + LastJerkPenalty + LastSkatePenalty
+                - TIME_PENALTY * _stepScale;
         }
 
         public bool ReachedGoal(float currentDistance) => currentDistance <= GOAL_RADIUS_METERS;

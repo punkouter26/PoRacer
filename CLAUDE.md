@@ -93,6 +93,12 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   * The 12 ML-Agents creatures are compensated with `DecisionPeriod: 20` (was 5),
     which holds their decision interval at the 0.1 s they were trained at. **If you
     ever change Δt, change `DecisionPeriod` on all 12 prefabs to match.**
+  * `Reward_WormLoco.Step` runs every FixedUpdate, and its stall limit and shaping
+    constants were tuned at 0.02 s. From 2026-08-29 to 2026-09-02 nothing told it
+    about the 0.005 s step, so training episodes were cut at 5 s of "no progress"
+    instead of 20 and every per-step penalty landed 4x per second. `Agent_Creature`
+    now calls `ConfigureTimestep(Time.fixedDeltaTime)`; every brain trained in that
+    window (`broken_loco01`) learned against the distorted reward.
   * 200 Hz is an exact multiple of the policy rate for both Isaac ports (IsaacH1
     at 0.02 s, MujocoBiped at 0.025 s). Do not move to 1/240 s — that breaks
     IsaacH1's exact 0.02 s step.
