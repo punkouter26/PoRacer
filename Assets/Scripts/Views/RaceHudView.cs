@@ -202,8 +202,11 @@ namespace PoRacer.Views
             _podiumPanel = new VisualElement { pickingMode = PickingMode.Ignore };
             _podiumPanel.style.position = Position.Absolute;
             _podiumPanel.style.top = new Length(38f, LengthUnit.Percent);
-            _podiumPanel.style.left = new Length(12f, LengthUnit.Percent);
-            _podiumPanel.style.right = new Length(12f, LengthUnit.Percent);
+            // 6% side margins, not 12: at a 420 dp reference width a full row
+            // ("Mighty Rocket the Isaac H1  18.5s  ELO 1216  +16") needs the room,
+            // and the rows below are allowed to wrap rather than overflow the card.
+            _podiumPanel.style.left = new Length(6f, LengthUnit.Percent);
+            _podiumPanel.style.right = new Length(6f, LengthUnit.Percent);
             UiTheme.StyleGlassPanel(_podiumPanel, glowing: true);
             _podiumPanel.style.display = DisplayStyle.None;
             var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
@@ -225,6 +228,12 @@ namespace PoRacer.Views
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.style.color = UiTheme.Text;
                 label.style.fontSize = UiTheme.FONT_MD;
+                // A flex-row child defaults to flex-shrink 0 and no wrapping, so a
+                // long name pushed the ELO delta clean off the card's right edge.
+                // Let the label take the remaining width and wrap inside it.
+                label.style.flexGrow = 1f;
+                label.style.flexShrink = 1f;
+                label.style.whiteSpace = WhiteSpace.Normal;
                 // The ELO delta is injected as a <color> tag.
                 label.enableRichText = true;
                 row.Add(label);
@@ -331,7 +340,10 @@ namespace PoRacer.Views
             _ticker.style.position = Position.Absolute;
             _ticker.style.left = UiTheme.SPACE_SM;
             _ticker.style.right = new Length(20f, LengthUnit.Percent);
-            _ticker.style.bottom = UiTheme.SPACE_LG + UiTheme.SPACE_LG;
+            // Clear the DBG button, which DebugOverlayView anchors bottom-left at
+            // SPACE_SM with a CONTROL_SM-tall touch target: the ticker's lowest
+            // line used to wrap straight underneath it.
+            _ticker.style.bottom = UiTheme.SPACE_SM + UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
             safeRoot.Add(_ticker);
 
             for (int lineIndex = 0; lineIndex < CommentaryModel.MAX_LINES; lineIndex++)
