@@ -3,6 +3,7 @@
     "rootNamespace": "PoRacer.Editor",
     "references": [
         "PoRacer.Runtime",
+        "PoRacer.IsaacPorts.Runtime",
         "Unity.InferenceEngine",
         "Unity.ML-Agents",
         "Unity.RenderPipelines.Universal.Runtime",

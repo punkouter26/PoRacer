@@ -18,39 +18,52 @@ MonoBehaviour:
     prefab: {fileID: 5071429042841699206, guid: f0948a40df5e7364f93cf03c340eae26, type: 3}
     model: {fileID: 5022602860645237092, guid: e7b6a3eac2dea3a43a0f190ef081bd01, type: 3}
     spawnHeight: 0.15
+    brainInPrefab: 0
   - id: Spider_v01
     displayName: Spider
     prefab: {fileID: 2008265692840570716, guid: d8ff3715ba81a6b489c1d6cea63f09eb, type: 3}
     model: {fileID: 5022602860645237092, guid: 543425b6b5e223c4e9183710fff1fb99, type: 3}
     spawnHeight: 0.5
+    brainInPrefab: 0
   - id: Quad_v01
     displayName: Quadruped
     prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}
     model: {fileID: 5022602860645237092, guid: 124878cf78be94f4ab8d2214668bef9c, type: 3}
     spawnHeight: 0.85
+    brainInPrefab: 0
   - id: Hexapod_v01
     displayName: Hexapod
     prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
     model: {fileID: 5022602860645237092, guid: e201d9a2974be304f8b4fdbb9db60ec7, type: 3}
     spawnHeight: 0.75
+    brainInPrefab: 0
   - id: Centipede_v01
     displayName: Centipede
     prefab: {fileID: 2521974577969091722, guid: 8a2c392fa95349348997b69b7bd62395, type: 3}
     model: {fileID: 5022602860645237092, guid: 15ff0125eec1baf4e898d84bd3c192a2, type: 3}
     spawnHeight: 0.25
+    brainInPrefab: 0
   - id: Crab_v01
     displayName: Crab
     prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
     model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
     spawnHeight: 0.75
+    brainInPrefab: 0
   - id: IsaacH1_v01
     displayName: Isaac H1
     prefab: {fileID: 2078622320464831490, guid: 7bd9f2667f5c873429387b345f7d3ed2, type: 3}
     model: {fileID: 5022602860645237092, guid: 1c9374e3f334dbd4c98f2880c8239f4d, type: 3}
     spawnHeight: 1
+    brainInPrefab: 0
   - id: Fido_v01
     displayName: Fido
     prefab: {fileID: 1855124412564560699, guid: 2b95672e9a7531241b89d450d6a3e6df, type: 3}
     model: {fileID: 0}
     spawnHeight: 0
     brainInPrefab: 1
+  - id: Boy_v01
+    displayName: Boy
+    prefab: {fileID: 4612862146113467812, guid: 28265eb1fe356a6458fc813cbc989828, type: 3}
+    model: {fileID: 0}
+    spawnHeight: 0.714
+    brainInPrefab: 0

@@ -1,0 +1,737 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d045c318b866bd74481838853d90d387, type: 3}
+  m_Name: BoyRig
+  m_EditorClassIdentifier: PoRacer.IsaacPorts.Runtime::Boy.BoyRigAsset
+  sourceTask: Isaac-Chase-Flat-Boy-Play-v0
+  trainTask: Isaac-Chase-Flat-Boy-v0
+  sourceModel: Boy_Character.glb
+  checkpoint: 
+  jointOrder:
+  - spine_pitch
+  - hip_yaw_L
+  - hip_yaw_R
+  - shoulder_roll_L
+  - shoulder_roll_R
+  - hip_roll_L
+  - hip_roll_R
+  - shoulder_pitch_L
+  - shoulder_pitch_R
+  - hip_pitch_L
+  - hip_pitch_R
+  - shoulder_yaw_L
+  - shoulder_yaw_R
+  - knee_L
+  - knee_R
+  - elbow_L
+  - elbow_R
+  - ankle_pitch_L
+  - ankle_pitch_R
+  - ankle_roll_L
+  - ankle_roll_R
+  bodyOrder:
+  - hips
+  - spine
+  - hip_yaw_link_L
+  - hip_yaw_link_R
+  - shoulder_roll_link_L
+  - shoulder_roll_link_R
+  - hip_roll_link_L
+  - hip_roll_link_R
+  - shoulder_pitch_link_L
+  - shoulder_pitch_link_R
+  - thigh_L
+  - thigh_R
+  - upper_arm_L
+  - upper_arm_R
+  - shin_L
+  - shin_R
+  - forearm_L
+  - forearm_R
+  - ankle_pitch_link_L
+  - ankle_pitch_link_R
+  - foot_L
+  - foot_R
+  skinBones:
+  - hips
+  - spine
+  - chest
+  - neck
+  - head
+  - shoulder.L
+  - upper_arm.L
+  - forearm.L
+  - hand.L
+  - shoulder.R
+  - upper_arm.R
+  - forearm.R
+  - hand.R
+  - thigh.L
+  - shin.L
+  - foot.L
+  - thigh.R
+  - shin.R
+  - foot.R
+  obsDim: 75
+  actDim: 21
+  actionScale: 0.5
+  useDefaultOffset: 1
+  policyDt: 0.02
+  isaacPhysicsDt: 0.005
+  isaacDecimation: 4
+  episodeLengthS: 20
+  spawnPosIsaac: {x: 0, y: 0, z: 0.764}
+  hipsHeightAtDefaultPoseRest: 0.744
+  hipsHeightAtZeroPoseRest: 0.76
+  totalMass: 45
+  physics:
+    gravityIsaac: {x: 0, y: 0, z: -9.81}
+    groundStaticFriction: 1
+    groundDynamicFriction: 1
+    groundRestitution: 0
+    robotStaticFriction: 0.8
+    robotDynamicFriction: 0.6
+    robotRestitution: 0
+    frictionCombineMode: multiply
+    maxLinearVelocity: 1000
+    maxAngularVelocity: 1000
+    maxDepenetrationVelocity: 1
+    linearDamping: 0
+    angularDamping: 0
+    jointFriction: 0
+    solverPositionIterations: 4
+    solverVelocityIterations: 4
+    enabledSelfCollisions: 0
+    contactOffset: 0.02
+    restOffset: 0
+    isaacSolverType: TGS
+  chase:
+    targetObsClip: 5
+    targetRadiusMin: 3
+    targetRadiusMax: 10
+    reachRadius: 0.5
+    resampleSecondsMin: 8
+    resampleSecondsMax: 12
+    targetSpeed: 1
+  bodies:
+  - name: hips
+    parent: 
+    isRoot: 1
+    boneName: hips
+    mass: 6.106
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.04742327, y: 0.02951233, z: 0.05088333}
+    worldPosIsaac: {x: 0, y: 0, z: 0.76}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 0
+    joint:
+      name: 
+      index: 0
+      family: 
+      axisInChildIsaac: {x: 0, y: 0, z: 0}
+      lowerRad: 0
+      upperRad: 0
+      stiffness: 0
+      damping: 0
+      effortLimit: 0
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: box
+      centerIsaac: {x: 0, y: 0, z: 0}
+      sizeIsaac: {x: 0.18, y: 0.26, z: 0.16}
+      radius: 0
+      height: 0
+      axis: 
+  - name: spine
+    parent: hips
+    isRoot: 0
+    boneName: spine
+    mass: 18.748
+    comIsaac: {x: 0, y: 0, z: 0.272424}
+    inertiaDiagIsaac: {x: 0.7727184, y: 0.7179498, z: 0.16598734}
+    worldPosIsaac: {x: 0, y: 0, z: 0.9}
+    localPosIsaac: {x: 0, y: 0, z: 0.14}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: spine_pitch
+      index: 0
+      family: spine_pitch
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.5
+      upperRad: 0.5
+      stiffness: 400
+      damping: 15
+      effortLimit: 200
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: box
+      centerIsaac: {x: 0, y: 0, z: 0.1325}
+      sizeIsaac: {x: 0.18, y: 0.3, z: 0.265}
+      radius: 0
+      height: 0
+      axis: 
+    - kind: sphere
+      centerIsaac: {x: 0, y: 0, z: 0.49}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.13
+      height: 0
+      axis: 
+  - name: hip_yaw_link_L
+    parent: hips
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: 0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: 0.085, z: 0.02}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_yaw_L
+      index: 1
+      family: hip_yaw
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -0.6
+      upperRad: 0.6
+      stiffness: 80
+      damping: 3
+      effortLimit: 150
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: hip_yaw_link_R
+    parent: hips
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: -0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: -0.085, z: 0.02}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_yaw_R
+      index: 2
+      family: hip_yaw
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -0.6
+      upperRad: 0.6
+      stiffness: 80
+      damping: 3
+      effortLimit: 150
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: shoulder_roll_link_L
+    parent: spine
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: 0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: 0.165, z: 0.265}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_roll_L
+      index: 3
+      family: shoulder_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -1.75
+      upperRad: 0.6
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: -1.35
+      armature: 0
+    colliders: []
+  - name: shoulder_roll_link_R
+    parent: spine
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: -0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: -0.165, z: 0.265}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_roll_R
+      index: 4
+      family: shoulder_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.6
+      upperRad: 1.75
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: 1.35
+      armature: 0
+    colliders: []
+  - name: hip_roll_link_L
+    parent: hip_yaw_link_L
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: 0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_roll_L
+      index: 5
+      family: hip_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.6
+      upperRad: 0.6
+      stiffness: 100
+      damping: 4
+      effortLimit: 150
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: hip_roll_link_R
+    parent: hip_yaw_link_R
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: -0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_roll_R
+      index: 6
+      family: hip_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.6
+      upperRad: 0.6
+      stiffness: 100
+      damping: 4
+      effortLimit: 150
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: shoulder_pitch_link_L
+    parent: shoulder_roll_link_L
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: 0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_pitch_L
+      index: 7
+      family: shoulder_pitch
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -2.5
+      upperRad: 1
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: shoulder_pitch_link_R
+    parent: shoulder_roll_link_R
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: 0, y: -0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_pitch_R
+      index: 8
+      family: shoulder_pitch
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -1
+      upperRad: 2.5
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: 0
+      armature: 0
+    colliders: []
+  - name: thigh_L
+    parent: hip_roll_link_L
+    isRoot: 0
+    boneName: thigh.L
+    mass: 4.3
+    comIsaac: {x: 0, y: 0, z: -0.180017}
+    inertiaDiagIsaac: {x: 0.04141519, y: 0.04141519, z: 0.0113136}
+    worldPosIsaac: {x: 0, y: 0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_pitch_L
+      index: 9
+      family: hip_pitch
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -2
+      upperRad: 0.8
+      stiffness: 150
+      damping: 5
+      effortLimit: 150
+      defaultPosRad: -0.2
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0, z: -0.180017}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.075
+      height: 0.210035
+      axis: Z
+  - name: thigh_R
+    parent: hip_roll_link_R
+    isRoot: 0
+    boneName: thigh.R
+    mass: 4.3
+    comIsaac: {x: 0, y: 0, z: -0.180017}
+    inertiaDiagIsaac: {x: 0.04141519, y: 0.04141519, z: 0.0113136}
+    worldPosIsaac: {x: 0, y: -0.085, z: 0.78}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: hip_pitch_R
+      index: 10
+      family: hip_pitch
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -2
+      upperRad: 0.8
+      stiffness: 150
+      damping: 5
+      effortLimit: 150
+      defaultPosRad: -0.2
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0, z: -0.180017}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.075
+      height: 0.210035
+      axis: Z
+  - name: upper_arm_L
+    parent: shoulder_pitch_link_L
+    isRoot: 0
+    boneName: upper_arm.L
+    mass: 1.204
+    comIsaac: {x: 0, y: 0.125169, z: 0}
+    inertiaDiagIsaac: {x: 0.00558038, y: 0.00115266, z: 0.00558038}
+    worldPosIsaac: {x: 0, y: 0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_yaw_L
+      index: 11
+      family: shoulder_yaw
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1
+      upperRad: 1
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0.125169, z: 0}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.045
+      height: 0.160338
+      axis: Y
+  - name: upper_arm_R
+    parent: shoulder_pitch_link_R
+    isRoot: 0
+    boneName: upper_arm.R
+    mass: 1.204
+    comIsaac: {x: 0, y: -0.125169, z: 0}
+    inertiaDiagIsaac: {x: 0.00558038, y: 0.00115266, z: 0.00558038}
+    worldPosIsaac: {x: 0, y: -0.165, z: 1.165}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: shoulder_yaw_R
+      index: 12
+      family: shoulder_yaw
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -1
+      upperRad: 1
+      stiffness: 30
+      damping: 3
+      effortLimit: 40
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: -0.125169, z: 0}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.045
+      height: 0.160338
+      axis: Y
+  - name: shin_L
+    parent: thigh_L
+    isRoot: 0
+    boneName: shin.L
+    mass: 1.9995
+    comIsaac: {x: 0, y: 0, z: -0.172572}
+    inertiaDiagIsaac: {x: 0.01762676, y: 0.01762676, z: 0.00288046}
+    worldPosIsaac: {x: 0, y: 0.09, z: 0.42}
+    localPosIsaac: {x: 0, y: 0.005, z: -0.36}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: knee_L
+      index: 13
+      family: knee
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: 0
+      upperRad: 2.4
+      stiffness: 150
+      damping: 5
+      effortLimit: 150
+      defaultPosRad: 0.4
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0, z: -0.172572}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.055
+      height: 0.235145
+      axis: Z
+  - name: shin_R
+    parent: thigh_R
+    isRoot: 0
+    boneName: shin.R
+    mass: 1.9995
+    comIsaac: {x: 0, y: 0, z: -0.172572}
+    inertiaDiagIsaac: {x: 0.01762676, y: 0.01762676, z: 0.00288046}
+    worldPosIsaac: {x: 0, y: -0.09, z: 0.42}
+    localPosIsaac: {x: 0, y: -0.005, z: -0.36}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: knee_R
+      index: 14
+      family: knee
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: 0
+      upperRad: 2.4
+      stiffness: 150
+      damping: 5
+      effortLimit: 150
+      defaultPosRad: 0.4
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0, z: -0.172572}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.055
+      height: 0.235145
+      axis: Z
+  - name: forearm_L
+    parent: upper_arm_L
+    isRoot: 0
+    boneName: forearm.L
+    mass: 0.946
+    comIsaac: {x: 0, y: 0.190101, z: 0}
+    inertiaDiagIsaac: {x: 0.0103034, y: 0.00073397, z: 0.0103034}
+    worldPosIsaac: {x: 0.005, y: 0.415, z: 1.153}
+    localPosIsaac: {x: 0.005, y: 0.25, z: -0.012}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: elbow_L
+      index: 15
+      family: elbow
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: -2.3
+      upperRad: 0
+      stiffness: 20
+      damping: 2
+      effortLimit: 40
+      defaultPosRad: -0.4
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: 0.190101, z: 0}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      height: 0.300202
+      axis: Y
+  - name: forearm_R
+    parent: upper_arm_R
+    isRoot: 0
+    boneName: forearm.R
+    mass: 0.946
+    comIsaac: {x: 0, y: -0.190101, z: 0}
+    inertiaDiagIsaac: {x: 0.0103034, y: 0.00073397, z: 0.0103034}
+    worldPosIsaac: {x: 0.005, y: -0.415, z: 1.153}
+    localPosIsaac: {x: 0.005, y: -0.25, z: -0.012}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: elbow_R
+      index: 16
+      family: elbow
+      axisInChildIsaac: {x: 0, y: 0, z: 1}
+      lowerRad: 0
+      upperRad: 2.3
+      stiffness: 20
+      damping: 2
+      effortLimit: 40
+      defaultPosRad: 0.4
+      armature: 0
+    colliders:
+    - kind: capsule
+      centerIsaac: {x: 0, y: -0.190101, z: 0}
+      sizeIsaac: {x: 0, y: 0, z: 0}
+      radius: 0.04
+      height: 0.300202
+      axis: Y
+  - name: ankle_pitch_link_L
+    parent: shin_L
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: -0.01, y: 0.09, z: 0.075}
+    localPosIsaac: {x: -0.01, y: 0, z: -0.345}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_pitch_L
+      index: 17
+      family: ankle_pitch
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.9
+      upperRad: 0.9
+      stiffness: 30
+      damping: 3
+      effortLimit: 50
+      defaultPosRad: -0.2
+      armature: 0
+    colliders: []
+  - name: ankle_pitch_link_R
+    parent: shin_R
+    isRoot: 0
+    boneName: 
+    mass: 0.2
+    comIsaac: {x: 0, y: 0, z: 0}
+    inertiaDiagIsaac: {x: 0.0002, y: 0.0002, z: 0.0002}
+    worldPosIsaac: {x: -0.01, y: -0.09, z: 0.075}
+    localPosIsaac: {x: -0.01, y: 0, z: -0.345}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_pitch_R
+      index: 18
+      family: ankle_pitch
+      axisInChildIsaac: {x: 0, y: 1, z: 0}
+      lowerRad: -0.9
+      upperRad: 0.9
+      stiffness: 30
+      damping: 3
+      effortLimit: 50
+      defaultPosRad: -0.2
+      armature: 0
+    colliders: []
+  - name: foot_L
+    parent: ankle_pitch_link_L
+    isRoot: 0
+    boneName: foot.L
+    mass: 0.6235
+    comIsaac: {x: 0.06, y: 0, z: -0.0375}
+    inertiaDiagIsaac: {x: 0.00081185, y: 0.00380465, z: 0.00403197}
+    worldPosIsaac: {x: -0.01, y: 0.09, z: 0.075}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_roll_L
+      index: 19
+      family: ankle_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.5
+      upperRad: 0.5
+      stiffness: 20
+      damping: 2
+      effortLimit: 50
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: box
+      centerIsaac: {x: 0.06, y: 0, z: -0.0375}
+      sizeIsaac: {x: 0.26, y: 0.1, z: 0.075}
+      radius: 0
+      height: 0
+      axis: 
+  - name: foot_R
+    parent: ankle_pitch_link_R
+    isRoot: 0
+    boneName: foot.R
+    mass: 0.6235
+    comIsaac: {x: 0.06, y: 0, z: -0.0375}
+    inertiaDiagIsaac: {x: 0.00081185, y: 0.00380465, z: 0.00403197}
+    worldPosIsaac: {x: -0.01, y: -0.09, z: 0.075}
+    localPosIsaac: {x: 0, y: 0, z: 0}
+    localRotIsaacWxyz: {x: 1, y: 0, z: 0, w: 0}
+    hasJoint: 1
+    joint:
+      name: ankle_roll_R
+      index: 20
+      family: ankle_roll
+      axisInChildIsaac: {x: 1, y: 0, z: 0}
+      lowerRad: -0.5
+      upperRad: 0.5
+      stiffness: 20
+      damping: 2
+      effortLimit: 50
+      defaultPosRad: 0
+      armature: 0
+    colliders:
+    - kind: box
+      centerIsaac: {x: 0.06, y: 0, z: -0.0375}
+      sizeIsaac: {x: 0.26, y: 0.1, z: 0.075}
+      radius: 0
+      height: 0
+      axis: 
+  isaacMeanSpeed: 0
+  isaacMeanSpeedTowardTarget: 0
+  isaacReferenceForwardSpeed: 0
+  isaacReferenceTargetDistance: 8
+  isaacFallsPerRobotPerMinute: 0
+  isaacTargetsReachedPerMinute: 0

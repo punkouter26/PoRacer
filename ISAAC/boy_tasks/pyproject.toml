@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "boy_tasks"
+version = "0.1.0"
+description = "Isaac Lab target-chasing locomotion task for the PoRacer Boy character"
+requires-python = ">=3.10"
+# isaaclab, isaaclab_tasks, isaaclab_rl and rsl-rl-lib come from the Isaac Lab checkout
+# this package is installed INTO (see ISAAC/install.ps1); they are deliberately not
+# listed here so pip never tries to resolve them from PyPI.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["boy_tasks*"]
