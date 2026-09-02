@@ -108,7 +108,7 @@ namespace PoRacer.Tests
                 new() { RacerId = "b", CreatureId = "spider", Status = RacerStatus.Racing },
                 new() { RacerId = "c", CreatureId = "crab", Status = RacerStatus.Racing },
                 new() { RacerId = "d", CreatureId = "blob", Status = RacerStatus.Racing },
-                new() { RacerId = "e", CreatureId = "snake", Status = RacerStatus.Racing }
+                new() { RacerId = "e", CreatureId = "crab", Status = RacerStatus.Racing }
             });
 
             _sut.NotifyFinish("a");

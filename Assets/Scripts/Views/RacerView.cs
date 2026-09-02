@@ -272,7 +272,7 @@ namespace PoRacer.Views
                 return;
             }
             // Heading only on the yaw; the creature's authored rest pose is kept
-            // underneath it, or standing a snake "upright" means standing its
+            // underneath it, or standing a centipede "upright" means standing its
             // capsule chain on end. A diverged rig can report a NaN rotation, and
             // a NaN yaw would teleport it straight back out of the world, so fall
             // back to facing down the track.

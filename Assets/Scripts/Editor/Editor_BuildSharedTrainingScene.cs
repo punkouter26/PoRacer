@@ -26,7 +26,6 @@ namespace PoRacer.Editor
             "Assets/Prefabs/Spider_v01.prefab",
             "Assets/Prefabs/Hexapod_v01.prefab",
             "Assets/Prefabs/Quad_v01.prefab",
-            "Assets/Prefabs/Snake_v01.prefab",
             "Assets/Prefabs/Centipede_v01.prefab",
             "Assets/Prefabs/Crab_v01.prefab",
             "Assets/Prefabs/Kangaroo_v01.prefab",

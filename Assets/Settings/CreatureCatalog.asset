@@ -28,11 +28,6 @@ MonoBehaviour:
     prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}
     model: {fileID: 5022602860645237092, guid: 124878cf78be94f4ab8d2214668bef9c, type: 3}
     spawnHeight: 0.85
-  - id: Snake_v01
-    displayName: Snake
-    prefab: {fileID: 3283885459884916767, guid: 5bf92e641629e1d498c76dd37e977eae, type: 3}
-    model: {fileID: 5022602860645237092, guid: f5732cd6fb8bc3f4faf9480dce4cb9ba, type: 3}
-    spawnHeight: 0.2
   - id: Hexapod_v01
     displayName: Hexapod
     prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
@@ -48,21 +43,11 @@ MonoBehaviour:
     prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
     model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
     spawnHeight: 0.75
-  - id: IsaacSpider_v01
-    displayName: Isaac Spider
-    prefab: {fileID: 8403439250134436600, guid: f0f5aa0652aa2024a894ff6dd3fba4f8, type: 3}
-    model: {fileID: 5022602860645237092, guid: a8423705548225a45b39d3d14e9c28ed, type: 3}
-    spawnHeight: 0.18
   - id: IsaacH1_v01
     displayName: Isaac H1
     prefab: {fileID: 2078622320464831490, guid: 7bd9f2667f5c873429387b345f7d3ed2, type: 3}
     model: {fileID: 5022602860645237092, guid: 1c9374e3f334dbd4c98f2880c8239f4d, type: 3}
     spawnHeight: 1
-  - id: IsaacBiped2_v01
-    displayName: IsaacBiped2
-    prefab: {fileID: 4313217411317115453, guid: 103e23b58a742534695be79ce01dfead, type: 3}
-    model: {fileID: 5022602860645237092, guid: 3d5e75225e07d5c4699ea4604c187e0e, type: 3}
-    spawnHeight: 0.68
   - id: Fido_v01
     displayName: Fido
     prefab: {fileID: 1855124412564560699, guid: 2b95672e9a7531241b89d450d6a3e6df, type: 3}

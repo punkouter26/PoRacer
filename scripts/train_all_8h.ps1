@@ -35,12 +35,12 @@ if (-not (Test-Path $config)) { throw "Config missing: $config" }
 if (-not (Test-Path $mlagents)) { throw "mlagents-learn missing: $mlagents" }
 $settings = Get-Content (Join-Path $root "ProjectSettings\ProjectSettings.asset") -Raw
 if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
-# The config warm-starts the nine coded-gait creatures from BC/GAIL demos, by
+# The config warm-starts the eight coded-gait creatures from BC/GAIL demos, by
 # exact filename - a stale recording session leaves "Worm_1.demo" behind while
 # "Worm.demo" is missing, which mlagents only complains about minutes in. The
 # four humanoids are deliberately absent: a biped's coded gait is a fall, so they
 # train on extrinsic reward alone.
-$demoBehaviors = @("Worm", "Spider", "Hexapod", "Quad", "Snake", "Centipede", "Crab", "Kangaroo", "Blob")
+$demoBehaviors = @("Worm", "Spider", "Hexapod", "Quad", "Centipede", "Crab", "Kangaroo", "Blob")
 $missingDemos = $demoBehaviors | Where-Object { -not (Test-Path (Join-Path $root "Assets\Demonstrations\$_.demo")) }
 if ($missingDemos) { throw "Missing demos: $($missingDemos -join ', '). Record via PoRacer/Training menu (delete the old .demo files first, or the new ones land as <Name>_1.demo)." }
 

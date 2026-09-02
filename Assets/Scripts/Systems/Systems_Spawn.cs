@@ -400,8 +400,8 @@ namespace PoRacer.Systems
                             + layer * STACK_LAYER_HEIGHT,
                         localZ);
 
-                    // The prefab's own rotation, not identity: Snake and Centipede
-                    // are authored lying down (90 deg on X) and spawn as a
+                    // The prefab's own rotation, not identity: the Centipede is
+                    // authored lying down (90 deg on X) and spawns as a
                     // collapsing vertical tower of capsules without it.
                     GameObject instance = UnityEngine.Object.Instantiate(
                         entry.prefab, position, entry.prefab.transform.rotation);
@@ -455,11 +455,9 @@ namespace PoRacer.Systems
 
                     bool isMujoco = instance.GetComponent<Agent_Fido>() != null;
 
-                    // The Isaac spider ships its own URDF-shaped body: no connective
-                    // links, eyes or props on it (they float off its small 0.2 m body).
-                    // Fido is bare for a different reason: BodyLinkView draws links
-                    // between ArticulationBodies, and he has none to link.
-                    bool bareBody = instance.GetComponent<Agent_IsaacSpider>() != null || isMujoco;
+                    // Fido is bare: BodyLinkView draws links between
+                    // ArticulationBodies, and he has none to link.
+                    bool bareBody = isMujoco;
                     // Connective limb visuals must exist before tinting so the
                     // links pick up this racer's color along with its parts.
                     if (!bareBody)
@@ -608,7 +606,6 @@ namespace PoRacer.Systems
             switch (bodyPlan.ToLowerInvariant())
             {
                 case "worm":
-                case "snake":
                 case "centipede":
                     return SURFACE_SCALES;
                 case "spider":

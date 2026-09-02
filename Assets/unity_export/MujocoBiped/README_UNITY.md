@@ -200,8 +200,7 @@ a trace instead of a mean. Turn self-collision off for any actuator measurement.
 Unity 6000.5's importer. A file written to the plural extension is byte-correct YAML, gets
 a `.meta`, and still loads as `DefaultAsset` — so every
 `LoadAssetAtPath<PhysicsMaterial>` returns null and the colliders silently fall back to
-PhysX defaults. `Assets/unity_export/spider/PM_IsaacSpider.physicsMaterial` has this
-problem in this project today; fixing it belongs to that creature's owner.
+PhysX defaults.
 
 ---
 

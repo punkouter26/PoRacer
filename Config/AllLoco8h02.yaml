@@ -96,20 +96,6 @@ behaviors:
     summary_freq: 20000
     keep_checkpoints: 5
     checkpoint_interval: 250000
-  Snake:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Snake.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Snake.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 5
-    checkpoint_interval: 250000
   Centipede:
     trainer_type: ppo
     threaded: true

@@ -24,7 +24,7 @@ namespace PoRacer.Views
         /// <summary>
         /// One camera angle. Azimuth is degrees around the target measured from
         /// straight behind it (0 = chase, 90 = its left, 180 = head-on), taken
-        /// against world +Z rather than the racer's own facing: a tumbling snake's
+        /// against world +Z rather than the racer's own facing: a tumbling centipede's
         /// forward vector spins, and a shot anchored to it would spin with it.
         /// </summary>
         private readonly struct ShotDef

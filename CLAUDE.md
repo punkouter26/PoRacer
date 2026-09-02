@@ -69,12 +69,16 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
 * **Amendment (2026-08-14):** The prefix rule applies to the `Agents/`, `Sensors/`, `Rewards/`, and `Systems/` folders only. Views and Models follow `.claude/rules/architecture.md` naming (`*View`, `*Model`, `Messages.cs`, `*LifetimeScope`).
 * **Amendment (2026-08-29):** The `Agent_` prefix rule applies to
   `Assets/Scripts/Agents/` only. Classes under `Assets/unity_export/` keep the
-  exported names their Python side generates (`IsaacH1Agent`, `MujocoBipedAgent`,
-  `IsaacSpiderAgent`, `IsaacBiped2Agent`) — renaming them would fight every
-  re-export. Each is wrapped by a thin `Agent_*` adapter in `Assets/Scripts/Agents/`
+  exported names their Python side generates (`IsaacH1Agent`, `MujocoBipedAgent`)
+  — renaming them would fight every re-export. Each is wrapped by a thin `Agent_*` adapter in `Assets/Scripts/Agents/`
   implementing `ICreatureAgent`; that adapter is what the spawner, RacerView and
   camera talk to. Port folders under `unity_export/` are PascalCase and must match
-  their namespace (`IsaacSpider`, not `spider`).
+  their namespace (`IsaacH1`, not `h1`).
+* **Removed (2026-09-02):** the IsaacSpider and IsaacBiped2 ports and the Snake.
+  The two ports had raced brainless since the 2026-08-29 assembly merge renamed
+  their inference define and silently compiled their policies out; the Snake never
+  got past 3 m. Their assets, adapters, training sources, demo and catalog entries
+  are gone. Do not re-import any of them without a brain that finishes a race.
 * **Amendment (2026-08-27):** Everything in `Views/` is a `*View` MonoBehaviour. Shared presentation helpers that are not Views (`UiTheme`, `FxUtil`, `AudioLibrary`, `SynthUtil`) live in `Assets/Scripts/Presentation/` under namespace `PoRacer.Presentation`. ML-Agents `Agent` subclasses have an explicit MVS carve-out: they own their observation/action/reward logic (reward math still lives in a plain-C# `Reward_*` class); they take no VContainer dependencies, and training scenes have no LifetimeScope.
 * **Scenes & Environments:** Scenes prefix with `SCN_` (training scenes use `SCN_TRAIN_<NAME>` without suffixes). Build environments to `Builds/<Name>Env/`.
 * **Configs & Run IDs:** Configs are `<Name><Phase><NN>.yaml`. Attended one-off runs pair 1:1 with run-id `<name>_<phase><nn>`; unattended runs launched from `scripts/` are timestamped `<name>_<yyyyMMdd_HHmm>` instead, because they repeat. `scripts/Clean-TrainingArtifacts.ps1` understands both and protects the newest run of each prefix.
@@ -86,23 +90,19 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   Isaac Lab ports were trained against a 200 Hz sim. Solver iterations are locked
   at 12. Do not change either casually: an override silently changes dynamics
   fitted against trained brains.
-  * The 13 ML-Agents creatures are compensated with `DecisionPeriod: 20` (was 5),
+  * The 12 ML-Agents creatures are compensated with `DecisionPeriod: 20` (was 5),
     which holds their decision interval at the 0.1 s they were trained at. **If you
-    ever change Δt, change `DecisionPeriod` on all 13 prefabs to match.**
-  * 200 Hz is an exact multiple of the policy rate for 3 of the 4 Isaac ports
-    (IsaacBiped2 and IsaacH1 at 0.02 s, MujocoBiped at 0.025 s). IsaacSpider runs
-    at 1/30 s, which is 6.667 steps — it logs an error and runs its policy every 7
-    steps (35 ms instead of 33.3 ms, a 5% gait-timing error). That is *better* than
-    the old 0.02 s, which gave it 40 ms (20% off). The only Δt exact for all four
-    is 1/600 s, which costs 3× the current physics budget. Do not "fix" the spider
-    by moving to 1/240 s — that breaks IsaacBiped2 and IsaacH1 instead.
+    ever change Δt, change `DecisionPeriod` on all 12 prefabs to match.**
+  * 200 Hz is an exact multiple of the policy rate for both Isaac ports (IsaacH1
+    at 0.02 s, MujocoBiped at 0.025 s). Do not move to 1/240 s — that breaks
+    IsaacH1's exact 0.02 s step.
   * Fido is a *MuJoCo* creature and the plug-in always takes MuJoCo's timestep from
     `Time.fixedDeltaTime`, ignoring `<option timestep>` in the MJCF. His prefab
     carries `actionDecimation: 4`, so 0.005 × 4 = the exact 0.02 s his policy
     trained at. The drop ships 5, correct only at its own 0.004 s. **If you change
     Δt, change his decimation too.** Do not move the project to 0.004 to suit him:
     that breaks MujocoBiped's exact 0.025 s step and forces DecisionPeriod 20 → 25
-    on all 13 ML-Agents prefabs. Verified: he walks at 0.005 × 4.
+    on all 12 ML-Agents prefabs. Verified: he walks at 0.005 × 4.
 
 ### Fido — the MuJoCo racer
 

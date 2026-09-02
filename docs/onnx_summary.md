@@ -13,7 +13,7 @@
 | **Total shipped size** | ~2.79 MB across all brains |
 | **Default network** | PPO 256×2 with `normalize=true`, `tanh` activations, optional LSTM(128) |
 | **Promotion rule** | Staging → Production only after winning an ELO gauntlet. Never by mean reward alone (potential-based reward scales with episode length). |
-| **All-Production creatures** | 7 of 9 (Worm, Spider, Hexapod, Quad, Snake, Centipede, Crab). Kangaroo and Blob remain in Staging pending their first ELO win. |
+| **All-Production creatures** | 6 of 8 (Worm, Spider, Hexapod, Quad, Centipede, Crab). Kangaroo and Blob remain in Staging pending their first ELO win. |
 
 ---
 
@@ -29,7 +29,6 @@ Every shipped brain is a Sentis-friendly export from `mlagents-learn` baked via 
 | **Spider** | `Assets/Agents/Spider_v01/`    | `Spider_v01.onnx`    | 305 608 B | `(1, 59)`  floats | `(1, 24)` cont. | `spider_loco02` | 19.1 | **Production** |
 | **Hexapod**| `Assets/Agents/Hexapod_v01/`   | `Hexapod_v01.onnx`   | 317 994 B | `(1, 47)`  floats | `(1, 18)` cont. | `all_loco02` (hexapod) | 18.6 | **Production** |
 | **Quad**   | `Assets/Agents/Quad_v01/`      | `Quad_v01.onnx`      | 305 608 B | `(1, 35)`  floats | `(1, 12)` cont. | `all_loco02` (quad)    | 20.3 | **Production** |
-| **Snake**  | `Assets/Agents/Snake_v01/`     | `Snake_v01.onnx`     | 308 704 B | `(1, 59)`  floats | `(1, 24)` cont. | `all_loco02` (snake)   | 18.0 | **Production** |
 | **Centipede** | `Assets/Agents/Centipede_v01/` | `Centipede_v01.onnx` | 333 476 B | `(1, 75)`  floats | `(1, 32)` cont. | `all_loco02` (centipede) | 19.7 | **Production** |
 | **Crab**   | `Assets/Agents/Crab_v01/`      | `Crab_v01.onnx`      | 317 994 B | `(1, 47)`  floats | `(1, 18)` cont. | `all_loco02` (crab)    | 17.8 | **Production** |
 | **Kangaroo** | `Assets/Agents/Kangaroo_v01/` | `Kangaroo_v01.onnx`  | 299 415 B | `(1, 27)`  floats | `(1, 8)` cont.  | `all_loco02` (kangaroo) | 14.2 | **Staging** |
@@ -45,7 +44,6 @@ Every shipped brain is a Sentis-friendly export from `mlagents-learn` baked via 
 > | Spider  | 256 | 2 | 95 K |
 > | Hexapod | 256 | 2 | 80 K |
 > | Quad    | 256 | 2 | 71 K |
-> | Snake   | 256 | 2 | 95 K |
 > | Centipede | 256 | 2 | 110 K |
 > | Crab    | 256 | 2 | 80 K |
 > | Kangaroo | 256 | 2 | 64 K |
@@ -59,7 +57,6 @@ Every shipped brain is a Sentis-friendly export from `mlagents-learn` baked via 
 | **Spider**    | `ArticulationBody` (root + 8 legs × 3 joints) | revolute + SLERP on hip yaw | PD; hip yaw uses `ArticulationDrive` with SLERP-style target | 24 | Octopedal crawl with tripod-alternating gait. |
 | **Hexapod**   | `ArticulationBody` (root + 6 legs × 3 joints) | revolute | PD | 18 | Insect-style alternating-tripod locomotion. |
 | **Quad**      | `ArticulationBody` (root + 4 legs × 3 joints) | revolute | PD | 12 | Quadruped trot; faster than hexapod on flat ground, less stable on rough. |
-| **Snake**     | `ArticulationBody` (chain of 18 segments) | revolute (low stiffness, high damping) | PD | 24 | Lateral undulation; relies on friction, no legs. |
 | **Centipede** | `ArticulationBody` (root + 16 legs × 2 joints + body) | revolute + phase-shifted | PD | 32 | Many-leg coordination; tests curriculum across many coupled DoFs. |
 | **Crab**      | `ArticulationBody` (root + 8 legs × 2 joints + claws) | revolute, low center of mass | PD | 18 | Sideways scuttle; wide stance. |
 | **Kangaroo**  | `ArticulationBody` (root + 2 legs × 3 joints + tail) | revolute (hip) + prismatic spine | PD; high torque at hip | 8 | Half-biped hop. Staging — curriculum is harder than flat-ground crawlers. |
@@ -85,7 +82,6 @@ Unity's `OnnxModelImporter` (com.unity.ml-agents `com.unity.inferenceengine` dep
 | 2 | Spider    | `Assets/Agents/Spider_v01/Spider_v01.onnx`    | 305 608 | `(1, 59)` → `(1, 24)` | 95 K | `spider_loco02` | Production |
 | 3 | Hexapod   | `Assets/Agents/Hexapod_v01/Hexapod_v01.onnx`   | 317 994 | `(1, 47)` → `(1, 18)` | 80 K | `all_loco02` (hexapod) | Production |
 | 4 | Quad      | `Assets/Agents/Quad_v01/Quad_v01.onnx`         | 305 608 | `(1, 35)` → `(1, 12)` | 71 K | `all_loco02` (quad) | Production |
-| 5 | Snake     | `Assets/Agents/Snake_v01/Snake_v01.onnx`       | 308 704 | `(1, 59)` → `(1, 24)` | 95 K | `all_loco02` (snake) | Production |
 | 6 | Centipede | `Assets/Agents/Centipede_v01/Centipede_v01.onnx` | 333 476 | `(1, 75)` → `(1, 32)` | 110 K | `all_loco02` (centipede) | Production |
 | 7 | Crab      | `Assets/Agents/Crab_v01/Crab_v01.onnx`         | 317 994 | `(1, 47)` → `(1, 18)` | 80 K | `all_loco02` (crab) | Production |
 | 8 | Kangaroo  | `Assets/Agents/Kangaroo_v01/Kangaroo_v01.onnx` | 299 415 | `(1, 27)` → `(1, 8)`  | 64 K | `all_loco02` (kangaroo) | Staging |
@@ -99,7 +95,6 @@ Unity's `OnnxModelImporter` (com.unity.ml-agents `com.unity.inferenceengine` dep
 | **Spider**    | 1 root + 8 legs      | 24 revolute + SLERP | `target = a_i · 45°` | 100 N·m | Hip yaw uses SLERP; lower legs are revolute |
 | **Hexapod**   | 1 root + 6 legs      | 18 revolute | `target = a_i · 45°` | 100 N·m | Tripod gait; alternating L1,R2,R3 vs L2,L3,R1 |
 | **Quad**      | 1 root + 4 legs      | 12 revolute | `target = a_i · 45°` | 100 N·m | Trot; diagonal pairs in phase |
-| **Snake**     | 1 root + 18 segments | 24 revolute | `target = a_i · 45°` | 100 N·m | Low stiffness, high damping (relies on friction) |
 | **Centipede** | 1 root + 16 legs + body | 32 revolute | `target = a_i · 45°` | 100 N·m | Phase-shifted alternating tripods |
 | **Crab**      | 1 root + 8 legs + claws | 18 revolute | `target = a_i · 45°` | 100 N·m | Wide stance; claws are passive visual |
 | **Kangaroo**  | 1 root + 2 legs + tail | 8 revolute + prismatic spine | `target = a_i · 45°` (hips), linear for spine | 150 N·m (hip) | Prismatic spine for compression; high torque for hops |
@@ -140,7 +135,6 @@ Assets/
     Spider_v01/…                — Production
     Hexapod_v01/…               — Production
     Quad_v01/…                  — Production
-    Snake_v01/…                 — Production
     Centipede_v01/…             — Production
     Crab_v01/…                  — Production
     Kangaroo_v01/…              — Staging

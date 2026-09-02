@@ -334,8 +334,7 @@ for you to confirm.
 
 Two more things about that ground: it only exists **after the race starts**, so an H1
 sitting in the edit-mode scene has nothing under it until then; and
-`IsaacH1Agent` has no `holdUntilGrounded` equivalent to the `Agent_IsaacSpider`
-adapter's, so it will fall for those frames.
+`IsaacH1Agent` has no `holdUntilGrounded`, so it will fall for those frames.
 
 ### Solver iterations - adaptive, and NOT load-bearing in this project
 
@@ -501,15 +500,13 @@ Ordered by how much they matter.
 
 10. **Other agents' settings - read, not touched.** Unlike the project this rig was
     first built in, PoRacer *does* contain ML-Agents (`com.unity.ml-agents` 4.1.0),
-    `Agent_Creature` / `Agent_IsaacSpider` / `ICreatureAgent` in
+    `Agent_Creature` / `ICreatureAgent` in
     `Assets/Scripts/Agents/`, 10+ trained brains under `Assets/Agents/*_v01/`, a
-    `CreatureCatalog` of 8 racers and a sibling Isaac export at
-    `Assets/unity_export/spider/`. **None of it was read from or written to.** The
+    `CreatureCatalog` of 8 racers. **None of it was read from or written to.** The
     relevant shared surface is `Time.fixedDeltaTime = 0.02`, which those brains were
     trained at and which this integration does not change (§6: the ratio is exactly 1).
     IsaacH1 is not registered in `CreatureCatalog` and is not an `ICreatureAgent`; it
-    does not participate in a race unless you adapt it the way `Agent_IsaacSpider`
-    adapts the spider.
+    does not participate in a race unless you wrap it in an `Agent_*` adapter.
 
 11. **Enhanced determinism is On, and this rig is less forgiving because of it.**
     `m_EnableEnhancedDeterminism: 1` here (it was `0` in the project this rig was first
