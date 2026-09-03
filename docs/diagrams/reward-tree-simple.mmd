@@ -1,17 +1,44 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "17px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart LR
-    SENSORS["Sensors<br/>Joints + Root Pose + Goal"] --> REW["Reward_WormLoco<br/>Composite"]
-    REW --> SUM{"Per Step Total"}
-    SUM --> R1["Progress<br/>delta * 1.0"]
-    SUM --> R2["Efficiency<br/>-0.05 * torque"]
-    SUM --> R3["Upright<br/>0.02 * up_dot"]
-    SUM --> R4["Time<br/>-0.002"]
-    R1 --> TOTAL["AddReward -> PPO/SAC"]
-    R2 --> TOTAL
-    R3 --> TOTAL
-    R4 --> TOTAL
-    TOTAL --> TERM{"Terminal Check<br/>goal / out-of-bounds / no-progress"}
+    ROOT["<b>What the creature<br/>is paid for</b>"]
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef ctrl fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    class SENSORS,REW,SUM,R1,R2,R3,R4,TOTAL ml;
-    class TERM ctrl;
+    G["<b>Get closer</b><br/>+1 per metre gained<br/><i>the only term that<br/>survives an episode</i>"]
+    F["<b>Finish</b><br/>+10 on reaching<br/>the goal (0.5 m)"]
+    T["<b>Hurry</b><br/>&minus;0.002 every step<br/>so fast beats slow"]
+
+    E["<b>Do not strain</b><br/>&minus;0.05 &middot; torque&sup2;"]
+    U["<b>Stay upright</b><br/>+0.02 &middot; upright"]
+    J["<b>Move smoothly</b><br/>&minus;0.01 &middot; jerk"]
+    S["<b>Do not skate</b><br/>&minus;0.025 &middot; foot slip"]
+
+    X1["<b>Fell / diverged</b><br/>&minus;1, episode over"]
+    X2["<b>Gave up</b><br/>&minus;0.5 after 20 s<br/>without progress"]
+
+    ROOT --> WIN["<b>Win the race</b><br/>task reward"]
+    ROOT --> MOVE["<b>Move like an animal</b><br/>shaping reward"]
+    ROOT --> STOP["<b>Do not break</b><br/>terminal reward"]
+
+    WIN --> G & F & T
+    MOVE --> E & U & J & S
+    STOP --> X1 & X2
+
+    NOTE["Shaping terms are training-only.<br/>They never run at race time, so they can<br/>be retuned without invalidating a brain."]
+    MOVE -.- NOTE
+
+    classDef root fill:#10203a,stroke:#10203a,stroke-width:2px,color:#ffffff;
+    classDef task fill:#e6f7ec,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    classDef shape fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef term fill:#ffeaea,stroke:#d0453f,stroke-width:2px,color:#4a0f0d;
+    classDef note fill:#f4f6fa,stroke:#9aa7bd,stroke-width:1px,color:#3a465c,font-size:14px;
+    class ROOT root;
+    class WIN,G,F,T task;
+    class MOVE,E,U,J,S shape;
+    class STOP,X1,X2 term;
+    class NOTE note;

@@ -1,357 +1,552 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PoRacer — Architecture & Runtime Pipeline</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoRacer — Architecture &amp; Pipeline</title>
 <style>
-  :root {
-    --bg-1: #0d1117; --bg-2: #161b22; --bg-3: #1f2630;
-    --border: #30363d; --text-1: #e6edf3; --text-2: #9ba9b7;
-    --accent: #58a6ff; --accent-2: #d2a8ff;
-    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #8957e5;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0;
-    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.65; min-height: 100vh; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
-  header { padding: 24px 0 32px; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0 0 8px; font-size: 2rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header p { color: var(--text-2); margin: 4px 0; }
-  nav.toc { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
-  nav.toc a { color: var(--accent); background: var(--bg-3); padding: 6px 14px; border-radius: 999px; text-decoration: none; font-size: 0.85rem; border: 1px solid var(--border); }
-  nav.toc a:hover { border-color: var(--accent); }
-  h2 { margin: 48px 0 16px; font-size: 1.6rem; color: var(--text-1); border-left: 4px solid var(--accent); padding-left: 14px; }
-  h3 { margin: 28px 0 10px; font-size: 1.15rem; color: var(--accent); }
-  h4 { margin: 18px 0 8px; font-size: 1rem; color: var(--accent-2); }
-  p, li { color: var(--text-1); }
-  ul, ol { padding-left: 22px; }
-  code { background: var(--bg-3); padding: 2px 7px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; color: var(--accent-2); }
-  pre { background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; overflow-x: auto; font-size: 0.86rem; line-height: 1.5; }
-  pre code { background: transparent; padding: 0; color: var(--text-1); }
-  table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 0.92rem; }
-  th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
-  th { background: var(--bg-3); color: var(--accent); }
-  td { background: rgba(255,255,255,0.02); }
-  .tier-card { background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 18px 22px; margin: 20px 0; }
-  .tier-card.tier-1 { border-left-color: var(--green); }
-  .tier-card.tier-2 { border-left-color: var(--accent); }
-  .tier-card.tier-3 { border-left-color: var(--purple); }
-  .tier-label { display: inline-block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
-  .tier-card.tier-1 .tier-label { color: var(--green); }
-  .tier-card.tier-2 .tier-label { color: var(--accent); }
-  .tier-card.tier-3 .tier-label { color: var(--purple); }
-  .tier-card h3:first-child { margin-top: 0; }
-  .diagram { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 20px 0; }
-  .diagram img { width: 100%; height: auto; display: block; border-radius: 6px; background: #fff; }
-  .diagram-caption { color: var(--text-2); font-size: 0.86rem; margin-top: 10px; text-align: center; }
-  .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 760px) { .two-up { grid-template-columns: 1fr; } }
-  .callout { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; margin: 14px 0; color: var(--text-1); }
-  .callout.warn { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.3); }
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem; color: var(--text-2); margin: 10px 0; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
-  a { color: var(--accent); }
-  footer { margin-top: 56px; padding: 20px 0; border-top: 1px solid var(--border); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+:root{
+  color-scheme:light;
+  --bg:#f6f6f4; --surface-1:#fcfcfb; --surface-2:#f0efec; --border:#dcdbd6; --border-strong:#c3c2b7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --crit:#e34948; --warn:#eda100;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 4px 14px rgba(11,11,11,.045);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark; --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835;
+  --border-strong:#4d4d49; --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835;
+  --border-strong:#4d4d49; --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.top-in{max-width:1080px;margin:0 auto;padding:12px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:680;letter-spacing:-.02em;margin-right:auto;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--s1)}
+.brand small{font-weight:450;color:var(--text-muted)}
+.top-in a{color:var(--text-secondary);text-decoration:none;font-size:13.5px}
+.top-in a:hover{color:var(--text-primary)}
+.iconbtn{appearance:none;border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:15px}
+h1{font-size:clamp(27px,4vw,40px);line-height:1.08;letter-spacing:-.028em;margin:44px 0 12px;font-weight:700}
+.lede{font-size:17.5px;color:var(--text-secondary);max-width:66ch;margin:0 0 18px}
+.stamp{font:12.5px/1.5 var(--mono);color:var(--text-muted);border-left:2px solid var(--border-strong);padding-left:12px;max-width:80ch}
+h2{font-size:23px;letter-spacing:-.02em;margin:54px 0 6px;padding-bottom:10px;border-bottom:1px solid var(--border);font-weight:670}
+h3{font-size:17.5px;letter-spacing:-.015em;margin:32px 0 4px;font-weight:640}
+h4{font-size:15px;margin:22px 0 4px;font-weight:640;color:var(--text-secondary)}
+p{max-width:78ch}
+.tierpill{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--s1);background:color-mix(in srgb,var(--s1) 12%,transparent);padding:5px 8px;border-radius:5px;margin-bottom:10px}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+.mono{font-family:var(--mono);font-size:.9em}
+.grid{display:grid;gap:14px;margin:20px 0}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(224px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:7px}
+.tile .v{font:700 29px/1.05 var(--sans);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:14px;font-weight:560;color:var(--text-secondary)}
+.tile .d{font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.45}
+.note{font-size:14px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--s2);border-radius:0 8px 8px 0;padding:13px 16px;margin:18px 0;max-width:88ch}
+.note b{color:var(--text-primary)}
+.note.crit{border-left-color:var(--crit)}
+.note.good{border-left-color:var(--s3)}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+caption{text-align:left;padding:14px 16px 0;font-size:13px;color:var(--text-muted);caption-side:top}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:640;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-secondary);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+td.name{font-weight:620;white-space:nowrap}
+ul.tight{margin:10px 0;padding-left:20px}
+ul.tight li{margin:5px 0;max-width:76ch}
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:20px 0;max-width:none}
+ol.steps li{counter-increment:s;position:relative;padding:0 0 0 46px;margin:0 0 18px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:30px;height:30px;
+  border-radius:8px;background:var(--s1);color:#fff;font:700 14px/30px var(--sans);text-align:center}
+ol.steps h4{margin:2px 0 4px;font-size:15.5px;color:var(--text-primary)}
+ol.steps p{margin:0;font-size:14px;color:var(--text-secondary)}
+.dgm{margin:20px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);box-shadow:var(--shadow);overflow:hidden}
+.dgm figcaption{padding:13px 16px;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border);background:var(--surface-2)}
+.dgm figcaption b{color:var(--text-primary);font-weight:640}
+.dgm .scroll{overflow:auto;padding:18px;max-height:82vh;background:#fff;border-radius:8px}
+.dgm img{display:block;height:auto}
+.dgm .hint{padding:8px 16px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)}
+.flow{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;
+  box-shadow:var(--shadow);margin:18px 0;overflow-x:auto}
+.flow svg{display:block;min-width:820px}
+.flow text{font-family:var(--sans);fill:var(--text-secondary);font-size:11.5px}
+.flow .lb{font-weight:660;fill:var(--text-primary);font-size:12.5px}
+.flow .mn{font-family:var(--mono);font-size:10.5px;fill:var(--text-muted)}
+a{color:var(--s1)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+.badge{display:inline-block;font:600 11px/1 var(--sans);padding:4px 8px;border-radius:999px;border:1px solid;white-space:nowrap}
+.badge.ok{color:var(--s3);border-color:color-mix(in srgb,var(--s3) 40%,transparent);background:color-mix(in srgb,var(--s3) 11%,transparent)}
+.badge.no{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,transparent);background:color-mix(in srgb,var(--crit) 11%,transparent)}
+.badge.wa{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 11%,transparent)}
 </style>
 </head>
 <body>
+<header class="top"><div class="top-in">
+  <div class="brand"><span class="dot"></span>PoRacer <small>Architecture &amp; Pipeline</small></div>
+  <a href="index.html">index</a>
+  <a href="creatures_dashboard.html">dashboard</a>
+  <a href="scenes_layout.html">scenes</a>
+  <a href="onnx_summary.md">ONNX inventory</a>
+  <button class="iconbtn" id="themeBtn" aria-label="Toggle theme">◐</button>
+</div></header>
+
 <div class="wrap">
-  <header>
-    <h1>Architecture & Runtime Pipeline</h1>
-    <p>C# (ML-Agents) → ONNX (Sentis/Barracuda) → PhysX 5 Articulations → buffer / reset.</p>
-    <p style="font-size: 0.88rem;">Every section below carries three progressive detail tiers so the same page serves an executive skim and a deep implementation dive.</p>
-    <nav class="toc">
-      <a href="#lifecycle">Lifecycle &amp; Execution Loop</a>
-      <a href="#tensors">Tensor Blueprint &amp; Actuator Map</a>
-      <a href="#reward">Sensor Perception &amp; Reward Tree</a>
-      <a href="#hparams">Hyperparameters &amp; Trainer</a>
-      <a href="#hub">← Back to Hub</a>
-    </nav>
-  </header>
 
-  <!-- ============================== LIFECYCLE ============================== -->
-  <h2 id="lifecycle">1. Dynamic Lifecycle &amp; Execution Loop</h2>
+<h1>Three training pipelines that all end in one race</h1>
+<p class="lede">How a policy gets from a Python trainer into a Unity racer — three separate routes,
+each with its own engine, its own export tooling, and its own way of going wrong.</p>
+<p class="stamp">Regenerated 2026-09-03 from <span class="mono">Config/*.yaml</span>,
+<span class="mono">training/</span>, <span class="mono">ISAAC/</span>,
+<span class="mono">Assets/Scripts/</span>, <span class="mono">Assets/unity_export/</span> and
+<span class="mono">Packages/manifest.json</span>.</p>
 
-  <div class="tier-card tier-1">
-    <span class="tier-label">Tier 1 · Executive summary</span>
-    <h3>The 4-beat loop</h3>
-    <p><strong>Observe</strong> joints, root pose, goal, velocity → <strong>Infer</strong> with ONNX → <strong>Apply</strong> targets to PhysX joint drives → <strong>Score</strong> with the reward function and check for termination. Every 0.02 s (FixedUpdate).</p>
-  </div>
+<!-- ============ TIER 1 ============ -->
+<h2 id="t1">Tier 1 · Executive summary</h2>
+<span class="tierpill">Tier 1 — 30 seconds</span>
 
-  <div class="tier-card tier-2">
-    <span class="tier-label">Tier 2 · Basic overview</span>
-    <h3>Loop steps and message flow</h3>
-    <ol>
-      <li><strong>C# Agent</strong> (<code>Agent_Creature</code>) packs an observation vector from <code>ArticulationBody.jointPosition</code>, <code>jointVelocity</code>, root <code>up</code>, <code>position.y</code>, goal direction &amp; distance, and root velocity.</li>
-      <li><strong>Sentis</strong> runs the ONNX policy on Burst and returns continuous actions <code>a ∈ [-1, 1]^N</code>.</li>
-      <li>Each action becomes an <code>ArticulationDrive.target</code> in degrees (revolute) or metres (prismatic) before the next PhysX step.</li>
-      <li><strong>Reward_WormLoco.Step</strong> computes potential-based progress, efficiency penalty, upright bonus, and constant time cost; <strong>Agent_Creature</strong> fires terminal checks (goal hit / out-of-bounds / no-progress) and either ends the episode or loops back.</li>
-    </ol>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/lifecycle-simple.svg" alt="Lifecycle - simple">
-    <div class="diagram-caption">Figure L1 · Lifecycle &amp; execution loop — simple (conceptual)</div>
-  </div>
-
-  <div class="tier-card tier-3">
-    <span class="tier-label">Tier 3 · Complete specification</span>
-    <h3>Detailed pipeline (tensors, memory, Sentis, PhysX)</h3>
-    <p>The detailed diagram breaks the loop into four runtime layers: C# packing, ONNX inference, PhysX solve, and the buffer / reset loop. Key invariant: <strong>actions are applied only in <code>FixedUpdate</code></strong> because <code>ArticulationBody.Solve</code> consumes targets at the same cadence as the simulation step (0.02 s).</p>
-    <h4>Cadence and timing</h4>
-    <ul>
-      <li><code>Time.fixedDeltaTime = 0.02</code> · <code>Physics.gravity = (0, -9.81, 0)</code> · <code>vSyncCount = 0</code>, <code>targetFrameRate = 60</code></li>
-      <li><code>DecisionRequester.DecisionStep = 5</code> on inference racers means the policy runs every ~0.10 s, but PD targets are held continuously by the drive between decisions.</li>
-      <li>Training cadence: the trainer runs <code>num_epoch = 3</code> passes per buffer with a <code>batch_size = 2048</code> gradient step.</li>
-    </ul>
-    <h4>NaN firewall</h4>
-    <p><code>Reward_WormLoco.Step</code> sanitizes <code>currentDistance</code>, <code>normalizedTorque</code>, and <code>uprightDot</code> before any arithmetic. One exploding body must never feed NaN into a sensor, which would abort the Academy step for <em>all</em> agents sharing the environment.</p>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/lifecycle-detailed.svg" alt="Lifecycle - detailed">
-    <div class="diagram-caption">Figure L2 · Lifecycle &amp; execution loop — detailed (tensors, memory, PhysX)</div>
-  </div>
-
-  <!-- ============================== TENSORS ============================== -->
-  <h2 id="tensors">2. Tensor Blueprint &amp; Actuator Map</h2>
-
-  <div class="tier-card tier-1">
-    <span class="tier-label">Tier 1 · Executive summary</span>
-    <h3>What the policy sees and what it controls</h3>
-    <p><strong>Input</strong>: per-joint position + velocity (<code>2·N</code>), root up, height, goal direction, goal distance, root velocity → <code>N·2 + 11</code> floats. <strong>Output</strong>: one continuous value per joint, in <code>[-1, 1]</code>, scaled into an <code>ArticulationDrive.target</code>.</p>
-  </div>
-
-  <div class="tier-card tier-2">
-    <span class="tier-label">Tier 2 · Basic overview</span>
-    <h3>Per-creature observation shape</h3>
-    <pre><code>obs = [
-  joint_position_normalized (N),
-  joint_velocity_normalized (N),
-  root.up (3),
-  root.position.y (1),
-  goal_dir_local (3),
-  goal_distance / 20 (1),
-  root_velocity_local / MAX_ROOT_SPEED (3)
-]   // total = N*2 + 11</code></pre>
-    <p>With terrain probes enabled, four look-ahead raycasts add <code>+4</code> floats. Each value passes through <code>Safe()</code> so NaN/Infinity collapse to 0.</p>
-    <h3>Network</h3>
-    <p>Two fully-connected layers of 256 units with tanh activations, fed through an optional LSTM(128) for memory. Output heads emit per-action means; SAC additionally emits <code>log_sigma</code>.</p>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/tensor-blueprint-simple.svg" alt="Tensor blueprint - simple">
-    <div class="diagram-caption">Figure T1 · Tensor blueprint &amp; actuator map — simple</div>
-  </div>
-
-  <div class="tier-card tier-3">
-    <span class="tier-label">Tier 3 · Complete specification</span>
-    <h3>Sensor layout and normalization constants</h3>
-    <table>
-      <thead><tr><th>Sensor / Field</th><th>Shape</th><th>Range</th><th>Normalization</th></tr></thead>
-      <tbody>
-        <tr><td>joint position</td><td><code>N</code></td><td><code>[-π, π]</code> rad</td><td><code>x / (jointDriveScale · Deg2Rad)</code></td></tr>
-        <tr><td>joint velocity</td><td><code>N</code></td><td><code>[-10, 10]</code> rad/s</td><td><code>xdot / MAX_JOINT_VELOCITY (=10)</code></td></tr>
-        <tr><td>root.up</td><td><code>3</code></td><td>unit vector</td><td>passed through <code>SafeVector</code></td></tr>
-        <tr><td>root.position.y</td><td><code>1</code></td><td>meters</td><td>raw, clamped</td></tr>
-        <tr><td>goal direction (local)</td><td><code>3</code></td><td>unit</td><td><code>root.InverseTransformDirection(normalized(toGoal))</code></td></tr>
-        <tr><td>goal distance</td><td><code>1</code></td><td><code>[0, 20]</code> m</td><td><code>clamp01(d / GOAL_DISTANCE_NORM)</code></td></tr>
-        <tr><td>root velocity (local)</td><td><code>3</code></td><td><code>|v| ≤ 2 m/s</code></td><td><code>clampMagnitude(v / MAX_ROOT_SPEED, 1)</code></td></tr>
-        <tr><td>terrain probes (opt.)</td><td><code>4</code></td><td><code>[-2, 2]</code> m</td><td><code>clamp(h / PROBE_HEIGHT_NORM, -1, 1)</code></td></tr>
-      </tbody>
-    </table>
-
-    <h3>Actuator map and drive constants</h3>
-    <table>
-      <thead><tr><th>Parameter</th><th>Default</th><th>Source</th></tr></thead>
-      <tbody>
-        <tr><td><code>jointDriveScale</code> (deg / m)</td><td><code>45</code></td><td><code>Agent_Creature</code> serialized field, per prefab</td></tr>
-        <tr><td><code>forceLimit</code> (N·m)</td><td><code>100</code></td><td>matched to prefab's <code>ArticulationDrive.forceLimit</code></td></tr>
-        <tr><td><code>stiffness</code> (Kp)</td><td>per joint</td><td>authored per prefab, modified by race-day quirk ±8%</td></tr>
-        <tr><td><code>damping</code> (Kd)</td><td>per joint</td><td>authored per prefab</td></tr>
-        <tr><td><code>maxAngularVelocity</code></td><td><code>20</code> rad/s</td><td>set in <code>Initialize</code> on root + every joint</td></tr>
-      </tbody>
-    </table>
-
-    <h4>Action flow</h4>
-    <pre><code>// In Agent.OnActionReceived:
-for each joint i:
-    a_i = clamp(actions.ContinuousActions[i], -1, 1)
-    drive = joint.xDrive
-    drive.target = a_i * jointDriveScale
-    joint.xDrive = drive
-// PhysX.ArticulationBody.Solve applies torque:
-//   tau = stiffness * (target - x) - damping * xdot   (clamped to forceLimit)</code></pre>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/tensor-blueprint-detailed.svg" alt="Tensor blueprint - detailed">
-    <div class="diagram-caption">Figure T2 · Tensor blueprint &amp; actuator map — detailed</div>
-  </div>
-
-  <!-- ============================== REWARD ============================== -->
-  <h2 id="reward">3. Sensor Perception &amp; Reward Tree</h2>
-
-  <div class="tier-card tier-1">
-    <span class="tier-label">Tier 1 · Executive summary</span>
-    <h3>Reward = progress − effort + upright − time</h3>
-    <p>The composite reward favors forward motion, discourages waste of torque, rewards staying upright, and adds a constant per-step cost so faster finishes win. Three terminal conditions: reach the goal, fall out of bounds, or 20 s without progress.</p>
-  </div>
-
-  <div class="tier-card tier-2">
-    <span class="tier-label">Tier 2 · Basic overview</span>
-    <h3>Components (per step)</h3>
-    <table>
-      <thead><tr><th>Signal</th><th>Formula</th><th>Sign</th><th>Weight</th></tr></thead>
-      <tbody>
-        <tr><td>Progress (extrinsic)</td><td><code>Δd × PROGRESS_SCALE</code></td><td>+</td><td><code>1.0</code></td></tr>
-        <tr><td>Efficiency penalty</td><td><code>−ENERGY_PENALTY × torque_norm</code></td><td>−</td><td><code>0.05</code></td></tr>
-        <tr><td>Upright bonus</td><td><code>UPRIGHT_BONUS × max(up·ŷ, 0)</code></td><td>+</td><td><code>0.02</code></td></tr>
-        <tr><td>Time penalty</td><td>constant</td><td>−</td><td><code>0.002</code></td></tr>
-      </tbody>
-    </table>
-    <h3>Terminal conditions</h3>
-    <ul>
-      <li><strong>Goal</strong>: <code>d ≤ 0.5 m</code> → <code>+10</code> bonus, <code>EndEpisode()</code></li>
-      <li><strong>Out-of-bounds</strong>: <code>y &lt; −1</code> → <code>−1</code>, <code>EndEpisode()</code></li>
-      <li><strong>No-progress</strong>: 1000 steps (~20 s) without best-distance improvement → <code>EpisodeInterrupted()</code></li>
-    </ul>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/reward-tree-simple.svg" alt="Reward tree - simple">
-    <div class="diagram-caption">Figure R1 · Sensor perception &amp; reward tree — simple</div>
-  </div>
-
-  <div class="tier-card tier-3">
-    <span class="tier-label">Tier 3 · Complete specification</span>
-    <h3>Reward shaping constants (Reward_WormLoco)</h3>
-    <pre><code>PROGRESS_SCALE         = 1.0
-GOAL_REWARD            = 10.0
-OUT_OF_BOUNDS_REWARD   = -1.0
-GOAL_RADIUS_METERS     = 0.5
-NO_PROGRESS_LIMIT_STEPS = 1000     // 20 s @ 0.02 s
-MAX_STEP_DELTA_METERS  = 0.2       // physics glitch clamp
-ENERGY_PENALTY_SCALE   = 0.05
-UPRIGHT_BONUS_SCALE    = 0.02
-TIME_PENALTY           = 0.002     // ≈ 6 / full 3000-step episode</code></pre>
-
-    <h3>StatsRecorder telemetry (training only)</h3>
-    <p>When <code>Academy.IsCommunicatorOn</code>, <code>Agent_Creature</code> writes:</p>
-    <pre><code>stats.Add("Reward/Progress",           LastProgressReward)
-stats.Add("Reward/EfficiencyPenalty",  LastEfficiencyPenalty)
-stats.Add("Reward/UprightBonus",       LastUprightBonus)
-stats.Add("Reward/TimePenalty",        -TIME_PENALTY)</code></pre>
-    <p>Inference-only racers never pay this cost — hundreds of bots in a race do not record stats.</p>
-
-    <h3>NaN firewall invariants</h3>
-    <ul>
-      <li><code>currentDistance</code>: NaN/Inf → fall back to <code>_previousDistance</code> (no zero-delta that would still poison progress).</li>
-      <li><code>normalizedTorque</code>: NaN/Inf → 0 (no efficiency penalty).</li>
-      <li><code>uprightDot</code>: NaN/Inf → 0 (no upright bonus).</li>
-      <li><code>delta</code> ternary clamp passes NaN through; the stored <code>_previousDistance</code> is reset explicitly when <code>delta</code> is NaN.</li>
-    </ul>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/reward-tree-detailed.svg" alt="Reward tree - detailed">
-    <div class="diagram-caption">Figure R2 · Sensor perception &amp; reward tree — detailed</div>
-  </div>
-
-  <!-- ============================== HYPERPARAMS ============================== -->
-  <h2 id="hparams">4. Hyperparameters &amp; Trainer Specification</h2>
-
-  <div class="tier-card tier-1">
-    <span class="tier-label">Tier 1 · Executive summary</span>
-    <h3>Two trainers, one shared network shape</h3>
-    <p><strong>PPO</strong> for the bulk of behaviors (256×2 dense, normalize=true). <strong>SAC</strong> for the off-policy ablation against PPO. Both share the same observation contract and ArticulationBody actuator map.</p>
-  </div>
-
-  <div class="tier-card tier-2">
-    <span class="tier-label">Tier 2 · Basic overview</span>
-    <h3>PPO config (canonical — WormLoco03 / AllLoco1h01)</h3>
-    <table>
-      <thead><tr><th>Field</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td>batch_size / buffer_size</td><td><code>2048</code> / <code>20480</code></td></tr>
-        <tr><td>learning_rate / schedule</td><td><code>3e-4</code> / <code>linear</code></td></tr>
-        <tr><td>epsilon / lambd / beta / num_epoch</td><td><code>0.2</code> / <code>0.95</code> / <code>0.005</code> / <code>3</code></td></tr>
-        <tr><td>network</td><td><code>Dense(256) → Dense(256)</code>, tanh, normalize=true</td></tr>
-        <tr><td>extrinsic γ / strength</td><td><code>0.995</code> / <code>1.0</code></td></tr>
-        <tr><td>time_horizon / max_steps</td><td><code>1000</code> / <code>10M</code> (long), <code>400k</code> (1 h), <code>2M</code> (5 h)</td></tr>
-      </tbody>
-    </table>
-
-    <h3>SAC config (WormSac01)</h3>
-    <table>
-      <thead><tr><th>Field</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td>batch_size / buffer_size / init_steps</td><td><code>256</code> / <code>500000</code> / <code>5000</code></td></tr>
-        <tr><td>learning_rate / schedule</td><td><code>3e-4</code> / <code>constant</code></td></tr>
-        <tr><td>tau / steps_per_update / init_entcoef</td><td><code>0.005</code> / <code>2</code> / <code>0.5</code></td></tr>
-        <tr><td>network</td><td><code>Dense(256) → Dense(256)</code>, normalize=true</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/hyperparameters-simple.svg" alt="Hyperparameters - simple">
-    <div class="diagram-caption">Figure H1 · Hyperparameters &amp; trainer specification — simple</div>
-  </div>
-
-  <div class="tier-card tier-3">
-    <span class="tier-label">Tier 3 · Complete specification</span>
-    <h3>YAML trainer registry</h3>
-    <table>
-      <thead><tr><th>Config</th><th>Run ID</th><th>Trainer</th><th>Network</th><th>Max Steps</th><th>Purpose</th></tr></thead>
-      <tbody>
-        <tr><td><code>WormLoco03.yaml</code></td><td><code>worm_loco03</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Reference worm locomotion run</td></tr>
-        <tr><td><code>WormLoco04.yaml</code></td><td><code>worm_loco04</code></td><td>PPO 512×3</td><td>normalize</td><td><code>5M</code></td><td>Wider-network ablation vs SAC</td></tr>
-        <tr><td><code>WormSac01.yaml</code></td><td><code>worm_sac01</code></td><td>SAC</td><td>normalize</td><td><code>5M</code></td><td>Off-policy ablation vs PPO 512</td></tr>
-        <tr><td><code>WormRough01.yaml</code></td><td><code>worm_rough01</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Single-creature rough-terrain curriculum</td></tr>
-        <tr><td><code>SpiderLoco02.yaml</code></td><td><code>spider_loco02</code></td><td>PPO 256×2</td><td>normalize</td><td><code>10M</code></td><td>Spider-only run</td></tr>
-        <tr><td><code>AllLoco02.yaml</code></td><td><code>all_loco02</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>10M</code>/beh</td><td>All creatures, shared curriculum</td></tr>
-        <tr><td><code>AllLoco03.yaml</code></td><td><code>all_loco03</code></td><td>PPO + BC + GAIL</td><td>normalize</td><td><code>10M</code>/beh</td><td>BC + GAIL warm start from coded-gait demos</td></tr>
-        <tr><td><code>AllLoco1h01.yaml</code></td><td><code>all1h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>400k</code>/beh</td><td>1-hour budget (~110 steps/s)</td></tr>
-        <tr><td><code>AllLoco1h02.yaml</code></td><td><code>all1h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>400k</code>/beh</td><td>Gen3 refresh of 1h01, adds track_kind &amp; quirk_power_span</td></tr>
-        <tr><td><code>AllLoco5h01.yaml</code></td><td><code>all5h_&lt;ts&gt;</code></td><td>PPO 256×2 × 9</td><td>normalize</td><td><code>2M</code>/beh</td><td>5-hour unattended box</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Curriculum knobs read by <code>Systems_TrainingArea</code></h3>
-    <table>
-      <thead><tr><th>Parameter</th><th>Lessons</th><th>Source</th></tr></thead>
-      <tbody>
-        <tr><td><code>goal_distance_max</code></td><td><code>8 → 14 → 20</code> m</td><td>YAML <code>environment_parameters.goal_distance_max</code></td></tr>
-        <tr><td><code>rough_amplitude</code></td><td><code>0.35 → 0.7 → 1.0</code></td><td>YAML <code>environment_parameters.rough_amplitude</code></td></tr>
-        <tr><td><code>track_kind</code></td><td><code>Flat 0 → Lumpy 6 → Swamp 7</code></td><td>YAML <code>environment_parameters.track_kind</code></td></tr>
-        <tr><td><code>quirk_power_span</code></td><td><code>0 → 0.05 → 0.08</code></td><td>YAML <code>environment_parameters.quirk_power_span</code></td></tr>
-      </tbody>
-    </table>
-
-    <h3>Reward signal strengths</h3>
-    <ul>
-      <li><strong>Extrinsic</strong>: <code>γ = 0.995</code>, <code>strength = 1.0</code> — universal.</li>
-      <li><strong>GAIL</strong>: <code>γ = 0.99</code>, <code>strength = 0.05</code>, <code>demo_path = Assets/Demonstrations/&lt;Name&gt;.demo</code> — AllLoco03.</li>
-      <li><strong>Behavioral cloning</strong>: <code>strength = 0.3</code>, <code>steps = 500000</code> — AllLoco03 warm start.</li>
-    </ul>
-
-    <div class="callout">
-      <strong>Promotion gate</strong>: A brain moves from Staging → Production only after winning an ELO gauntlet. Never by mean reward alone (the shared potential-based reward scales with episode length, making cross-run reward comparisons unsafe).
-    </div>
-  </div>
-
-  <div class="diagram">
-    <img src="assets/hyperparameters-detailed.svg" alt="Hyperparameters - detailed">
-    <div class="diagram-caption">Figure H2 · Hyperparameters &amp; trainer specification — detailed</div>
-  </div>
-
-  <footer>PoRacer · <a href="index.html">Back to documentation hub</a> · August 2026</footer>
+<div class="grid g3">
+  <div class="tile"><div class="k">Route A — ML-Agents</div><div class="v">12 <small>brains</small></div>
+    <div class="d">Unity is the simulator. Python trains over a socket against a headless build.</div></div>
+  <div class="tile"><div class="k">Route B — Isaac Lab</div><div class="v">2 <small>brains</small></div>
+    <div class="d">Isaac is the simulator. Unity reproduces the rig and replays the ONNX.</div></div>
+  <div class="tile"><div class="k">Route C — MuJoCo</div><div class="v">2 <small>brains</small></div>
+    <div class="d">MuJoCo is the simulator, and for Fido it stays the simulator at race time.</div></div>
 </div>
+
+<p><b>The three routes differ in who owns the physics.</b> That single fact explains almost every
+integration problem in the project. Route A has no port problem at all — the same engine trains and
+races. Route B has to re-create an Isaac rig inside PhysX exactly enough that a policy trained on one
+works on the other. Route C sidesteps the question for Fido by shipping MuJoCo itself into the game.</p>
+
+<div class="flow">
+  <h4 style="margin:0 0 14px">The three routes, end to end</h4>
+  <svg viewBox="0 0 900 320" width="900" height="320" role="img"
+    aria-label="Three training pipelines: ML-Agents trains inside Unity; Isaac Lab and MuJoCo train externally and export a policy that Unity replays">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="var(--border-strong)"/>
+      </marker>
+    </defs>
+    <!-- lane A -->
+    <text class="lb" x="0" y="22" fill="var(--s1)">Route A · ML-Agents — Unity is the simulator</text>
+    <g>
+      <rect x="0" y="32" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s1) 12%,transparent)" stroke="var(--s1)"/>
+      <text class="lb" x="10" y="52">SCN_TRAIN_ALL</text><text class="mn" x="10" y="68">16 areas · Builds/AllEnv</text>
+      <rect x="182" y="32" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s1) 12%,transparent)" stroke="var(--s1)"/>
+      <text class="lb" x="192" y="52">mlagents-learn</text><text class="mn" x="192" y="68">PPO · gRPC · 4–8 envs</text>
+      <rect x="364" y="32" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s1) 12%,transparent)" stroke="var(--s1)"/>
+      <text class="lb" x="374" y="52">.onnx export</text><text class="mn" x="374" y="68">Agents/&lt;Name&gt;_v01/</text>
+      <rect x="546" y="32" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="556" y="52">CreatureCatalog</text><text class="mn" x="556" y="68">ModelAsset slot</text>
+      <rect x="728" y="32" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="738" y="52">SCN_RACE_FLAT</text><text class="mn" x="738" y="68">Agent_Creature</text>
+      <line x1="150" y1="58" x2="178" y2="58" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="332" y1="58" x2="360" y2="58" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="514" y1="58" x2="542" y2="58" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="696" y1="58" x2="724" y2="58" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <path d="M257 32 L257 20 L75 20 L75 32" fill="none" stroke="var(--s1)" stroke-dasharray="3 3" marker-end="url(#ar)"/>
+      <text class="mn" x="166" y="16" text-anchor="middle">observations / actions over the socket</text>
+    </g>
+    <!-- lane B -->
+    <text class="lb" x="0" y="128" fill="var(--s2)">Route B · Isaac Lab — Isaac is the simulator, Unity re-creates the rig</text>
+    <g>
+      <rect x="0" y="138" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s2) 12%,transparent)" stroke="var(--s2)"/>
+      <text class="lb" x="10" y="158">build_boy_rig.py</text><text class="mn" x="10" y="174">boy.usda + rig.json</text>
+      <rect x="182" y="138" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s2) 12%,transparent)" stroke="var(--s2)"/>
+      <text class="lb" x="192" y="158">RSL-RL PPO</text><text class="mn" x="192" y="174">4096 envs · GPU · 60k fps</text>
+      <rect x="364" y="138" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s2) 12%,transparent)" stroke="var(--s2)"/>
+      <text class="lb" x="374" y="158">export_bundle.py</text><text class="mn" x="374" y="174">.onnx + rig.json + eval</text>
+      <rect x="546" y="138" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="556" y="158">IsaacBoxAgent</text><text class="mn" x="556" y="174">builds ArticulationBody</text>
+      <rect x="728" y="138" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="738" y="158">Agent_IsaacBox</text><text class="mn" x="738" y="174">ICreatureAgent adapter</text>
+      <line x1="150" y1="164" x2="178" y2="164" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="332" y1="164" x2="360" y2="164" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="514" y1="164" x2="542" y2="164" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="696" y1="164" x2="724" y2="164" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <path d="M439 190 L439 204 L621 204 L621 190" fill="none" stroke="var(--s2)" stroke-dasharray="3 3" marker-end="url(#ar)"/>
+      <text class="mn" x="530" y="218" text-anchor="middle">rig.json is the shared source of truth: joint order, gains, effort limits, spawn height</text>
+    </g>
+    <!-- lane C -->
+    <text class="lb" x="0" y="252" fill="var(--s3)">Route C · MuJoCo — Fido keeps MuJoCo at race time</text>
+    <g>
+      <rect x="0" y="262" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="10" y="282">creature.xml</text><text class="mn" x="10" y="298">MJCF · training/fido/</text>
+      <rect x="182" y="262" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="192" y="282">MJX / Brax PPO</text><text class="mn" x="192" y="298">run walk03</text>
+      <rect x="364" y="262" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="374" y="282">export_policy.py</text><text class="mn" x="374" y="298">policy.json · err 2e-6</text>
+      <rect x="546" y="262" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="556" y="282">org.mujoco 3.12</text><text class="mn" x="556" y="298">MjScene in the game</text>
+      <rect x="728" y="262" width="150" height="52" rx="8" fill="color-mix(in srgb,var(--s3) 12%,transparent)" stroke="var(--s3)"/>
+      <text class="lb" x="738" y="282">Agent_Fido</text><text class="mn" x="738" y="298">brainInPrefab = true</text>
+      <line x1="150" y1="288" x2="178" y2="288" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="332" y1="288" x2="360" y2="288" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="514" y1="288" x2="542" y2="288" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+      <line x1="696" y1="288" x2="724" y2="288" stroke="var(--border-strong)" marker-end="url(#ar)"/>
+    </g>
+  </svg>
+</div>
+
+<div class="note crit"><b>TensorBoard is not optional, and this is the rule that gets skipped.</b>
+Start <code>tensorboard --logdir results --port 6006</code> <b>before</b> every
+<code>mlagents-learn</code> launch, without exception. It goes up first so the run is observable from
+step 0 — a run you cannot watch is a run you cannot judge. Launch scripts must start it themselves
+rather than assume it is running; <code>ISAAC/scripts/train.py</code> does exactly that, on
+<code>ISAAC/logs/rsl_rl</code>, and tears it down last. <b>Port 6006 must be free first:</b> a crashed
+run leaks its TensorBoard, and the next launch prints
+<span class="mono">"TensorBoard exited immediately (port busy?)"</span> and then trains blind. Kill the
+listener; do not accept the warning. Tear down in strict order: <b>trainer → envs → TensorBoard</b>.</div>
+
+<!-- ============ TIER 2 ============ -->
+<h2 id="t2">Tier 2 · The three routes in detail</h2>
+<span class="tierpill">Tier 2 — overview</span>
+
+<div class="tw">
+  <table>
+    <thead><tr><th></th><th>Route A · ML-Agents</th><th>Route B · Isaac Lab</th><th>Route C · MuJoCo</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Training simulator</td><td>Unity PhysX, headless build</td><td>Isaac Sim (PhysX GPU)</td><td>MJX / Brax on GPU</td></tr>
+      <tr><td class="name">Race simulator</td><td>Unity PhysX</td><td>Unity PhysX <b>(ported)</b></td><td>Fido: MuJoCo. MujocoBiped: would be PhysX</td></tr>
+      <tr><td class="name">Trainer</td><td>mlagents 1.1.0, PPO / SAC</td><td>RSL-RL PPO</td><td>PPO (MJX)</td></tr>
+      <tr><td class="name">Parallelism</td><td>16 areas × 4–8 env processes</td><td>4,096 envs in one process</td><td>large batch on GPU</td></tr>
+      <tr><td class="name">Throughput</td><td>~400k steps/behaviour/hour</td><td class="num">~60,000 steps/s</td><td>14.5 M steps total (MujocoBiped)</td></tr>
+      <tr><td class="name">Policy artifact</td><td><code>.onnx</code>, opset 9, stochastic + deterministic heads</td>
+        <td><code>.onnx</code>, deterministic actor only</td><td><code>.onnx</code> or <code>policy.json</code></td></tr>
+      <tr><td class="name">Normaliser</td><td>baked in (<code>normalize: true</code>)</td>
+        <td>IsaacBox baked in; IsaacH1 <b>not</b></td><td>Fido: mean/std in the JSON</td></tr>
+      <tr><td class="name">Rig fidelity risk</td><td><span class="badge ok">none — same engine</span></td>
+        <td><span class="badge wa">high — frame, gains, timing</span></td>
+        <td><span class="badge ok">none for Fido</span> <span class="badge wa">high for MujocoBiped</span></td></tr>
+      <tr><td class="name">Verified to</td><td>prefab obs/act match the graph exactly</td>
+        <td>IsaacH1 reproduces to <b>1 mm</b></td><td>Fido: max abs error <b>2.0 × 10⁻⁶</b></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Route A — the ML-Agents loop</h3>
+<ol class="steps">
+  <li><h4>Author the rig</h4><p>Prefab with an <code>ArticulationBody</code> chain,
+    <code>Agent_Creature</code>, <code>BehaviorParameters</code> and a <code>DecisionRequester</code> at
+    <code>DecisionPeriod 20</code>. Per-creature gait phase and amplitude tables are authored here too —
+    they are the heuristic brain <i>and</i> the demo source for BC and GAIL.</p></li>
+  <li><h4>Sync the observation size</h4><p><code>PoRacer ▸ Sync Agent Observation Sizes</code> writes
+    <code>VectorObservationSize = 3N + 19</code> onto every prefab. Skip it and the trainer rejects the
+    env on a shape mismatch — or worse, an old <code>.demo</code> file does.</p></li>
+  <li><h4>Record demonstrations</h4><p><code>PoRacer ▸ Training ▸ Enable Demo Recorders In Open Scene</code>
+    in <code>SCN_TRAIN_ALL</code>, driven by the coded gait. <b>Re-record after any observation change</b> —
+    a stale <code>.demo</code> carries the old obs size and mlagents refuses it.</p></li>
+  <li><h4>Build the headless env</h4><p><code>Builds/AllEnv</code> from <code>SCN_TRAIN_ALL</code>. It
+    contains <b>all thirteen behaviours</b>, so the YAML must name all thirteen or the run aborts at
+    startup.</p></li>
+  <li><h4>Start TensorBoard, then train</h4><p><code>--env --no-graphics</code>, explicit consecutive
+    <code>--base-port</code> values, 4–8 envs to leave CPU for PyTorch. Record
+    <code>--num-envs</code>: it changes batching behaviour.</p></li>
+  <li><h4>Export and wire</h4><p>Overwrite the <code>.onnx</code> <b>in place</b> to preserve the Unity
+    <code>.meta</code> GUID, then confirm the <code>CreatureCatalog</code> entry still resolves.</p></li>
+  <li><h4>Race it, then promote it</h4><p><code>Editor_EloGauntlet</code> runs actual races. Promote on
+    ELO, never on mean reward.</p></li>
+</ol>
+
+<div class="note"><b>Run-id conventions are 1:1 for attended runs and timestamped for unattended ones.</b>
+Configs are <code>&lt;Name&gt;&lt;Phase&gt;&lt;NN&gt;.yaml</code>. An attended one-off pairs with run-id
+<code>&lt;name&gt;_&lt;phase&gt;&lt;nn&gt;</code>; a script-launched unattended run is
+<code>&lt;name&gt;_&lt;yyyyMMdd_HHmm&gt;</code> instead, because it repeats.
+<code>scripts/Clean-TrainingArtifacts.ps1</code> understands both and protects the newest run of each
+prefix. <b>Prune obsolete runs before starting a new one</b> — TensorBoard shows everything under the
+logdir, and dead experiments make the curve you care about unreadable. Kill TensorBoard before a
+<code>--force</code> wipe: Windows file handles will silently fail it.</div>
+
+<h3>Route B — porting an Isaac Lab policy into PhysX</h3>
+<p>This is the hard route, and the reason it works is that <b>one JSON file is the single source of
+truth for both sides</b>. <code>build_boy_rig.py</code> writes <code>isaacbox_rig.json</code>;
+<code>boy_cfg.py</code> reads it to configure the Isaac articulation, and <code>IsaacBoxAgent</code>
+reads the same file to build the Unity <code>ArticulationBody</code> tree. Joint order, default pose,
+stiffness, damping, effort limits and spawn height all come from one place.</p>
+
+<div class="grid g2">
+  <div class="card">
+    <h4 style="margin-top:0">What must match exactly</h4>
+    <ul class="tight" style="font-size:14px">
+      <li><b>Joint order.</b> It is the ONNX action order. <code>export_bundle.py</code> rewrites it
+        from the live sim rather than trusting the authored order.</li>
+      <li><b>Frame conversion.</b> Isaac is right-handed Z-up X-forward; Unity is left-handed Y-up.
+        <code>IsaacFrameMap</code> in <code>unity_export/Shared/</code> owns the conversion.</li>
+      <li><b>Control rate.</b> <code>policyDt / Time.fixedDeltaTime</code> must be a whole number.
+        <code>IsaacBoxAgent</code> checks this at startup and names the nearest valid fixed step in the
+        error if it is not.</li>
+      <li><b>Drive units.</b> Unity's <code>ArticulationDrive</code> applies stiffness against degrees
+        or radians depending on version — the agent carries an explicit flag for it.</li>
+      <li><b>Observation layout.</b> 75 floats in a fixed order, index by index.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">How it is proved</h4>
+    <ul class="tight" style="font-size:14px">
+      <li>The <code>_PLAY</code> Isaac config turns off <i>all</i> randomness — observation noise,
+        pushes, mass and friction randomisation — so the reference recording is deterministic.</li>
+      <li>That recording is checked against the Unity rig frame by frame. IsaacH1 reproduces to
+        <b>1 mm</b>.</li>
+      <li>Independent evaluation figures ship in the rig JSON's <code>eval</code> block: mean speed,
+        tracking error, falls per robot-minute, targets per minute.</li>
+      <li><code>PoRacer.IsaacPorts.Tests</code> holds the play-mode harness.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note crit"><b>The failure mode this route actually hit.</b> On 2026-08-29 the assembly
+merge — eleven port assemblies collapsed into three — renamed the inference scripting define. Two
+ports, IsaacSpider and IsaacBiped2, had their policy code silently compiled out. <b>They kept racing,
+brainless, for four days</b>, because a missing policy is not an exception: it is a creature that
+stands still. Both were deleted on 2026-09-02. The lesson is that a compile-time define guarding
+inference code turns a hard failure into an invisible one — and nothing in the race loop notices a
+racer that never moves.</div>
+
+<div class="note"><b>Assembly layout is fixed at six, and adding a port must not add more.</b>
+<code>PoRacer.Runtime</code>, <code>PoRacer.Editor</code>, <code>PoRacer.Tests</code>, and
+<code>PoRacer.IsaacPorts.{Runtime, Editor, Tests}</code>. A new port joins the existing three; it does
+not get a triad of its own. Shared port types live in <code>Assets/unity_export/Shared/</code> under
+<code>PoRacer.IsaacPorts</code> — <code>ITargetProvider</code>, <code>IsaacFrameMap</code> and
+<code>MiniJson</code>. All three were duplicated per-rig before the merge; do not re-copy them.</div>
+
+<h3>Route C — MuJoCo, and the one racer PhysX does not simulate</h3>
+<p>Fido is the exception to everything. He is a quadruped trained in MJX/Brax, driven by a
+33→128→128→128→16 SiLU MLP read from <code>Assets/Creature/policy.json</code> — no ONNX, no Inference
+Engine. <code>Packages/org.mujoco</code> 3.12.0 is embedded and simulates him <i>inside the game</i>.</p>
+
+<div class="tw">
+  <table>
+    <thead><tr><th>Consequence</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td class="name"><code>CreatureEntry.brainInPrefab</code> exists</td>
+        <td>He has no <code>ModelAsset</code> to assign, so the menu gates on <code>HasBrain</code>
+          rather than <code>model != null</code>. Without this flag he would sit under "coming soon"
+          forever.</td></tr>
+      <tr><td class="name"><code>ICreatureAgent.Body</code> exists</td>
+        <td>He has no <code>ArticulationBody</code> at all. MuJoCo moves his <i>torso</i> while the
+          imported container stands at the start line — keyed off the prefab root, he would race
+          perfectly while the camera framed an empty grid slot and every standing read row 0.</td></tr>
+      <tr><td class="name">Scene build order matters</td>
+        <td><code>Systems_MujocoWorld</code> must create the <code>MjScene</code> before the first Fido
+          is instantiated, because <code>MjScene.Instance</code> <i>creates</i> one on access.</td></tr>
+      <tr><td class="name">He ignores every hazard</td>
+        <td>MuJoCo cannot see Unity colliders. Mud, boost, gust and gate volumes key off
+          <code>attachedArticulationBody</code> and skip him; he collides only with other Fidos.</td></tr>
+      <tr><td class="name">Timestep is doubly constrained</td>
+        <td>The plug-in takes MuJoCo's timestep from <code>Time.fixedDeltaTime</code>, <b>ignoring
+          <code>&lt;option timestep&gt;</code> in the MJCF</b>. His prefab carries
+          <code>actionDecimation 4</code>, so 0.005 × 4 = the exact 0.02 s he trained at. The upstream
+          drop ships 5, correct only at its own 0.004 s.</td></tr>
+      <tr><td class="name">Two patches ride on the package</td>
+        <td>A <code>GetInstanceID</code> CS0619 fix for Unity 6.5, and an explicit
+          <code>PluginImporter</code> meta on <code>mujoco.dll</code>. The DLL is a native plug-in:
+          <b>it loads at Editor startup only</b>, so moving it needs an Editor restart.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note crit"><b>Do not let the spawner's +0.05 m drop reach Fido.</b>
+<code>Agent_Fido.SnapToTrainedStance</code> cancels it and puts his torso at exactly <b>0.34 m</b>.
+Measured: 0.39 m collapses on the first stride every time; 0.34 m walks away. A trained policy has no
+slack for a drop a ragdoll shrugs off.</div>
+
+<!-- ============ TIER 3 ============ -->
+<h2 id="t3">Tier 3 · Complete specification</h2>
+<span class="tierpill">Tier 3 — complete</span>
+
+<h3>Runtime architecture — MVS over VContainer and MessagePipe</h3>
+<p>Three layers, enforced by assembly boundaries and by rule. <b>Models</b> are pure C# state with no
+Unity API. <b>Views</b> are MonoBehaviours that read models and forward input, with no logic.
+<b>Systems</b> are plain C# classes registered in VContainer that own and mutate models.</p>
+
+<div class="tw">
+  <caption>Everything <code>GameLifetimeScope.Configure</code> binds, read from source.</caption>
+  <table>
+    <thead><tr><th>Binding</th><th>Lifetime</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="name">CreatureCatalog</td><td><code>RegisterInstance</code></td><td>The roster ScriptableObject, assigned in the Inspector</td></tr>
+      <tr><td class="name">RaceModel</td><td>Singleton</td><td>Racers, progress, places, clock</td></tr>
+      <tr><td class="name">EloModel</td><td>Singleton</td><td>Ratings, default 1200</td></tr>
+      <tr><td class="name">RaceConfigModel</td><td>Singleton</td><td>Map choice and per-creature counts</td></tr>
+      <tr><td class="name">CommentaryModel</td><td>Singleton</td><td>Commentary line queue</td></tr>
+      <tr><td class="name">AudioMixModel</td><td>Singleton</td><td>Duck state, menu mix</td></tr>
+      <tr><td class="name">Systems_AppBootstrap</td><td>EntryPoint</td><td>Frame rate, vSync, orientation, boot into the menu</td></tr>
+      <tr><td class="name">Systems_Race</td><td>EntryPoint + Self</td><td>Referee. <code>Advance(dt)</code> is split from <code>Tick</code> so tests drive time explicitly</td></tr>
+      <tr><td class="name">Systems_Commentary</td><td>EntryPoint</td><td>Turns messages into lines</td></tr>
+      <tr><td class="name">Systems_AudioMix</td><td>EntryPoint + Self</td><td>Ticks the duck release and menu mix slide</td></tr>
+      <tr><td class="name">Systems_Spawn</td><td>EntryPoint + Self</td><td>Builds the grid from the catalog</td></tr>
+      <tr><td class="name">Systems_Persistence</td><td>Singleton</td><td>JSON in <code>Application.persistentDataPath</code></td></tr>
+      <tr><td class="name">Systems_Elo</td><td>Singleton + <b>BuildCallback</b></td><td>Forced eager construction — see note below</td></tr>
+      <tr><td class="name">Systems_CameraDirector</td><td>EntryPoint + Self</td><td>Ticks to watch for the final stretch and re-aim</td></tr>
+      <tr><td class="name">Systems_TrackBuilder</td><td>Singleton, factory</td><td>Built from <code>RaceTrackView</code>'s three materials</td></tr>
+      <tr><td class="name">10 Views</td><td><code>RegisterComponentInHierarchy</code></td>
+        <td>RaceHud, Menu, WinFx, Input, RaceTrack, CameraRig, FinishLine, CameraFx, DebugOverlay, PostFx</td></tr>
+      <tr><td class="name">8 message brokers</td><td><code>RegisterMessageBroker</code></td><td>All <code>readonly struct</code> — zero allocation</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note"><b>Why <code>Systems_Elo</code> needs a build callback.</b> It has no tick or start
+interface, so VContainer would construct it lazily — on first resolve, which is after the first race
+ends. Its <code>RaceFinishedMessage</code> subscription would therefore not exist when it was first
+needed. <code>RegisterBuildCallback(c =&gt; c.Resolve&lt;Systems_Elo&gt;())</code> forces it up front.
+This is the general shape of the problem: a subscriber with no lifecycle interface is invisible to the
+container until something asks for it.</div>
+
+<div class="note"><b>No GameContext, no service locator, no singletons.</b> Every class requests exactly
+its own dependencies — constructor injection for Systems, <code>[Inject] Construct</code> for Views.
+No <code>FindObjectOfType</code>, no static access. The LifetimeScope is the single place binding
+happens. ML-Agents <code>Agent</code> subclasses are the one carve-out: they take no VContainer
+dependencies at all, and training scenes have no LifetimeScope.</div>
+
+<h3>Package dependency graph</h3>
+<div class="tw">
+  <caption><code>Packages/manifest.json</code> lists direct dependencies only — it was pruned on
+    2026-08-27 to stop listing indirect and unused packages, and pruned again on 2026-08-29.</caption>
+  <table>
+    <thead><tr><th>Package</th><th>Version</th><th>Why it is here</th></tr></thead>
+    <tbody>
+      <tr><td class="name">com.unity.ml-agents</td><td class="num">4.1.0</td><td>Route A. Must stay in exact version parity with Python <code>mlagents</code> 1.1.0 or the comms handshake is rejected</td></tr>
+      <tr><td class="name">Inference Engine (Sentis)</td><td>—</td><td>ONNX inference for all three routes except Fido</td></tr>
+      <tr><td class="name">com.unity.pipeline</td><td class="num">0.5.0-exp.1</td><td>The MCP bridge — <code>unity-editor-mcp</code> server</td></tr>
+      <tr><td class="name">URP</td><td class="num">17.5.0</td><td>Render pipeline</td></tr>
+      <tr><td class="name">Cinemachine</td><td class="num">3.1.7</td><td><code>CM_Overview</code> + <code>CinemachineBrain</code>. Splines and Timeline are its indirect deps, not direct ones</td></tr>
+      <tr><td class="name">glTFast</td><td class="num">6.19.0</td><td>Real dependency: <code>Assets/Art/Models/RIGGED_*.glb</code> and <code>Assets/Resources/Props/*.glb</code> load through it</td></tr>
+      <tr><td class="name">VContainer</td><td>git</td><td>DI, the only wiring mechanism</td></tr>
+      <tr><td class="name">MessagePipe (+ VContainer bridge)</td><td>git</td><td>The only messaging mechanism</td></tr>
+      <tr><td class="name">UniTask</td><td>git</td><td>All async. Currently earns exactly one <code>using</code>, in <code>Systems_Spawn.cs</code></td></tr>
+      <tr><td class="name">Input System</td><td class="num">1.20.0</td><td>Legacy <code>Input.GetKey</code> is hook-blocked</td></tr>
+      <tr><td class="name">Test Framework</td><td class="num">1.7.0</td><td>EditMode + PlayMode</td></tr>
+      <tr><td class="name">org.mujoco</td><td class="num">3.12.0</td><td>Embedded, two local patches. Route C</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note"><b>What was removed, and why it must not come back.</b> AI Navigation, PrimeTween
+(and the OpenUPM scoped registry it alone needed), Sentry, and 27 built-in modules went on 2026-08-27.
+Two more went on 2026-08-29 after reappearing: <b><code>com.unity.ugui</code></b> and TextMeshPro — the
+project is 100% C#-built UI Toolkit, with no Canvas, no <code>UnityEngine.UI</code> import and no
+<code>.uxml</code>/<code>.uss</code> anywhere — and <b><code>com.besty.unity-skills</code></b>, whose
+test suite wrote <code>InitTestScene*</code> litter into <code>Assets/</code> on every unfiltered run.
+Visual Scripting was never installed.</div>
+
+<h3>Android release pipeline</h3>
+<div class="grid g4">
+  <div class="tile"><div class="k">Application id</div><div class="v" style="font-size:16px">com.punkoutersoftware<br>.poracer</div>
+    <div class="d"><b>Permanent</b> — never change after the first upload</div></div>
+  <div class="tile"><div class="k">Version / code</div><div class="v">1.0.0 <small>/ 1</small></div>
+    <div class="d">Bump <code>VERSION_CODE</code> every upload; Play rejects a reused code</div></div>
+  <div class="tile"><div class="k">min / target SDK</div><div class="v">26 <small>/ 36</small></div>
+    <div class="d">Play requires target 36 for new uploads from 2026-08-31</div></div>
+  <div class="tile"><div class="k">Build</div><div class="v">ARM64</div>
+    <div class="d">IL2CPP, Release, portrait locked</div></div>
+</div>
+
+<div class="tw">
+  <table>
+    <thead><tr><th>Tool</th><th>What it does</th><th>Success marker</th></tr></thead>
+    <tbody>
+      <tr><td class="name">PoRacer ▸ Configure Android Release Settings</td>
+        <td>Identity, SDK levels, orientation, launcher icons (adaptive + round + legacy, 6 densities) from <code>Assets/Icons/</code></td>
+        <td>Re-run after changing icon art</td></tr>
+      <tr><td class="name">PoRacer ▸ Build Android AAB</td><td>Signed bundle → <code>Builds/Android/PoRacer.aab</code></td>
+        <td>grep the log for <code>AAB BUILD RESULT:</code></td></tr>
+      <tr><td class="name">PoRacer ▸ Build Android APK</td><td>Sideloadable APK on the <b>same key</b>, so it installs over a Play build</td>
+        <td><code>BUILD RESULT:</code></td></tr>
+      <tr><td class="name"><code>Tools/play_publish.py</code></td><td>Uploads a built AAB. Defaults to the <code>internal</code> track as a <code>draft</code></td>
+        <td><code>--dry-run</code> rehearses and discards</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note crit"><b>Secrets live outside the repo, at
+<code>C:/Users/punko/Downloads/PoRacer-Release/</code>.</b> <code>poracer-upload.jks</code> is the
+upload key — <b>losing it means losing the ability to update the app</b>. Back it up somewhere other
+than this machine. Unity does not serialize keystore passwords into <code>ProjectSettings</code>, so
+both Android builders read <code>PORACER_KEYSTORE_PASS</code> first and fall back to
+<code>poracer-upload.pass</code>. With neither, the build <b>aborts</b> rather than producing an
+unsigned artifact.</div>
+
+<div class="note"><b><code>Tools/play_publish.py</code> needs its own venv</b>
+(<code>Tools/publish-venv</code>). Do not install it into <code>.venv</code> — that one carries
+load-bearing ml-agents and torch pins, and the C#/Python ml-agents versions must stay in exact parity.</div>
+
+<h4>Headless build invocation</h4>
+<div class="tw"><table><tbody><tr><td><code>Unity.exe -batchmode -quit -nographics -projectPath &lt;root&gt;
+  -buildTarget Android -executeMethod PoRacer.EditorTools.Editor_BuildAndroidAAB.Build
+  -logFile &lt;log&gt;</code></td></tr></tbody></table></div>
+<p style="font-size:14px">Grep the log for <code>AAB BUILD RESULT:</code> — that line is the outcome.
+<b>Do not trust the exit code</b>: the Unity bridge reports lying exit codes, so verify artifacts
+rather than statuses.</p>
+
+<h3>Known upstream issues, and the ones not to "fix"</h3>
+<div class="tw">
+  <table>
+    <thead><tr><th>Issue</th><th>Impact</th><th>Correct response</th></tr></thead>
+    <tbody>
+      <tr><td class="name"><code>TensorProxy</code> finalizer NRE</td>
+        <td><b>3,553 <code>NullReferenceException</code>s in ~2 minutes</b> on a Pixel 9 Pro, ~30/sec,
+          each with a stack trace. Does not reproduce in the Editor — GC timing differs</td>
+        <td><b>Harmless.</b> <code>SentisModelInfo</code> builds its <code>Worker</code> with
+          <code>DeviceType.CPU</code>, so the guarded body is a no-op. Filter the log
+          (<code>adb logcat | grep -v TensorProxy</code>) and report upstream. <b>Do not embed the
+          package to patch it</b> — that costs 40 MB and a fork; tried 2026-08-29, reverted</td></tr>
+      <tr><td class="name">MuJoCo double-rotated angular velocity</td>
+        <td><code>obs[7:10]</code> is <code>Rᵀ Rᵀ ω_world</code> in MujocoBiped</td>
+        <td><b>Reproduce it, do not fix it.</b> The policy was trained on it</td></tr>
+      <tr><td class="name">Unity bridge lying exit codes</td>
+        <td>A failed operation can report success</td>
+        <td>Verify artifacts, not logs. The console also does not clear between runs, and some menu
+          items are modal</td></tr>
+      <tr><td class="name">H1 URDF vs USD mass disagreement</td>
+        <td>URDF says 59.338 kg; the simulated USD says 51.437 kg</td>
+        <td><b>Isaac wins.</b> The rig JSON records both and uses the USD value</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  <p><b>PoRacer architecture &amp; pipeline</b> · regenerated 2026-09-03<br>
+  Companion documents: <a href="index.html">index</a> ·
+  <a href="creatures_dashboard.html">creatures dashboard</a> ·
+  <a href="scenes_layout.html">scenes layout</a> ·
+  <a href="onnx_summary.md">ONNX &amp; rig inventory</a> ·
+  <a href="agent-motivation.html">agent motivation diagrams</a></p>
+</footer>
+</div>
+<script>
+(function(){
+  const b=document.getElementById('themeBtn');
+  function cur(){const a=document.documentElement.getAttribute('data-theme');
+    return a||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  b.onclick=()=>{const n=cur()==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',n);
+    try{localStorage.setItem('poracer-theme',n)}catch(_){}};
+  let s=null;try{s=localStorage.getItem('poracer-theme')}catch(_){}
+  if(s)document.documentElement.setAttribute('data-theme',s);
+})();
+</script>
 </body>
 </html>

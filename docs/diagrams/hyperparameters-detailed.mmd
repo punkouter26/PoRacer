@@ -1,89 +1,79 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "16px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart TB
-    subgraph Config["YAML Trainer Configs"]
-        Y1["WormLoco03.yaml<br/>10M steps, PPO"]
-        Y2["WormLoco04.yaml<br/>5M steps, PPO 512-wide"]
-        Y3["WormSac01.yaml<br/>5M steps, SAC off-policy"]
-        Y4["AllLoco1h01.yaml<br/>9 behaviors, 400k steps"]
-        Y5["SpiderLoco02.yaml"]
-        Y6["WormRough01.yaml<br/>terrain curriculum"]
+    subgraph A["Config/AllLoco8h02.yaml &mdash; 4th-gen unattended 8-hour all-creatures run"]
+      direction TB
+      A1["<b>8 coded-gait behaviors</b> Worm Spider Hexapod Quad Centipede Crab Kangaroo Blob<br/>trainer_type ppo &middot; threaded true<br/>batch_size 2048 &middot; buffer_size 20480 (10 batches per update)<br/>learning_rate 3e-4, schedule linear &middot; beta 0.005 &middot; epsilon 0.2 &middot; lambd 0.95 &middot; num_epoch 3<br/>network: normalize true, hidden_units 256, num_layers 2<br/>max_steps 3,200,000 &middot; time_horizon 1000 &middot; summary_freq 20,000 &middot; checkpoint_interval 250,000"]
+      A2["<b>reward_signals</b><br/>extrinsic: gamma 0.995, strength 1.0<br/>gail: gamma 0.99, strength 0.05, demo_path Assets/Demonstrations/&lt;Name&gt;.demo<br/><b>behavioral_cloning</b>: strength 0.3, steps 400,000"]
+      A3["<b>4 biped behaviors</b> Grandma Grandpa Matt Nick (YAML anchor *biped)<br/>same hyperparameters, but network 512 &times; 3 &mdash; the shape ML-Agents uses for its own Walker<br/><b>NO gail, NO behavioral_cloning</b> &mdash; extrinsic only<br/>max_steps 30,000,000: the launcher time box is the real stop,<br/>so these four never reach the progress thresholds the ladder keys off"]
+      A4["<b>Why all thirteen are listed:</b> Builds/AllEnv contains all thirteen behaviors.<br/>A config naming only nine aborts the run at startup &mdash; which is exactly<br/>what happened to all8h_20260826_2233."]
+      A1 --- A2
+      A3 --- A4
     end
 
-    subgraph PPO["PPO Hyperparameters"]
-        P_BS["batch_size = 2048"]
-        P_BUF["buffer_size = 20480"]
-        P_LR["learning_rate = 3e-4 (linear)"]
-        P_EPS["epsilon = 0.2"]
-        P_LAM["lambd = 0.95"]
-        P_BETA["beta = 0.005"]
-        P_EP["num_epoch = 3"]
-        P_H["hidden_units = 256"]
-        P_L["num_layers = 2"]
-        P_G["gamma = 0.995"]
-        P_TH["time_horizon = 1000"]
+    subgraph CUR["environment_parameters &mdash; curriculum, gated on <b>progress</b> (behavior steps / max_steps)"]
+      direction LR
+      C1["<b>goal_distance_max</b><br/>near 8 m &rarr; .10<br/>mid 14 m &rarr; .30<br/>far 20 m"]
+      C2["<b>goal_angle_span</b><br/>straight 0&deg; &rarr; .15<br/>gentle 20&deg; &rarr; .35<br/>sharp 40&deg;"]
+      C3["<b>rough_amplitude</b><br/>gentle .35 &rarr; .10<br/>medium .70 &rarr; .30<br/>full 1.0"]
+      C4["<b>track_kind</b><br/>Flat 0 &rarr; .15<br/>Lumpy 6 &rarr; .40<br/>Swamp 7"]
+      C5["<b>hazard_level</b><br/>clean 0 &rarr; .20<br/>mud+boost 1 &rarr; .45<br/>full 2"]
+      C6["<b>quirk_power_span</b><br/>0 &rarr; .10<br/>.05 &rarr; .30<br/>.08"]
+      C7["<b>quirk_mass_span</b><br/>0 &rarr; .10<br/>.06 &rarr; .30<br/>.12"]
+      C8["<b>quirk_friction_span</b><br/>0 &rarr; .10<br/>.15 &rarr; .30<br/>.30"]
+      C9["<b>Why progress, not reward:</b><br/>the reward is potential-based, so<br/>its scale drifts with episode length.<br/>Progress is a shared clock &mdash; every<br/>behavior steps at the same rate, so<br/>slow learners are no longer dragged<br/>along by the Worm score.<br/><i>completion_criteria still needs a<br/>behavior name; Worm is just the clock.</i>"]
     end
 
-    subgraph SAC["SAC Hyperparameters"]
-        S_BS["batch_size = 256"]
-        S_BUF["buffer_size = 500000"]
-        S_INIT["buffer_init_steps = 5000"]
-        S_TAU["tau = 0.005"]
-        S_LR["learning_rate = 3e-4"]
-        S_E["init_entcoef = 0.5"]
-        S_SPU["steps_per_update = 2"]
+    subgraph B["Config/BrokenLoco01.yaml &mdash; 1-hour attended fine-tune, 2026-09-02"]
+      direction TB
+      B1["<b>init_path</b> results/all8h_20260826_2244/&lt;Name&gt;/checkpoint.pt<br/>continues from the 8-hour run; global step resets, so max_steps 300,000 counts fresh<br/>summary_freq 10,000 &middot; keep_checkpoints 8 &middot; checkpoint_interval 40,000"]
+      B2["<b>Extrinsic only</b> &mdash; BC/GAIL would pull the policy back toward the coded gait,<br/>which is exactly the crawl being escaped"]
+      B3["<b>No curriculum.</b> Every parameter pinned to what the Flat race actually asks:<br/>goal_distance_max 20 &middot; goal_angle_span 0 &middot; rough_amplitude 0 &middot; track_kind 0<br/>hazard_level 0 &middot; quirk_power .08 &middot; quirk_mass .12 &middot; quirk_friction .15<br/><i>An hour is not long enough to climb the ladder, and the ladder was<br/>training them for goals the race never sets.</i>"]
+      B4["<b>Target:</b> Worm, Spider, Centipede, Crab &mdash; the four that do not reach<br/>the finish on the 20 m Flat race. Quad, Hexapod, Kangaroo and Blob are listed<br/>only because Builds/AllEnv contains them. <b>Ship a retrained brain ONLY if it<br/>beats the incumbent in an actual race.</b>"]
+      B5["<b>Caveat, measured:</b> Reward_WormLoco was not told about the 0.005 s step<br/>until 2026-09-02, so every brain trained in that window &mdash; broken_loco01 included &mdash;<br/>learned against a distorted reward: episodes cut at 5 s of no progress instead of 20,<br/>and every per-step penalty landing 4&times; per simulated second."]
+      B1 --- B2 --- B3
+      B4 --- B5
     end
 
-    subgraph Rewards["Reward Signal Strengths"]
-        R_EXT["extrinsic strength = 1.0<br/>gamma = 0.995"]
-        R_ICM["intrinsic (curiosity) optional<br/>strength = 0.02"]
+    subgraph I["ISAAC/boy_tasks/agents/rsl_rl_ppo_cfg.py &mdash; RSL-RL PPO on GPU"]
+      direction TB
+      I1["<b>Runner</b> num_steps_per_env 24 &middot; max_iterations 3000 &middot; save_interval 50<br/>experiment_name boy_chase_flat &middot; empirical_normalization true<br/>4096 envs &times; 24 steps = 98,304 transitions per iteration"]
+      I2["<b>Actor and critic</b> MLP [128, 128, 128], activation elu<br/>obs_normalization true, init_std 1.0<br/><i>the fitted normaliser is baked into the exported ONNX,<br/>so Unity feeds raw observations</i>"]
+      I3["<b>Algorithm</b> clip_param 0.2 &middot; entropy_coef 0.01 &middot; value_loss_coef 1.0<br/>num_learning_epochs 5 &middot; num_mini_batches 4<br/>learning_rate 1e-3, schedule <b>adaptive</b> with desired_kl 0.01<br/>gamma 0.99 &middot; lam 0.95 &middot; max_grad_norm 1.0 &middot; clipped value loss"]
+      I4["<b>Domain randomisation</b> (startup) body friction static .6-1.0, dynamic .4-.8<br/>spine mass &times; log-uniform 1/1.25 .. 1.25<br/>(reset) pose &plusmn;0.5 m, yaw &plusmn;&pi;, velocity &plusmn;0.3 m/s, &plusmn;0.3 rad/s<br/>(interval) push every 10-15 s at &plusmn;0.5 m/s"]
+      I5["<b>Observation noise</b> lin_vel &plusmn;0.1 &middot; ang_vel &plusmn;0.2 &middot; gravity &plusmn;0.05<br/>joint_pos &plusmn;0.01 &middot; joint_vel &plusmn;1.5 &middot; enable_corruption true<br/><i>the PLAY config turns all of it off: the reference recording must be deterministic</i>"]
+      I1 --- I2 --- I3
+      I4 --- I5
     end
 
-    subgraph Schedules["Learning Rate Schedules"]
-        SCH1["linear (PPO)"]
-        SCH2["constant (SAC)"]
+    subgraph S["Config/Humanoids02_Biomechanical.yaml &mdash; the SAC alternative, not the shipped path"]
+      direction LR
+      S1["<b>Worm Spider Crab Hexapod as SAC</b><br/>batch_size 256 &middot; buffer_size 500,000 &middot; buffer_init_steps 10,000<br/>tau 0.005 &middot; steps_per_update 1 &middot; init_entcoef 0.5<br/>lr 3e-4 constant &middot; gamma 0.99 &middot; max_steps 10,000,000"]
+      S2["<b>Bipeds keep PPO 512&times;3</b> with BipedWalk.demo<br/>gail strength 0.1 &middot; bc strength 0.2 for 500,000 steps<br/>4-stage curriculum keyed on Grandma: Flat &rarr; SlopeAndRough<br/>&rarr; DomainRandomization &rarr; FullCourseHazards"]
     end
 
-    subgraph Network["Network Architecture"]
-        NW1["normalize = true"]
-        NW2["Dense(256) -> Dense(256)<br/>tanh activations"]
-        NW3["recurrent: LSTM(128) optional"]
-    end
+    A --> CUR
+    A ==>|"the shipped brains<br/>came from here"| B
+    NOTE["<b>Promotion rule:</b> evaluate with ELO from actual races (Systems_Elo, K = 32,<br/>default rating 1200), never on mean reward. A potential-based reward scales with<br/>episode length, so a longer-surviving brain scores higher without racing better."]
+    B --> NOTE
+    I --> NOTE
+    S -.->|"available, not shipped"| NOTE
 
-    Y1 --> PPO
-    Y2 --> PPO
-    Y3 --> SAC
-    Y4 --> PPO
-    Y5 --> PPO
-    Y6 --> PPO
-    PPO --> P_BS
-    PPO --> P_BUF
-    PPO --> P_LR
-    PPO --> P_EPS
-    PPO --> P_LAM
-    PPO --> P_BETA
-    PPO --> P_EP
-    PPO --> P_H
-    PPO --> P_L
-    PPO --> P_G
-    PPO --> P_TH
-    SAC --> S_BS
-    SAC --> S_BUF
-    SAC --> S_INIT
-    SAC --> S_TAU
-    SAC --> S_LR
-    SAC --> S_E
-    SAC --> S_SPU
-    PPO --> Rewards
-    SAC --> Rewards
-    P_LR --> SCH1
-    S_LR --> SCH2
-    PPO --> Network
-    SAC --> Network
-
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    classDef ctrl fill:#8957e5,stroke:#4a2a8c,color:#fff,stroke-width:2px;
-    classDef net fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
-    class Y1,Y2,Y3,Y4,Y5,Y6 ml;
-    class P_BS,P_BUF,P_LR,P_EPS,P_LAM,P_BETA,P_EP,P_H,P_L,P_G,P_TH,S_BS,S_BUF,S_INIT,S_TAU,S_LR,S_E,S_SPU rt;
-    class R_EXT,R_ICM,SCH1,SCH2 ctrl;
-    class NW1,NW2,NW3 net;
+    classDef mla fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef cur fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    classDef ft fill:#ffe6f0,stroke:#c0398a,stroke-width:2px,color:#4a0a2e;
+    classDef isa fill:#e6f7ec,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    classDef sac fill:#f3ecff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef note fill:#10203a,stroke:#10203a,stroke-width:2px,color:#ffffff;
+    class A1,A2,A3,A4 mla;
+    class C1,C2,C3,C4,C5,C6,C7,C8,C9 cur;
+    class B1,B2,B3,B4,B5 ft;
+    class I1,I2,I3,I4,I5 isa;
+    class S1,S2 sac;
+    class NOTE note;

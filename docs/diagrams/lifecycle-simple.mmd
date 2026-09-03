@@ -1,17 +1,32 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "17px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    primaryColor: "#e8eefc"
+    primaryTextColor: "#10203a"
+    primaryBorderColor: "#3f6ee0"
+    lineColor: "#5b6b86"
+---
 flowchart LR
-    A[C# Agent<br/>CollectObservations] --> B[ONNX Brain<br/>Sentis/Barracuda]
-    B --> C[Action Targets<br/>Normalized -1..1]
-    C --> D[PhysX<br/>ArticulationBody Step]
-    D --> E{Terminal?}
-    E -- No --> A
-    E -- Yes --> F[Buffer / Reset]
-    F --> A
+    OBS["<b>1. Observe</b><br/>CollectObservations<br/>joint angles, contacts,<br/>goal vector, terrain probes"]
+    NET["<b>2. Decide</b><br/>ONNX policy<br/>Inference Engine, CPU"]
+    ACT["<b>3. Act</b><br/>OnActionReceived<br/>action -1..1 &rarr; xDrive.target"]
+    PHY["<b>4. Simulate</b><br/>PhysX ArticulationBody<br/>&Delta;t = 0.005 s (200 Hz)"]
+    TERM{"<b>5. Terminal?</b><br/>goal reached &middot; fell &middot;<br/>stalled &middot; out of bounds"}
+    RESET["<b>6. Reset</b><br/>OnEpisodeBegin<br/>clear fatigue, restore drives"]
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
-    classDef ctrl fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    class A,ml1 ml;
-    class B ml;
-    class C ml;
-    class D phys;
-    class E,F ctrl;
+    OBS --> NET --> ACT --> PHY --> TERM
+    TERM -- "no (hold action<br/>for 20 ticks)" --> PHY
+    TERM -- "no (new decision)" --> OBS
+    TERM -- "yes" --> RESET --> OBS
+
+    classDef sense fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef brain fill:#efe6ff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef phys fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    classDef ctrl fill:#e6f7ec,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    class OBS sense;
+    class NET brain;
+    class ACT,PHY phys;
+    class TERM,RESET ctrl;

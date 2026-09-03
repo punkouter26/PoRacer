@@ -1,133 +1,233 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PoRacer Documentation Hub</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoRacer — Documentation</title>
 <style>
-  :root {
-    --bg-1: #0d1117;
-    --bg-2: #161b22;
-    --bg-3: #1f2630;
-    --border: #30363d;
-    --text-1: #e6edf3;
-    --text-2: #9ba9b7;
-    --accent: #58a6ff;
-    --accent-2: #d2a8ff;
-    --green: #3fb950;
-    --orange: #d29922;
-    --red: #f85149;
-    --link: #58a6ff;
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0;
-    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
-  header { text-align: center; padding: 32px 0 56px; border-bottom: 1px solid var(--border); }
-  header h1 { font-size: 2.4rem; margin: 0 0 12px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header p { color: var(--text-2); margin: 0; font-size: 1.05rem; }
-  .badge { display: inline-block; background: var(--bg-3); color: var(--accent); padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; margin-top: 18px; border: 1px solid var(--border); }
-  h2 { color: var(--text-1); margin: 56px 0 16px; font-size: 1.6rem; border-left: 4px solid var(--accent); padding-left: 14px; }
-  h3 { color: var(--accent); margin: 32px 0 12px; font-size: 1.2rem; }
-  .doc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
-  .doc-card {
-    background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
-    padding: 22px; transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .doc-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(88,166,255,0.12); }
-  .doc-card h4 { margin: 0 0 8px; color: var(--text-1); font-size: 1.15rem; }
-  .doc-card p { margin: 8px 0 0; color: var(--text-2); font-size: 0.92rem; }
-  .doc-card a { color: var(--accent); text-decoration: none; font-weight: 600; }
-  .doc-card a:hover { text-decoration: underline; }
-  .doc-card .tier { display: block; font-size: 0.75rem; color: var(--accent-2); margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
-  footer { margin-top: 64px; padding: 24px 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-2); font-size: 0.85rem; }
-  table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.92rem; }
-  th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; }
-  th { background: var(--bg-3); color: var(--accent); }
-  td { background: rgba(255,255,255,0.02); }
-  code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; color: var(--accent-2); }
-  .pill { display: inline-block; background: rgba(63,185,80,0.15); color: var(--green); padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; border: 1px solid rgba(63,185,80,0.3); }
-  .pill.warn { background: rgba(210,153,34,0.15); color: var(--orange); border-color: rgba(210,153,34,0.3); }
-  .pill.info { background: rgba(88,166,255,0.15); color: var(--accent); border-color: rgba(88,166,255,0.3); }
+:root{
+  color-scheme:light;
+  --bg:#f6f6f4; --surface-1:#fcfcfb; --surface-2:#f0efec; --border:#dcdbd6; --border-strong:#c3c2b7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --crit:#e34948; --warn:#eda100;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 4px 14px rgba(11,11,11,.045);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark; --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835;
+  --border-strong:#4d4d49; --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835;
+  --border-strong:#4d4d49; --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 96px}
+header.top{border-bottom:1px solid var(--border);background:var(--surface-1)}
+.top-in{max-width:1000px;margin:0 auto;padding:12px 24px;display:flex;gap:14px;align-items:center}
+.brand{font-weight:680;letter-spacing:-.02em;margin-right:auto;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--s1)}
+.brand small{font-weight:450;color:var(--text-muted)}
+.iconbtn{appearance:none;border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:15px}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.05;letter-spacing:-.03em;margin:52px 0 14px;font-weight:700}
+.lede{font-size:18px;color:var(--text-secondary);max-width:62ch;margin:0 0 10px}
+.stamp{font:12.5px/1.5 var(--mono);color:var(--text-muted);border-left:2px solid var(--border-strong);
+  padding-left:12px;max-width:78ch;margin:16px 0 0}
+h2{font-size:22px;letter-spacing:-.02em;margin:52px 0 6px;padding-bottom:10px;border-bottom:1px solid var(--border);font-weight:670}
+p{max-width:76ch}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+.grid{display:grid;gap:14px;margin:22px 0}
+.g2{grid-template-columns:repeat(auto-fit,minmax(304px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(166px,1fr))}
+a.doc{display:block;text-decoration:none;color:inherit;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow);
+  transition:border-color .12s, transform .12s}
+a.doc:hover{border-color:var(--s1);transform:translateY(-1px)}
+a.doc .kind{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--s1);
+  display:block;margin-bottom:9px}
+a.doc h3{margin:0 0 6px;font-size:17.5px;letter-spacing:-.015em;font-weight:660}
+a.doc p{margin:0;font-size:14px;color:var(--text-secondary);max-width:none}
+a.doc .meta{margin-top:11px;font:11.5px/1 var(--mono);color:var(--text-muted)}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:7px}
+.tile .v{font:700 28px/1.05 var(--sans);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:14px;font-weight:560;color:var(--text-secondary)}
+.tile .d{font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.45}
+.note{font-size:14px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--s2);border-radius:0 8px 8px 0;padding:13px 16px;margin:20px 0;max-width:86ch}
+.note b{color:var(--text-primary)}
+.note.crit{border-left-color:var(--crit)}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:640;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-secondary)}
+tbody tr:last-child td{border-bottom:0}
+td.name{font-weight:620;white-space:nowrap}
+a{color:var(--s1)}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+ul.tight{margin:10px 0;padding-left:20px}
+ul.tight li{margin:5px 0;max-width:74ch}
 </style>
 </head>
 <body>
+<header class="top"><div class="top-in">
+  <div class="brand"><span class="dot"></span>PoRacer <small>Documentation</small></div>
+  <button class="iconbtn" id="themeBtn" aria-label="Toggle theme">◐</button>
+</div></header>
+
 <div class="wrap">
-  <header>
-    <h1>PoRacer — Documentation Hub</h1>
-    <p>ML-Agents locomotion, ONNX inference runtime, and self-running race loop</p>
-    <div class="badge">Unity 6000.5.6f1 · URP · ML-Agents 4.1.0 · Sentis · Windows standalone · portrait 9:16 · 60 FPS</div>
-  </header>
 
-  <h2>Documentation Suite</h2>
-  <p style="color: var(--text-2);">Every document below is provided in three progressive detail tiers — <strong>Tier 1 (Executive, &lt;30s)</strong>, <strong>Tier 2 (Basic Overview)</strong>, and <strong>Tier 3 (Complete Specification)</strong>. Toggle inside each page to deepen the read.</p>
+<h1>PoRacer</h1>
+<p class="lede">A self-running creature race where nothing is animated. Every racer moves only by
+torque through its own joints, driven by a neural policy that learned to walk.</p>
+<p class="stamp">Documentation regenerated <b>2026-09-03</b>. Every figure in this suite was read off
+disk — 15 ONNX graphs parsed with <span class="mono">onnx.load</span>, prefab gains scraped from
+<span class="mono">Assets/Prefabs/*.prefab</span>, scene hierarchies parsed from
+<span class="mono">Assets/Scenes/*.unity</span>, and training curves read from the live TFEvents in
+<span class="mono">ISAAC/logs/rsl_rl/</span>. Diagram sources are in
+<span class="mono">DOCS/diagrams/*.mmd</span>, compiled to <span class="mono">DOCS/assets/*.svg</span>.</p>
 
-  <div class="doc-grid">
-    <div class="doc-card">
-      <h4>🏎️ Creatures Dashboard</h4>
-      <p>Interactive single-page dashboard with Executive / Technical view toggle. Behavior status, mean-vs-target reward bars, training tags, ONNX tensor graphs, joint physics, observation vector breakdowns.</p>
-      <a href="creatures_dashboard.html">Open dashboard →</a>
-      <span class="tier">Tier 1 + 2 + 3 · View toggle</span>
-    </div>
-
-    <div class="doc-card">
-      <h4>🧠 Architecture & Runtime Pipeline</h4>
-      <p>Unified C# → Sentis → PhysX execution loop, tensor / actuator blueprints, reward tree, and PPO/SAC trainer specifications. Includes both <code>-simple</code> and <code>-detailed</code> SVG diagrams.</p>
-      <a href="architecture_pipeline.html">Open architecture →</a>
-      <span class="tier">Tier 1 + 2 + 3 · 8 diagrams</span>
-    </div>
-
-    <div class="doc-card">
-      <h4>🎬 Scenes Layout</h4>
-      <p>Every scene in <code>Assets/Scenes/</code>, every GameObject, what each one does, what messages it publishes / subscribes to, and how the training and race pipelines split.</p>
-      <a href="scenes_layout.html">Open scenes →</a>
-      <span class="tier">Tier 1 + 2 + 3 · Per-object reference</span>
-    </div>
-
-    <div class="doc-card">
-      <h4>📦 ONNX & Rig Inventory</h4>
-      <p>Matrix A (per-model ONNX stats, Run IDs, promotion status) and Matrix B (per-creature ArticulationBody / drive mode / DOF / behavioral purpose). Markdown for grep-friendly diff review.</p>
-      <a href="onnx_summary.md">Open inventory →</a>
-      <span class="tier">Tier 1 + 2 + 3 · 2 matrices</span>
-    </div>
-  </div>
-
-  <h2>Quick Reference Table</h2>
-  <table>
-    <thead>
-      <tr><th>Document</th><th>Format</th><th>Diagrams</th><th>Tiers</th><th>Best For</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><a href="creatures_dashboard.html">creatures_dashboard.html</a></td><td>Interactive HTML</td><td>8 SVGs</td><td><span class="pill">1</span> <span class="pill">2</span> <span class="pill">3</span></td><td>Live project status review</td></tr>
-      <tr><td><a href="architecture_pipeline.html">architecture_pipeline.html</a></td><td>Static HTML</td><td>8 SVGs</td><td><span class="pill">1</span> <span class="pill">2</span> <span class="pill">3</span></td><td>Onboarding, code reviews, RFCs</td></tr>
-      <tr><td><a href="scenes_layout.html">scenes_layout.html</a></td><td>Static HTML</td><td>—</td><td><span class="pill">1</span> <span class="pill">2</span> <span class="pill">3</span></td><td>Scene wiring, content authoring</td></tr>
-      <tr><td><a href="onnx_summary.md">onnx_summary.md</a></td><td>Markdown</td><td>—</td><td><span class="pill">1</span> <span class="pill">2</span> <span class="pill">3</span></td><td>Promotion gates, run registry</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Project At A Glance</h2>
-  <table>
-    <thead><tr><th>Field</th><th>Value</th></tr></thead>
-    <tbody>
-      <tr><td>Engine</td><td>Unity 6000.5.6f1, URP</td></tr>
-      <tr><td>ML runtime</td><td>com.unity.ml-agents 4.1.0 · mlagents 1.1.0 (Python <code>.venv</code>)</td></tr>
-      <tr><td>Inference backend</td><td>Sentis (default) on Burst; BehaviorType.InferenceOnly</td></tr>
-      <tr><td>Physics</td><td>PhysX 5 Articulations, Δt 0.02 s, gravity −9.81</td></tr>
-      <tr><td>Platform</td><td>Windows standalone, portrait 9:16, targetFrameRate = 60</td></tr>
-      <tr><td>Architectural style</td><td>MVS + VContainer + MessagePipe + UniTask</td></tr>
-      <tr><td>Creature count</td><td>8 morphology variants (Worm, Spider, Hexapod, Quad, Centipede, Crab, Kangaroo, Blob)</td></tr>
-      <tr><td>Trained brains shipped</td><td>9 × <code>.onnx</code> at <code>Assets/Agents/&lt;Name&gt;_v01/</code></td></tr>
-      <tr><td>Trainer configs</td><td>10 YAML files (PPO + SAC + BC/GAIL variants)</td></tr>
-    </tbody>
-  </table>
-
-  <footer>PoRacer · Documentation generated for the MVS+ML-Agents locomotion / race loop · August 2026</footer>
+<div class="grid g4">
+  <div class="tile"><div class="k">Racers on the grid</div><div class="v">9</div>
+    <div class="d">Across three separate inference paths</div></div>
+  <div class="tile"><div class="k">Brains on disk</div><div class="v">15 <small>+1</small></div>
+    <div class="d">15 ONNX graphs plus one JSON policy</div></div>
+  <div class="tile"><div class="k">Physics rate</div><div class="v">200 <small>Hz</small></div>
+    <div class="d">Δt 0.005 s, 12 solver iterations, locked</div></div>
+  <div class="tile"><div class="k">Scenes shipped</div><div class="v">1 <small>of 5</small></div>
+    <div class="d">Everything else is generated at runtime</div></div>
 </div>
+
+<h2>Read these in order</h2>
+
+<div class="grid g2">
+  <a class="doc" href="creatures_dashboard.html">
+    <span class="kind">Interactive · start here</span>
+    <h3>Creatures Dashboard</h3>
+    <p>The roster, what each brain is, how it trained, and what it measurably does. Toggles between
+    <b>Executive</b> and <b>Technical</b> mode; three progressive tiers; twelve live charts built from
+    real training telemetry.</p>
+    <div class="meta">Tier 1 · 2 · 3 &nbsp;·&nbsp; 12 charts &nbsp;·&nbsp; 8 embedded diagrams</div>
+  </a>
+  <a class="doc" href="architecture_pipeline.html">
+    <span class="kind">Reference</span>
+    <h3>Architecture &amp; Pipeline</h3>
+    <p>Three training routes — ML-Agents, Isaac Lab, MuJoCo — and how each gets a policy into a racer.
+    MVS over VContainer and MessagePipe, the package graph, the Android release pipeline, and the
+    upstream bugs you must <i>not</i> fix.</p>
+    <div class="meta">Tier 1 · 2 · 3</div>
+  </a>
+  <a class="doc" href="scenes_layout.html">
+    <span class="kind">Reference</span>
+    <h3>Scenes &amp; Objects</h3>
+    <p>All five scenes, every GameObject, every component, and what it does at runtime — parsed
+    straight out of the <code>.unity</code> YAML. Includes the message-flow map and the training-area
+    anatomy.</p>
+    <div class="meta">Tier 1 · 2 · 3</div>
+  </a>
+  <a class="doc" href="onnx_summary.md">
+    <span class="kind">Inventory · markdown</span>
+    <h3>ONNX &amp; Rig Inventory</h3>
+    <p>Matrix A: every model with real file sizes, tensor shapes and parameter counts. Matrix B: every
+    rig with real PD gains, DOF counts and drive limits. Plus export provenance and the orphan list.</p>
+    <div class="meta">Tier 1 · 2 · 3 &nbsp;·&nbsp; 15 models · 13 rigs</div>
+  </a>
+  <a class="doc" href="agent-motivation.html">
+    <span class="kind">Visual essay</span>
+    <h3>What the Racers Want</h3>
+    <p>The same system drawn as motivation rather than architecture: what each creature is paid for,
+    what it is punished for, and how those incentives produce the gait you see. Editorial diagrams.</p>
+    <div class="meta">6 diagrams</div>
+  </a>
+  <a class="doc" href="FeatureBrief-CreatureRace.md">
+    <span class="kind">History</span>
+    <h3>Feature Brief &amp; P1 Plan</h3>
+    <p>The original 2026-08-14 interview brief and the post-critic P1 implementation plan, preserved
+    with verified <i>then vs. now</i> headers. Decisions D1–D14 are still load-bearing.
+    <a href="Plan-P1-Worm.md">P1 plan →</a></p>
+    <div class="meta">Historical · status-checked 2026-09-03</div>
+  </a>
+</div>
+
+<h2>What the documentation says that the old edition got wrong</h2>
+<p>The previous suite carried a number of figures that do not survive contact with the files. They are
+corrected throughout, and called out where it matters:</p>
+
+<div class="tw">
+  <table>
+    <thead><tr><th>Previously stated</th><th>Actually true</th></tr></thead>
+    <tbody>
+      <tr><td>9 brains, ~2.79 MB total</td><td class="name">15 ONNX files, 12,262,121 B (11.69 MB)</td></tr>
+      <tr><td>Worm 39 obs / 14 actions; Centipede 32 DOF</td>
+        <td class="name">Worm 34 / 5; Centipede 70 / 17. <code>obs = 3N + 19</code> exactly, on all twelve</td></tr>
+      <tr><td>All creatures share <code>forceLimit = 100 N·m</code></td>
+        <td class="name">500–1350 N·m, and <code>forceLimit = Kp / 5</code> on every rig</td></tr>
+      <tr><td><code>ConfigurableJoint</code> and SLERP drives on some rigs</td>
+        <td class="name">Neither exists anywhere in the project. All <code>ArticulationBody</code> + <code>xDrive</code></td></tr>
+      <tr><td>"Optional LSTM(128)"</td><td class="name"><code>memory_size = 0</code> — no recurrence in any shipped brain</td></tr>
+      <tr><td>Per-run mean rewards and promotion states</td>
+        <td class="name">Unverifiable — <code>results/</code> is no longer in the tree. Removed rather than restated</td></tr>
+      <tr><td>Blob is a soft-body with configurable joints</td>
+        <td class="name">Five <b>prismatic</b> joints — the only non-revolute rig, and its drive scale is metres</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>The five things worth knowing before you touch anything</h2>
+<ul class="tight">
+  <li><b>Δt = 0.005 s is load-bearing.</b> It divides evenly into 0.02 s (IsaacH1, IsaacBox, Fido) and
+    0.025 s (MujocoBiped). Change it and you must change <code>DecisionPeriod</code> on all twelve
+    ML-Agents prefabs and Fido's <code>actionDecimation</code> with it.</li>
+  <li><b>Promote on ELO, never on mean reward.</b> The locomotion reward is potential-based, so its
+    episode sum scales with survival time. A brain that stands still longer scores higher.</li>
+  <li><b>Colour is a legend.</b> Red is reserved for heuristic bots, green for the baseline RL policy.
+    A creature that arrived with authored art — IsaacBox does — keeps it and must not be recoloured.</li>
+  <li><b>Some bugs are load-bearing.</b> MujocoBiped's double-rotated angular velocity and the
+    <code>TensorProxy</code> finaliser noise are both documented as <i>do not fix</i>. Read the reason
+    before touching either.</li>
+  <li><b>Commit to <code>master</code>.</b> No feature branches unless explicitly asked, and verify
+    before committing — compile clean, plus a play-mode check for anything touching runtime.</li>
+</ul>
+
+<div class="note crit"><b>Two open high-severity items</b> as of this regeneration.
+<b>(1)</b> Four creatures — Worm, Spider, Centipede and Crab — do not reach the finish on the 22 m Flat
+map. <b>(2)</b> Every brain trained between 2026-08-29 and 2026-09-02 learned against a distorted
+reward: the step-scaling fix landed on 09-02, and until then episodes were cut at 5 s of no progress
+instead of 20, with every per-step penalty landing four times per simulated second.
+Full list in the <a href="creatures_dashboard.html#gaps">dashboard's gaps section</a>.</div>
+
+<div class="note"><b>Regenerating this suite.</b> Diagram sources live in
+<code>DOCS/diagrams/*.mmd</code> and compile with
+<code>npx @mermaid-js/mermaid-cli -i DOCS/diagrams/&lt;name&gt;.mmd -o DOCS/assets/&lt;name&gt;.svg -b transparent</code>.
+Each of the four topics ships a <code>-simple</code> conceptual variant and a <code>-detailed</code>
+specification variant; the dashboard picks between them based on the Executive / Technical toggle.
+The SVGs are embedded at source size inside scrolling frames so no label is ever shrunk.</div>
+
+<footer>
+  <p><b>PoRacer</b> · Unity 6000.5.8f1 · URP 17.5.0 · ML-Agents 4.1.0 / mlagents 1.1.0 ·
+  Isaac Lab + RSL-RL · MuJoCo 3.12.0 · <code>com.punkoutersoftware.poracer</code><br>
+  Documentation regenerated 2026-09-03. Project context and rules: <code>CLAUDE.md</code> and
+  <code>.claude/rules/*.md</code> at the repository root.</p>
+</footer>
+</div>
+<script>
+(function(){
+  const b=document.getElementById('themeBtn');
+  function cur(){const a=document.documentElement.getAttribute('data-theme');
+    return a||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  b.onclick=()=>{const n=cur()==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',n);
+    try{localStorage.setItem('poracer-theme',n)}catch(_){}};
+  let s=null;try{s=localStorage.getItem('poracer-theme')}catch(_){}
+  if(s)document.documentElement.setAttribute('data-theme',s);
+})();
+</script>
 </body>
 </html>

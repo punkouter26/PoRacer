@@ -1,338 +1,493 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PoRacer — Scenes Layout</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoRacer — Scenes &amp; Objects</title>
 <style>
-  :root {
-    --bg-1: #0d1117; --bg-2: #161b22; --bg-3: #1f2630;
-    --border: #30363d; --text-1: #e6edf3; --text-2: #9ba9b7;
-    --accent: #58a6ff; --accent-2: #d2a8ff;
-    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #8957e5;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0;
-    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.6; min-height: 100vh; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
-  header { padding: 24px 0 32px; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0 0 8px; font-size: 2rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header p { color: var(--text-2); margin: 4px 0; }
-  h2 { margin: 48px 0 16px; font-size: 1.5rem; color: var(--text-1); border-left: 4px solid var(--accent); padding-left: 14px; }
-  h3 { margin: 24px 0 10px; font-size: 1.1rem; color: var(--accent); }
-  h4 { margin: 16px 0 6px; font-size: 1rem; color: var(--accent-2); }
-  p, li { color: var(--text-1); }
-  code { background: var(--bg-3); padding: 2px 7px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; color: var(--accent-2); }
-  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.9rem; }
-  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
-  th { background: var(--bg-3); color: var(--accent); }
-  td { background: rgba(255,255,255,0.02); }
-
-  .tier-card { background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px 22px; margin: 16px 0; }
-  .tier-card.tier-1 { border-left-color: var(--green); }
-  .tier-card.tier-2 { border-left-color: var(--accent); }
-  .tier-card.tier-3 { border-left-color: var(--purple); }
-  .tier-label { display: inline-block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
-  .tier-card.tier-1 .tier-label { color: var(--green); }
-  .tier-card.tier-2 .tier-label { color: var(--accent); }
-  .tier-card.tier-3 .tier-label { color: var(--purple); }
-  .tier-card h3:first-child { margin-top: 0; }
-
-  .scene-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
-  .scene-card .path { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.84rem; color: var(--accent); }
-  .scene-card .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; margin-right: 6px; }
-  .tag.train { background: rgba(210,153,34,0.15); color: var(--orange); border: 1px solid rgba(210,153,34,0.3); }
-  .tag.race  { background: rgba(63,185,80,0.15);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
-  .tag.boot  { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
-
-  .tree { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 12px 0; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.86rem; color: var(--text-1); overflow-x: auto; }
-  .tree .g { color: var(--accent); }
-  .tree .c { color: var(--accent-2); }
-  .tree .s { color: var(--green); }
-
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
-
-  .callout { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; margin: 14px 0; }
-
-  a { color: var(--accent); }
-  footer { margin-top: 56px; padding: 20px 0; border-top: 1px solid var(--border); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+:root{
+  color-scheme:light;
+  --bg:#f6f6f4; --surface-1:#fcfcfb; --surface-2:#f0efec; --border:#dcdbd6; --border-strong:#c3c2b7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --crit:#e34948; --warn:#eda100;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 4px 14px rgba(11,11,11,.045);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark;
+  --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835; --border-strong:#4d4d49;
+  --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --border:#383835; --border-strong:#4d4d49;
+  --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --crit:#e66767; --warn:#c98500;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.top-in{max-width:1080px;margin:0 auto;padding:12px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:680;letter-spacing:-.02em;margin-right:auto;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--s1)}
+.brand small{font-weight:450;color:var(--text-muted)}
+.top-in a{color:var(--text-secondary);text-decoration:none;font-size:13.5px}
+.top-in a:hover{color:var(--text-primary)}
+.iconbtn{appearance:none;border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:15px}
+h1{font-size:clamp(27px,4vw,40px);line-height:1.08;letter-spacing:-.028em;margin:44px 0 12px;font-weight:700}
+.lede{font-size:17.5px;color:var(--text-secondary);max-width:66ch;margin:0 0 18px}
+.stamp{font:12.5px/1.5 var(--mono);color:var(--text-muted);border-left:2px solid var(--border-strong);
+  padding-left:12px;max-width:80ch}
+h2{font-size:23px;letter-spacing:-.02em;margin:54px 0 6px;padding-bottom:10px;border-bottom:1px solid var(--border);font-weight:670}
+h3{font-size:17.5px;letter-spacing:-.015em;margin:32px 0 4px;font-weight:640}
+h4{font-size:15px;margin:22px 0 4px;font-weight:640;color:var(--text-secondary)}
+p{max-width:78ch}
+.tierpill{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--s1);background:color-mix(in srgb,var(--s1) 12%,transparent);padding:5px 8px;border-radius:5px;
+  margin-bottom:10px}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:4px;padding:1px 5px}
+.mono{font-family:var(--mono);font-size:.9em}
+.grid{display:grid;gap:14px;margin:20px 0}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:7px}
+.tile .v{font:700 29px/1.05 var(--sans);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:14px;font-weight:560;color:var(--text-secondary)}
+.tile .d{font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.45}
+.note{font-size:14px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--s2);border-radius:0 8px 8px 0;padding:13px 16px;margin:18px 0;max-width:88ch}
+.note b{color:var(--text-primary)}
+.note.crit{border-left-color:var(--crit)}
+.note.good{border-left-color:var(--s3)}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);
+  box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+caption{text-align:left;padding:14px 16px 0;font-size:13px;color:var(--text-muted);caption-side:top}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:640;font-size:12px;letter-spacing:.02em;
+  text-transform:uppercase;color:var(--text-secondary);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+td.name{font-weight:620;white-space:nowrap}
+/* hierarchy tree */
+.tree{font-family:var(--mono);font-size:13px;line-height:1.85;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;padding:18px 20px;overflow-x:auto;box-shadow:var(--shadow);margin:18px 0}
+.tree .go{color:var(--text-primary);font-weight:600}
+.tree .cm{color:var(--s1)}
+.tree .an{color:var(--text-muted);font-family:var(--sans);font-size:12.5px}
+.tree .br{color:var(--border-strong)}
+.tree .rt{color:var(--s2);font-weight:660}
+ul.tight{margin:10px 0;padding-left:20px}
+ul.tight li{margin:5px 0;max-width:76ch}
+.badge{display:inline-block;font:600 11px/1 var(--sans);padding:4px 8px;border-radius:999px;border:1px solid;white-space:nowrap}
+.badge.ship{color:var(--s3);border-color:color-mix(in srgb,var(--s3) 40%,transparent);background:color-mix(in srgb,var(--s3) 11%,transparent)}
+.badge.train{color:var(--s1);border-color:color-mix(in srgb,var(--s1) 40%,transparent);background:color-mix(in srgb,var(--s1) 11%,transparent)}
+.badge.test{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 11%,transparent)}
+a{color:var(--s1)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+/* layout diagram */
+.mapfig{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;
+  box-shadow:var(--shadow);margin:18px 0;overflow-x:auto}
+.mapfig svg{display:block;min-width:600px}
+.mapfig text{font-family:var(--sans);fill:var(--text-secondary);font-size:12px}
+.mapfig .lb{font-weight:650;fill:var(--text-primary);font-size:12.5px}
+.mapfig .dim{fill:var(--text-muted);font-size:11px;font-family:var(--mono)}
 </style>
 </head>
 <body>
+<header class="top"><div class="top-in">
+  <div class="brand"><span class="dot"></span>PoRacer <small>Scenes &amp; Objects</small></div>
+  <a href="index.html">index</a>
+  <a href="creatures_dashboard.html">dashboard</a>
+  <a href="architecture_pipeline.html">pipeline</a>
+  <a href="onnx_summary.md">ONNX inventory</a>
+  <button class="iconbtn" id="themeBtn" aria-label="Toggle theme">◐</button>
+</div></header>
+
 <div class="wrap">
-  <header>
-    <h1>Scenes Layout &amp; Object Reference</h1>
-    <p>Every scene in <code>Assets/Scenes/</code>, every authored GameObject, what each one does, and what MessagePipe messages it publishes or subscribes to.</p>
-    <p style="font-size: 0.88rem;">Three progressive detail tiers — <strong style="color:var(--green)">Tier 1 (Executive, &lt;30 s)</strong> · <strong style="color:var(--accent)">Tier 2 (Component &amp; Flow)</strong> · <strong style="color:var(--purple)">Tier 3 (Per-object Reference)</strong>.</p>
-  </header>
 
-  <div class="tier-card tier-1">
-    <span class="tier-label">Tier 1 · Executive summary</span>
-    <h3>6 scenes · 1 runtime boot, 4 training, 1 race</h3>
-    <p><strong>Boot:</strong> <code>SCN_RACE_FLAT</code> is the only runtime scene — it auto-loads on launch and runs the endless race loop. <strong>Training:</strong> <code>SCN_TRAIN_WORM</code>, <code>SCN_TRAIN_SPIDER</code>, <code>SCN_TRAIN_ALL</code>, <code>SCN_TRAIN_WORM_ROUGH</code> contain ≥ 8 parallel training areas and are launched only inside the headless <code>Builds/WormEnv</code> and <code>Builds/AllEnv</code> player builds via <code>mlagents-learn</code>.</p>
-  </div>
+<h1>Five scenes, and only one of them ships</h1>
+<p class="lede">Every GameObject in every scene, what component sits on it, and what that component
+actually does at runtime. Parsed directly out of the <code>.unity</code> YAML.</p>
+<p class="stamp">Regenerated 2026-09-03. GameObject names, component GUIDs and parenting read from
+<span class="mono">Assets/Scenes/*.unity</span>; script GUIDs resolved against
+<span class="mono">Assets/**/*.cs.meta</span> and <span class="mono">Library/PackageCache</span>.</p>
 
-  <div class="tier-card tier-2">
-    <span class="tier-label">Tier 2 · Component &amp; flow</span>
-    <h3>How a runtime launch wires up</h3>
-    <ol>
-      <li><code>GameLifetimeScope</code> (<code>Assets/Scripts/</code>) registers VContainer: <code>RaceModel</code>, <code>EloModel</code>, <code>CommentaryModel</code>, <code>RaceConfigModel</code>, <code>CreatureCatalog</code>, <code>TrackCatalog</code>, plus all <code>Systems_*</code> as singletons.</li>
-      <li><code>Systems_AppBootstrap</code> on the root <code>GameObject</code> of <code>SCN_RACE_FLAT</code> hooks MessagePipe, fires <code>RaceConfigModel.NotifyChanged()</code>, and shows the menu UI.</li>
-      <li>The menu (<code>MenuView</code>) edits <code>RaceConfigModel</code> counts; tapping <em>Start Race</em> calls <code>Systems_Spawn.BeginRacing()</code> which instantiates every selected creature prefab, hooks <code>BehaviorParameters</code> to its <code>.onnx</code> model, and publishes <code>RaceStartedMessage</code>.</li>
-      <li><code>Systems_Race</code> tracks each racer's progress and finish order. <code>Systems_CameraDirector</code> switches camera targets on <code>RaceStartedMessage</code> and <code>CheckpointPassedMessage</code>. <code>Systems_Elo</code> subscribes <code>RaceFinishedMessage</code>; <code>Systems_Persistence</code> writes <code>elo.json</code> + <code>race-history.json</code>.</li>
-      <li>Training scenes have no race HUD — they host <code>Systems_TrainingArea</code> on each area, which resets the agent + goal and reads curriculum knobs from <code>Academy.EnvironmentParameters</code>.</li>
-    </ol>
-  </div>
+<!-- ================= TIER 1 ================= -->
+<h2 id="t1">Tier 1 · Executive summary</h2>
+<span class="tierpill">Tier 1 — 30 seconds</span>
 
-  <!-- ============================ SCENE: RACE FLAT ============================ -->
-  <h2>1. Runtime Scene</h2>
-
-  <div class="scene-card">
-    <span class="tag race">Race</span>
-    <code class="path">Assets/Scenes/SCN_RACE_FLAT.unity</code>
-    <h3 style="margin-top:12px;">SCN_RACE_FLAT — self-running race loop</h3>
-    <div class="tree">
-├── <span class="g">▶ Bootstrap</span>
-│   ├── <span class="c">Systems_AppBootstrap</span> — VContainer root + menu start
-│   └── <span class="c">GameLifetimeScope</span> — DI registry (VContainer + MessagePipe)
-│
-├── <span class="g">▶ Camera</span>
-│   ├── <span class="c">Main Camera</span> + <span class="c">CameraRigView</span> (driven by <span class="c">Systems_CameraDirector</span>)
-│   └── <span class="c">CameraFxView</span>, <span class="c">PostFxView</span>
-│
-├── <span class="g">▶ Track</span>
-│   ├── <span class="c">TrackRoot</span> (children built at runtime by <span class="c">Systems_TrackBuilder</span>)
-│   ├── <span class="c">FinishLine</span> — collider + agent goal trigger
-│   └── <span class="c">SpawnPoints</span> (10 × N grid behind start line)
-│
-├── <span class="g">▶ Spawn point (runtime)</span>
-│   └── (creature prefabs instantiated by <span class="c">Systems_Spawn</span> per race)
-│       ├── <span class="c">Agent_Creature</span> (ML-Agents Agent)
-│       ├── <span class="c">BehaviorParameters</span> (InferenceOnly · Burst)
-│       ├── <span class="c">DecisionRequester</span> (DecisionStep = gridIndex % 5)
-│       ├── <span class="c">RacerView</span> (HUD bindings)
-│       ├── <span class="c">BodyLinkView</span> (joint visuals)
-│       ├── <span class="c">DustTrailView</span>
-│       └── <span class="c">CreatureAudioView</span>
-│
-├── <span class="g">▶ HUD (UI Toolkit, 9:16 portrait)</span>
-│   ├── <span class="c">RaceHudView</span> — leaderboard, countdown, track name
-│   ├── <span class="c">InputView</span> — camera target cycle / pause
-│   ├── <span class="c">MenuView</span> — per-creature counts, map select, scripted toggle
-│   ├── <span class="c">DebugOverlayView</span> — FPS / agent count / version
-│   ├── <span class="c">UiTheme</span>
-│   └── <span class="c">WinFxView</span>, <span class="c">FinishLineView</span>, <span class="c">MudZoneView</span>
-│
-└── <span class="g">▶ Audio</span>
-    ├── <span class="c">AudioDirectorView</span>
-    └── <span class="c">CreatureAudioView</span> (per-racer)
-    </div>
-
-    <h4>What this scene does</h4>
-    <p>The only scene loaded at runtime. On launch, the menu shows up via <code>Systems_AppBootstrap.Start</code>. The user picks per-creature counts (0 / 1 / 10 / 50 / 100), selects a map (Flat / Lumpy / Swamp), optionally toggles scripted brains, and taps <em>Start Race</em>.</p>
-    <p><code>Systems_Spawn</code> instantiates the chosen creatures in a 10-wide grid behind the start line, hooks each to its <code>.onnx</code> model (<code>BehaviorType.InferenceOnly</code>, <code>InferenceDevice.Burst</code>), and tints it with a per-racer HSV step (golden ratio) so a 100-racer race stays readable.</p>
-    <p>Racers race until the last crosses the finish line or the 120 s race timeout. <code>Systems_Race</code> reports finishing order, including same-frame ties resolved by overshoot. <code>Systems_Elo</code> updates ratings; <code>Systems_Persistence</code> writes JSON. After a 5 s pause, the next race begins.</p>
-
-    <h4>Subscribes / publishes</h4>
-    <table>
-      <thead><tr><th>System</th><th>Subscribes</th><th>Publishes</th></tr></thead>
-      <tbody>
-        <tr><td>Systems_Race</td><td>—</td><td><code>RaceStarted</code>, <code>RacerFinished</code>, <code>RacerDnf</code>, <code>RaceFinished</code></td></tr>
-        <tr><td>Systems_Spawn</td><td><code>RaceFinished</code></td><td>—</td></tr>
-        <tr><td>Systems_Elo</td><td><code>RaceFinished</code></td><td>—</td></tr>
-        <tr><td>Systems_Persistence</td><td><code>RaceFinished</code></td><td>—</td></tr>
-        <tr><td>Systems_CameraDirector</td><td><code>RaceStarted</code>, <code>CheckpointPassed</code></td><td>—</td></tr>
-        <tr><td>Systems_Commentary</td><td><code>RaceStarted</code>, <code>RacerFinished</code></td><td>—</td></tr>
-        <tr><td>MenuView</td><td>—</td><td><em>(writes RaceConfigModel)</em></td></tr>
-        <tr><td>InputView</td><td>—</td><td><em>(camera + pause commands)</em></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ============================ TRAINING SCENES ============================ -->
-  <h2>2. Training Scenes</h2>
-
-  <div class="scene-card">
-    <span class="tag train">Training</span>
-    <code class="path">Assets/Scenes/SCN_TRAIN_WORM.unity</code>
-    <h3 style="margin-top:12px;">SCN_TRAIN_WORM — Worm-only, flat ground</h3>
-    <div class="tree">
-├── <span class="g">▶ TrainingArea × 8+</span>   <em>(≥ 8 parallel, per project rule)</em>
-│   ├── <span class="c">Agent_Creature</span> (Worm prefab, MaxStep = 3000)
-│   ├── <span class="c">BehaviorParameters</span> (Default, attached to trainer)
-│   ├── <span class="c">DecisionRequester</span> (DecisionStep = 5)
-│   ├── <span class="c">Systems_TrainingArea</span> — resets worm, randomizes goal
-│   ├── <span class="c">Goal</span> (Transform)
-│   ├── <span class="c">SpawnPoint</span> (Transform)
-│   └── <span class="c">TrackRoot</span> — rebuilt per episode (obstacles / kind)
-│
-├── <span class="g">▶ Academy</span>
-│   └── <span class="c">Academy</span> + <span class="c">Brain</span> (Worm, PPO 256×2)
-│
-└── <span class="g">▶ Track builder</span>
-    └── <span class="c">Systems_TrackBuilder</span> — built per episode via curriculum
-    </div>
-    <h4>Purpose</h4>
-    <p>P1 slice: prove the training pipeline end-to-end. <code>Systems_TrainingArea.Awake</code> caches the authored stiffness / forceLimit per body so per-episode quirk scaling (from <code>quirk_power_span</code>) never compounds across resets.</p>
-    <h4>Curriculum knobs read</h4>
-    <p><code>goal_distance_max</code> (3–20 m), <code>rough_amplitude</code> (0..1), <code>track_kind</code> (Flat=0 default), <code>quirk_power_span</code> (0).</p>
-  </div>
-
-  <div class="scene-card">
-    <span class="tag train">Training</span>
-    <code class="path">Assets/Scenes/SCN_TRAIN_SPIDER.unity</code>
-    <h3 style="margin-top:12px;">SCN_TRAIN_SPIDER — Spider-only</h3>
-    <div class="tree">
-├── <span class="g">▶ TrainingArea × 8+</span>
-│   ├── <span class="c">Agent_Creature</span> (Spider prefab)
-│   └── <span class="c">Systems_TrainingArea</span> with <code>_trackKind = Flat</code>
-│
-├── <span class="g">▶ Academy</span>
-│   └── <span class="c">Brain</span> (Spider, PPO 256×2)
-│
-└── <span class="g">▶ Track builder</span>
-    └── <span class="c">Systems_TrackBuilder</span>
-    </div>
-    <h4>Purpose</h4>
-    <p>P3 second-morphology. Single-behavior Spider run uses <code>SpiderLoco02.yaml</code>. Same shared <code>Agent_Creature</code>, same <code>Reward_WormLoco</code> (named for history; reused across morphologies).</p>
-  </div>
-
-  <div class="scene-card">
-    <span class="tag train">Training</span>
-    <code class="path">Assets/Scenes/SCN_TRAIN_ALL.unity</code>
-    <h3 style="margin-top:12px;">SCN_TRAIN_ALL — all nine creatures, mixed areas</h3>
-    <div class="tree">
-├── <span class="g">▶ TrainingArea (Worm) × 2</span>   <em>(pacing behavior)</em>
-├── <span class="g">▶ TrainingArea (Spider) × 1</span>
-├── <span class="g">▶ TrainingArea (Hexapod) × 1</span>
-├── <span class="g">▶ TrainingArea (Quad) × 1</span>
-├── <span class="g">▶ TrainingArea (Centipede) × 1</span>
-├── <span class="g">▶ TrainingArea (Crab) × 1</span>
-├── <span class="g">▶ TrainingArea (Kangaroo) × 1</span>
-├── <span class="g">▶ TrainingArea (Blob) × 1</span>
-│
-├── <span class="g">▶ Academy</span>
-│   └── <span class="c">Brain</span> × 9 (one per creature, PPO 256×2)
-│
-└── <span class="g">▶ Demonstration recorders</span>
-    └── <span class="c">DemoRecorder</span> — emits <code>.demo</code> files into
-        <code>Assets/Demonstrations/&lt;Creature&gt;.demo</code> (used by
-        <code>AllLoco03.yaml</code>'s BC + GAIL warm start).
-    </div>
-    <h4>Purpose</h4>
-    <p>Bulk all-creatures training driven by <code>AllLoco*</code> YAMLs. The pacing behavior is Worm; curriculum in every <code>AllLoco*</code> YAML measures Worm's mean reward against thresholds (12/22 in gen-3 configs) before unlocking the next lesson.</p>
-    <h4>Opt-in: Enable Demo Recorders</h4>
-    <p>Menu <em>PoRacer/Training/Enable Demo Recorders In Open Scene</em> attaches <code>DemoRecorder</code> components so you can play a few minutes of Heuristic-only gaits and produce <code>.demo</code> files for the AllLoco03 BC + GAIL warm start.</p>
-  </div>
-
-  <div class="scene-card">
-    <span class="tag train">Training</span>
-    <code class="path">Assets/Scenes/SCN_TRAIN_WORM_ROUGH.unity</code>
-    <h3 style="margin-top:12px;">SCN_TRAIN_WORM_ROUGH — rough terrain ablation</h3>
-    <div class="tree">
-├── <span class="g">▶ TrainingArea × 8+</span>
-│   ├── <span class="c">Agent_Creature</span> (Worm prefab)
-│   ├── <span class="c">Systems_TrainingArea</span> with <code>_trackKind = Rough</code>
-│   └── <span class="c">TrackRoot</span> — <span class="c">Systems_TrackBuilder</span> rebuilds
-│       terrain mesh per episode (Perlin 2-octave, 0.8 m amplitude)
-│
-└── <span class="g">▶ Academy</span>
-    └── <span class="c">Brain</span> (Worm, PPO 256×2)
-    </div>
-    <h4>Purpose</h4>
-    <p>Tests the worm against the Perlin rough terrain curriculum driven by <code>rough_amplitude</code>. Optional <code>_useTerrainProbes</code> on the agent adds 4 look-ahead height observations, requiring a matching <code>VectorObservationSize</code> bump and a retrain.</p>
-    <div class="callout"><strong>Terrain-probe retrain warning</strong>: flipping <code>_useTerrainProbes</code> changes the observation size; any previously trained <code>.onnx</code> brain becomes shape-incompatible and must be retrained from scratch.</div>
-  </div>
-
-  <!-- ============================ TIER 3 PER-OBJECT ============================ -->
-  <h2>3. Per-Object Reference (Tier 3)</h2>
-  <div class="tier-card tier-3">
-    <span class="tier-label">Tier 3 · Complete specification</span>
-    <h3>Every key GameObject, what it owns, what it does</h3>
-  </div>
-
-  <h3>Runtime scene: SCN_RACE_FLAT — full per-object table</h3>
-  <table>
-    <thead><tr><th>Object / Component</th><th>What it owns</th><th>Lifecycle</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td><code>Bootstrap</code></td><td><code>Systems_AppBootstrap</code></td><td>Permanent</td><td>First to <code>Start</code>; opens menu</td></tr>
-      <tr><td><code>GameLifetimeScope</code></td><td>VContainer root</td><td>Permanent</td><td>Builds DI graph on launch</td></tr>
-      <tr><td><code>Main Camera</code> + <code>CameraRigView</code></td><td>Camera target list</td><td>Permanent</td><td>Driven by <code>Systems_CameraDirector</code></td></tr>
-      <tr><td><code>CameraFxView</code>, <code>PostFxView</code></td><td>Post-processing stack</td><td>Permanent</td><td>URP volume hookups</td></tr>
-      <tr><td><code>TrackRoot</code></td><td>Procedural track parent</td><td>Rebuilt per race</td><td>Children: ground mesh, obstacles, decor</td></tr>
-      <tr><td><code>FinishLine</code></td><td>Trigger + agent goal</td><td>Moved per map length</td><td>Position.z = map.LengthMeters − 2</td></tr>
-      <tr><td><code>SpawnPoints</code></td><td>Empty children</td><td>Permanent layout</td><td>10×N grid behind start line</td></tr>
-      <tr><td><code>RaceHudView</code></td><td>Leaderboard, countdown, track name</td><td>UI Toolkit</td><td>Subscribes <code>RaceModel</code> via ReactiveProperty</td></tr>
-      <tr><td><code>MenuView</code></td><td>Per-creature counts, map, scripted</td><td>Visible while menu up</td><td>Writes <code>RaceConfigModel</code></td></tr>
-      <tr><td><code>InputView</code></td><td>Camera cycle, pause</td><td>Permanent</td><td>InputSystem action map</td></tr>
-      <tr><td><code>DebugOverlayView</code></td><td>FPS, racer count, <code>Application.version</code></td><td>Always visible</td><td>Anchored top-left per project rule</td></tr>
-      <tr><td><code>UiTheme</code></td><td>Colors, fonts, layout constants</td><td>Permanent</td><td>Source of truth for styling</td></tr>
-      <tr><td><code>WinFxView</code>, <code>FinishLineView</code>, <code>MudZoneView</code></td><td>FX hooks for race events</td><td>Permanent</td><td>Subscribe relevant MessagePipe</td></tr>
-      <tr><td><code>AudioDirectorView</code></td><td>Music layers (countdown, race, win)</td><td>Permanent</td><td>Plays music state</td></tr>
-      <tr><td><code>Racer (runtime)</code></td><td>Creature prefab instance</td><td>Per race</td><td>DecisionStep staggered 0..4</td></tr>
-      <tr><td><code>RacerView</code></td><td>Per-racer HUD bindings</td><td>Per race</td><td>Reports progress to <code>Systems_Race</code></td></tr>
-      <tr><td><code>BodyLinkView</code></td><td>Visual connectors between limbs</td><td>Per race</td><td>Reads joint transforms each frame</td></tr>
-      <tr><td><code>DustTrailView</code></td><td>Wheel/contact particle emitter</td><td>Per race</td><td>Reads root linearVelocity</td></tr>
-      <tr><td><code>CreatureAudioView</code></td><td>Per-racer footfalls</td><td>Per race</td><td>Reads root linearVelocity</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Training scene: per-area wiring (identical across all training scenes)</h3>
-  <table>
-    <thead><tr><th>Object / Component</th><th>What it owns</th><th>Lifecycle</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td><code>TrainingArea</code> (root)</td><td>One self-contained agent + track slice</td><td>Permanent in scene</td><td>≥ 8 instances per training scene</td></tr>
-      <tr><td><code>Worm</code> / <code>Spider</code> / …</td><td>Creature prefab instance</td><td>Reset per episode</td><td>Has <code>Agent_Creature</code> attached</td></tr>
-      <tr><td><code>Systems_TrainingArea</code></td><td>Reset, goal randomize, curriculum</td><td>Permanent per area</td><td>Caches base drive values in <code>Awake</code></td></tr>
-      <tr><td><code>Goal</code></td><td>Transform marker</td><td>Per-episode move</td><td>z ∈ [MIN_GOAL_DISTANCE, goal_distance_max]</td></tr>
-      <tr><td><code>SpawnPoint</code></td><td>Transform</td><td>Permanent</td><td>Used by <code>ArticulationBody.TeleportRoot</code></td></tr>
-      <tr><td><code>TrackRoot</code></td><td>Procedural track slice</td><td>Rebuilt per episode on Rough / kind change</td><td>Built by <code>Systems_TrackBuilder</code></td></tr>
-      <tr><td><code>Academy</code> + <code>Brain</code> (one per behavior)</td><td>Trainer config + brain graph</td><td>Permanent</td><td>One per creature being trained</td></tr>
-      <tr><td><code>DemoRecorder</code> (opt-in)</td><td>Records <code>.demo</code></td><td>Opt-in via menu</td><td>Writes to <code>Assets/Demonstrations/</code></td></tr>
-    </tbody>
-  </table>
-
-  <h3>Creature prefab anatomy (shared across race + training)</h3>
-  <div class="tree">
-├── <span class="g">▶ CreatureRoot</span> (the prefab root)
-│   ├── <span class="c">ArticulationBody</span> (root, immutable per-episode)
-│   ├── <span class="c">ArticulationBody[]</span> (joints; one per DoF)
-│   │       └── each carries an <span class="c">ArticulationDrive</span>
-│   │           (target, stiffness, damping, forceLimit)
-│   ├── <span class="c">Agent_Creature</span>  <em>(ML-Agents Agent + ICreatureAgent)</em>
-│   ├── <span class="c">BehaviorParameters</span>  <em>(BehaviorName = creature id)</em>
-│   └── <span class="c">DecisionRequester</span>  <em>(DecisionStep = 5 by default)</em>
-│
-└── <span class="g">▶ Visual children</span>
-    ├── <span class="c">MeshRenderer</span> per body part
-    ├── <span class="c">MeshCollider</span> per body part (where needed)
-    └── <span class="g">▶ Optional</span>
-        ├── <span class="c">BodyLinkView</span> — added at runtime in race
-        ├── <span class="c">DustTrailView</span> — added at runtime in race
-        └── <span class="c">CreatureAudioView</span> — added at runtime in race
-  </div>
-
-  <div class="callout">
-    <strong>Per-creature details</strong>: each creature prefab (Worm, Spider, …) differs only in its <code>ArticulationBody</code> hierarchy, joint count, drive limits, and the per-joint gait tables (<code>_gaitFrequency</code>, <code>_gaitPhases</code>, <code>_gaitAmplitudes</code>, <code>_gaitOffsets</code>) used by <code>Heuristic()</code>. The shared <code>Agent_Creature</code> reads all of them.
-  </div>
-
-  <h3>Message topology (across the whole app)</h3>
-  <table>
-    <thead><tr><th>Message</th><th>Published by</th><th>Subscribed by</th><th>When</th></tr></thead>
-    <tbody>
-      <tr><td><code>RaceStartedMessage</code></td><td>Systems_Race.StartRace</td><td>Systems_CameraDirector, Systems_Commentary</td><td>Race begins</td></tr>
-      <tr><td><code>CheckpointPassedMessage</code></td><td>Systems_Race.ReportProgress</td><td>Systems_CameraDirector</td><td>≥ 5 cm progress</td></tr>
-      <tr><td><code>RacerFinishedMessage</code></td><td>Systems_Race.NotifyFinish</td><td>Systems_Commentary, RaceHudView</td><td>A racer crosses the line</td></tr>
-      <tr><td><code>RacerDnfMessage</code></td><td>Systems_Race (timeout / OOB)</td><td>Systems_Commentary</td><td>A racer did-not-finish</td></tr>
-      <tr><td><code>RaceFinishedMessage</code></td><td>Systems_Race.CheckRaceEnd</td><td>Systems_Spawn, Systems_Elo, Systems_Persistence</td><td>Last racer ends, or timeout</td></tr>
-    </tbody>
-  </table>
-
-  <footer>PoRacer · <a href="index.html">Back to documentation hub</a> · August 2026</footer>
+<div class="grid g4">
+  <div class="tile"><div class="k">Scenes on disk</div><div class="v">5</div>
+    <div class="d">1 shipped, 3 training, 1 test bed</div></div>
+  <div class="tile"><div class="k">In the build</div><div class="v">1</div>
+    <div class="d"><code>SCN_RACE_FLAT</code> — the only scene a player ever loads</div></div>
+  <div class="tile"><div class="k">Objects in the race scene</div><div class="v">15</div>
+    <div class="d">Everything else — track, racers, hazards — is built at runtime</div></div>
+  <div class="tile"><div class="k">Training areas</div><div class="v">28</div>
+    <div class="d">16 in ALL, 8 in HUMANOIDS, 8 in WORM_ROUGH*</div></div>
 </div>
+
+<p>The shipped scene is deliberately almost empty. It holds one
+<code>GameLifetimeScope</code>, five UI and camera objects, a finish trigger and an empty
+<code>TrackRoot</code>. <b>The track, the racers, the mud, the boost pads, the gusts, the gates and
+the crowd are all generated at runtime</b> by <code>Systems_TrackBuilder</code> and
+<code>Systems_Spawn</code>. That is why the scene file is 32 KB while a training scene is 159 KB.</p>
+
+<div class="note crit"><b>The shipped scene list is explicit, and for a reason.</b>
+<code>Editor_BuildAndroidAAB.SHIP_SCENES</code> hardcodes
+<code>Assets/Scenes/SCN_RACE_FLAT.unity</code> as scene 0 — it does <b>not</b> read Unity's Build
+Settings, because Build Settings also carries the three training scenes. Depending on their order
+those would bloat the bundle and, worse, could boot a tester straight into a training rig. A scene
+named in <code>SHIP_SCENES</code> that is missing on disk <b>aborts</b> the build.</div>
+
+<div class="tw">
+  <caption>All five scenes.</caption>
+  <table>
+    <thead><tr><th>Scene</th><th>Role</th><th class="num">Objects</th><th class="num">Size</th><th>Ships?</th></tr></thead>
+    <tbody>
+      <tr><td class="name">SCN_RACE_FLAT</td><td>The game. Menu, race, results, camera director.</td>
+        <td class="num">15</td><td class="num">32 KB</td><td><span class="badge ship">Build scene 0</span></td></tr>
+      <tr><td class="name">SCN_TRAIN_ALL</td><td>16 parallel areas — 8 coded-gait creatures × Lumpy and Walls terrain.</td>
+        <td class="num">66</td><td class="num">159 KB</td><td><span class="badge train">Training only</span></td></tr>
+      <tr><td class="name">SCN_TRAIN_HUMANOIDS</td><td>8 areas — the 4 <code>.glb</code> bipeds × Lumpy and Walls.</td>
+        <td class="num">34</td><td class="num">106 KB</td><td><span class="badge train">Training only</span></td></tr>
+      <tr><td class="name">SCN_TRAIN_WORM_ROUGH</td><td>8 unnamed areas (<code>Area_0</code>…<code>Area_7</code>) for the original Worm rough-terrain run.</td>
+        <td class="num">34</td><td class="num">81 KB</td><td><span class="badge train">Training only</span></td></tr>
+      <tr><td class="name">SCN_TEST_ISAACBOX</td><td>Bare IsaacBox test bed: camera, ground plane, light. Nothing else.</td>
+        <td class="num">3</td><td class="num">15 KB</td><td><span class="badge test">Scratch</span></td></tr>
+    </tbody>
+  </table>
+</div>
+<p style="font-size:13px;color:var(--text-muted)">* WORM_ROUGH's eight areas are generically named,
+so they carry no creature identity in the hierarchy — unlike the other two training scenes, whose
+area names encode both creature and terrain.</p>
+
+<!-- ================= TIER 2 ================= -->
+<h2 id="t2">Tier 2 · The shipped scene, object by object</h2>
+<span class="tierpill">Tier 2 — overview</span>
+
+<div class="tree">
+<span class="rt">SCN_RACE_FLAT</span>
+<span class="br">├─</span> <span class="go">GameLifetimeScope</span>  <span class="cm">GameLifetimeScope</span>  <span class="an">— VContainer root. Binds 5 models, 9 systems, 10 views, 8 message brokers.</span>
+<span class="br">├─</span> <span class="go">Main Camera</span>        <span class="cm">Camera · AudioListener · CinemachineBrain · PostFxView</span>
+<span class="br">│</span>                        <span class="an">— the only real camera; Cinemachine drives it from CM_Overview.</span>
+<span class="br">├─</span> <span class="go">CM_Overview</span>        <span class="cm">CinemachineCamera</span>  <span class="an">— the virtual camera the director re-aims.</span>
+<span class="br">├─</span> <span class="go">CameraRig</span>          <span class="cm">CameraRigView · CameraFxView</span>
+<span class="br">│</span>                        <span class="an">— follows the pack; CameraFxView owns the winner slow-mo and wipeout shake.</span>
+<span class="br">├─</span> <span class="go">Directional Light</span>  <span class="cm">Light · UniversalAdditionalLightData</span>  <span class="an">— the scene's only light.</span>
+<span class="br">├─</span> <span class="go">RaceTrack</span>          <span class="cm">RaceTrackView</span>
+<span class="br">│</span>                        <span class="an">— holds the ground / obstacle / physics materials that Systems_TrackBuilder builds with.</span>
+<span class="br">├─</span> <span class="go">TrackRoot</span>          <span class="an">(transform only) — empty at edit time. Every piece of geometry is parented here at runtime.</span>
+<span class="br">├─</span> <span class="go">Lane_0</span>             <span class="an">(transform only) — grid origin. Racers are laid out from here, 10 per row.</span>
+<span class="br">├─</span> <span class="go">FinishLine</span>         <span class="cm">BoxCollider (trigger) · FinishLineView</span>
+<span class="br">│</span>                        <span class="an">— the trigger that calls Systems_Race.NotifyFinish, with overshoot for tie-breaks.</span>
+<span class="br">├─</span> <span class="go">FinishBar</span>          <span class="cm">MeshRenderer ×2</span>  <span class="an">— the visible gantry. Purely decorative.</span>
+<span class="br">├─</span> <span class="go">WinFx</span>              <span class="cm">WinFxView</span>  <span class="an">— confetti / flash on the winner crossing.</span>
+<span class="br">├─</span> <span class="go">Menu</span>               <span class="cm">UIDocument · MenuView</span>  <span class="an">— map picker, racer counts, RACE / MENU.</span>
+<span class="br">├─</span> <span class="go">RaceHud</span>            <span class="cm">UIDocument · RaceHudView</span>  <span class="an">— live standings, clock, commentary, results panel.</span>
+<span class="br">├─</span> <span class="go">DebugOverlay</span>       <span class="cm">UIDocument · DebugOverlayView</span>
+<span class="br">│</span>                        <span class="an">— ships in release. Owns the top-centre FPS readout. Costs a frame counter until DBG is pressed.</span>
+<span class="br">└─</span> <span class="go">Input</span>              <span class="cm">InputView</span>  <span class="an">— the only object that touches PlayerControls.</span>
+</div>
+
+<div class="note"><b>Three UIDocuments, zero Canvases.</b> The project is 100% C#-built UI Toolkit —
+no UGUI, no IMGUI, no <code>.uxml</code> or <code>.uss</code> assets anywhere. <code>com.unity.ugui</code>
+and TextMeshPro were removed from the manifest on 2026-08-29 after being confirmed unreferenced.
+All three documents share <code>RaceHudPanelSettings</code>, which scales on width against a
+<b>420 dp reference</b> so one UI unit is roughly one dp on a real handset.</div>
+
+<div class="note"><b>Screen furniture is fixed at five anchors</b>, identical on every screen:
+game name <b>upper-left</b>, FPS <b>top-centre</b>, MENU <b>upper-right</b>,
+<code>Application.version</code> <b>lower-right</b>, DBG <b>lower-left</b>. All on the inset safe
+layer, non-pickable where they are not controls, and outside any ScrollView.
+<code>DebugOverlayView</code> owns the FPS readout — <b>do not add a second one to
+<code>RaceHudView</code></b>; they share an anchor and draw over each other.</div>
+
+<h3>What gets built at runtime</h3>
+<div class="grid g2">
+  <div class="card">
+    <h4 style="margin-top:0"><code>Systems_TrackBuilder</code> → under <code>TrackRoot</code></h4>
+    <ul class="tight" style="font-size:14px">
+      <li>Ground slab, sized to the chosen map's length and a fixed 24 m width</li>
+      <li>Terrain displacement for <code>Lumpy</code> and <code>Swamp</code></li>
+      <li>Obstacle boxes, gate walls, mud volumes, boost pads, gust volumes</li>
+      <li>Crowd stands along the lane edges</li>
+    </ul>
+    <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:0">Eight
+    <code>TrackKind</code> values exist (<code>Flat, Hills, Bumps, Walls, Rough, RoughBlocked,
+    Lumpy, Swamp</code>) but only four are reachable from the menu; <code>Rough</code> and
+    <code>RoughBlocked</code> are training-only until brains are retrained on them.</p>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0"><code>Systems_Spawn</code> → the grid</h4>
+    <ul class="tight" style="font-size:14px">
+      <li>Instantiates from <code>CreatureCatalog</code> per <code>RaceConfigModel</code> counts</li>
+      <li>10 columns, 2 m apart, rows 1.6 m back — a marathon start</li>
+      <li>Past <b>30</b> racers it stacks in layers 1.5 m apart with 0.35 m jitter, three rows deep per layer</li>
+      <li>Staggers <code>DecisionStep</code> by <code>gridIndex % 5</code> so decisions spread across frames</li>
+      <li>Applies visible quirks — power, mass and friction spread — with a HUD badge and a name prefix</li>
+      <li>Sets <code>MaxStep = 0</code>: a racer is never episode-capped, only despawned</li>
+      <li><b>A racer whose <code>.onnx</code> is missing is skipped with a warning.</b> The race never crashes</li>
+    </ul>
+  </div>
+</div>
+
+<div class="mapfig">
+  <h4 style="margin:0 0 4px">Race scene geometry — Flat map</h4>
+  <p style="font-size:13px;color:var(--text-muted);margin:0 0 14px;max-width:none">To scale on the
+  long axis. Lane width is fixed at 24 m so the 10-wide grid fills the frame visually, whatever the
+  race length.</p>
+  <svg viewBox="0 0 700 190" width="700" height="190" role="img"
+    aria-label="Plan view of the Flat race map: 10-wide start grid at the origin, 22 metres to the finish line, 24 metres of lane width">
+    <rect x="60" y="40" width="580" height="96" rx="4" fill="var(--surface-2)" stroke="var(--border-strong)"/>
+    <!-- grid -->
+    <g fill="var(--s1)">
+      <rect x="66" y="48" width="7" height="7" rx="1.5"/><rect x="66" y="60" width="7" height="7" rx="1.5"/>
+      <rect x="66" y="72" width="7" height="7" rx="1.5"/><rect x="66" y="84" width="7" height="7" rx="1.5"/>
+      <rect x="66" y="96" width="7" height="7" rx="1.5"/><rect x="66" y="108" width="7" height="7" rx="1.5"/>
+      <rect x="66" y="120" width="7" height="7" rx="1.5"/>
+      <rect x="78" y="48" width="7" height="7" rx="1.5"/><rect x="78" y="60" width="7" height="7" rx="1.5"/>
+      <rect x="78" y="72" width="7" height="7" rx="1.5"/><rect x="78" y="84" width="7" height="7" rx="1.5"/>
+      <rect x="78" y="96" width="7" height="7" rx="1.5"/><rect x="78" y="108" width="7" height="7" rx="1.5"/>
+      <rect x="78" y="120" width="7" height="7" rx="1.5"/>
+      <rect x="90" y="48" width="7" height="7" rx="1.5"/><rect x="90" y="60" width="7" height="7" rx="1.5"/>
+      <rect x="90" y="72" width="7" height="7" rx="1.5"/><rect x="90" y="84" width="7" height="7" rx="1.5"/>
+      <rect x="90" y="96" width="7" height="7" rx="1.5"/>
+    </g>
+    <line x1="60" y1="36" x2="60" y2="146" stroke="var(--s1)" stroke-width="2"/>
+    <text class="lb" x="60" y="28" text-anchor="middle">Lane_0 · start</text>
+    <line x1="628" y1="36" x2="628" y2="146" stroke="var(--s2)" stroke-width="3"/>
+    <text class="lb" x="628" y="28" text-anchor="end">FinishLine trigger</text>
+    <line x1="60" y1="160" x2="628" y2="160" stroke="var(--border-strong)" stroke-width="1"/>
+    <line x1="60" y1="156" x2="60" y2="164" stroke="var(--border-strong)"/>
+    <line x1="628" y1="156" x2="628" y2="164" stroke="var(--border-strong)"/>
+    <text class="dim" x="344" y="176" text-anchor="middle">22 m to the finish placement · ~20 m actually raced (the grid sits ahead of the origin)</text>
+    <line x1="656" y1="40" x2="656" y2="136" stroke="var(--border-strong)"/>
+    <line x1="652" y1="40" x2="660" y2="40" stroke="var(--border-strong)"/>
+    <line x1="652" y1="136" x2="660" y2="136" stroke="var(--border-strong)"/>
+    <text class="dim" x="666" y="92" transform="rotate(-90 666 92)" text-anchor="middle">24 m</text>
+    <text class="dim" x="106" y="120">grid: 10 cols × 2 m, rows 1.6 m back</text>
+  </svg>
+</div>
+
+<h3>Message flow through the scene</h3>
+<div class="tw">
+  <caption>The eight MessagePipe brokers <code>GameLifetimeScope</code> registers, and who listens.
+    All are <code>readonly struct</code> — zero allocation.</caption>
+  <table>
+    <thead><tr><th>Message</th><th>Published by</th><th>Consumed by</th></tr></thead>
+    <tbody>
+      <tr><td class="name">RaceStartedMessage</td><td><code>Systems_Race.StartRace</code></td>
+        <td><code>RaceHudView</code>, <code>Systems_Commentary</code>, <code>Systems_CameraDirector</code>, <code>Systems_AudioMix</code></td></tr>
+      <tr><td class="name">RacerFinishedMessage</td><td><code>Systems_Race.NotifyFinish</code></td>
+        <td><code>RaceHudView</code>, <code>WinFxView</code>, <code>Systems_Commentary</code></td></tr>
+      <tr><td class="name">RacerDnfMessage</td><td><code>Systems_Race</code> (30 s stall / 120 s clock)</td>
+        <td><code>RaceHudView</code>, <code>Systems_Commentary</code></td></tr>
+      <tr><td class="name">RaceFinishedMessage</td><td><code>Systems_Race</code> (podium of 3, or timeout)</td>
+        <td><code>Systems_Elo</code>, <code>Systems_Persistence</code>, <code>Systems_Spawn</code>, <code>RaceHudView</code></td></tr>
+      <tr><td class="name">LeadChangedMessage</td><td><code>Systems_Race</code></td>
+        <td><code>Systems_CameraDirector</code>, <code>Systems_Commentary</code></td></tr>
+      <tr><td class="name">RacerWipeoutMessage</td><td><code>Systems_Race.NotifyWipeout</code></td>
+        <td><code>CameraFxView</code> (shake), <code>CreatureAudioView</code></td></tr>
+      <tr><td class="name">RacerOvertakeMessage</td><td><code>Systems_Race</code></td>
+        <td><code>Systems_Commentary</code></td></tr>
+      <tr><td class="name">PhotoFinishMessage</td><td><code>Systems_Race.ResolveSameFrameTie</code></td>
+        <td><code>Systems_Commentary</code>, audio sting</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note crit"><b>Three of those brokers were dead until recently.</b>
+<code>RacerWipeoutMessage</code>, <code>RacerOvertakeMessage</code> and <code>PhotoFinishMessage</code>
+were declared and published but never <i>registered</i> in the LifetimeScope — so VContainer handed
+every publisher and subscriber the <code>null</code> default their optional constructor parameter
+allowed. Wipeout audio, the wipeout camera shake, the photo-finish sting and its commentary line were
+all silently doing nothing. The lesson: an optional <code>IPublisher&lt;T&gt;</code> parameter turns a
+missing registration from a startup exception into a feature that quietly never fires.</div>
+
+<div class="note"><b>Two objects need forced construction or ordering.</b>
+<code>Systems_Elo</code> has no tick or start interface, so <code>RegisterBuildCallback</code> resolves
+it eagerly — otherwise its <code>RaceFinishedMessage</code> subscription would not exist when the first
+race ended. And <code>Agent_IsaacBox</code> carries
+<code>[DefaultExecutionOrder(100)]</code> so it runs <i>after</i> <code>IsaacBoxAgent.Start</code> has
+built the inference worker, before parking it.</div>
+
+<!-- ================= TIER 3 ================= -->
+<h2 id="t3">Tier 3 · Training scenes, complete</h2>
+<span class="tierpill">Tier 3 — complete</span>
+
+<h3>Anatomy of one training area</h3>
+<p>Every area in every training scene is the same four-object unit. The scene is that unit repeated,
+side by side, so one trainer process collects from many independent episodes at once.</p>
+
+<div class="tree">
+<span class="rt">Area_&lt;Creature&gt;_v01_&lt;Terrain&gt;</span>   <span class="cm">Systems_TrainingArea</span>
+<span class="br">│</span>   <span class="an">Owns the episode: places the goal, rebuilds the terrain, resets the creature,</span>
+<span class="br">│</span>   <span class="an">and reads the eight curriculum parameters from the Academy each reset.</span>
+<span class="br">├─</span> <span class="go">&lt;Creature&gt;_v01</span>   <span class="cm">Agent_Creature · BehaviorParameters · DecisionRequester · ArticulationBody ×N</span>
+<span class="br">│</span>                    <span class="an">the creature prefab instance — the thing that learns</span>
+<span class="br">├─</span> <span class="go">SpawnPoint</span>       <span class="an">(transform only) — where the creature is placed on reset</span>
+<span class="br">├─</span> <span class="go">Goal</span>             <span class="an">(transform only) — re-placed every episode within the curriculum's distance and angle</span>
+<span class="br">└─</span> <span class="go">TrackRoot</span>        <span class="an">(transform only) — the area's own ground, rebuilt when track_kind changes</span>
+</div>
+
+<div class="tw">
+  <caption><code>Systems_TrainingArea</code> constants, read from source.</caption>
+  <table>
+    <thead><tr><th>Constant</th><th class="num">Value</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="name">TRACK_LENGTH</td><td class="num">24 m</td><td>Per-area ground length</td></tr>
+      <tr><td class="name">TRACK_WIDTH</td><td class="num">12 m</td><td>Per-area ground width — half the race lane's 24 m</td></tr>
+      <tr><td class="name">MIN_GOAL_DISTANCE</td><td class="num">3 m</td><td>Floor, whatever the curriculum says</td></tr>
+      <tr><td class="name">MAX_GOAL_DISTANCE</td><td class="num">20 m</td><td>Ceiling — and exactly the observation's distance normaliser</td></tr>
+      <tr><td class="name">MAX_GOAL_ANGLE_DEGREES</td><td class="num">45°</td><td>Ceiling on <code>goal_angle_span</code></td></tr>
+      <tr><td class="name">GOAL_X_MARGIN</td><td class="num">1 m</td><td>Keeps the goal off the side wall</td></tr>
+      <tr><td class="name">TRAINING_MAX_STEP</td><td class="num">3000</td><td>Agent steps per episode. Race prefabs get <code>MaxStep = 0</code> instead</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h4>How an area reads the curriculum</h4>
+<p>On every reset, guarded by <code>Academy.IsInitialized</code> so it is a no-op in a race,
+the area pulls all eight environment parameters and clamps each one. The clamps are the real
+ceilings — a config asking for more than these gets silently trimmed.</p>
+<div class="tw">
+  <table>
+    <thead><tr><th>Parameter</th><th>Default when absent</th><th>Runtime clamp</th></tr></thead>
+    <tbody>
+      <tr><td class="name">goal_distance_max</td><td class="num">20 m</td><td>floored at <code>MIN_GOAL_DISTANCE</code> 3 m</td></tr>
+      <tr><td class="name">goal_angle_span</td><td class="num">0°</td><td class="num">0 … 45°</td></tr>
+      <tr><td class="name">rough_amplitude</td><td class="num">1.0</td><td class="num">0 … 1</td></tr>
+      <tr><td class="name">track_kind</td><td>the area's authored <code>_trackKind</code></td><td>rounded to a <code>TrackKind</code> value</td></tr>
+      <tr><td class="name">hazard_level</td><td class="num">0</td><td class="num">0 … 2 (integer)</td></tr>
+      <tr><td class="name">quirk_power_span</td><td class="num">0</td><td class="num">0 … 0.5</td></tr>
+      <tr><td class="name">quirk_mass_span</td><td class="num">0</td><td class="num">0 … 0.3</td></tr>
+      <tr><td class="name">quirk_friction_span</td><td class="num">0</td><td class="num">0 … 0.5</td></tr>
+    </tbody>
+  </table>
+</div>
+<p style="font-size:13.5px;color:var(--text-secondary)">Note the headroom: the race-day curriculum
+tops out at <code>quirk_power_span 0.08</code> against a clamp of 0.5, and
+<code>quirk_mass_span 0.12</code> against 0.3. The clamps are safety rails, not the schedule.
+<code>rough_amplitude</code> is the exception — it writes a <i>static</i>
+<code>Systems_TrackBuilder.RoughAmplitudeScale</code>, so every area in the scene shares one value,
+which is fine only because all areas advance on the same progress clock.</p>
+
+<div class="note crit"><b>The <code>TRAINING_MAX_STEP</code> comment is stale, and the number it
+describes has quadrupled.</b> Source says <span class="mono">// 60 s at 0.02 s per step</span>, which
+was true when one agent step was one 0.02 s physics tick. Today <code>MaxStep</code> counts
+<i>decisions</i>, and a decision is <code>DecisionPeriod 20</code> × Δt 0.005 s = <b>0.1 s</b> — so
+3,000 steps is <b>300 s</b> of simulated time, not 60. Combined with the configs'
+<code>time_horizon: 1000</code>, GAE truncates three times inside a single full-length episode. The
+cap itself is harmless (the stall timer fires long before it), but the comment will mislead the next
+person to tune it.</div>
+
+<div class="tw">
+  <caption>What each training scene contains. Area names encode creature and terrain in the first two;
+    WORM_ROUGH's do not.</caption>
+  <table>
+    <thead><tr><th>Scene</th><th class="num">Areas</th><th>Layout</th><th>Shared objects</th><th>Used by</th></tr></thead>
+    <tbody>
+      <tr><td class="name">SCN_TRAIN_ALL</td><td class="num">16</td>
+        <td>8 creatures × {<code>Lumpy</code>, <code>Walls</code>}: Worm, Spider, Quad, Hexapod,
+          Centipede, Crab, Kangaroo, Blob</td>
+        <td><code>Main Camera</code> (+ AudioListener), <code>Directional Light</code></td>
+        <td><code>AllLoco8h02.yaml</code>, <code>BrokenLoco01.yaml</code> → <code>Builds/AllEnv</code></td></tr>
+      <tr><td class="name">SCN_TRAIN_HUMANOIDS</td><td class="num">8</td>
+        <td>4 bipeds × {<code>Lumpy</code>, <code>Walls</code>}: Grandma, Grandpa, Matt, Nick</td>
+        <td>same</td><td><code>Humanoids02_Biomechanical.yaml</code></td></tr>
+      <tr><td class="name">SCN_TRAIN_WORM_ROUGH</td><td class="num">8</td>
+        <td><code>Area_0</code>…<code>Area_7</code>, all Worm on rough terrain</td>
+        <td>same</td><td><code>WormRough01.yaml</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note"><b>Why <code>SCN_TRAIN_ALL</code> holds creatures that no longer race.</b>
+<code>Builds/AllEnv</code> is built from this scene, so it contains all thirteen behaviours — and
+<b>mlagents aborts at startup on any behaviour present in the env but absent from the config</b>. That
+is exactly what killed run <code>all8h_20260826_2233</code>. It is also why
+<code>BrokenLoco01.yaml</code> lists Quad, Hexapod, Kangaroo and Blob even though it only cares about
+Worm, Spider, Centipede and Crab.</div>
+
+<div class="note"><b>Training scenes have no LifetimeScope, on purpose.</b> ML-Agents
+<code>Agent</code> subclasses have an explicit carve-out from the MVS pattern: they own their
+observation, action and reward logic, take no VContainer dependencies, and the reward maths lives in a
+plain-C# <code>Reward_*</code> class so it stays unit-testable. A training scene therefore needs no DI
+container at all — which is also why a training scene accidentally shipped in a build would boot into
+nothing recognisable.</div>
+
+<h3><code>SCN_TEST_ISAACBOX</code> — three objects</h3>
+<div class="tree">
+<span class="rt">SCN_TEST_ISAACBOX</span>
+<span class="br">├─</span> <span class="go">IsaacBox_Camera</span>  <span class="cm">Camera</span>            <span class="an">— no CinemachineBrain, no AudioListener</span>
+<span class="br">├─</span> <span class="go">IsaacBox_Ground</span>  <span class="cm">MeshRenderer ×2 · MeshCollider</span>  <span class="an">— a plain plane; no TrackBuilder involvement</span>
+<span class="br">└─</span> <span class="go">IsaacBox_Light</span>   <span class="cm">Light · UniversalAdditionalLightData</span>
+</div>
+<p>The IsaacBox prefab is <b>not</b> in this scene — it is dropped in by hand, or added by
+<code>PoRacer ▸ Creatures ▸ Register IsaacBox Racer</code>. The scene exists so the rig can be watched
+walking without a race, a menu, a HUD or a LifetimeScope in the way. It is currently modified in the
+working tree and is <b>not</b> in <code>SHIP_SCENES</code>.</p>
+
+<div class="note"><b>The IsaacBox prefab holds no <code>ArticulationBody</code> at all.</b>
+<code>IsaacBoxAgent</code> builds the 22-link, 21-joint articulation at runtime from
+<code>isaacbox_rig.json</code>, reading per-joint stiffness, damping and effort limit out of the same
+file the Isaac Lab side reads. That is what keeps the Unity rig and the trained rig from drifting
+apart — but it also means <b>the hierarchy you see in the Editor is not the hierarchy that races</b>.</div>
+
+<div class="note crit"><b>Fido needs one scene-order rule.</b> <code>Systems_MujocoWorld</code> must
+build its <code>MjScene</code>, ground plane and solver options <b>before the first Fido is
+instantiated</b>. Every <code>MjComponent.OnEnable</code> reads <code>MjScene.Instance</code>, and that
+getter <i>creates</i> an MjScene if none exists — so building second throws
+<span class="mono">"singleton, yet multiple instances found"</span>. Related:
+<code>mujoco.dll</code> is a native plug-in that loads at Editor startup only, so moving it requires an
+Editor restart before anything MuJoCo works.</div>
+
+<h3>Scene-level physics settings</h3>
+<div class="grid g4">
+  <div class="tile"><div class="k">Fixed timestep</div><div class="v">0.005 <small>s</small></div>
+    <div class="d">200 Hz. Not the 0.02 s the original docs specified.</div></div>
+  <div class="tile"><div class="k">Solver iterations</div><div class="v">12</div>
+    <div class="d">Locked. An override silently changes dynamics fitted against trained brains.</div></div>
+  <div class="tile"><div class="k">Gravity</div><div class="v">−9.81</div>
+    <div class="d">m/s², SI units throughout</div></div>
+  <div class="tile"><div class="k">Target frame rate</div><div class="v">60 <small>FPS</small></div>
+    <div class="d">Portrait 9:16, <code>vSyncCount = 0</code> so <code>targetFrameRate</code> is honoured</div></div>
+</div>
+
+<footer>
+  <p><b>PoRacer scenes &amp; objects</b> · regenerated 2026-09-03 · parsed from
+  <code>Assets/Scenes/*.unity</code><br>
+  Companion documents: <a href="index.html">index</a> ·
+  <a href="creatures_dashboard.html">creatures dashboard</a> ·
+  <a href="architecture_pipeline.html">architecture &amp; pipeline</a> ·
+  <a href="onnx_summary.md">ONNX &amp; rig inventory</a> ·
+  <a href="agent-motivation.html">agent motivation diagrams</a></p>
+</footer>
+</div>
+<script>
+(function(){
+  const b=document.getElementById('themeBtn');
+  function cur(){const a=document.documentElement.getAttribute('data-theme');
+    return a||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+  b.onclick=()=>{const n=cur()==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',n);
+    try{localStorage.setItem('poracer-theme',n)}catch(_){}};
+  let s=null;try{s=localStorage.getItem('poracer-theme')}catch(_){}
+  if(s)document.documentElement.setAttribute('data-theme',s);
+})();
+</script>
 </body>
 </html>

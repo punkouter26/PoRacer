@@ -1,13 +1,37 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "17px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart LR
-    CFG["YAML Config<br/>WormLoco / AllLoco / WormSac"] --> PPO["PPO Trainer<br/>on-policy"]
-    CFG --> SAC["SAC Trainer<br/>off-policy"]
-    PPO --> NET["Net 256 x 2<br/>normalize"]
-    SAC --> NET
-    PPO --> ENV["8 Headless Envs"]
-    SAC --> ENV
-    ENV --> ONNX["Bake .onnx<br/>Assets/Agents/&lt;Name&gt;_v01/"]
+    A["<b>Three trainers,<br/>three families</b>"]
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    class CFG,PPO,SAC ml;
-    class NET,ENV,ONNX rt;
+    B["<b>PPO 256 &times; 2</b><br/>the eight coded-gait creatures<br/>Worm Spider Quad Hexapod<br/>Crab Centipede Kangaroo Blob<br/><br/>warm-started from<br/>hand-written gait demos"]
+    C["<b>PPO 512 &times; 3</b><br/>the four .glb bipeds<br/>Grandma Grandpa Matt Nick<br/><br/>no demos: a biped's<br/>coded gait is a fall"]
+    D["<b>RSL-RL PPO 128 &times; 3</b><br/>the Isaac Lab ports<br/>IsaacBox &middot; IsaacH1<br/><br/>4096 parallel envs on GPU,<br/>~60,000 steps/second"]
+
+    E["batch 2048 &middot; buffer 20480<br/>lr 3e-4 linear &middot; gamma 0.995<br/>beta 0.005 &middot; 3 epochs"]
+    F["same, wider network<br/>ML-Agents' own Walker shape"]
+    G["24 steps/env &middot; 5 epochs &middot; 4 minibatches<br/>lr 1e-3 adaptive (desired KL 0.01)<br/>gamma 0.99 &middot; entropy 0.01"]
+
+    H["<b>Curriculum</b><br/>goals lengthen, then swing off-centre;<br/>ground roughens; hazards arrive;<br/>mass / power / friction spread widens.<br/>All lessons gate on <i>progress</i>, not reward,<br/>so every creature advances on one clock."]
+
+    A --> B --> E
+    A --> C --> F
+    A --> D --> G
+    E --> H
+    F -.->|"max_steps far past<br/>any one session:<br/>they ignore the ladder"| H
+
+    classDef root fill:#10203a,stroke:#10203a,stroke-width:2px,color:#ffffff;
+    classDef mla fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef bip fill:#f3ecff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef isa fill:#e6f7ec,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    classDef cur fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    class A root;
+    class B,E mla;
+    class C,F bip;
+    class D,G isa;
+    class H cur;

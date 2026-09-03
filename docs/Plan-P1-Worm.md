@@ -1,5 +1,30 @@
 # P1 Implementation Plan — Worm Slice + App Skeleton (v2, post-critic)
 
+> **Status header added 2026-09-03 by the docs regeneration.** This is a *historical* design
+> document from 2026-08-14, preserved because decisions D1–D14 are still load-bearing and the
+> reasoning behind them exists nowhere else. It has **not** been rewritten to today's numbers.
+> Verified against the current tree, here is what changed:
+>
+> | Then | Now | Where the current truth lives |
+> |---|---|---|
+> | Δt 0.02 s, DecisionPeriod 5 | **Δt 0.005 s (200 Hz), DecisionPeriod 20** — same 0.1 s decision interval | [`creatures_dashboard.html`](creatures_dashboard.html) Tier 2 |
+> | D3: "no per-step time penalty" | A **−0.002 time penalty exists**, plus jerk and skate penalties, all step-scaled | [`creatures_dashboard.html`](creatures_dashboard.html) Tier 3 reward tree |
+> | D3: obs = joint pos/vel + root up/height + goal | obs = **3N + 19** — adds per-limb contact, root angular velocity, stamina, 4 terrain probes | [`onnx_summary.md`](onnx_summary.md) §3.3 |
+> | One creature (Worm), 8 racers | **9 racers in the catalog, 15 ONNX brains on disk**, three inference paths | [`creatures_dashboard.html`](creatures_dashboard.html) roster |
+> | `Agent_Worm.cs` | Generalised to **`Agent_Creature.cs`**, morphology-agnostic via `ICreatureAgent` | `Assets/Scripts/Agents/` |
+> | 12 position / 4 velocity solver iterations | **12 solver iterations**, locked | [`scenes_layout.html`](scenes_layout.html) |
+> | Fatigue "later phases" | **Shipped** — reads applied `jointForce`, drains stamina, scales drives | [`creatures_dashboard.html`](creatures_dashboard.html) Tier 3 |
+> | VContainer/MessagePipe/UniTask "not yet installed" | All three installed and load-bearing | [`architecture_pipeline.html`](architecture_pipeline.html) Tier 3 |
+>
+> **Still exactly true:** D1 (ArticulationBody, reset via `TeleportRoot`, never `transform.position`),
+> D5 (no hand-rolled ReactiveProperty), D6 (the naming amendment and the ML-Agents MVS carve-out),
+> D7 (pairwise ELO, K = 32), D10 (`MaxStep = 0` at race time, `DecisionStep` staggering),
+> D13 (scene-anchor Views exception), D14 (one frame between despawn and respawn, `Safe()` on every
+> observation), and every line under **Verified non-issues** — including that C# ML-Agents 4.1.0
+> against Python mlagents 1.1.0 is the *correct* pairing.
+
+---
+
 > Amends docs/FeatureBrief-CreatureRace.md after unity-critic review on 2026-08-14.
 > Complexity: complex. Executed by the orchestrator with MCP for scenes/settings; verify loop at the end.
 

@@ -1,40 +1,67 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "16px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart TB
-    subgraph CSharp["C# Runtime (Unity 6 + ML-Agents 4.1)"]
-        OBS["Agent.CollectObservations<br/>VectorSensor.AddObservation"]
-        ACT["Agent.OnActionReceived<br/>ActionBuffers"]
-        NAIVE["Agent.Heuristic<br/>Coded Gait"]
-        NAIVE -.fallback.-> ACT
-        OBS --> TENSOR["obs_vec Float32[N*2+11+probes]"]
-        ACT --> DRIVE["xDrive.target per joint"]
-        DRIVE --> STEP["ArticulationBody.Solve<br/>ArticulationReducedSpace"]
+    subgraph UNITY["Unity FixedUpdate &mdash; every 0.005 s (200 Hz), solver iterations 12"]
+      direction TB
+      DR["<b>DecisionRequester</b><br/>DecisionPeriod = 20<br/>TakeActionsBetweenDecisions = 1<br/>&rarr; new decision every 0.1 s;<br/>the last action is re-applied on the<br/>19 ticks in between"]
+      CO["<b>Agent_Creature.CollectObservations(VectorSensor)</b><br/>N&times;3 + 19 floats, every value through Safe()<br/>per joint: jointPosition/(scale&middot;deg2rad), jointVelocity/10, isGrounded<br/>+ root.up(3), root.y(1), goalDir_local(3), dist/20(1),<br/>vel_local/2(3), angVel_local/20(3), stamina(1), 4 terrain probes"]
+      OAR["<b>Agent_Creature.OnActionReceived(ActionBuffers)</b><br/>clamp to [-1,1] &rarr; xDrive.target = a &middot; 45&deg;<br/>jerk = mean |a_t &minus; a_(t&minus;1)|"]
+      FAT["<b>Fatigue</b> &mdash; torque read from jointForce, NOT the action<br/>overload = (&tau;&#770; &minus; 0.5)/0.5 &rarr; stamina &minus;0.25/s, recovery +0.15/s<br/>power factor = lerp(0.55, 1, stamina) scales stiffness + forceLimit<br/>written only when |&Delta;factor| &gt; 0.005"]
+      PHYS["<b>PhysX solves the articulation</b><br/>ArticulationBody PD drive per DOF,<br/>torque clamped to forceLimit"]
     end
 
-    subgraph Sentis["Sentis / Barracuda ONNX Engine"]
-        TENSOR --> INF["ModelExecutor<br/>Burst Backend"]
-        INF --> HIDDEN["Dense x2 (256u, tanh)"]
-        HIDDEN --> POL["PolicyHead / ValueHead"]
-        HIDDEN -.RL alg.-> PPO["PPO: clipped surrogate"]
-        HIDDEN -.off-pol.-> SAC["SAC: tanh-Gaussian"]
-        POL --> ACTIONS["action Float32[N]"]
+    subgraph SENTIS["Inference Engine (Sentis) &mdash; CPU worker, InferenceOnly"]
+      direction TB
+      T1["obs_0 : (batch, N&times;3+19) float32"]
+      NORM["Sub &rarr; Div &rarr; Clip<br/>running mean/variance normaliser<br/>(baked in when normalize: true)"]
+      H1["Gemm 256 &rarr; Sigmoid&middot;x (swish)"]
+      H2["Gemm 256 &rarr; Sigmoid&middot;x"]
+      MU["Gemm &rarr; mu (N)"]
+      SIG["log_sigma &rarr; Exp &rarr; sigma"]
+      SAMP["RandomNormalLike &middot; sigma + mu<br/>&rarr; Clip [-3,3] &rarr; Div 3"]
+      OUT["continuous_actions : (batch, N)<br/>deterministic_continuous_actions : (batch, N)"]
+      T1 --> NORM --> H1 --> H2 --> MU --> SAMP --> OUT
+      H2 --> SIG --> SAMP
     end
 
-    subgraph PhysX["PhysX 5 Articulation Solver"]
-        STEP --> JOINT["ArticulationDrive PD<br/>Kp * (x - xDrive.target) - Kd * xdot"]
-        JOINT --> TORQUE["jointForce -> torque sum"]
-        TORQUE -->|clamp| STEP
-        STEP --> STATE["x, xdot, q, qdot"]
-        STATE --> TERMCHECK{"Terminated?<br/>NaN | y < -1 | no-progress 20s"}
-        TERMCHECK -- No --> OBS
-        TERMCHECK -- Yes --> BUF["StatsRecorder.Add<br/>Reward/Progress, Efficiency, Upright"]
-        BUF --> RES["Episode Reset<br/>articular state + drives cleared"]
-        RES --> OBS
+    subgraph REW["Reward &mdash; training only, never evaluated at race time"]
+      direction TB
+      R1["Reward_WormLoco.Step(distance, &tau;&#770;, uprightDot, jerk, skate)<br/>NaN/Inf firewall on all five inputs"]
+      R2["progress = clamp(&Delta;distance, &plusmn;0.2 m) &middot; 1.0 &nbsp;<i>(telescoping, unscaled)</i><br/>&minus;0.05&tau;&#770;&sup2; &nbsp;+0.02&middot;upright&#8314; &nbsp;&minus;0.01&middot;jerk &nbsp;&minus;0.025&middot;skate &nbsp;&minus;0.002<br/>all five shaping terms &times; stepScale = &Delta;t / 0.02 = 0.25"]
+      R3["StatsRecorder &mdash; only when a trainer is attached<br/>Reward/{Progress,EfficiencyPenalty,UprightBonus,JerkPenalty,SkatePenalty}<br/>Fatigue/Stamina"]
+      R1 --> R2 --> R3
     end
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
-    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    classDef buf fill:#8957e5,stroke:#4a2a8c,color:#fff,stroke-width:2px;
-    class OBS,ACT,NAIVE,DRIVE,STEP ml;
-    class TENSOR,INF,HIDDEN,POL,ACTIONS,PPO,SAC rt;
-    class JOINT,TORQUE,STATE phys;
-    class TERMCHECK,BUF,RES buf;
+    TERM{"<b>Terminal check</b>"}
+    E1["<b>Goal</b> dist &le; 0.5 m<br/>+10 &rarr; EndEpisode()"]
+    E2["<b>Diverged</b> root.y &lt; &minus;1 m<br/>or dist &gt; 500 m or NaN<br/>&minus;1 &rarr; EndEpisode()"]
+    E3["<b>Stalled</b> no &gt;0.05 m gain<br/>for 20 s = 4000 steps<br/>&minus;0.5 &rarr; EpisodeInterrupted()<br/><i>truncation: value bootstrapped</i>"]
+    OEB["<b>OnEpisodeBegin</b><br/>1. RestoreDriveBaseline() &mdash; fatigue cleared BEFORE motors<br/>2. stamina = 1, previousActions = 0<br/>3. areaReset() re-authors drives + quirks<br/>4. reward.Reset(distanceToGoal)"]
+
+    DR -->|"decision tick"| CO
+    DR -.->|"in-between tick:<br/>re-apply cached action"| OAR
+    CO --> T1
+    OUT --> OAR
+    OAR --> FAT --> PHYS
+    OAR --> R1
+    PHYS --> TERM
+    TERM -- "no" --> DR
+    TERM -- "goal" --> E1 --> OEB
+    TERM -- "diverged" --> E2 --> OEB
+    TERM -- "stalled" --> E3 --> OEB
+    OEB --> DR
+
+    classDef unity fill:#fff8ec,stroke:#c98a12,stroke-width:2px,color:#3a2800;
+    classDef net fill:#f3ecff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef rew fill:#e9f7ef,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    classDef term fill:#ffeaea,stroke:#d0453f,stroke-width:2px,color:#4a0f0d;
+    class DR,CO,OAR,FAT,PHYS unity;
+    class T1,NORM,H1,H2,MU,SIG,SAMP,OUT net;
+    class R1,R2,R3 rew;
+    class TERM,E1,E2,E3,OEB term;

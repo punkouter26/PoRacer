@@ -1,39 +1,64 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "16px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart TB
-    subgraph Sensors["Sensor Inputs (Float32)"]
-        S1["RayPerception<br/>RaycastSensor (n_rays, 3)"]
-        S2["Joint State<br/>x[N], xdot[N]"]
-        S3["Root Pose<br/>up(3), height(1)"]
-        S4["Goal<br/>dir(3), dist(1)"]
-        S5["Root Velocity<br/>v(3) in local"]
-        S6["Terrain Probes<br/>height(4) optional"]
-        S1 --> OBS
-        S2 --> OBS
-        S3 --> OBS
-        S4 --> OBS
-        S5 --> OBS
-        S6 --> OBS
-        OBS["obs = concat(s1..s6)<br/>shape = N*2 + 11 + 4"]
+    subgraph OBSA["Observation vector &mdash; ML-Agents creatures, obs = N&times;3 + 19 (VectorSensor, float32)"]
+      direction LR
+      O1["<b>[0 .. 3N)</b> per joint, &times;N<br/>jointPosition[0] / (45&deg; &middot; deg2rad), clamp &plusmn;1<br/>jointVelocity[0] / 10 rad&middot;s&#8315;&sup1;, clamp &plusmn;1<br/>Sensor_LimbContact.IsGrounded &rarr; 1 or 0"]
+      O2["<b>[3N .. 3N+4)</b> root pose<br/>root.up (3, world)<br/>root.position.y (1, raw metres)"]
+      O3["<b>[3N+4 .. 3N+8)</b> goal<br/>InverseTransformDirection(toGoal.normalized) (3)<br/>clamp01(|toGoal| / 20 m) (1)"]
+      O4["<b>[3N+8 .. 3N+14)</b> root motion<br/>vel_local / 2 m&middot;s&#8315;&sup1;, ClampMagnitude 1 (3)<br/>angVel_local / 20 rad&middot;s&#8315;&sup1;, ClampMagnitude 1 (3)"]
+      O5["<b>[3N+14]</b> stamina, 0..1"]
+      O6["<b>[3N+15 .. 3N+19)</b> terrain look-ahead<br/>Physics.Raycast down from +3 m, range 6 m,<br/>at 0.5 / 1.2 / 2.2 / 3.5 m along flattened forward<br/>(hit.y &minus; root.y) / 2, clamp &plusmn;1"]
     end
 
-    subgraph Network["Policy / Value Network"]
-        OBS --> NORM["Input Normalizer<br/>running mean / var"]
-        NORM --> H1["Dense(256) + tanh"]
-        H1 --> H2["Dense(256) + tanh"]
-        H2 -.recurrent.-> LSTM["LSTM(128) optional"]
-        H2 --> HEAD
-        LSTM --> HEAD
-        HEAD["Heads<br/>mean, log_sigma, value"]
+    NAN["<b>Safe() / SafeVector() on every element</b><br/>one exploded body must never feed NaN into the sensor &mdash;<br/>that aborts the Academy step for <i>every</i> agent in the scene"]
+
+    subgraph GRAPH["ONNX graph &mdash; opset 9, ir_version 4, exported by pytorch 2.4.1"]
+      direction TB
+      N1["<b>Normaliser</b> (normalize: true, baked at export)<br/>Sub(mean) &rarr; Div(sqrt var) &rarr; Clip &plusmn;5"]
+      N2["<b>seq_layers.0</b> Gemm W(256, obs) + b(256)<br/>&rarr; Mul(x, Sigmoid(x)) &mdash; swish"]
+      N3["<b>seq_layers.2</b> Gemm W(256, 256) + b(256)<br/>&rarr; Mul(x, Sigmoid(x))"]
+      N4["<b>mu head</b> Gemm W(N, 256) + b(N)"]
+      N5["<b>log_sigma</b> parameter (N)<br/>&rarr; Exp &rarr; sigma"]
+      N6["<b>Sample</b> RandomNormalLike(mu) &middot; sigma + mu<br/>&rarr; Clip [&minus;3, 3] &rarr; Div 3"]
+      N7["<b>Outputs</b><br/>continuous_actions (batch, N) &mdash; stochastic, used in training<br/>deterministic_continuous_actions (batch, N) &mdash; mu, used at race time<br/>version_number (1) &middot; memory_size (1) &middot; continuous_action_output_shape (1)"]
+      N1 --> N2 --> N3 --> N4 --> N6 --> N7
+      N3 --> N5 --> N6
     end
 
-    subgraph Actuators["Actuator Map (per joint)"]
-        HEAD --> ACT["action[i] in [-1, 1]"]
-        ACT --> SCALE["target = action[i] * driveScale (deg or m)"]
-        SCALE --> DRIVE["ArticulationDrive<br/>stiffness = Kp<br/>damping = Kd<br/>forceLimit = torque"]
+    subgraph DRIVE["Actuator map &mdash; ArticulationBody xDrive, one per action"]
+      direction LR
+      D1["<b>target</b> = clamp(a, &plusmn;1) &middot; jointDriveScale<br/>45&deg; for revolute, metres for prismatic"]
+      D2["<b>stiffness</b> Kp &mdash; authored per prefab,<br/>then &times; powerFactor<br/><b>damping</b> Kd &mdash; authored per prefab"]
+      D3["<b>forceLimit</b> 100 N&middot;m nominal,<br/>&times; powerFactor<br/>PhysX clamps applied torque to it"]
+      D4["<b>powerFactor</b> = lerp(0.55, 1, stamina)<br/>baseline captured lazily at full power<br/>so spawn quirks are included"]
+      D1 --- D2 --- D3 --- D4
     end
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
-    classDef net fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    class S1,S2,S3,S4,S5,S6,OBS,ACT ml;
-    class NORM,H1,H2,LSTM,HEAD net;
-    class SCALE,DRIVE phys;
+    subgraph PORTS["Ports &mdash; same skeleton, different numbers"]
+      direction TB
+      P1["<b>IsaacBox</b> obs 75 &rarr; act 21 &middot; 128&times;3 ELU &middot; 45,611 params<br/>base_lin_vel(3) base_ang_vel(3) projected_gravity(3) target_pos_b(3)<br/>joint_pos_rel(21) joint_vel_rel(21) last_action(21)<br/>target = default + 0.5 &middot; a &middot; implicit PD &middot; policy 50 Hz"]
+      P2["<b>IsaacH1</b> obs 69 &rarr; act 19 &middot; 128&times;3 ELU &middot; 44,435 params<br/>same layout, velocity_commands(3) in place of target_pos_b<br/>no Sub/Div nodes: raw Gemm+Elu only"]
+      P3["<b>MujocoBiped</b> obs 49 &rarr; act 12 &middot; 256&times;2 Tanh &middot; 81,774 params<br/>Tanh output, Clip, policy 40 Hz (0.025 s)<br/>not in the race catalog"]
+      P4["<b>Fido</b> obs 33 &rarr; act 8 &middot; 33-128-128-128-16 SiLU &middot; ~39,506 params<br/>policy.json, not ONNX; MuJoCo plug-in, not PhysX<br/>16 outputs = mean(8) + std(8); mean/std normaliser in the JSON"]
+    end
+
+    OBSA --> NAN --> GRAPH --> DRIVE
+    GRAPH -.->|"same shape,<br/>different weights"| PORTS
+
+    classDef sense fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef guard fill:#ffeaea,stroke:#d0453f,stroke-width:2px,color:#4a0f0d;
+    classDef net fill:#f3ecff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef act fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    classDef port fill:#eef7f2,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    class O1,O2,O3,O4,O5,O6 sense;
+    class NAN guard;
+    class N1,N2,N3,N4,N5,N6,N7 net;
+    class D1,D2,D3,D4 act;
+    class P1,P2,P3,P4 port;

@@ -19,17 +19,33 @@
 ### Read `DOCS/` first
 
 `DOCS/` at the repo root is the project's own summary — read it before starting
-work, so the overall shape is in hand before touching code:
+work, so the overall shape is in hand before touching code. **Regenerated
+2026-09-03**; every figure in it was read off disk (ONNX graphs via `onnx.load`,
+prefab gains scraped from the YAML, training curves from the live TFEvents), so
+prefer it over memory when the two disagree:
 
 | File | What |
 |---|---|
 | `index.html` | entry point; links the rest |
-| `FeatureBrief-CreatureRace.md` | what the game is |
-| `creatures_dashboard.html` | the roster and each creature's state |
-| `architecture_pipeline.html` | training -> export -> Unity flow |
-| `scenes_layout.html` | scene structure |
-| `onnx_summary.md` | exported brains |
-| `Plan-P1-Worm.md` | worked example of a creature plan |
+| `FeatureBrief-CreatureRace.md` | what the game is (historical, with a verified then-vs-now header) |
+| `creatures_dashboard.html` | the roster and each creature's state; Executive/Technical toggle, 12 live charts |
+| `architecture_pipeline.html` | the three training routes -> export -> Unity flow |
+| `scenes_layout.html` | scene structure, every GameObject and component |
+| `onnx_summary.md` | exported brains: Matrix A (models) + Matrix B (rigs and actuators) |
+| `agent-motivation.html` | what the racers are *paid* for — five editorial diagrams |
+| `Plan-P1-Worm.md` | worked example of a creature plan (historical, status-checked) |
+| `diagrams/*.mmd` -> `assets/*.svg` | 4 topics x {`-simple`, `-detailed`}; recompile with `npx @mermaid-js/mermaid-cli -i DOCS/diagrams/<n>.mmd -o DOCS/assets/<n>.svg -b transparent` |
+
+The 2026-09-03 pass corrected figures the previous edition had wrong: there are
+**15** ONNX files (11.69 MB), not 9 at 2.79 MB; `obs = 3N + 19` exactly, so the
+real DOF ceiling is 21 (IsaacBox) and the Worm is 34 -> 5, not 39 -> 14;
+`forceLimit` runs 500-1350 N·m with **forceLimit = Kp / 5** and **Kp : Kd = 15 : 1**
+on every rig, not a flat 100 N·m; there is **no `ConfigurableJoint`, no SLERP
+drive and no LSTM** anywhere in the project; and per-run mean rewards were dropped
+rather than restated, because `results/` is no longer in the working tree.
+
+`.diagram-design` at the repo root pins the `poracer` diagram-design profile
+(blue focal accent — red and green are reserved by the racer-colour legend below).
 
 ### Detected Packages
 

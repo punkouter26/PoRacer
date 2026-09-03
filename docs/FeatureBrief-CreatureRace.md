@@ -1,5 +1,33 @@
 # Feature Brief: PoRacer — Self-Running Creature Race
 
+> **Status header added 2026-09-03 by the docs regeneration.** This is the *original* feature brief
+> from the 2026-08-14 interview, preserved as the record of intent. It has **not** been rewritten.
+> Verified against the current tree:
+>
+> | Then | Now |
+> |---|---|
+> | Unity 6000.5.6f1, Windows standalone | **Unity 6000.5.8f1**, and the shipping target is **Android** — signed AAB to Play internal testing |
+> | Δt locked 0.02 s | **Δt locked 0.005 s (200 Hz)**, 12 solver iterations |
+> | MVS packages "NOT yet installed — step one of implementation" | VContainer, MessagePipe and UniTask are all installed and load-bearing |
+> | P1: worm reaches a goal on flat ground | **Done.** P2 (self-running race, ELO, HUD, camera director) and P3 (more morphologies) are done too |
+> | P3: "second morphology (spider), then more bodies" | **9 racers on the grid** across three inference paths; 6 more brains trained but uncatalogued |
+> | P4: combat | **Not started.** Still the next unbuilt phase |
+> | P5: terrain variety | **Done** — 5 player-selectable maps with mud, boost pads, gusts and gates |
+> | P6: GLB scene import | **Not started**, but glTFast is installed and already loads rigged creature models |
+> | "up to 8 racers" | The grid is 10 wide and **stacks in layers past 30 racers** |
+>
+> **Acceptance criteria status:** 3, 7, 8 and 9 hold as written. Criterion 4 now asserts
+> `fixedDeltaTime == 0.005`, not 0.02. Criterion 2 (a goal 20 m away within 60 s, 8 of 10 episodes) is
+> **not met by four creatures** — Worm, Spider, Centipede and Crab do not finish the 22 m Flat race,
+> which is why `Config/BrokenLoco01.yaml` exists. Criterion 1's evidence is gone: `results/` is no
+> longer in the working tree.
+>
+> Current state lives in [`creatures_dashboard.html`](creatures_dashboard.html),
+> [`architecture_pipeline.html`](architecture_pipeline.html),
+> [`scenes_layout.html`](scenes_layout.html) and [`onnx_summary.md`](onnx_summary.md).
+
+---
+
 > Produced by /unity-interview on 2026-08-14. Confirmed answers: worm first slice, combat later,
 > portrait 9:16, watch+camera+stats viewer, up to 8 racers, ELO + race history persisted.
 

@@ -1,403 +1,1637 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PoRacer — Creatures Dashboard</title>
 <style>
-  :root {
-    --bg-1: #0d1117; --bg-2: #161b22; --bg-3: #1f2630; --bg-4: #262d36;
-    --border: #30363d; --text-1: #e6edf3; --text-2: #9ba9b7; --text-3: #6e7681;
-    --accent: #58a6ff; --accent-2: #d2a8ff;
-    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #8957e5; --cyan: #39c5cf;
+:root{
+  color-scheme: light;
+  --bg:#f6f6f4; --surface-1:#fcfcfb; --surface-2:#f0efec; --surface-3:#e6e5e1;
+  --border:#dcdbd6; --border-strong:#c3c2b7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a;
+  --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;
+  --good:#1baf7a; --warn:#eda100; --serious:#eb6834; --crit:#e34948;
+  --seq-100:#cde2fb; --seq-250:#86b6ef; --seq-400:#3987e5; --seq-550:#1c5cab; --seq-700:#0d366b;
+  --grid:#e6e5e1; --axis:#c3c2b7;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 4px 14px rgba(11,11,11,.045);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --surface-3:#2c2c2a;
+    --border:#383835; --border-strong:#4d4d49;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+    --pos:#3987e5; --neg:#e66767; --mid:#383835;
+    --good:#199e70; --warn:#c98500; --serious:#d95926; --crit:#e66767;
+    --seq-100:#0d366b; --seq-250:#184f95; --seq-400:#2a78d6; --seq-550:#5598e7; --seq-700:#b7d3f6;
+    --grid:#2c2c2a; --axis:#4d4d49;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0;
-    background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.55; min-height: 100vh; }
-  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px 20px 64px; }
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0 28px; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0; font-size: 1.7rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header .meta { color: var(--text-2); font-size: 0.86rem; }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#111110; --surface-1:#1a1a19; --surface-2:#232322; --surface-3:#2c2c2a;
+  --border:#383835; --border-strong:#4d4d49;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938b;
+  --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+  --pos:#3987e5; --neg:#e66767; --mid:#383835;
+  --good:#199e70; --warn:#c98500; --serious:#d95926; --crit:#e66767;
+  --seq-100:#0d366b; --seq-250:#184f95; --seq-400:#2a78d6; --seq-550:#5598e7; --seq-700:#b7d3f6;
+  --grid:#2c2c2a; --axis:#4d4d49;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.6 var(--sans);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 96px}
 
-  /* View toggle */
-  .toggle { display: inline-flex; background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 4px; gap: 4px; }
-  .toggle button { background: transparent; color: var(--text-2); border: none; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.15s, color 0.15s; }
-  .toggle button.active { background: var(--accent); color: #0d1117; }
-  .toggle button:hover:not(.active) { color: var(--text-1); }
+/* ---------- top bar ---------- */
+header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.top-in{max-width:1180px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:680;letter-spacing:-.02em;font-size:16px;margin-right:auto;display:flex;align-items:center;gap:9px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--series-1);flex:none}
+.brand small{font-weight:450;color:var(--text-muted);letter-spacing:0}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px}
+.seg button{appearance:none;border:0;background:transparent;color:var(--text-secondary);
+  font:inherit;font-size:13.5px;font-weight:560;padding:7px 15px;border-radius:6px;cursor:pointer;min-height:34px}
+.seg button[aria-pressed="true"]{background:var(--surface-1);color:var(--text-primary);box-shadow:var(--shadow)}
+.seg button:focus-visible{outline:2px solid var(--series-1);outline-offset:1px}
+.tierbar{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-muted)}
+.iconbtn{appearance:none;border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:15px;line-height:1}
+.iconbtn:focus-visible{outline:2px solid var(--series-1);outline-offset:1px}
 
-  h2 { margin: 36px 0 12px; font-size: 1.35rem; color: var(--text-1); border-left: 4px solid var(--accent); padding-left: 12px; }
-  h3 { margin: 20px 0 8px; color: var(--accent); font-size: 1.05rem; }
-  p, li { color: var(--text-1); font-size: 0.95rem; }
+/* ---------- hero ---------- */
+.hero{padding:44px 0 8px}
+.hero h1{font-size:clamp(28px,4.2vw,42px);line-height:1.08;letter-spacing:-.028em;margin:0 0 12px;font-weight:700}
+.hero p.lede{font-size:17.5px;line-height:1.55;color:var(--text-secondary);max-width:66ch;margin:0 0 20px}
+.stamp{font:12.5px/1.5 var(--mono);color:var(--text-muted);border-left:2px solid var(--border-strong);
+  padding-left:12px;margin:0 0 8px;max-width:80ch}
 
-  /* Tier bands */
-  .tier-card { background: var(--bg-2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 16px 20px; margin: 16px 0; }
-  .tier-card.tier-1 { border-left-color: var(--green); }
-  .tier-card.tier-2 { border-left-color: var(--accent); }
-  .tier-card.tier-3 { border-left-color: var(--purple); }
-  .tier-label { display: inline-block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 6px; }
-  .tier-card.tier-1 .tier-label { color: var(--green); }
-  .tier-card.tier-2 .tier-label { color: var(--accent); }
-  .tier-card.tier-3 .tier-label { color: var(--purple); }
-  .tier-card h3:first-child { margin-top: 0; }
+/* ---------- tiers ---------- */
+.tier{scroll-margin-top:78px}
+.tier-head{display:flex;align-items:baseline;gap:12px;margin:56px 0 6px;padding-bottom:10px;
+  border-bottom:1px solid var(--border)}
+.tier-head .n{font:600 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--series-1);background:color-mix(in srgb,var(--series-1) 12%,transparent);
+  padding:5px 8px;border-radius:5px;flex:none}
+.tier-head h2{font-size:24px;letter-spacing:-.02em;margin:0;font-weight:670}
+.tier-head .sub{margin-left:auto;font-size:13px;color:var(--text-muted);white-space:nowrap}
+h3{font-size:18px;letter-spacing:-.015em;margin:36px 0 4px;font-weight:640}
+h4{font-size:15px;margin:26px 0 4px;font-weight:640;color:var(--text-secondary)}
+p{max-width:78ch}
+.note{font-size:14px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--series-2);border-radius:0 8px 8px 0;padding:13px 16px;margin:18px 0;max-width:88ch}
+.note b{color:var(--text-primary)}
+.note.good{border-left-color:var(--good)}
+.note.crit{border-left-color:var(--crit)}
 
-  /* Cards */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
-  .card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: border-color 0.15s; }
-  .card:hover { border-color: var(--accent); }
-  .card h4 { margin: 0 0 6px; color: var(--text-1); font-size: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .card .sub { color: var(--text-2); font-size: 0.82rem; margin-bottom: 10px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.3px; }
-  .badge.prod { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
-  .badge.stg  { background: rgba(210,153,34,0.15); color: var(--orange); border: 1px solid rgba(210,153,34,0.3); }
-  .badge.dev  { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
+/* ---------- cards / grid ---------- */
+.grid{display:grid;gap:14px;margin:20px 0}
+.g2{grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(228px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(172px,1fr))}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.card.flush{padding:0;overflow:hidden}
 
-  .progress { background: var(--bg-3); border-radius: 6px; height: 14px; overflow: hidden; border: 1px solid var(--border); margin: 6px 0; position: relative; }
-  .progress > .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.3s; }
-  .progress > .target { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--orange); }
-  .progress-row { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-2); margin-bottom: 4px; }
+/* stat tile */
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:7px}
+.tile .v{font:700 30px/1.05 var(--sans);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:15px;font-weight:560;color:var(--text-secondary);letter-spacing:0}
+.tile .d{font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.45}
 
-  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.86rem; }
-  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
-  th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
-  td { background: rgba(255,255,255,0.02); }
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--sans);letter-spacing:.02em;
+  padding:5px 9px;border-radius:999px;border:1px solid;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.pill.racing{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);
+  background:color-mix(in srgb,var(--good) 11%,transparent)}
+.pill.bench{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);
+  background:color-mix(in srgb,var(--warn) 11%,transparent)}
+.pill.orphan{color:var(--serious);border-color:color-mix(in srgb,var(--serious) 40%,transparent);
+  background:color-mix(in srgb,var(--serious) 11%,transparent)}
+.pill.gone{color:var(--text-muted);border-color:var(--border-strong);background:var(--surface-2)}
+.pill.plain{color:var(--text-secondary);border-color:var(--border);background:var(--surface-2)}
+.pill.plain::before{display:none}
 
-  code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.86em; color: var(--accent-2); }
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);
+  box-shadow:var(--shadow);margin:18px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+caption{text-align:left;padding:14px 16px 0;font-size:13px;color:var(--text-muted);caption-side:top}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:640;font-size:12px;letter-spacing:.02em;
+  text-transform:uppercase;color:var(--text-secondary);position:sticky;top:0;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+td.name{font-weight:620;white-space:nowrap}
+code,.mono{font-family:var(--mono);font-size:.9em}
+code{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+tfoot td{background:var(--surface-2);font-weight:620;font-size:12.5px}
 
-  .diagram { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 16px 0; }
-  .diagram img { width: 100%; height: auto; display: block; border-radius: 6px; background: #fff; }
-  .diagram-caption { color: var(--text-2); font-size: 0.84rem; margin-top: 8px; text-align: center; }
-  .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 800px) { .two-up { grid-template-columns: 1fr; } }
+/* ---------- charts ---------- */
+.chart{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.chart h4{margin:0 0 2px;font-size:15px;color:var(--text-primary);font-weight:640}
+.chart .csub{font-size:13px;color:var(--text-muted);margin:0 0 14px;line-height:1.45}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;font-size:12.5px;color:var(--text-secondary)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;flex:none}
+.legend i.sq{width:10px;height:10px;border-radius:2px}
+svg{display:block;max-width:100%;overflow:visible}
+svg text{font-family:var(--sans);fill:var(--text-secondary)}
+.gl{stroke:var(--grid);stroke-width:1}
+.ax{stroke:var(--axis);stroke-width:1}
+.tick{font-size:11px;fill:var(--text-muted)}
+.alab{font-size:11.5px;fill:var(--text-muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.dlab{font-size:12px;font-weight:650}
+.hit{fill:transparent;cursor:crosshair}
+.tip{position:fixed;z-index:99;pointer-events:none;opacity:0;transition:opacity .09s;
+  background:var(--surface-1);border:1px solid var(--border-strong);border-radius:8px;
+  box-shadow:0 6px 24px rgba(0,0,0,.18);padding:9px 11px;font-size:12.5px;max-width:280px;color:var(--text-primary)}
+.tip.on{opacity:1}
+.tip .tt{font-weight:660;margin-bottom:5px}
+.tip .tr{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+.tip .tr i{width:9px;height:9px;border-radius:2px;flex:none}
+.tip .tr b{margin-left:auto;font-variant-numeric:tabular-nums}
 
-  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
-  .kpi .item { background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-  .kpi .item .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-3); }
-  .kpi .item .value { font-size: 1.5rem; font-weight: 700; color: var(--text-1); margin-top: 4px; }
-  .kpi .item .delta { font-size: 0.78rem; color: var(--green); }
-  .kpi .item.warn .value { color: var(--orange); }
-  .kpi .item.accent .value { color: var(--accent); }
-  .kpi .item.purple .value { color: var(--purple); }
+/* obs strip */
+.strip{display:flex;width:100%;border-radius:7px;overflow:hidden;border:1px solid var(--border);
+  height:40px;margin:12px 0 6px}
+.strip div{display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--sans);
+  color:#fff;overflow:hidden;white-space:nowrap;border-right:2px solid var(--surface-1)}
+.strip div:last-child{border-right:0}
+.striplegend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary);margin-bottom:4px}
+.striplegend span{display:inline-flex;align-items:center;gap:6px}
+.striplegend i{width:10px;height:10px;border-radius:2px;flex:none}
 
-  /* View toggle behavior */
-  .view-exec .tech-only { display: none !important; }
-  .view-tech .exec-only { display: none !important; }
-  .view-exec body, .view-tech body { background: var(--bg-1); }
+/* diagram */
+.dgm{margin:20px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);
+  box-shadow:var(--shadow);overflow:hidden}
+.dgm figcaption{padding:13px 16px;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border);
+  background:var(--surface-2)}
+.dgm figcaption b{color:var(--text-primary);font-weight:640}
+.dgm .scroll{overflow:auto;padding:18px;max-height:82vh}
+.dgm img{display:block;height:auto}
+:root[data-theme="dark"] .dgm .scroll,
+.dgm .scroll{background:#fff;border-radius:8px}
+.dgm .hint{padding:8px 16px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)}
 
-  .callout { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.3); border-radius: 8px; padding: 12px 16px; margin: 14px 0; }
-  .callout.warn { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.3); }
+/* mermaid live block */
+.mmd{background:#fff;border-radius:8px;padding:16px;overflow:auto}
 
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  footer { margin-top: 56px; padding: 20px 0; border-top: 1px solid var(--border); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+/* visibility */
+[data-mode] .exec-only,[data-mode] .tech-only{display:none}
+[data-mode="exec"] .exec-only{display:revert}
+[data-mode="tech"] .tech-only{display:revert}
+[data-mode="exec"] tr.tech-only,[data-mode="tech"] tr.tech-only{display:table-row}
+[data-mode="exec"] tr.tech-only{display:none}
+[data-mode="exec"] th.tech-only,[data-mode="exec"] td.tech-only{display:none}
+[data-mode="tech"] th.tech-only,[data-mode="tech"] td.tech-only{display:table-cell}
+.modehint{font-size:13px;color:var(--text-muted);margin:6px 0 0}
+
+/* toc */
+nav.toc{position:sticky;top:78px;font-size:13.5px}
+.layout{display:grid;grid-template-columns:1fr;gap:32px}
+@media (min-width:1080px){.layout{grid-template-columns:196px 1fr}}
+@media (max-width:1079px){nav.toc{position:static;margin-top:24px}}
+nav.toc ol{list-style:none;margin:0;padding:0}
+nav.toc a{display:block;padding:5px 0 5px 11px;color:var(--text-secondary);text-decoration:none;
+  border-left:2px solid var(--border)}
+nav.toc a:hover{color:var(--text-primary);border-left-color:var(--series-1)}
+nav.toc .g{font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);
+  margin:16px 0 6px;padding-left:11px}
+a{color:var(--series-1)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)}
+.kbd{font:600 11px/1 var(--mono);border:1px solid var(--border-strong);border-bottom-width:2px;
+  border-radius:4px;padding:3px 5px;background:var(--surface-2);color:var(--text-secondary)}
+hr.soft{border:0;border-top:1px solid var(--border);margin:38px 0}
+ul.tight{margin:10px 0;padding-left:20px}
+ul.tight li{margin:5px 0;max-width:76ch}
 </style>
 </head>
-<body class="view-exec">
+<body data-mode="exec">
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="dot"></span>PoRacer <small>Creatures Dashboard</small></div>
+    <div class="tierbar">
+      <span class="tech-only" style="font-size:12.5px">jump</span>
+      <a href="#t1" style="text-decoration:none;color:var(--text-secondary);font-size:13px;padding:0 4px">T1</a>
+      <a href="#t2" style="text-decoration:none;color:var(--text-secondary);font-size:13px;padding:0 4px">T2</a>
+      <a href="#t3" style="text-decoration:none;color:var(--text-secondary);font-size:13px;padding:0 4px">T3</a>
+    </div>
+    <div class="seg" role="group" aria-label="Detail mode">
+      <button id="mExec" aria-pressed="true">Executive</button>
+      <button id="mTech" aria-pressed="false">Technical</button>
+    </div>
+    <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme">◐</button>
+  </div>
+</header>
+
 <div class="wrap">
-  <header>
-    <div>
-      <h1>🏎️ Creatures Dashboard</h1>
-      <div class="meta">9 trained ONNX brains · 10 trainer configs · PPO + SAC · target mean reward 18.0 (race-ready)</div>
-    </div>
-    <div class="toggle" role="tablist" aria-label="View toggle">
-      <button id="btn-exec" class="active" aria-selected="true" onclick="setView('exec')">Executive View</button>
-      <button id="btn-tech" aria-selected="false" onclick="setView('tech')">Technical View</button>
-    </div>
-  </header>
 
-  <!-- ============ EXECUTIVE: TIER 1 ============ -->
-  <div class="exec-only">
-    <div class="tier-card tier-1">
-      <span class="tier-label">Tier 1 · 30-second executive summary</span>
-      <h3>9 creatures are race-ready. 9 of 9 ONNX brains promoted to Production.</h3>
-      <p>Every shipped brain wins its own ELO gauntlet versus the previous version. PPO 256×2 with normalize=true is the canonical recipe; SAC and the wider PPO 512×3 were ablation runs judged by head-to-head race results, never by mean reward alone. Reward is potential-based (progress − effort + upright − time); curriculum grows <code>goal_distance_max</code>, <code>rough_amplitude</code>, <code>track_kind</code>, and <code>quirk_power_span</code> as Worm's mean reward crosses thresholds.</p>
-    </div>
+<section class="hero">
+  <h1>Twelve brains, nine racers, three inference paths</h1>
+  <p class="lede">PoRacer is a self-running creature race. Nothing is keyframed: every racer moves
+  only by torque through its own joints, driven by a neural policy that learned to walk. This is the
+  roster, what each brain is, how it was trained, and what it actually does.</p>
+  <p class="stamp">Regenerated 2026-09-03. Every figure read off disk — 15 <code>.onnx</code> graphs via
+  <span class="mono">onnx.load</span>, prefab gains scraped from <span class="mono">Assets/Prefabs/*.prefab</span>,
+  training curves parsed from the live TFEvents under <span class="mono">ISAAC/logs/rsl_rl/</span>.
+  No estimated values except where a row says so.</p>
+  <p class="modehint"><b>Executive</b> shows behaviour, status and progress. <b>Technical</b> adds
+  tensor graphs, joint physics, observation layouts and hyperparameters — press the toggle above.</p>
+</section>
 
-    <h2>Behavior status</h2>
-    <div class="grid">
-      <!-- Worm -->
-      <div class="card">
-        <h4>Worm <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps · Loco 03</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">17.4</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:96.6%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">72%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:72%"></div></div>
-      </div>
-      <!-- Spider -->
-      <div class="card">
-        <h4>Spider <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps · Loco 02</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">19.1</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">81%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:81%"></div></div>
-      </div>
-      <!-- Hexapod -->
-      <div class="card">
-        <h4>Hexapod <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">18.6</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">77%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:77%"></div></div>
-      </div>
-      <!-- Quad -->
-      <div class="card">
-        <h4>Quad <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">20.3</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">83%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:83%"></div></div>
-      </div>
-      <!-- Centipede -->
-      <div class="card">
-        <h4>Centipede <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">19.7</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:100%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">75%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:75%"></div></div>
-      </div>
-      <!-- Crab -->
-      <div class="card">
-        <h4>Crab <span class="badge prod">Production</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--green)">17.8</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:98.9%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">71%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:71%"></div></div>
-      </div>
-      <!-- Kangaroo -->
-      <div class="card">
-        <h4>Kangaroo <span class="badge stg">Staging</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps · half-biped</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--orange)">14.2</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:78.9%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--green)">59%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:59%"></div></div>
-      </div>
-      <!-- Blob -->
-      <div class="card">
-        <h4>Blob <span class="badge stg">Staging</span></h4>
-        <div class="sub">PPO 256×2 · 10M steps · soft-body</div>
-        <div class="progress-row"><span>Mean reward</span><span><strong style="color:var(--orange)">12.6</strong> / 18 target</span></div>
-        <div class="progress"><div class="fill" style="width:70%"></div><div class="target" style="left:100%"></div></div>
-        <div class="progress-row"><span>Beats v00 gauntlet</span><span><strong style="color:var(--orange)">53%</strong></span></div>
-        <div class="progress"><div class="fill" style="width:53%"></div></div>
-      </div>
-    </div>
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li class="g">Tier 1</li>
+    <li><a href="#t1">Executive summary</a></li>
+    <li><a href="#roster">The roster</a></li>
+    <li class="g">Tier 2</li>
+    <li><a href="#t2">How a racer works</a></li>
+    <li><a href="#evolution">Behaviour evolution</a></li>
+    <li><a href="#progress">Reward progress</a></li>
+    <li><a href="#colour">Colour legend</a></li>
+    <li><a href="#race">Race rules</a></li>
+    <li class="g">Tier 3</li>
+    <li><a href="#t3">Complete spec</a></li>
+    <li><a href="#tensors">Tensor graphs</a></li>
+    <li><a href="#obsvec">Observation vectors</a></li>
+    <li><a href="#physics">Joint physics</a></li>
+    <li><a href="#hyper">Hyperparameters</a></li>
+    <li><a href="#rewardspec">Reward tree</a></li>
+    <li><a href="#gaps">Gaps &amp; risks</a></li>
+  </ol>
+</nav>
 
-    <h2>Fleet KPIs</h2>
-    <div class="kpi">
-      <div class="item accent"><div class="label">Brains shipped</div><div class="value">9</div><div class="delta">+0 this week</div></div>
-      <div class="item"><div class="label">Staging → Production gate</div><div class="value">7 / 9</div><div class="delta">Kangaroo, Blob pending</div></div>
-      <div class="item purple"><div class="label">Active trainer configs</div><div class="value">10</div><div class="delta">8 PPO, 1 SAC, 1 BC+GAIL</div></div>
-      <div class="item"><div class="label">Mean steps / hour</div><div class="value">~110 / behavior</div><div class="delta">measured live</div></div>
-      <div class="item warn"><div class="label">Inference FPS target</div><div class="value">60</div><div class="delta">portrait 9:16, 8 racers</div></div>
-      <div class="item"><div class="label">Reward components logged</div><div class="value">4</div><div class="delta">Progress, Efficiency, Upright, Time</div></div>
-    </div>
+<main>
 
-    <h2>High-level runtime architecture</h2>
-    <div class="diagram">
-      <img src="assets/lifecycle-simple.svg" alt="Lifecycle - simple">
-      <div class="diagram-caption">Figure · The 4-beat loop: observe → infer → apply → score</div>
-    </div>
+<!-- ============================= TIER 1 ============================= -->
+<section class="tier" id="t1">
+  <div class="tier-head">
+    <span class="n">Tier 1</span>
+    <h2>Executive summary</h2>
+    <span class="sub">read in 30 seconds</span>
+  </div>
 
-    <div class="callout">
-      <strong>How to read this dashboard</strong>: Production = ELO gauntlet winner, ships in race loop. Staging = meets curriculum thresholds, gauntlet pending. Mean reward values are from the most recent summary_freq batch; cross-run comparisons are unsafe (potential-based reward depends on episode length).
+  <div class="grid g4">
+    <div class="tile"><div class="k">Racers on the grid</div><div class="v">9</div>
+      <div class="d">Wired into <code>CreatureCatalog.asset</code> with a brain that runs</div></div>
+    <div class="tile"><div class="k">Brains on disk</div><div class="v">15 <small>+1</small></div>
+      <div class="d">15 <code>.onnx</code> files plus Fido's <code>policy.json</code></div></div>
+    <div class="tile"><div class="k">Race payload</div><div class="v">3.06 <small>MB</small></div>
+      <div class="d">2.24 MB ONNX + 0.81 MB JSON for the whole starting grid</div></div>
+    <div class="tile"><div class="k">Physics rate</div><div class="v">200 <small>Hz</small></div>
+      <div class="d">Δt = 0.005 s, 12 solver iterations — locked</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">What is working</h4>
+      <ul class="tight">
+        <li><b>IsaacBox is the strongest racer.</b> Measured 0.99 m/s, <b>zero falls per robot-minute</b>,
+          <b>8.09 targets reached per minute</b> — now running <code>model_2999.pt</code>, promoted in
+          commit <code>afa3eeb</code>.</li>
+        <li><b>The port pipeline is exact.</b> IsaacH1 reproduces to 1 mm; MujocoBiped's plumbing matches
+          Python to float precision; Fido's exported MLP agrees to 2.0 × 10⁻⁶ max absolute error.</li>
+        <li><b>Every prefab agrees with its brain.</b> All twelve ML-Agents observation/action sizes match
+          their ONNX tensor widths exactly — no silent shape drift.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">What is not</h4>
+      <ul class="tight">
+        <li><b>Four creatures do not finish.</b> Worm, Spider, Centipede and Crab fail to reach the line on
+          the 22 m Flat map — the reason <code>BrokenLoco01.yaml</code> exists.</li>
+        <li><b>Fido cannot steer.</b> His 33 observations contain no goal and no heading, so he walks
+          robustly at ~1.6 m/s and curves away from the finish. Policy limitation, not integration.</li>
+        <li><b>Six trained brains never race.</b> Blob, Kangaroo and the four bipeds are exported and
+          prefab-wired but absent from the catalog. <code>results/</code> is gone, so their run history
+          cannot be audited.</li>
+      </ul>
     </div>
   </div>
 
-  <!-- ============ TECHNICAL: TIER 2 + TIER 3 ============ -->
+  <div class="note crit"><b>Promotion rule, and it is not negotiable.</b> A brain is promoted on
+  <b>ELO from actual races</b> (<code>Systems_Elo</code>, K = 32, base rating 1200) — never on mean reward.
+  The locomotion reward is potential-based, so its episode sum scales with how long the creature survived:
+  a brain that stands still for longer outscores one that races faster. Mean reward answers
+  "did training converge", not "is this brain better".</div>
+</section>
+
+<!-- ============================= ROSTER ============================= -->
+<section class="tier" id="roster">
+  <div class="tier-head">
+    <span class="n">Roster</span>
+    <h2>Every creature and its state</h2>
+    <span class="sub">9 racing · 7 benched · 3 removed</span>
+  </div>
+
+  <div class="tw">
+    <caption>Sizes and tensor widths read from the <code>.onnx</code> graphs; spawn heights from
+      <code>CreatureCatalog.asset</code>. "Joints" is the actuated DOF count, which equals the action width.</caption>
+    <table>
+      <thead><tr>
+        <th>Creature</th><th>Status</th><th>Body plan &amp; behaviour</th>
+        <th class="num">Joints</th>
+        <th class="num tech-only">Obs</th>
+        <th class="tech-only">Network</th>
+        <th class="num tech-only">Params</th>
+        <th class="num tech-only">Bytes</th>
+        <th class="tech-only">Runtime path</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="name">IsaacBox</td><td><span class="pill racing">Racing</span></td>
+          <td>Humanoid boy, 22 links, 45 kg. Chases a target at ~1 m/s, facing it. The most capable
+            racer on the grid and the only one measured at zero falls.</td>
+          <td class="num">21</td><td class="num tech-only">75</td><td class="tech-only">128×3 ELU</td>
+          <td class="num tech-only">45,611</td><td class="num tech-only">184,076</td>
+          <td class="tech-only">Inference Engine, no ML-Agents</td></tr>
+
+        <tr><td class="name">IsaacH1</td><td><span class="pill racing">Racing</span></td>
+          <td>Unitree H1 humanoid, 20 links, 51.4 kg. Velocity-command walker — told a speed, not a target.
+            0.51 m/s, 0.125 falls/robot-minute.</td>
+          <td class="num">19</td><td class="num tech-only">69</td><td class="tech-only">128×3 ELU</td>
+          <td class="num tech-only">44,435</td><td class="num tech-only">178,875</td>
+          <td class="tech-only">Inference Engine, no ML-Agents</td></tr>
+
+        <tr><td class="name">Centipede</td><td><span class="pill racing">Racing</span></td>
+          <td>18-segment many-leg crawler — the widest ML-Agents control problem. Authored lying along
+            its body axis; stand it upright and the solver goes to NaN.</td>
+          <td class="num">17</td><td class="num tech-only">70</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">88,497</td><td class="num tech-only">359,276</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Hexapod</td><td><span class="pill racing">Racing</span></td>
+          <td>Insect, 6 legs × 2 joints. Alternating-tripod gait — the most stable multi-leg walker
+            in the ML-Agents set.</td>
+          <td class="num">12</td><td class="num tech-only">55</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">83,337</td><td class="num tech-only">338,634</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Crab</td><td><span class="pill racing">Racing</span></td>
+          <td>Sideways scuttle on a wide, low stance. Same rig budget as Hexapod, different phase table.
+            <b>Does not finish the 22 m Flat map.</b></td>
+          <td class="num">12</td><td class="num tech-only">55</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">83,337</td><td class="num tech-only">338,634</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Quadruped</td><td><span class="pill racing">Racing</span></td>
+          <td>4 legs × 2 joints, trot gait. Fastest of the coded-gait creatures on flat ground and the
+            least stable on rough.</td>
+          <td class="num">8</td><td class="num tech-only">43</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">79,209</td><td class="num tech-only">322,122</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Spider</td><td><span class="pill racing">Racing</span></td>
+          <td>8 legs × 1 joint, alternating-tetrapod. <b>Does not finish the 22 m Flat map.</b></td>
+          <td class="num">8</td><td class="num tech-only">43</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">79,209</td><td class="num tech-only">322,122</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Fido</td><td><span class="pill racing">Racing</span></td>
+          <td>MuJoCo quadruped. Walks robustly at ~1.6 m/s — the fastest gait in the project — but has
+            <b>no goal in his observations</b>, so over a long straight he traces a circle.</td>
+          <td class="num">8</td><td class="num tech-only">33</td><td class="tech-only">128×3 SiLU</td>
+          <td class="num tech-only">39,506</td><td class="num tech-only">851,712*</td>
+          <td class="tech-only">Hand-rolled MLP over MuJoCo</td></tr>
+
+        <tr><td class="name">Worm</td><td><span class="pill racing">Racing</span></td>
+          <td>Six segments, serpentine body wave. The first slice, and the clock every curriculum lesson
+            gates on. <b>Does not finish the 22 m Flat map.</b></td>
+          <td class="num">5</td><td class="num tech-only">34</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">76,113</td><td class="num tech-only">309,738</td>
+          <td class="tech-only">ML-Agents <code>Agent_Creature</code></td></tr>
+
+        <tr><td class="name">Grandma</td><td><span class="pill bench">Benched</span></td>
+          <td>Eleven joints of biped balance. Trained on extrinsic reward only — a biped's coded gait is a
+            fall, so cloning it would teach it to face-plant faster.</td>
+          <td class="num">11</td><td class="num tech-only">52</td><td class="tech-only">512×3 swish</td>
+          <td class="num tech-only">558,209</td><td class="num tech-only">2,239,066</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+        <tr><td class="name">Grandpa</td><td><span class="pill bench">Benched</span></td>
+          <td>Same rig and hyperparameters as Grandma; separate weights.</td>
+          <td class="num">11</td><td class="num tech-only">52</td><td class="tech-only">512×3 swish</td>
+          <td class="num tech-only">558,209</td><td class="num tech-only">2,239,066</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+        <tr><td class="name">Matt</td><td><span class="pill bench">Benched</span></td>
+          <td>Same rig; separate weights.</td>
+          <td class="num">11</td><td class="num tech-only">52</td><td class="tech-only">512×3 swish</td>
+          <td class="num tech-only">558,209</td><td class="num tech-only">2,239,066</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+        <tr><td class="name">Nick</td><td><span class="pill bench">Benched</span></td>
+          <td>Same rig; separate weights.</td>
+          <td class="num">11</td><td class="num tech-only">52</td><td class="tech-only">512×3 swish</td>
+          <td class="num tech-only">558,209</td><td class="num tech-only">2,239,066</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+
+        <tr><td class="name">MujocoBiped</td><td><span class="pill bench">Benched</span></td>
+          <td>PPO biped ported from MuJoCo at 14.5 M steps. 4 targets per episode, 1.15 m/s closing speed,
+            but survives a full episode only 30% of the time. No race adapter written.</td>
+          <td class="num">12</td><td class="num tech-only">49</td><td class="tech-only">256×2 Tanh</td>
+          <td class="num tech-only">81,774</td><td class="num tech-only">328,776</td>
+          <td class="tech-only">Ported, unregistered</td></tr>
+
+        <tr><td class="name">Kangaroo</td><td><span class="pill orphan">Orphan</span></td>
+          <td>Two-legged hop with a counterweight tail. Trained and prefab-wired; never added to the catalog.</td>
+          <td class="num">6</td><td class="num tech-only">37</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">77,145</td><td class="num tech-only">313,866</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+        <tr><td class="name">Blob</td><td><span class="pill orphan">Orphan</span></td>
+          <td>Soft-body pulse — five <b>prismatic</b> lobes that extend rather than rotate. The only
+            non-revolute rig in the project, and the only one whose drive scale is metres.</td>
+          <td class="num">5</td><td class="num tech-only">34</td><td class="tech-only">256×2 swish</td>
+          <td class="num tech-only">76,113</td><td class="num tech-only">309,738</td>
+          <td class="tech-only">ML-Agents, not in catalog</td></tr>
+
+        <tr><td class="name">IsaacSpider</td><td><span class="pill gone">Removed</span></td>
+          <td>Deleted 2026-09-02. Raced brainless after the assembly merge renamed its inference define
+            and silently compiled the policy out.</td>
+          <td class="num">—</td><td class="num tech-only">—</td><td class="tech-only">—</td>
+          <td class="num tech-only">—</td><td class="num tech-only">—</td><td class="tech-only">—</td></tr>
+        <tr><td class="name">IsaacBiped2</td><td><span class="pill gone">Removed</span></td>
+          <td>Deleted 2026-09-02, same cause as IsaacSpider.</td>
+          <td class="num">—</td><td class="num tech-only">—</td><td class="tech-only">—</td>
+          <td class="num tech-only">—</td><td class="num tech-only">—</td><td class="tech-only">—</td></tr>
+        <tr><td class="name">Snake</td><td><span class="pill gone">Removed</span></td>
+          <td>Deleted 2026-09-02. Never got past 3 m.</td>
+          <td class="num">—</td><td class="num tech-only">—</td><td class="tech-only">—</td>
+          <td class="num tech-only">—</td><td class="num tech-only">—</td><td class="tech-only">—</td></tr>
+      </tbody>
+      <tfoot><tr>
+        <td colspan="3">15 ONNX graphs + 1 JSON policy</td>
+        <td class="num">—</td>
+        <td class="num tech-only">—</td><td class="tech-only">—</td>
+        <td class="num tech-only">3,087,122</td><td class="num tech-only">12,262,121</td>
+        <td class="tech-only">3 inference paths</td>
+      </tr></tfoot>
+    </table>
+  </div>
+  <p style="font-size:13px;color:var(--text-muted)">* Fido's figure is the size of
+  <code>Assets/Creature/policy.json</code>, not an ONNX file — his weights ship as JSON text, which is why
+  it is the largest single racer artifact despite having the second-smallest network.
+  <b>Do not re-import IsaacSpider, IsaacBiped2 or the Snake</b> without a brain that finishes a race.</p>
+
+  <div class="chart" style="margin-top:20px">
+    <h4>Control problem size, per racer</h4>
+    <p class="csub">Actuated joints against observation width. The <span class="mono">3N + 19</span> line is
+    exact for every ML-Agents creature; the Isaac ports sit above it because they carry previous actions
+    and full joint-velocity blocks instead of contact bits and terrain probes.</p>
+    <div id="cScatter"></div>
+  </div>
+</section>
+<!-- ============================= TIER 2 ============================= -->
+<section class="tier" id="t2">
+  <div class="tier-head">
+    <span class="n">Tier 2</span>
+    <h2>How a racer works</h2>
+    <span class="sub">primary components and flows</span>
+  </div>
+
+  <p>Every racer runs the same six-step loop, sixty times a second of simulated time. The only things
+  that differ between a worm and a humanoid are the widths of the vectors and which engine solves
+  the physics.</p>
+
+  <figure class="dgm exec-only">
+    <figcaption><b>The execution loop</b> — conceptual. Observe, decide, act, simulate, check, reset.</figcaption>
+    <div class="scroll"><img src="assets/lifecycle-simple.svg" alt="Six-step agent execution loop: observe, decide, act, simulate, terminal check, reset" style="min-width:1200px"></div>
+    <div class="hint">Switch to Technical mode for the tick-accurate version with tensor shapes and termination thresholds.</div>
+  </figure>
+
+  <figure class="dgm tech-only">
+    <figcaption><b>The execution loop</b> — tick-accurate. FixedUpdate at 200 Hz, the Sentis graph node by
+      node, the fatigue path, and all four termination branches with their exact rewards.</figcaption>
+    <div class="scroll"><img src="assets/lifecycle-detailed.svg" alt="Detailed execution loop with FixedUpdate timing, ONNX graph nodes, fatigue system and termination branches" style="min-width:1320px"></div>
+    <div class="hint">Scroll inside the frame. Rendered at source size so no label is shrunk.</div>
+  </figure>
+
+  <div class="grid g3">
+    <div class="tile"><div class="k">Decision rate</div><div class="v">10 <small>Hz</small></div>
+      <div class="d"><code>DecisionPeriod 20</code> × 0.005 s. The last action is re-applied on the
+      19 physics ticks in between.</div></div>
+    <div class="tile"><div class="k">Isaac port rate</div><div class="v">50 <small>Hz</small></div>
+      <div class="d">Decimation 4 × 0.005 s = exactly the 0.02 s they trained at.</div></div>
+    <div class="tile"><div class="k">Fido &amp; MuJoCo</div><div class="v">50 / 40 <small>Hz</small></div>
+      <div class="d">Fido at 0.02 s; MujocoBiped at 0.025 s. Both exact multiples of Δt.</div></div>
+  </div>
+
+  <div class="note"><b>Why 200 Hz is load-bearing.</b> 0.005 s divides evenly into 0.02 s (IsaacH1, IsaacBox,
+  Fido) <i>and</i> 0.025 s (MujocoBiped). Moving to 1/240 s breaks IsaacH1's exact step. Moving to 0.004 s
+  breaks MujocoBiped's and forces <code>DecisionPeriod</code> 20 → 25 on all twelve ML-Agents prefabs.
+  If Δt ever changes, every prefab's <code>DecisionPeriod</code> and Fido's <code>actionDecimation</code>
+  must change with it — otherwise trained brains are silently run at a rate they never saw.</div>
+
+  <h3 id="evolution">Behaviour evolution — the one run with surviving telemetry</h3>
+  <p>The ML-Agents <code>results/</code> directory is no longer in the working tree, so those runs cannot be
+  replayed. The Isaac Lab side does survive: two runs of the <code>boy_chase_flat</code> experiment, read
+  straight out of their TFEvents files. This is IsaacBox learning to walk toward a target from scratch.</p>
+
+  <div class="grid g2">
+    <div class="chart">
+      <h4>Mean episode reward</h4>
+      <p class="csub">Reward per episode across PPO iterations. 4,096 parallel environments × 24 steps
+        = 98,304 transitions per iteration.</p>
+      <div class="legend">
+        <span><i style="background:var(--series-1)"></i>full — iterations 0 → 2,015</span>
+        <span><i style="background:var(--series-2)"></i>finish — resumes at 2,000, runs to 2,999</span>
+      </div>
+      <div id="cReward"></div>
+    </div>
+    <div class="chart">
+      <h4>Distance to target</h4>
+      <p class="csub">Metres. Falls as the policy learns to close on the target instead of standing still.
+        Never reaches zero: the target is resampled every 8–12 s at 3–10 m.</p>
+      <div class="legend">
+        <span><i style="background:var(--series-1)"></i>full</span>
+        <span><i style="background:var(--series-2)"></i>finish</span>
+      </div>
+      <div id="cDist"></div>
+    </div>
+    <div class="chart">
+      <h4>Episode length</h4>
+      <p class="csub">Steps out of a 1,000-step (20 s) cap. Rising means the boy stops falling over —
+        the clearest single signal that balance is being learned.</p>
+      <div class="legend">
+        <span><i style="background:var(--series-1)"></i>full</span>
+        <span><i style="background:var(--series-2)"></i>finish</span>
+      </div>
+      <div id="cEplen"></div>
+    </div>
+    <div class="chart">
+      <h4>Targets reached per episode</h4>
+      <p class="csub">How many goals the boy actually got to in a 20 s episode. The task metric that
+        matters, as opposed to the shaped reward.</p>
+      <div class="legend">
+        <span><i style="background:var(--series-1)"></i>full</span>
+        <span><i style="background:var(--series-2)"></i>finish</span>
+      </div>
+      <div id="cReached"></div>
+    </div>
+  </div>
+
+  <div class="grid g2 tech-only">
+    <div class="chart">
+      <h4>Policy standard deviation</h4>
+      <p class="csub">Action noise the policy still chooses to inject. Settles at 0.86 from an initial 1.0 —
+        exploring, not collapsed. A crash toward zero would mean premature convergence.</p>
+      <div class="legend"><span><i style="background:var(--series-1)"></i>full</span>
+        <span><i style="background:var(--series-2)"></i>finish</span></div>
+      <div id="cStd"></div>
+    </div>
+    <div class="chart">
+      <h4>Fall rate (base contact terminations)</h4>
+      <p class="csub">Fraction of episodes ended by the hips or spine touching the ground. Starts at 100%
+        — a fresh policy is a ragdoll — and settles near 2%.</p>
+      <div class="legend"><span><i style="background:var(--series-1)"></i>full</span>
+        <span><i style="background:var(--series-2)"></i>finish</span></div>
+      <div id="cFell"></div>
+    </div>
+  </div>
+
+  <div class="note good"><b>What the two runs mean.</b> <code>full</code> is the 2,016-iteration training run
+  whose <code>model_2000.pt</code> is the checkpoint the shipped ONNX was exported from. <code>finish</code>
+  resumes from exactly there — its x-axis starts at iteration 2000 — and runs the experiment out to its
+  configured 3,000, ending at <code>model_2999.pt</code>. The steep climb over its first ~30 iterations is
+  <b>not</b> the policy relearning: it is RSL-RL's running-mean buffers refilling after the resume. By
+  iteration 2030 it is already back at reward 17.5 and 720-step episodes.</div>
+
+  <div class="note crit"><b><code>model_2999.pt</code> was promoted — and it scores <i>less</i> reward than
+  the brain it replaced.</b> Commit <code>afa3eeb</code> (2026-09-03 10:13) re-exported the shipped ONNX from
+  the finish run's last checkpoint. Mean reward went <b>down</b>, 24.37 &rarr; 22.68, and mean speed dipped
+  0.9916 &rarr; 0.9869 m/s. On the metric the task is actually scored by, it went <b>up</b>:
+  <b>8.09 targets reached per minute against 7.91</b>, falls still exactly <b>0.0</b>, episode length
+  986.4 &rarr; 995.9 steps. This is the promotion rule working in the direction that is easy to get wrong —
+  a reward-ranked pipeline would have rejected the better brain. The graph is structurally unchanged
+  (184,076 bytes, 45,611 parameters); only the weights moved.</div>
+
+  <h3 id="progress">Measured performance — where numbers actually exist</h3>
+  <p>These are independently measured evaluation figures from each port's rig manifest, not training
+  rewards. They are the only cross-creature performance data in the project.</p>
+
+  <div class="chart">
+    <h4>Measured locomotion speed</h4>
+    <p class="csub">Metres per second, sustained. Fido is the fastest gait in the project and the only one
+      that cannot aim it. Values from <code>eval</code> blocks in each rig manifest and from Fido's
+      verification scene.</p>
+    <div id="cSpeed"></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="chart">
+      <h4>Reliability — falls per robot-minute</h4>
+      <p class="csub">Lower is better. Zero means IsaacBox did not fall once across the whole
+        evaluation window.</p>
+      <div id="cFalls"></div>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">The eight ML-Agents creatures have no surviving measurement</h4>
+      <p style="font-size:14px;color:var(--text-secondary);max-width:none">Their training runs lived under
+      <code>results/&lt;run-id&gt;/</code>, which is not in the working tree. What is known about them is
+      qualitative and comes from race observation:</p>
+      <ul class="tight" style="font-size:14px">
+        <li><b>Reach the finish on 22 m Flat:</b> Quadruped, Hexapod</li>
+        <li><b>Do not reach the finish:</b> Worm, Spider, Centipede, Crab — the four
+          <code>BrokenLoco01.yaml</code> was written to fix</li>
+        <li><b>Never raced:</b> Blob, Kangaroo</li>
+      </ul>
+      <p style="font-size:13.5px;color:var(--text-muted);max-width:none;margin-bottom:0">Restoring
+      auditability means preserving <code>results/</code> on future runs. Without it, no promotion decision
+      can be re-checked.</p>
+    </div>
+  </div>
+
+  <div class="note crit"><b>A measured training bug, and which brains it touched.</b>
+  <code>Reward_WormLoco.Step()</code> runs every FixedUpdate and all of its per-step constants were tuned at
+  a 0.02 s step. The project moved to 0.005 s on 2026-08-29 and nothing told the reward until 2026-09-02.
+  For those four days, training episodes were cut at <b>5 s</b> of no progress instead of 20, and every
+  per-step penalty landed <b>four times per simulated second</b>. Measured: fine-tune episodes lasted
+  50–85 decisions instead of 340–380. Every brain trained in that window — <code>broken_loco01</code>
+  included — learned against a distorted reward. <code>Agent_Creature</code> now calls
+  <code>ConfigureTimestep(Time.fixedDeltaTime)</code>, which rescales both the stall limit and the shaping
+  terms; the progress term is a telescoping sum and correctly needs no scaling.</div>
+
+  <h3 id="colour">Colour is a legend, not decoration</h3>
+  <p>A viewer must be able to tell what is driving a racer at a glance, so colour encodes the
+  <b>controller</b>, never the creature.</p>
+
+  <div class="grid g3">
+    <div class="card" style="border-left:4px solid var(--crit)">
+      <div class="k" style="font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--crit);font-weight:660;margin-bottom:7px">Red — reserved</div>
+      <p style="margin:0;font-size:14px">Heuristic and hand-coded bots. Always. A red racer is running a
+      sine-wave gait table, not a network.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--good)">
+      <div class="k" style="font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--good);font-weight:660;margin-bottom:7px">Green — reserved</div>
+      <p style="margin:0;font-size:14px">The standard RL policy — the <b>baseline only</b>, before any
+      per-creature variation. Not every RL racer.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--series-2)">
+      <div class="k" style="font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--series-2);font-weight:660;margin-bottom:7px">Custom art — variations</div>
+      <p style="margin:0;font-size:14px">RL variations derived from the baseline wear user-supplied
+      textures. A variation with no texture yet <b>waits</b> rather than borrowing red or green.</p>
+    </div>
+  </div>
+
+  <div class="note"><b>IsaacBox is not a standard RL racer</b> (confirmed 2026-09-02). He wears the textures
+  baked into <code>IsaacBox_Character.glb</code> — skin, shirt, trousers, shoes, hair — and must not be
+  turned green. Anything arriving with authored art is read the same way: ask before overriding a creature's
+  own materials with a legend colour.</div>
+
+  <h3 id="race">The race itself</h3>
+  <div class="grid g4">
+    <div class="tile"><div class="k">Maps</div><div class="v">5</div>
+      <div class="d">Flat 22 m · Lumpy 18 m · Swamp 18 m · Gale 20 m · Roulette 18 m</div></div>
+    <div class="tile"><div class="k">Podium</div><div class="v">3</div>
+      <div class="d">Once three racers finish, the rest are scored as non-finishers and the race ends</div></div>
+    <div class="tile"><div class="k">Race clock</div><div class="v">120 <small>s</small></div>
+      <div class="d">Plus a 30 s per-racer no-progress DNF timer</div></div>
+    <div class="tile"><div class="k">Grid</div><div class="v">10 <small>wide</small></div>
+      <div class="d">2 m columns, 1.6 m rows, marathon start. Past 30 racers it stacks in layers.</div></div>
+  </div>
+
+  <div class="tw tech-only">
+    <caption>Map catalog — <code>Systems_MapCatalog.Entries</code>. Lengths are finish-line placements;
+      the raced distance is ~2 m less because the grid sits ahead of the origin.</caption>
+    <table>
+      <thead><tr><th>Map</th><th class="num">Length</th><th>TrackKind</th><th>Features</th><th>Blurb</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Flat</td><td class="num">22 m</td><td><code>Flat</code></td><td>None</td>
+          <td>Clean open ground — a pure speed test</td></tr>
+        <tr><td class="name">Lumpy</td><td class="num">18 m</td><td><code>Lumpy</code></td><td>None</td>
+          <td>Rough hills with chunky rocks to dodge</td></tr>
+        <tr><td class="name">Swamp</td><td class="num">18 m</td><td><code>Swamp</code></td><td>Mud pits, gate walls</td>
+          <td>Mud slows racers; gates force a path choice</td></tr>
+        <tr><td class="name">Gale</td><td class="num">20 m</td><td><code>Flat</code></td>
+          <td><code>Gusts | BoostPads</code></td><td>Cross-winds shove the pack; boost pads reward a brave line</td></tr>
+        <tr><td class="name">Roulette</td><td class="num">18 m</td><td>random</td><td>random</td>
+          <td>Fresh terrain and hazards every race</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note tech-only"><b>Why 22 m and not 34.</b> Map lengths are sized off <i>measured pace</i>, not
+  off the training goal distance. The fastest ML-Agents brain covers about 0.25 m/s, so the old 34 m Flat
+  needed ~135 s — every race died on the 120 s clock with nobody across the line. 22 m puts the winner over
+  at roughly 80 s and leaves room for a second and third inside the window. <b>Re-measure these whenever the
+  brains are retrained.</b></div>
+
+  <div class="note tech-only"><b>Fido shares the ground but not the hazards.</b> MuJoCo cannot see Unity
+  colliders. He stands on his own plane at y = 0, which is exactly where the flat track's collider slab top
+  sits — so he shares the racers' surface but does not feel mud, boost, gust or wall volumes (those key off
+  <code>attachedArticulationBody</code> and skip him), and he collides only with other Fidos. On the
+  displaced-terrain maps he would walk through the ground; <code>MjHeightFieldShape</code> is the route to
+  fixing that. Also: <b>do not let the spawner's +0.05 m drop reach him.</b>
+  <code>Agent_Fido.SnapToTrainedStance</code> cancels it and puts his torso at exactly 0.34 m. Measured,
+  0.39 m collapses on the first stride every time; 0.34 m walks away.</div>
+</section>
+<!-- ============================= TIER 3 ============================= -->
+<section class="tier" id="t3">
+  <div class="tier-head">
+    <span class="n">Tier 3</span>
+    <h2>Complete specification</h2>
+    <span class="sub">tensors, physics, hyperparameters, telemetry</span>
+  </div>
+
+  <p class="exec-only" style="color:var(--text-secondary)">Tier 3 is written for the Technical view.
+  Switch modes above to see the tensor graphs, joint tables and hyperparameter matrices; the summary
+  tables below are visible either way.</p>
+
+  <h3 id="tensors">Tensor blueprint &amp; actuator map</h3>
+
+  <figure class="dgm exec-only">
+    <figcaption><b>Sense → decide → drive</b>, conceptually. The same five stages for every racer.</figcaption>
+    <div class="scroll"><img src="assets/tensor-blueprint-simple.svg" alt="Observation vector into two hidden layers into Gaussian heads into joint drives" style="min-width:1000px"></div>
+  </figure>
+
+  <figure class="dgm tech-only">
+    <figcaption><b>Tensor blueprint</b> — the observation vector index by index, the ONNX graph
+      node by node, the <code>xDrive</code> actuator map, and how each of the four ports differs.</figcaption>
+    <div class="scroll"><img src="assets/tensor-blueprint-detailed.svg" alt="Detailed tensor blueprint: observation index ranges, ONNX node graph, actuator parameters, port comparison" style="min-width:1600px"></div>
+    <div class="hint">Scroll inside the frame.</div>
+  </figure>
+
   <div class="tech-only">
-    <div class="tier-card tier-2">
-      <span class="tier-label">Tier 2 · High-level overview</span>
-      <h3>Tensor flow, joints, and trainer specs</h3>
-      <p>Each creature is a hierarchy of <code>ArticulationBody</code> joints with per-joint PD drives. The shared <code>Agent_Creature</code> packs observations from joint state, root pose, goal, and root velocity; the shared <code>Reward_WormLoco</code> returns a shaped scalar. Network is two dense layers of 256 units with tanh, fed through an optional LSTM(128) for memory. Outputs go to <code>ArticulationDrive.target</code> in degrees or metres, scaled by per-prefab <code>jointDriveScale</code>.</p>
+  <h4>ONNX graph node inventory — the twelve ML-Agents brains</h4>
+  <p style="font-size:14px">Node-for-node identical apart from tensor widths. All twelve report
+  <code>producer pytorch 2.4.1</code>, <code>ir_version 4</code>, <code>opset ai.onnx v9</code>, and an
+  <b>empty <code>metadata_props</code></b> — which is why run provenance cannot be recovered from the file
+  and has to live in the YAML headers instead.</p>
+
+  <div class="tw">
+    <caption>Op counts from <code>Worm_v01.onnx</code> (12 initializers). Every other ML-Agents brain
+      matches.</caption>
+    <table>
+      <thead><tr><th>Op</th><th class="num">Count</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>Sub</code> / <code>Div</code> / <code>Clip</code></td><td class="num">1 / 3 / 3</td>
+          <td>Baked observation normaliser (<code>normalize: true</code>), plus the action clamp and ÷3 rescale</td></tr>
+        <tr><td><code>Gemm</code></td><td class="num">3</td>
+          <td><code>seq_layers.0</code> W(256, obs) · <code>seq_layers.2</code> W(256, 256) · <code>mu</code> W(N, 256)</td></tr>
+        <tr><td><code>Sigmoid</code> / <code>Mul</code></td><td class="num">2 / 4</td>
+          <td>Two swish activations — <code>x · sigmoid(x)</code></td></tr>
+        <tr><td><code>Exp</code></td><td class="num">1</td><td><code>log_sigma</code> → <code>sigma</code></td></tr>
+        <tr><td><code>RandomNormalLike</code></td><td class="num">1</td>
+          <td>The stochastic sample. <b>This is what makes <code>continuous_actions</code> non-deterministic</b> —
+            race inference reads <code>deterministic_continuous_actions</code> instead</td></tr>
+        <tr><td><code>Add</code> / <code>Concat</code> / <code>Constant</code> / <code>Identity</code></td>
+          <td class="num">2 / 1 / 3 / 3</td><td>Bias adds and output plumbing</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tw">
+    <caption>The five outputs every ML-Agents graph exposes.</caption>
+    <table>
+      <thead><tr><th>Output</th><th>Shape</th><th>Consumer</th></tr></thead>
+      <tbody>
+        <tr><td><code>continuous_actions</code></td><td class="mono">(batch, N)</td><td>Training rollouts — sampled</td></tr>
+        <tr><td><code>deterministic_continuous_actions</code></td><td class="mono">(batch, N)</td>
+          <td><b>Race inference</b> — the mean, no sampling</td></tr>
+        <tr><td><code>version_number</code></td><td class="mono">(1)</td><td>ML-Agents API compatibility check</td></tr>
+        <tr><td><code>memory_size</code></td><td class="mono">(1)</td>
+          <td><b>0 — no LSTM in any shipped brain.</b> Earlier documentation claimed an optional LSTM(128); there is none</td></tr>
+        <tr><td><code>continuous_action_output_shape</code></td><td class="mono">(1)</td><td>Runtime shape assertion</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>The ports are deliberately plainer graphs</h4>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Port</th><th>Ops present</th><th>Why it differs</th></tr></thead>
+      <tbody>
+        <tr><td class="name">IsaacH1</td><td><code>Gemm</code>, <code>Elu</code></td>
+          <td>The RSL-RL normaliser was <b>not</b> baked in; the Unity agent normalises before the call</td></tr>
+        <tr><td class="name">IsaacBox</td><td><code>Concat</code>, <code>Sub</code>, <code>Div</code>, <code>Gemm</code>, <code>Elu</code></td>
+          <td>The fitted normaliser <b>is</b> baked in (<code>obs_normalization_baked_into_onnx: true</code>),
+            so Unity feeds raw observations — deliberately unlike IsaacH1</td></tr>
+        <tr><td class="name">MujocoBiped</td><td><code>Gemm</code>, <code>Tanh</code>, <code>Clip</code>, <code>Mul</code>, <code>Sub</code>, <code>Constant</code></td>
+          <td>Tanh-squashed policy with an explicit output rescale</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14px">None of the three carries a <code>RandomNormalLike</code>: they export the
+  deterministic actor directly. Fido is not ONNX at all — a 33→128→128→128→16 SiLU MLP in
+  <code>policy.json</code>, with its own 33-wide <code>mean</code>/<code>std</code> normaliser in the same
+  file, verified against the Python reference to <code>2.03e-06</code> max absolute error.</p>
+  </div>
+
+  <h3 id="obsvec">Observation vector layouts</h3>
+
+  <h4>ML-Agents creatures — <span class="mono">obs = 3N + 19</span></h4>
+  <p style="font-size:14px">Verified on all twelve. Every element passes through <code>Safe()</code> /
+  <code>SafeVector()</code>, because one NaN aborts the Academy step for <i>every</i> agent in the scene.</p>
+
+  <div id="obsStrip"></div>
+
+  <div class="tw tech-only">
+    <caption><code>Agent_Creature.CollectObservations</code>, exact index ranges and normalisation.</caption>
+    <table>
+      <thead><tr><th>Range</th><th class="num">Width</th><th>Contents</th><th>Normalisation</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">[0, 3N)</td><td class="num">3 × N</td>
+          <td><code>jointPosition[0]</code>, <code>jointVelocity[0]</code>, <code>IsGrounded</code></td>
+          <td>÷ (<code>_jointDriveScale</code> · Deg2Rad), clamp ±1 · ÷ 10 rad·s⁻¹, clamp ±1 · 1.0 or 0.0</td></tr>
+        <tr><td class="mono">[3N, 3N+3)</td><td class="num">3</td><td><code>root.up</code></td>
+          <td>World-space unit vector, raw</td></tr>
+        <tr><td class="mono">[3N+3]</td><td class="num">1</td><td><code>root.position.y</code></td>
+          <td><b>Raw metres, unnormalised</b></td></tr>
+        <tr><td class="mono">[3N+4, 3N+7)</td><td class="num">3</td><td>Goal direction</td>
+          <td><code>InverseTransformDirection(toGoal.normalized)</code> — root-local</td></tr>
+        <tr><td class="mono">[3N+7]</td><td class="num">1</td><td>Goal distance</td>
+          <td><code>clamp01(|toGoal| / 20 m)</code></td></tr>
+        <tr><td class="mono">[3N+8, 3N+11)</td><td class="num">3</td><td>Root linear velocity</td>
+          <td>Root-local, ÷ 2 m·s⁻¹, <code>ClampMagnitude 1</code></td></tr>
+        <tr><td class="mono">[3N+11, 3N+14)</td><td class="num">3</td><td>Root angular velocity</td>
+          <td>Root-local, ÷ 20 rad·s⁻¹, <code>ClampMagnitude 1</code></td></tr>
+        <tr><td class="mono">[3N+14]</td><td class="num">1</td><td>Stamina</td><td>0 … 1</td></tr>
+        <tr><td class="mono">[3N+15, 3N+19)</td><td class="num">4</td><td>Terrain look-ahead</td>
+          <td>Raycast down from +3 m, range 6 m, at 0.5 / 1.2 / 2.2 / 3.5 m along flattened forward;
+            <code>(hit.y − root.y) / 2</code>, clamp ±1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>IsaacBox — 75 floats, and this ordering is a contract</h4>
+  <p style="font-size:14px"><code>chase_env_cfg.py</code> and <code>IsaacBoxAgent</code> reproduce this index
+  by index. Change one side and you must change both — the comment in the Python says so explicitly:
+  <i>"ORDER MATTERS: this is the ONNX input layout Unity reproduces index by index."</i></p>
+  <div id="obsBox"></div>
+
+  <div class="tw tech-only">
+    <table>
+      <thead><tr><th>Term</th><th class="num">Start</th><th class="num">End</th><th class="num">Dim</th><th>Training noise</th></tr></thead>
+      <tbody>
+        <tr><td><code>base_lin_vel</code></td><td class="num">0</td><td class="num">3</td><td class="num">3</td><td class="num">±0.10</td></tr>
+        <tr><td><code>base_ang_vel</code></td><td class="num">3</td><td class="num">6</td><td class="num">3</td><td class="num">±0.20</td></tr>
+        <tr><td><code>projected_gravity</code></td><td class="num">6</td><td class="num">9</td><td class="num">3</td><td class="num">±0.05</td></tr>
+        <tr><td><code>target_pos_b</code></td><td class="num">9</td><td class="num">12</td><td class="num">3</td><td class="num">—</td></tr>
+        <tr><td><code>joint_pos</code> (rel. to default)</td><td class="num">12</td><td class="num">33</td><td class="num">21</td><td class="num">±0.01</td></tr>
+        <tr><td><code>joint_vel</code> (rel.)</td><td class="num">33</td><td class="num">54</td><td class="num">21</td><td class="num">±1.50</td></tr>
+        <tr><td><code>actions</code> (previous)</td><td class="num">54</td><td class="num">75</td><td class="num">21</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14px"><b>IsaacH1</b> is the same seven terms at 69 wide, with
+  <code>velocity_commands(3)</code> where IsaacBox has <code>target_pos_b(3)</code> and 19-wide joint blocks:
+  <span class="mono">[0,3) [3,6) [6,9) [9,12) [12,31) [31,50) [50,69)</span>.</p>
+
+  <div class="note crit"><b>Fido's observation vector is why he cannot steer.</b> All 33 floats:
+  <code>gravity_local(3) · linvel_local(3) · angvel_local(3) · joint_pos(8) · joint_vel(8) ·
+  last_action(8)</code>. There is <b>no goal term and no heading term anywhere in that list</b> — he
+  describes only his own body. He walks robustly and curves, because nothing in his input tells him which
+  way the finish line is. This reproduces in the original drop's own verification scene at its own settings,
+  so it is the policy, not the integration. Fixing it means retraining with a heading observation:
+  <code>OBS_LAYOUT</code> in <code>training/fido/creature_env.py</code> is a contract with
+  <code>CreatureAgent.BuildObservation</code> — change one, change both.</div>
+
+  <div class="note tech-only"><b>MujocoBiped preserves a bug on purpose.</b> 49 floats, with clip constants
+  in the rig manifest (<code>clipLinVel 10</code>, <code>clipAngVel 10</code>, <code>clipJointVel 20</code>,
+  <code>maxTargetDistance 10</code>). MuJoCo's free joint stores <code>qvel[3:6]</code> in the
+  <i>body-local</i> frame, and <code>env.py</code>'s <code>_get_obs</code> applies <code>rotᵀ</code> to it
+  anyway — so <code>obs[7:10]</code> is <code>Rᵀ Rᵀ ω_world</code>, double-rotated. The manifest says it
+  plainly: <b>reproduce it, do not fix it.</b> The policy was trained on it.</div>
+
+  <h3 id="physics">Joint physics &amp; actuator specification</h3>
+
+  <div class="tw">
+    <caption>Read from <code>Assets/Prefabs/*.prefab</code>. All ML-Agents rigs are
+      <code>ArticulationBody</code> chains on <code>xDrive</code> (PhysX implicit PD). <b>No
+      <code>ConfigurableJoint</code> and no SLERP drive exists anywhere in the project</b> — earlier
+      documentation claimed both.</caption>
+    <table>
+      <thead><tr>
+        <th>Creature</th><th class="num">Bodies</th><th class="num">DOF</th><th>Joint type</th>
+        <th class="num">Kp</th><th class="num">Kd</th><th class="num">forceLimit</th>
+        <th class="num">Drive scale</th><th class="num">Gait Hz</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="name">Worm</td><td class="num">6</td><td class="num">5</td><td>Revolute ±45°</td>
+          <td class="num">6750</td><td class="num">450</td><td class="num">1350</td><td class="num">45°</td><td class="num">0.796</td></tr>
+        <tr><td class="name">Blob</td><td class="num">6</td><td class="num">5</td><td><b>Prismatic</b></td>
+          <td class="num">2500</td><td class="num">166.67</td><td class="num">500</td><td class="num">0.3 m</td><td class="num">0.6</td></tr>
+        <tr><td class="name">Kangaroo</td><td class="num">7</td><td class="num">6</td><td>Revolute ±60°</td>
+          <td class="num">4250</td><td class="num">283.33</td><td class="num">850</td><td class="num">60°</td><td class="num">1.2</td></tr>
+        <tr><td class="name">Spider</td><td class="num">9</td><td class="num">8</td><td>Revolute ±40°</td>
+          <td class="num">3000</td><td class="num">200</td><td class="num">600</td><td class="num">40°</td><td class="num">0.796</td></tr>
+        <tr><td class="name">Quadruped</td><td class="num">9</td><td class="num">8</td><td>Revolute ±45°</td>
+          <td class="num">4500</td><td class="num">300</td><td class="num">900</td><td class="num">45°</td><td class="num">1.0</td></tr>
+        <tr><td class="name">Crab</td><td class="num">13</td><td class="num">12</td><td>Revolute ±45°</td>
+          <td class="num">3500</td><td class="num">233.33</td><td class="num">700</td><td class="num">45°</td><td class="num">0.9</td></tr>
+        <tr><td class="name">Hexapod</td><td class="num">13</td><td class="num">12</td><td>Revolute ±45°</td>
+          <td class="num">3500</td><td class="num">233.33</td><td class="num">700</td><td class="num">45°</td><td class="num">0.9</td></tr>
+        <tr><td class="name">Centipede</td><td class="num">18</td><td class="num">17</td><td>Revolute ±35°</td>
+          <td class="num">4000</td><td class="num">266.67</td><td class="num">800</td><td class="num">35°</td><td class="num">0.9</td></tr>
+        <tr><td class="name">Bipeds ×4</td><td class="num">12</td><td class="num">11</td><td>Revolute ±60°</td>
+          <td class="num">1000 / 837.5</td><td class="num">66.67 / 55.83</td><td class="num">200 / 167.5</td>
+          <td class="num">60°</td><td class="num">1.1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note good"><b>A consistent gain law.</b> Every creature rig satisfies
+  <b>Kp : Kd = 15 : 1</b> and <b>forceLimit = Kp / 5</b> — Worm 6750/450/1350, Quadruped 4500/300/900,
+  Blob 2500/166.67/500, and so on down the table. The bipeds keep the 15:1 ratio across both of their gain
+  tiers. Every rig also carries a root at <code>ArticulationJointType.Fixed</code>, which is why bodies
+  always equal DOF + 1.</div>
+
+  <div class="note crit"><b>The bipeds effectively never tire.</b> Their <code>_maxJointTorque</code> is
+  <b>670</b>, which matches <i>neither</i> drive tier (200 or 167.5). Since that constant is only the
+  denominator in <code>ComputeNormalizedTorque()</code>, biped fatigue reads roughly <b>3× lower</b> than
+  the other creatures at the same real load — the stamina pool barely drains. Worth fixing before they are
+  ever added to the catalog.</div>
+
+  <div class="tech-only">
+  <h4>Fatigue — the one mechanic shared by all ML-Agents creatures</h4>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">Constants</h4>
+      <div class="tw" style="margin:0;border:0;box-shadow:none"><table style="min-width:0">
+        <tbody>
+          <tr><td>Sustainable torque fraction</td><td class="num">0.50</td></tr>
+          <tr><td>Drain at full overload</td><td class="num">0.25 / s</td></tr>
+          <tr><td>Recovery at rest</td><td class="num">0.15 / s</td></tr>
+          <tr><td>Minimum power factor</td><td class="num">0.55</td></tr>
+          <tr><td>Drive-write epsilon</td><td class="num">0.005</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:0">At full overload a fresh pool
+      empties in ~4 s; a resting creature refills it in ~6.7 s. An empty pool still leaves 55% of authored
+      joint power, so tired racers <b>slow down instead of collapsing</b>.</p>
     </div>
-
-    <h2>Tensor blueprint (all behaviors share this shape)</h2>
-    <div class="two-up">
-      <div class="diagram">
-        <img src="assets/tensor-blueprint-simple.svg" alt="Tensor blueprint - simple">
-        <div class="diagram-caption">Tensor flow — simple</div>
-      </div>
-      <div class="diagram">
-        <img src="assets/tensor-blueprint-detailed.svg" alt="Tensor blueprint - detailed">
-        <div class="diagram-caption">Tensor flow — detailed (sensors, heads, drives)</div>
-      </div>
-    </div>
-
-    <h3>Observation vector (per creature, N = # joints)</h3>
-    <table>
-      <thead><tr><th>Slice</th><th>Shape</th><th>Normalization</th></tr></thead>
-      <tbody>
-        <tr><td>joint position</td><td>N</td><td><code>x / (jointDriveScale · Deg2Rad)</code></td></tr>
-        <tr><td>joint velocity</td><td>N</td><td><code>xdot / MAX_JOINT_VELOCITY (10 rad/s)</code></td></tr>
-        <tr><td>root.up</td><td>3</td><td>passed through <code>SafeVector</code></td></tr>
-        <tr><td>root.position.y</td><td>1</td><td>raw (meters)</td></tr>
-        <tr><td>goal direction (local)</td><td>3</td><td><code>root.InverseTransformDirection(toGoal.normalized)</code></td></tr>
-        <tr><td>goal distance</td><td>1</td><td><code>clamp01(d / 20)</code></td></tr>
-        <tr><td>root velocity (local)</td><td>3</td><td><code>clampMagnitude(v / 2, 1)</code></td></tr>
-        <tr><td>terrain probes (opt.)</td><td>4</td><td><code>clamp(h / 2, -1, 1)</code></td></tr>
-        <tr style="background: var(--bg-3); color: var(--accent); font-weight: 600;"><td>Total</td><td><strong>N·2 + 11 (+4)</strong></td><td>all values safe-floated</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Per-creature joint physics (articulator map)</h3>
-    <table>
-      <thead><tr><th>Creature</th><th>Joints</th><th>DOF</th><th>Drive config</th><th>Behavior</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Worm</strong></td><td>12 segments</td><td>~16</td><td>revolute, Kp auto, forceLimit 100</td><td>serpentine gait; first slice</td></tr>
-        <tr><td><strong>Spider</strong></td><td>8 legs × 3</td><td>24</td><td>SLERP on hip, revolute elsewhere</td><td>octopedal crawl</td></tr>
-        <tr><td><strong>Hexapod</strong></td><td>6 legs × 3</td><td>18</td><td>revolute tripods</td><td>alternating tripod gait</td></tr>
-        <tr><td><strong>Quad</strong></td><td>4 legs × 3</td><td>12</td><td>revolute, trot phase</td><td>quadruped trot</td></tr>
-        <tr><td><strong>Centipede</strong></td><td>16 legs × 2 + body</td><td>~32</td><td>phase-shifted alternating tripods</td><td>many-leg coordination</td></tr>
-        <tr><td><strong>Crab</strong></td><td>8 legs × 2 + claws</td><td>~18</td><td>wide stance, low center</td><td>sideways scuttle</td></tr>
-        <tr><td><strong>Kangaroo</strong></td><td>2 legs × 3 + tail</td><td>~8</td><td>high torque at hip, prismatic spine</td><td>half-biped hop (Staging)</td></tr>
-        <tr><td><strong>Blob</strong></td><td>4 lobes (configurable joint)</td><td>~6</td><td>low Kp, high Kd</td><td>soft amoeba-style locomotion (Staging)</td></tr>
-      </tbody>
-    </table>
-
-    <h2>Reward tree &amp; termination</h2>
-    <div class="two-up">
-      <div class="diagram">
-        <img src="assets/reward-tree-simple.svg" alt="Reward tree - simple">
-        <div class="diagram-caption">Reward components — simple</div>
-      </div>
-      <div class="diagram">
-        <img src="assets/reward-tree-detailed.svg" alt="Reward tree - detailed">
-        <div class="diagram-caption">Reward tree — detailed (NaN firewall, terminal checks)</div>
-      </div>
-    </div>
-
-    <h3>Reward_WormLoco constants</h3>
-    <table>
-      <thead><tr><th>Constant</th><th>Value</th><th>Effect</th></tr></thead>
-      <tbody>
-        <tr><td><code>PROGRESS_SCALE</code></td><td>1.0</td><td>Per-meter progress (potential-based)</td></tr>
-        <tr><td><code>ENERGY_PENALTY_SCALE</code></td><td>0.05</td><td>Penalty on normalized torque</td></tr>
-        <tr><td><code>UPRIGHT_BONUS_SCALE</code></td><td>0.02</td><td>Bonus for root·ŷ &gt; 0</td></tr>
-        <tr><td><code>TIME_PENALTY</code></td><td>0.002</td><td>Constant per-step cost</td></tr>
-        <tr><td><code>GOAL_REWARD</code></td><td>10.0</td><td>Bonus when d ≤ 0.5 m</td></tr>
-        <tr><td><code>OUT_OF_BOUNDS_REWARD</code></td><td>−1.0</td><td>Penalty when y &lt; −1</td></tr>
-        <tr><td><code>NO_PROGRESS_LIMIT_STEPS</code></td><td>1000</td><td>20 s @ 0.02 s</td></tr>
-        <tr><td><code>MAX_STEP_DELTA_METERS</code></td><td>0.2</td><td>Physics glitch clamp</td></tr>
-      </tbody>
-    </table>
-
-    <h2>Hyperparameter matrix (PPO + SAC)</h2>
-    <div class="two-up">
-      <div class="diagram">
-        <img src="assets/hyperparameters-simple.svg" alt="Hyperparameters - simple">
-        <div class="diagram-caption">Trainer configs — simple</div>
-      </div>
-      <div class="diagram">
-        <img src="assets/hyperparameters-detailed.svg" alt="Hyperparameters - detailed">
-        <div class="diagram-caption">Trainer configs — detailed (per-field)</div>
-      </div>
-    </div>
-
-    <h3>Per-config PPO hyperparameter matrix</h3>
-    <table>
-      <thead><tr><th>Config</th><th>batch</th><th>buffer</th><th>lr</th><th>sched</th><th>β</th><th>ε</th><th>λ</th><th>epochs</th><th>net</th><th>γ</th><th>max_steps</th></tr></thead>
-      <tbody>
-        <tr><td>WormLoco03</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
-        <tr><td>WormLoco04</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>512×3</td><td>0.995</td><td>5M</td></tr>
-        <tr><td>WormRough01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
-        <tr><td>SpiderLoco02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
-        <tr><td>AllLoco02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
-        <tr><td>AllLoco03 + BC+GAIL</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>10M</td></tr>
-        <tr><td>AllLoco1h01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>400k</td></tr>
-        <tr><td>AllLoco1h02</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>400k</td></tr>
-        <tr><td>AllLoco5h01</td><td>2048</td><td>20480</td><td>3e-4</td><td>linear</td><td>0.005</td><td>0.2</td><td>0.95</td><td>3</td><td>256×2</td><td>0.995</td><td>2M</td></tr>
-      </tbody>
-    </table>
-
-    <h3>SAC ablation (Worm only)</h3>
-    <table>
-      <thead><tr><th>Field</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td>batch_size / buffer_size / init_steps</td><td>256 / 500000 / 5000</td></tr>
-        <tr><td>learning_rate / schedule</td><td>3e-4 / constant</td></tr>
-        <tr><td>tau / steps_per_update / init_entcoef</td><td>0.005 / 2 / 0.5</td></tr>
-        <tr><td>network</td><td>256×2, normalize</td></tr>
-        <tr><td>max_steps</td><td>5M</td></tr>
-      </tbody>
-    </table>
-
-    <h2>ONNX tensor I/O and runtime routing</h2>
-    <table>
-      <thead><tr><th>Creature</th><th>File</th><th>Size</th><th>obs (1, N*2+11+probes)</th><th>action (1, N)</th><th>Inference device</th></tr></thead>
-      <tbody>
-        <tr><td>Worm</td><td>Worm_v01.onnx</td><td>~290 KB</td><td>1 × 39 (N=14)</td><td>1 × 14</td><td>Burst</td></tr>
-        <tr><td>Spider</td><td>Spider_v01.onnx</td><td>~299 KB</td><td>1 × 59</td><td>1 × 24</td><td>Burst</td></tr>
-        <tr><td>Hexapod</td><td>Hexapod_v01.onnx</td><td>~310 KB</td><td>1 × 47</td><td>1 × 18</td><td>Burst</td></tr>
-        <tr><td>Quad</td><td>Quad_v01.onnx</td><td>~299 KB</td><td>1 × 35</td><td>1 × 12</td><td>Burst</td></tr>
-        <tr><td>Centipede</td><td>Centipede_v01.onnx</td><td>~326 KB</td><td>1 × 75</td><td>1 × 32</td><td>Burst</td></tr>
-        <tr><td>Crab</td><td>Crab_v01.onnx</td><td>~310 KB</td><td>1 × 47</td><td>1 × 18</td><td>Burst</td></tr>
-        <tr><td>Kangaroo</td><td>Kangaroo_v01.onnx</td><td>~292 KB</td><td>1 × 27</td><td>1 × 8</td><td>Burst</td></tr>
-        <tr><td>Blob</td><td>Blob_v01.onnx</td><td>~290 KB</td><td>1 × 23</td><td>1 × 6</td><td>Burst</td></tr>
-      </tbody>
-    </table>
-
-    <div class="callout warn">
-      <strong>Promotion gate</strong>: A brain moves from Staging → Production only after winning an ELO gauntlet versus the previous version, run via the in-editor <em>PoRacer/Training/Gauntlet</em> menu. Mean reward alone is unsafe (potential-based reward depends on episode length).
-    </div>
-
-    <div class="tier-card tier-3">
-      <span class="tier-label">Tier 3 · Implementation &amp; telemetry</span>
-      <h3>Telemetry emitted per training step</h3>
-      <pre><code>stats.Add("Reward/Progress",          LastProgressReward)   // Δd * 1.0
-stats.Add("Reward/EfficiencyPenalty", LastEfficiencyPenalty) // -0.05 * torque_norm
-stats.Add("Reward/UprightBonus",      LastUprightBonus)      //  0.02 * max(up·ŷ, 0)
-stats.Add("Reward/TimePenalty",       -TIME_PENALTY)         // -0.002</code></pre>
-      <h3>Academy cadence</h3>
-      <ul>
-        <li><code>DecisionRequester.DecisionStep</code> is staggered per-racer (<code>gridIndex % 5</code>) to avoid burst inference.</li>
-        <li><code>TakeActionsBetweenDecisions</code> (default true) holds targets between decisions, so the policy effectively runs at ~10 Hz while joints update at 50 Hz.</li>
-        <li>Race prefabs set <code>MaxStep = 0</code> (infinite); training prefabs set <code>MaxStep = 3000</code> (60 s).</li>
+    <div class="card">
+      <h4 style="margin-top:0">Three rules that are easy to get wrong</h4>
+      <ul class="tight" style="font-size:14px">
+        <li><b>Load is read from applied torque, not the action vector.</b> Isometric bracing holds
+          near-maximum torque while the action barely moves — read <code>jointForce</code>, never
+          <code>ActionBuffers</code>.</li>
+        <li><b>Fatigue is cleared before motors are restored.</b> <code>OnEpisodeBegin</code> calls
+          <code>RestoreDriveBaseline()</code> <i>first</i>, then lets the area reset re-author drives and
+          quirks on top of clean values.</li>
+        <li><b>The baseline is captured lazily.</b> Spawn-time quirk scaling lands a frame after
+          instantiation, so capturing eagerly would bake a pre-quirk baseline.
+          <code>NotifyDrivesChanged()</code> invalidates it.</li>
       </ul>
-      <h3>NaN firewall invariants</h3>
-      <ul>
-        <li><code>Safe(float)</code> on every observation value.</li>
-        <li><code>SafeVector</code> on every Vector3.</li>
-        <li><code>Reward_WormLoco.Step</code> sanitizes <code>currentDistance</code>, <code>normalizedTorque</code>, <code>uprightDot</code> independently.</li>
-        <li>If root position or up-vector NaN, <code>_failed = true</code>; <code>OUT_OF_BOUNDS_REWARD</code>; <code>EndEpisode()</code>.</li>
+      <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:0">Drives are rewritten only when
+      the power factor moves more than 0.005, so a steady cruise costs zero drive writes.</p>
+    </div>
+  </div>
+
+  <h4>IsaacBox actuator map — 21 joints in ONNX action order</h4>
+  <div class="tw">
+    <caption>From <code>isaacbox_rig.json</code>, rewritten from the live sim by
+      <code>export_bundle.py</code>. All armatures 0.0. 22 links, 45.0 kg, 4/4 solver iterations, TGS,
+      self-collisions off. <code>target = default + 0.5 · action</code>.</caption>
+    <table>
+      <thead><tr><th class="num">Index</th><th>Joint</th><th>Family</th><th class="num">Kp</th><th class="num">Kd</th><th class="num">Effort limit</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0</td><td><code>spine_pitch</code></td><td>spine</td><td class="num">400</td><td class="num">15</td><td class="num">200</td></tr>
+        <tr><td class="num">1–2</td><td><code>hip_yaw_L/R</code></td><td>legs</td><td class="num">80</td><td class="num">3</td><td class="num">150</td></tr>
+        <tr><td class="num">3–4</td><td><code>shoulder_roll_L/R</code></td><td>arms</td><td class="num">30</td><td class="num">3</td><td class="num">40</td></tr>
+        <tr><td class="num">5–6</td><td><code>hip_roll_L/R</code></td><td>legs</td><td class="num">100</td><td class="num">4</td><td class="num">150</td></tr>
+        <tr><td class="num">7–8</td><td><code>shoulder_pitch_L/R</code></td><td>arms</td><td class="num">30</td><td class="num">3</td><td class="num">40</td></tr>
+        <tr><td class="num">9–10</td><td><code>hip_pitch_L/R</code></td><td>legs</td><td class="num">150</td><td class="num">5</td><td class="num">150</td></tr>
+        <tr><td class="num">11–12</td><td><code>shoulder_yaw_L/R</code></td><td>arms</td><td class="num">30</td><td class="num">3</td><td class="num">40</td></tr>
+        <tr><td class="num">13–14</td><td><code>knee_L/R</code></td><td>legs</td><td class="num">150</td><td class="num">5</td><td class="num">150</td></tr>
+        <tr><td class="num">15–16</td><td><code>elbow_L/R</code></td><td>arms</td><td class="num">20</td><td class="num">2</td><td class="num">40</td></tr>
+        <tr><td class="num">17–18</td><td><code>ankle_pitch_L/R</code></td><td>feet</td><td class="num">30</td><td class="num">3</td><td class="num">50</td></tr>
+        <tr><td class="num">19–20</td><td><code>ankle_roll_L/R</code></td><td>feet</td><td class="num">20</td><td class="num">2</td><td class="num">50</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14px">Hips sit at 0.76 m at zero pose and 0.744 m at the default pose; Isaac spawn is
+  <code>[0, 0, 0.764]</code> and the race catalog carries <code>spawnHeight 0.714</code>. Stiffness is
+  strongly graded by function: the spine is five times stiffer than a hip yaw and twenty times stiffer than
+  an elbow, because the torso must hold while the limbs must comply.</p>
+  </div>
+
+  <h3 id="hyper">Hyperparameter &amp; trainer specification</h3>
+
+  <figure class="dgm exec-only">
+    <figcaption><b>Three trainers, three families</b> — which creatures learn how.</figcaption>
+    <div class="scroll"><img src="assets/hyperparameters-simple.svg" alt="Three trainer families: PPO 256x2 for coded-gait creatures, PPO 512x3 for bipeds, RSL-RL PPO 128x3 for Isaac ports" style="min-width:1100px"></div>
+  </figure>
+
+  <figure class="dgm tech-only">
+    <figcaption><b>Full trainer matrix</b> — all four config files, the curriculum ladder with its exact
+      thresholds, the domain randomisation ranges, and the promotion rule.</figcaption>
+    <div class="scroll"><img src="assets/hyperparameters-detailed.svg" alt="Complete hyperparameter matrix across AllLoco8h02, BrokenLoco01, the Isaac RSL-RL config and the SAC alternative" style="min-width:1800px"></div>
+    <div class="hint">Scroll inside the frame.</div>
+  </figure>
+
+  <div class="tw">
+    <caption>Trainer configuration matrix, read from <code>Config/*.yaml</code> and
+      <code>ISAAC/boy_tasks/boy_tasks/agents/rsl_rl_ppo_cfg.py</code>.</caption>
+    <table>
+      <thead><tr>
+        <th>Parameter</th>
+        <th>AllLoco8h02<br><span style="font-weight:450;text-transform:none">8 creatures</span></th>
+        <th>AllLoco8h02<br><span style="font-weight:450;text-transform:none">4 bipeds</span></th>
+        <th>BrokenLoco01<br><span style="font-weight:450;text-transform:none">fine-tune</span></th>
+        <th>Isaac RSL-RL<br><span style="font-weight:450;text-transform:none">boy_chase_flat</span></th>
+        <th class="tech-only">Humanoids02<br><span style="font-weight:450;text-transform:none">SAC, unshipped</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="name">Algorithm</td><td>PPO</td><td>PPO</td><td>PPO</td><td>PPO (RSL-RL)</td><td class="tech-only">SAC</td></tr>
+        <tr><td class="name">Hidden units</td><td class="num">256 × 2</td><td class="num">512 × 3</td><td class="num">256 × 2</td><td class="num">128 × 3</td><td class="num tech-only">256 × 2</td></tr>
+        <tr><td class="name">Activation</td><td>swish</td><td>swish</td><td>swish</td><td>ELU</td><td class="tech-only">swish</td></tr>
+        <tr><td class="name">Batch size</td><td class="num">2048</td><td class="num">2048</td><td class="num">2048</td><td class="num">24 steps × 4096 envs</td><td class="num tech-only">256</td></tr>
+        <tr><td class="name">Buffer size</td><td class="num">20 480</td><td class="num">20 480</td><td class="num">20 480</td><td class="num">98 304 / iter</td><td class="num tech-only">500 000</td></tr>
+        <tr><td class="name">Learning rate</td><td class="num">3e-4 linear</td><td class="num">3e-4 linear</td><td class="num">3e-4 linear</td><td class="num">1e-3 <b>adaptive</b></td><td class="num tech-only">3e-4 constant</td></tr>
+        <tr><td class="name">Entropy / beta</td><td class="num">0.005</td><td class="num">0.005</td><td class="num">0.005</td><td class="num">0.01</td><td class="num tech-only">init_entcoef 0.5</td></tr>
+        <tr><td class="name">Clip ε</td><td class="num">0.2</td><td class="num">0.2</td><td class="num">0.2</td><td class="num">0.2</td><td class="num tech-only">—</td></tr>
+        <tr><td class="name">γ (gamma)</td><td class="num">0.995</td><td class="num">0.995</td><td class="num">0.995</td><td class="num">0.99</td><td class="num tech-only">0.99</td></tr>
+        <tr><td class="name">λ (lambd)</td><td class="num">0.95</td><td class="num">0.95</td><td class="num">0.95</td><td class="num">0.95</td><td class="num tech-only">—</td></tr>
+        <tr><td class="name">Epochs</td><td class="num">3</td><td class="num">3</td><td class="num">3</td><td class="num">5, 4 minibatches</td><td class="num tech-only">steps_per_update 1</td></tr>
+        <tr><td class="name">Normalize obs</td><td>true</td><td>true</td><td>true</td><td>true, <b>baked into ONNX</b></td><td class="tech-only">true</td></tr>
+        <tr><td class="name">Max steps</td><td class="num">3 200 000</td><td class="num">30 000 000</td><td class="num">300 000</td><td class="num">3000 iterations</td><td class="num tech-only">10 000 000</td></tr>
+        <tr><td class="name">Time horizon</td><td class="num">1000</td><td class="num">1000</td><td class="num">1000</td><td class="num">1000 steps (20 s)</td><td class="num tech-only">500</td></tr>
+        <tr><td class="name">Extrinsic</td><td>strength 1.0</td><td>strength 1.0</td><td>strength 1.0</td><td>17 weighted terms</td><td class="tech-only">strength 1.0</td></tr>
+        <tr><td class="name">GAIL</td><td class="num">0.05</td><td><b>none</b></td><td><b>none</b></td><td>—</td><td class="tech-only">0.1 (bipeds)</td></tr>
+        <tr><td class="name">Behavioral cloning</td><td class="num">0.3, 400k steps</td><td><b>none</b></td><td><b>none</b></td><td>—</td><td class="tech-only">0.2, 500k (bipeds)</td></tr>
+        <tr><td class="name">Curriculum</td><td>8 parameters, progress-gated</td><td>ignores it</td><td><b>none</b> — pinned to the race</td><td>domain randomisation instead</td><td class="tech-only">4 stages, keyed on Grandma</td></tr>
+        <tr><td class="name">Checkpoint interval</td><td class="num">250 000</td><td class="num">100 000</td><td class="num">40 000</td><td class="num">every 50 iters</td><td class="num tech-only">100 000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><b>Three deliberate asymmetries in that table.</b>
+  <b>(1)</b> The bipeds get no imitation signal at all — a biped's coded gait is a fall, so BC and GAIL would
+  teach them to face-plant faster. <b>(2)</b> <code>BrokenLoco01</code> also drops BC/GAIL, for the opposite
+  reason: it would pull the policy back toward the coded crawl it was written to escape. <b>(3)</b> The Isaac
+  side uses an <i>adaptive</i> learning rate targeting a KL of 0.01 rather than a linear schedule, which is
+  why its LR is visible in the telemetry falling from 1e-2 to 6e-4 on its own.</div>
+
+  <div class="tech-only">
+  <h4>The curriculum ladder — all eight parameters</h4>
+  <div class="tw">
+    <caption>Every lesson gates on <b>progress</b> (behavior step count ÷ max_steps), not on reward.
+      <code>completion_criteria</code> still requires a behavior name; Worm is just the clock.</caption>
+    <table>
+      <thead><tr><th>Parameter</th><th>Lesson 1</th><th class="num">→</th><th>Lesson 2</th><th class="num">→</th><th>Lesson 3 (race day)</th></tr></thead>
+      <tbody>
+        <tr><td class="name">goal_distance_max</td><td>near 8 m</td><td class="num">.10</td><td>mid 14 m</td><td class="num">.30</td><td>far 20 m</td></tr>
+        <tr><td class="name">goal_angle_span</td><td>straight 0°</td><td class="num">.15</td><td>gentle 20°</td><td class="num">.35</td><td>sharp 40°</td></tr>
+        <tr><td class="name">rough_amplitude</td><td>gentle 0.35</td><td class="num">.10</td><td>medium 0.70</td><td class="num">.30</td><td>full 1.0</td></tr>
+        <tr><td class="name">track_kind</td><td>Flat (0)</td><td class="num">.15</td><td>Lumpy (6)</td><td class="num">.40</td><td>Swamp (7)</td></tr>
+        <tr><td class="name">hazard_level</td><td>clean (0)</td><td class="num">.20</td><td>mud + boost (1)</td><td class="num">.45</td><td>full hazards (2)</td></tr>
+        <tr><td class="name">quirk_power_span</td><td>0</td><td class="num">.10</td><td>0.05</td><td class="num">.30</td><td>0.08</td></tr>
+        <tr><td class="name">quirk_mass_span</td><td>0</td><td class="num">.10</td><td>0.06</td><td class="num">.30</td><td>0.12</td></tr>
+        <tr><td class="name">quirk_friction_span</td><td>0</td><td class="num">.10</td><td>0.15</td><td class="num">.30</td><td>0.30</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14px"><b>Why progress and not reward.</b> The locomotion reward is potential-based, so
+  its scale drifts with episode length. Progress is a shared clock: every behavior steps at the same rate,
+  so lessons advance together and slow learners are no longer dragged along by the Worm's score. Order of
+  arrival: <b>10%</b> goals lengthen, terrain roughens, quirks begin · <b>15%</b> goals swing off-centre,
+  map turns lumpy · <b>20%</b> mud and boost pads · <b>30–45%</b> everything at race-day strength, gusts and
+  gates last.</p>
+
+  <h4>Isaac Lab domain randomisation — the substitute for a curriculum</h4>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">Startup (once per environment)</h4>
+      <ul class="tight" style="font-size:14px">
+        <li>Robot shape friction: static 0.6–1.0, dynamic 0.4–0.8, 64 buckets. The ground stays 1.0/1.0 and
+          PhysX <i>multiplies</i>, so the effective pair friction is whatever is drawn here.</li>
+        <li>Spine mass × log-uniform 1/1.25 … 1.25</li>
+      </ul>
+      <h4>Reset (every episode)</h4>
+      <ul class="tight" style="font-size:14px">
+        <li>Pose ±0.5 m in x and y, yaw ±π — a full random heading</li>
+        <li>Velocity ±0.3 m/s linear, ±0.3 rad/s angular</li>
+        <li>Joints reset at <b>exactly</b> the default pose (range 1.0–1.0): it is a precise standing pose
+          and must not be scaled randomly</li>
+      </ul>
+      <h4>Interval</h4>
+      <ul class="tight" style="font-size:14px">
+        <li>Shove at ±0.5 m/s every 10–15 s</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Task geometry</h4>
+      <div class="tw" style="margin:0;border:0;box-shadow:none"><table style="min-width:0"><tbody>
+        <tr><td>Target radius range</td><td class="num">3–10 m</td></tr>
+        <tr><td>Reach radius</td><td class="num">0.5 m</td></tr>
+        <tr><td>Resample interval</td><td class="num">8–12 s</td></tr>
+        <tr><td>Target speed</td><td class="num">1.0 m/s</td></tr>
+        <tr><td>Observation clip</td><td class="num">5.0 m</td></tr>
+        <tr><td>Episode length</td><td class="num">20 s</td></tr>
+        <tr><td>Environments</td><td class="num">4096</td></tr>
+        <tr><td>Env spacing</td><td class="num">2.5 m</td></tr>
+      </tbody></table></div>
+      <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:0">The <code>_PLAY</code> config
+      drops to 64 envs, extends episodes to 40 s, and <b>turns every source of randomness off</b> —
+      observation corruption, pushes, mass randomisation — with friction pinned to 0.8/0.6. The reference
+      recording must be deterministic, or the Unity port has nothing exact to be checked against.</p>
+    </div>
+  </div>
+  </div>
+
+  <h3 id="rewardspec">Multi-objective reward tree</h3>
+
+  <figure class="dgm exec-only">
+    <figcaption><b>What the creature is paid for</b> — win the race, move like an animal, do not break.</figcaption>
+    <div class="scroll"><img src="assets/reward-tree-simple.svg" alt="Reward tree: task reward, shaping reward and terminal reward branches" style="min-width:760px"></div>
+  </figure>
+
+  <figure class="dgm tech-only">
+    <figcaption><b>Reward tree</b> — every sensor that feeds it, the NaN firewall, the potential-based
+      progress term, all five shaping terms with their step scaling, the imitation signals, and the four
+      terminal branches in evaluation order.</figcaption>
+    <div class="scroll"><img src="assets/reward-tree-detailed.svg" alt="Detailed reward tree with sensors, NaN firewall, progress and shaping terms, imitation signals and terminal evaluation" style="min-width:1670px"></div>
+    <div class="hint">Scroll inside the frame.</div>
+  </figure>
+
+  <h4>ML-Agents creatures — <code>Reward_WormLoco</code></h4>
+  <div class="tw">
+    <caption>Every constant, and whether the 200 Hz step scaling applies to it.</caption>
+    <table>
+      <thead><tr><th>Term</th><th class="num">Constant</th><th>Kind</th><th class="num">× stepScale?</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Progress</td><td class="num">1.0 / m</td><td>Task</td><td class="num">No</td>
+          <td>Potential-based. The episode sum telescopes to net metres of approach — correct at any timestep,
+            so scaling it would be wrong.</td></tr>
+        <tr><td class="name">Goal bonus</td><td class="num">+10</td><td>Terminal</td><td class="num">No</td>
+          <td>Awarded once, within a 0.5 m radius.</td></tr>
+        <tr><td class="name">Time penalty</td><td class="num">−0.002</td><td>Shaping</td><td class="num">Yes</td>
+          <td>Races are won on time. A full 3000-step episode costs 6, comfortably under the +10 goal bonus,
+            so finishing always beats stalling.</td></tr>
+        <tr><td class="name">Energy</td><td class="num">−0.05 · τ̂²</td><td>Shaping</td><td class="num">Yes</td>
+          <td>Physiological τ² cost, from <b>applied</b> torque.</td></tr>
+        <tr><td class="name">Upright</td><td class="num">+0.02 · upright⁺</td><td>Shaping</td><td class="num">Yes</td>
+          <td><code>dot(root.up, world.up)</code>, negatives floored at zero.</td></tr>
+        <tr><td class="name">Jerk</td><td class="num">−0.01 · jerk</td><td>Shaping</td><td class="num">Yes</td>
+          <td>Mean per-joint action delta, clamped 0–2. Buys smooth gaits.</td></tr>
+        <tr><td class="name">Skate</td><td class="num">−0.025 · slip</td><td>Shaping</td><td class="num">Yes</td>
+          <td>Horizontal foot velocity while grounded, clamped 0–5. Closes the ice-skating exploit.</td></tr>
+        <tr><td class="name">Out of bounds</td><td class="num">−1</td><td>Terminal</td><td class="num">No</td>
+          <td>root.y &lt; −1 m, distance &gt; 500 m, or NaN. <code>EndEpisode()</code>.</td></tr>
+        <tr><td class="name">Stall</td><td class="num">−0.5</td><td>Truncation</td><td class="num">No</td>
+          <td>No 0.05 m gain for 20 s. <b><code>EpisodeInterrupted()</code>, not <code>EndEpisode()</code></b> —
+            the value function is bootstrapped, so the agent is not taught the world ends.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><b>Why the stall penalty is −0.5 and not 0.</b> At zero, freezing beats
+  trying-and-falling (−1) in expectation, which trains passive brains that stand still to avoid risk. It is
+  deliberately <i>milder</i> than the out-of-bounds −1 so that trying remains the better gamble. Two
+  constants, one behavioural outcome.</div>
+
+  <h4>IsaacBox — 17 weighted terms, and what each actually earns</h4>
+  <div class="chart">
+    <h4>Reward composition at the end of training</h4>
+    <p class="csub">Mean episodic return per second for each of the 17 terms, at the final iteration of the
+      2,016-iteration run. RSL-RL divides the episodic sum by episode length, so × 20 s ≈ the mean reward of
+      24.37. Positive terms earn; negative terms are the price paid for earning them.</p>
+    <div id="cRewardTerms"></div>
+  </div>
+
+  <div class="note tech-only"><b>Read that chart as a budget.</b> <code>target_speed_exp</code> (weight 1.5)
+  earns 1.32/s — it is the whole engine of the behaviour. Everything else is either a small nudge toward the
+  target (<code>target_progress</code> 0.31, <code>heading_to_target</code> 0.28), a gait-quality bonus
+  (<code>feet_air_time</code> 0.24, which is what buys real steps instead of a shuffle), or a regularisation
+  cost. The largest single cost is <code>action_rate_l2</code> at −0.23 — the policy pays more for jerky
+  actuation than for anything else, which is why the resulting gait looks smooth. Note
+  <code>targets_reached</code>: weight 5.0, the largest in the config, but it earns only 0.012/s because it
+  fires rarely. And <code>termination_penalty</code> at weight −200 costs just −0.005/s <b>because the boy
+  almost never falls</b> — a huge weight that is almost never collected is exactly what a working balance
+  term looks like.</div>
+
+  <div class="tw tech-only">
+    <caption>Full term list with configured weights and measured earnings, from
+      <code>chase_env_cfg.py</code> and the run's TFEvents.</caption>
+    <table>
+      <thead><tr><th>Term</th><th>Group</th><th class="num">Weight</th><th class="num">Earned / s</th><th>What it buys</th></tr></thead>
+      <tbody>
+        <tr><td class="name">target_speed_exp</td><td>Task</td><td class="num">1.5</td><td class="num">+1.3238</td><td>Close on the target at ~1 m/s (exponential, std 0.5)</td></tr>
+        <tr><td class="name">target_progress</td><td>Task</td><td class="num">0.5</td><td class="num">+0.3096</td><td>Raw approach rate, capped at 1.5 m/s</td></tr>
+        <tr><td class="name">heading_to_target</td><td>Task</td><td class="num">0.3</td><td class="num">+0.2795</td><td>Face the target, do not crab sideways</td></tr>
+        <tr><td class="name">targets_reached</td><td>Task</td><td class="num">5.0</td><td class="num">+0.0122</td><td>The sparse win condition</td></tr>
+        <tr><td class="name">feet_air_time</td><td>Gait</td><td class="num">1.0</td><td class="num">+0.2353</td><td>Real strides, threshold 0.6 s per foot</td></tr>
+        <tr><td class="name">undesired_contacts</td><td>Gait</td><td class="num">−1.0</td><td class="num">0.0000</td><td>Thighs, shins, arms off the ground — fully learned</td></tr>
+        <tr><td class="name">feet_slide</td><td>Gait</td><td class="num">−0.25</td><td class="num">−0.0581</td><td>No skating on a planted foot</td></tr>
+        <tr><td class="name">termination_penalty</td><td>Terminal</td><td class="num">−200.0</td><td class="num">−0.0047</td><td>Do not fall. Huge weight, almost never collected</td></tr>
+        <tr><td class="name">action_rate_l2</td><td>Reg.</td><td class="num">−0.005</td><td class="num">−0.2262</td><td>Smooth actuation — the biggest single cost</td></tr>
+        <tr><td class="name">dof_torques_l2</td><td>Reg.</td><td class="num">−1.0e-5</td><td class="num">−0.1652</td><td>Energy</td></tr>
+        <tr><td class="name">joint_deviation_arms</td><td>Reg.</td><td class="num">−0.2</td><td class="num">−0.1626</td><td>Arms near neutral</td></tr>
+        <tr><td class="name">dof_acc_l2</td><td>Reg.</td><td class="num">−1.25e-7</td><td class="num">−0.1257</td><td>Joint acceleration</td></tr>
+        <tr><td class="name">joint_deviation_hip</td><td>Reg.</td><td class="num">−0.2</td><td class="num">−0.0639</td><td>Hip yaw and roll near neutral</td></tr>
+        <tr><td class="name">ang_vel_xy_l2</td><td>Reg.</td><td class="num">−0.05</td><td class="num">−0.0534</td><td>No torso wobble</td></tr>
+        <tr><td class="name">joint_deviation_torso</td><td>Reg.</td><td class="num">−0.1</td><td class="num">−0.0479</td><td>Spine pitch near neutral</td></tr>
+        <tr><td class="name">flat_orientation_l2</td><td>Reg.</td><td class="num">−1.0</td><td class="num">−0.0176</td><td>Stay level</td></tr>
+        <tr><td class="name">dof_pos_limits</td><td>Reg.</td><td class="num">−1.0</td><td class="num">−0.0037</td><td>Ankles off their end stops</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="3">Sum</td><td class="num">+1.2313</td><td>× 20 s ≈ 24.6, against a measured mean reward of 24.37</td></tr></tfoot>
+    </table>
+  </div>
+
+  <h4>Terminations</h4>
+  <div class="grid g2">
+    <div class="card"><h4 style="margin-top:0">IsaacBox</h4>
+      <ul class="tight" style="font-size:14px">
+        <li><code>time_out</code> at 20 s — <b>97.9%</b> of episodes at the end of both runs</li>
+        <li><code>illegal_contact</code> on hips or spine, threshold 1.0 N — <b>2.1%</b>, down from
+          100% at iteration 0. A fresh policy is a ragdoll; a trained one falls once in fifty episodes</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="margin-top:0">ML-Agents creatures</h4>
+      <ul class="tight" style="font-size:14px">
+        <li>Goal reached within 0.5 m → <code>EndEpisode()</code></li>
+        <li>NaN root position or up-vector → <code>EndEpisode()</code>, <code>Failed = true</code></li>
+        <li>root.y &lt; −1 m or distance &gt; 500 m → same. <b>A solver blow-up reaches absurd-but-finite
+          coordinates long before it reaches NaN</b>, and every step in between feeds garbage to the trainer</li>
+        <li>No progress for 20 s → <code>EpisodeInterrupted()</code></li>
       </ul>
     </div>
   </div>
 
-  <footer>PoRacer · <a href="index.html">Back to documentation hub</a> · August 2026</footer>
-</div>
+  <h3 id="gaps">Gaps, risks and what to do next</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Issue</th><th>Severity</th><th>Evidence</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td class="name"><code>results/</code> is gone</td><td><span class="pill orphan">High</span></td>
+          <td>Directory absent from the working tree; no ML-Agents run history, no mean rewards, no run IDs</td>
+          <td>Nothing to recover. Preserve it on future runs, or no promotion decision can ever be re-audited.</td></tr>
+        <tr><td class="name">Four creatures do not finish</td><td><span class="pill orphan">High</span></td>
+          <td>Worm, Spider, Centipede, Crab on 22 m Flat</td>
+          <td><code>BrokenLoco01.yaml</code> exists for this. Ship a retrained brain <b>only</b> if it beats
+            the incumbent in an actual race.</td></tr>
+        <tr><td class="name">Brains trained 08-29 → 09-02 saw a distorted reward</td>
+          <td><span class="pill orphan">High</span></td>
+          <td>Episodes 50–85 decisions instead of 340–380; stall limit firing at 5 s instead of 20</td>
+          <td>Already fixed in code (<code>ConfigureTimestep</code>). Retrain anything from that window;
+            <code>broken_loco01</code> is affected.</td></tr>
+        <tr><td class="name">Fido cannot steer</td><td><span class="pill bench">Medium</span></td>
+          <td>No goal or heading term in his 33 observations; reproduces in the original verification scene</td>
+          <td>Retrain with a heading observation. <code>OBS_LAYOUT</code> and
+            <code>CreatureAgent.BuildObservation</code> must change together.</td></tr>
+        <tr><td class="name">Biped fatigue reads ~3× low</td><td><span class="pill bench">Medium</span></td>
+          <td><code>_maxJointTorque = 670</code> against drive force limits of 200 and 167.5</td>
+          <td>Set it to the real limit before the bipeds ever enter the catalog.</td></tr>
+        <tr><td class="name">Six trained brains unused</td><td><span class="pill bench">Medium</span></td>
+          <td>Blob, Kangaroo, 4 bipeds exported and prefab-wired, absent from <code>CreatureCatalog.asset</code></td>
+          <td>One catalog entry each. Check Blob's 0.3 m prismatic drive scale survives spawn quirk scaling.</td></tr>
+        <tr><td class="name">MujocoBiped has no adapter</td><td><span class="pill bench">Low</span></td>
+          <td>ONNX ported and verified; no <code>ICreatureAgent</code> implementation</td>
+          <td>An <code>Agent_MujocoBiped</code> adapter plus a catalog entry. Note it survives a full episode
+            only 30% of the time.</td></tr>
+        <tr><td class="name">Demos rejected after any obs change</td><td><span class="pill bench">Low</span></td>
+          <td><code>AllLoco8h02.yaml</code> needs <code>Assets/Demonstrations/&lt;Name&gt;.demo</code> for BC + GAIL</td>
+          <td>Re-record via <code>PoRacer/Training/Enable Demo Recorders In Open Scene</code> whenever the
+            observation size changes — an old <code>.demo</code> carries the old size and mlagents rejects it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
+<footer>
+  <p><b>PoRacer creatures dashboard</b> · regenerated 2026-09-03 · Unity 6000.5.8f1 · URP ·
+  ML-Agents 4.1.0 (C#) / mlagents 1.1.0 (Python) · Isaac Lab + RSL-RL · MuJoCo 3.12.0<br>
+  Sources: <code>Assets/**/*.onnx</code> · <code>Assets/Prefabs/*.prefab</code> ·
+  <code>Assets/Settings/CreatureCatalog.asset</code> · <code>Config/*.yaml</code> ·
+  <code>ISAAC/boy_tasks/</code> · <code>ISAAC/logs/rsl_rl/boy_chase_flat/</code> ·
+  <code>Assets/unity_export/*/\*_rig.json</code> · <code>Assets/Creature/policy.json</code></p>
+  <p>Companion documents: <a href="index.html">index</a> ·
+  <a href="architecture_pipeline.html">architecture &amp; pipeline</a> ·
+  <a href="scenes_layout.html">scenes layout</a> ·
+  <a href="onnx_summary.md">ONNX &amp; rig inventory</a> ·
+  <a href="agent-motivation.html">agent motivation diagrams</a></p>
+</footer>
+
+</main>
+</div>
+</div>
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+<script>window.PORACER={"runs":{"full":{"label":"full (2026-09-02 21:32)","iters":2016},"finish":{"label":"finish (2026-09-03 09:03)","iters":1000}},"curves":{"reward":{"full":[[0,-0.9227],[16,-7.1922],[32,-5.7514],[48,-5.2195],[64,-4.6705],[80,-4.3189],[96,-4.488],[112,-4.3761],[128,-4.4872],[144,-5.6759],[160,-5.1609],[176,1.2109],[192,3.0089],[208,6.5024],[224,9.1163],[240,9.7399],[256,12.5602],[272,13.5114],[288,14.1899],[304,14.7265],[320,15.9234],[336,17.0061],[352,17.4776],[368,17.197],[384,18.7353],[400,17.9724],[416,19.4079],[432,19.079],[448,19.0364],[464,20.0776],[480,19.6732],[496,19.5454],[512,20.538],[528,20.4794],[544,19.6678],[560,20.5112],[576,19.1176],[592,20.5676],[608,20.6601],[624,20.1545],[640,20.6695],[656,20.2278],[672,20.9333],[688,20.9437],[704,20.5857],[720,21.7393],[736,21.1225],[752,22.3164],[768,21.3002],[784,21.4873],[800,21.5994],[816,21.7434],[832,20.9587],[848,21.9575],[864,21.3383],[880,22.9697],[896,21.653],[912,21.684],[928,23.5724],[944,21.6773],[960,22.3141],[976,22.8648],[992,22.4897],[1008,22.4866],[1024,22.8778],[1040,23.3972],[1056,22.9602],[1072,22.1732],[1088,23.1174],[1104,22.3387],[1120,22.257],[1136,22.2864],[1152,20.7647],[1168,22.2422],[1184,21.9916],[1200,21.7693],[1216,22.7421],[1232,22.9216],[1248,22.5361],[1264,23.3919],[1280,23.2229],[1296,23.5322],[1312,23.444],[1328,23.4146],[1344,24.023],[1360,23.4803],[1376,24.3503],[1392,24.6044],[1408,24.6398],[1424,24.6635],[1440,25.1965],[1456,25.3104],[1472,25.0047],[1488,25.2626],[1504,24.9755],[1520,24.9825],[1536,24.9351],[1552,24.9939],[1568,24.707],[1584,24.5605],[1600,24.0446],[1616,24.1022],[1632,24.1897],[1648,24.1548],[1664,23.4929],[1680,23.4361],[1696,23.3663],[1712,23.7111],[1728,24.0137],[1744,23.374],[1760,24.4803],[1776,23.9672],[1792,23.3154],[1808,24.3187],[1824,24.2156],[1840,24.1237],[1856,23.8072],[1872,24.1601],[1888,24.0213],[1904,23.8258],[1920,24.4969],[1936,24.4696],[1952,24.4811],[1968,25.0311],[1984,24.841],[2000,24.3393],[2015,24.3738]],"finish":[[2000,-0.0609],[2008,4.7076],[2016,9.6373],[2024,14.241],[2032,19.4496],[2040,24.189],[2048,24.9306],[2056,24.25],[2064,23.8226],[2072,24.6826],[2080,24.4349],[2088,24.4985],[2096,24.1735],[2104,23.6495],[2112,23.9292],[2120,23.1399],[2128,23.3531],[2136,23.6201],[2144,24.2514],[2152,24.2957],[2160,23.8493],[2168,24.6881],[2176,24.6459],[2184,24.3399],[2192,23.6581],[2200,24.527],[2208,24.1354],[2216,23.6953],[2224,24.3537],[2232,23.7659],[2240,23.9252],[2248,23.6167],[2256,23.8739],[2264,23.7374],[2272,24.1912],[2280,23.5025],[2288,23.584],[2296,23.3283],[2304,23.5687],[2312,23.2563],[2320,22.6489],[2328,22.976],[2336,23.4611],[2344,23.7326],[2352,22.9778],[2360,23.4829],[2368,23.8921],[2376,23.7802],[2384,23.6421],[2392,23.225],[2400,23.0085],[2408,23.7047],[2416,23.2793],[2424,22.9326],[2432,23.5286],[2440,23.8854],[2448,23.5888],[2456,23.1469],[2464,23.5973],[2472,23.1495],[2480,23.0803],[2488,22.552],[2496,23.4136],[2504,23.3119],[2512,23.3169],[2520,23.3728],[2528,23.4589],[2536,23.3865],[2544,24.1049],[2552,23.716],[2560,23.4625],[2568,24.338],[2576,23.8395],[2584,24.5304],[2592,23.8675],[2600,23.971],[2608,24.3818],[2616,23.5482],[2624,23.6991],[2632,24.5399],[2640,23.7682],[2648,24.2556],[2656,24.0068],[2664,24.2064],[2672,24.1507],[2680,23.7893],[2688,24.6086],[2696,25.0182],[2704,24.7544],[2712,24.6946],[2720,24.7267],[2728,23.9959],[2736,24.2847],[2744,23.7937],[2752,23.8727],[2760,24.5234],[2768,23.5511],[2776,24.3212],[2784,23.2258],[2792,24.4986],[2800,23.7614],[2808,23.7229],[2816,24.0065],[2824,24.1923],[2832,23.7274],[2840,24.0917],[2848,23.5774],[2856,23.1907],[2864,22.9285],[2872,23.2105],[2880,22.6815],[2888,22.9827],[2896,22.5318],[2904,22.8609],[2912,22.7622],[2920,22.8125],[2928,22.6405],[2936,23.0198],[2944,23.2172],[2952,22.8534],[2960,22.7161],[2968,22.7783],[2976,22.4371],[2984,22.7513],[2992,22.5235],[2999,22.6817]]},"eplen":{"full":[[0,14.35],[16,58.72],[32,57.56],[48,59.09],[64,60.86],[80,62.97],[96,70.39],[112,97.85],[128,149.9],[144,301.39],[160,621.16],[176,948.67],[192,899.15],[208,978.75],[224,972.73],[240,954.5],[256,991.92],[272,972.98],[288,973.03],[304,948.13],[320,971.97],[336,983.37],[352,983.29],[368,959.55],[384,995.83],[400,959.62],[416,987.98],[432,975.59],[448,973.87],[464,999.79],[480,974.86],[496,969.32],[512,994.62],[528,995.81],[544,977.78],[560,992.2],[576,953.8],[592,985.39],[608,976.37],[624,985.43],[640,997.64],[656,973.63],[672,990.54],[688,985.32],[704,978.11],[720,990.7],[736,976.91],[752,1000.0],[768,973.49],[784,987.52],[800,985.87],[816,989.56],[832,962.56],[848,981.57],[864,974.07],[880,996.07],[896,960.56],[912,955.55],[928,1000.0],[944,959.47],[960,984.67],[976,990.53],[992,981.31],[1008,976.39],[1024,983.8],[1040,991.44],[1056,978.7],[1072,971.56],[1088,990.53],[1104,977.2],[1120,973.95],[1136,978.49],[1152,959.75],[1168,998.32],[1184,992.07],[1200,980.32],[1216,990.47],[1232,992.92],[1248,987.18],[1264,996.75],[1280,998.11],[1296,988.99],[1312,984.42],[1328,980.79],[1344,995.29],[1360,978.1],[1376,997.47],[1392,1000.0],[1408,1000.0],[1424,996.53],[1440,1000.0],[1456,997.62],[1472,991.17],[1488,997.6],[1504,997.13],[1520,992.53],[1536,991.09],[1552,998.32],[1568,990.41],[1584,992.61],[1600,986.18],[1616,992.64],[1632,990.6],[1648,1000.0],[1664,996.2],[1680,977.93],[1696,972.69],[1712,990.88],[1728,998.87],[1744,994.09],[1760,1000.0],[1776,995.45],[1792,975.18],[1808,998.28],[1824,999.23],[1840,1000.0],[1856,988.04],[1872,998.45],[1888,996.37],[1904,988.62],[1920,1000.0],[1936,1000.0],[1952,1000.0],[1968,996.89],[1984,996.1],[2000,986.44],[2015,986.42]],"finish":[[2000,14.35],[2008,204.96],[2016,393.47],[2024,580.28],[2032,778.22],[2040,965.23],[2048,996.98],[2056,986.86],[2064,974.81],[2072,990.75],[2080,988.65],[2088,993.82],[2096,994.83],[2104,984.1],[2112,999.74],[2120,989.51],[2128,986.16],[2136,989.74],[2144,995.79],[2152,993.51],[2160,989.29],[2168,993.62],[2176,1000.0],[2184,993.84],[2192,978.25],[2200,1000.0],[2208,988.84],[2216,987.54],[2224,994.85],[2232,987.34],[2240,994.48],[2248,987.12],[2256,993.66],[2264,983.93],[2272,1000.0],[2280,990.54],[2288,993.09],[2296,989.72],[2304,994.15],[2312,992.85],[2320,973.67],[2328,985.64],[2336,1000.0],[2344,994.98],[2352,985.42],[2360,993.48],[2368,1000.0],[2376,1000.0],[2384,994.62],[2392,988.83],[2400,980.81],[2408,992.22],[2416,989.38],[2424,975.44],[2432,994.85],[2440,1000.0],[2448,991.26],[2456,983.22],[2464,992.71],[2472,987.48],[2480,974.51],[2488,978.98],[2496,990.47],[2504,993.85],[2512,990.44],[2520,1000.0],[2528,993.17],[2536,986.78],[2544,997.83],[2552,996.43],[2560,981.88],[2568,997.78],[2576,983.68],[2584,1000.0],[2592,996.28],[2600,990.77],[2608,1000.0],[2616,984.41],[2624,990.11],[2632,1000.0],[2640,993.01],[2648,991.31],[2656,992.57],[2664,990.54],[2672,991.67],[2680,973.69],[2688,1000.0],[2696,1000.0],[2704,994.16],[2712,997.2],[2720,995.12],[2728,991.91],[2736,994.3],[2744,986.66],[2752,992.39],[2760,997.5],[2768,979.21],[2776,994.27],[2784,989.61],[2792,1000.0],[2800,990.31],[2808,991.84],[2816,1000.0],[2824,1000.0],[2832,994.91],[2840,998.58],[2848,991.11],[2856,986.03],[2864,985.96],[2872,985.35],[2880,980.88],[2888,987.49],[2896,984.29],[2904,993.69],[2912,987.57],[2920,992.62],[2928,992.88],[2936,992.6],[2944,988.76],[2952,993.13],[2960,986.57],[2968,993.46],[2976,994.17],[2984,1000.0],[2992,994.67],[2999,995.89]]},"dist":{"full":[[0,5.9633],[16,6.4436],[32,6.2355],[48,6.0823],[64,5.9321],[80,5.7717],[96,5.5912],[112,5.2601],[128,4.5017],[144,5.225],[160,5.4284],[176,3.8036],[192,3.5182],[208,4.0107],[224,3.8869],[240,4.0663],[256,3.9144],[272,3.8464],[288,3.9636],[304,4.1118],[320,3.5894],[336,4.2468],[352,3.5875],[368,3.7604],[384,4.0487],[400,4.2812],[416,4.2455],[432,4.2026],[448,4.232],[464,4.177],[480,4.1474],[496,4.0955],[512,4.2079],[528,4.0285],[544,4.2502],[560,3.8957],[576,4.3554],[592,4.2538],[608,3.4903],[624,4.0079],[640,3.8977],[656,4.4396],[672,3.7876],[688,3.8477],[704,3.6963],[720,3.9001],[736,4.3948],[752,3.9815],[768,4.2298],[784,3.9322],[800,3.8988],[816,3.6911],[832,3.875],[848,3.9406],[864,4.5528],[880,4.2616],[896,4.1787],[912,4.6653],[928,4.4104],[944,3.4812],[960,4.129],[976,4.2077],[992,4.0991],[1008,3.9538],[1024,4.2666],[1040,4.3305],[1056,3.9717],[1072,3.6572],[1088,3.9131],[1104,3.9663],[1120,3.8375],[1136,4.0529],[1152,3.9006],[1168,3.6392],[1184,4.3029],[1200,3.954],[1216,3.8266],[1232,3.7329],[1248,3.8879],[1264,4.1637],[1280,4.2908],[1296,3.8112],[1312,3.981],[1328,3.9372],[1344,4.5173],[1360,4.4259],[1376,4.1431],[1392,4.0018],[1408,4.011],[1424,3.7944],[1440,3.8293],[1456,3.8248],[1472,3.8503],[1488,4.112],[1504,3.7784],[1520,3.8431],[1536,4.6613],[1552,3.7983],[1568,4.0462],[1584,4.2855],[1600,3.2521],[1616,3.8944],[1632,3.9151],[1648,3.9716],[1664,4.5203],[1680,3.8311],[1696,3.8562],[1712,4.2189],[1728,3.6211],[1744,4.1581],[1760,3.6702],[1776,3.9228],[1792,4.4003],[1808,3.8681],[1824,4.0926],[1840,3.8406],[1856,4.2748],[1872,3.9062],[1888,4.2875],[1904,4.5383],[1920,4.2235],[1936,4.1735],[1952,4.2325],[1968,3.923],[1984,3.8039],[2000,3.9084],[2015,4.0509]],"finish":[[2000,5.8638],[2008,3.5644],[2016,3.5819],[2024,4.0093],[2032,3.8186],[2040,3.7373],[2048,3.6733],[2056,3.4534],[2064,4.2156],[2072,4.2736],[2080,4.0059],[2088,3.6739],[2096,4.0049],[2104,4.023],[2112,3.786],[2120,4.3751],[2128,3.9306],[2136,3.942],[2144,4.0487],[2152,3.628],[2160,3.9497],[2168,3.7907],[2176,3.8519],[2184,3.8804],[2192,4.1446],[2200,3.875],[2208,4.093],[2216,4.2504],[2224,3.9815],[2232,4.03],[2240,3.696],[2248,4.0488],[2256,4.2381],[2264,4.1025],[2272,4.1233],[2280,3.8306],[2288,4.1457],[2296,4.1046],[2304,3.9199],[2312,4.1009],[2320,4.2583],[2328,3.895],[2336,3.6651],[2344,4.1463],[2352,3.6991],[2360,4.3308],[2368,3.1211],[2376,4.2028],[2384,3.8383],[2392,4.4779],[2400,3.9186],[2408,4.2242],[2416,4.404],[2424,4.1394],[2432,3.7379],[2440,4.1137],[2448,3.9774],[2456,4.4553],[2464,4.2658],[2472,3.8839],[2480,4.3147],[2488,3.9194],[2496,4.1769],[2504,4.3877],[2512,3.9947],[2520,3.8366],[2528,4.0087],[2536,3.8629],[2544,4.214],[2552,4.3907],[2560,3.8619],[2568,4.2201],[2576,3.9819],[2584,4.2005],[2592,3.9916],[2600,3.9621],[2608,3.8651],[2616,4.011],[2624,4.1702],[2632,3.9081],[2640,4.0059],[2648,3.7426],[2656,3.8618],[2664,3.6654],[2672,4.0322],[2680,3.8262],[2688,4.0852],[2696,3.6769],[2704,3.6334],[2712,4.2195],[2720,4.1216],[2728,3.9289],[2736,3.9491],[2744,4.603],[2752,3.7754],[2760,3.6231],[2768,3.9816],[2776,3.9268],[2784,4.4156],[2792,3.794],[2800,4.0354],[2808,3.7029],[2816,3.7911],[2824,4.2152],[2832,4.0643],[2840,4.0093],[2848,4.1767],[2856,4.3338],[2864,3.5454],[2872,3.8195],[2880,3.9947],[2888,4.048],[2896,4.4069],[2904,4.2043],[2912,4.1466],[2920,4.2629],[2928,3.8085],[2936,3.7518],[2944,4.0261],[2952,4.0278],[2960,4.0839],[2968,4.2423],[2976,4.525],[2984,4.1632],[2992,4.7756],[2999,4.2153]]},"reached":{"full":[[0,0.0],[16,0.0],[32,0.0],[48,0.0],[64,0.0],[80,0.0],[96,0.0],[112,0.0],[128,0.0487],[144,0.4569],[160,0.8431],[176,1.874],[192,1.9167],[208,2.257],[224,2.2439],[240,2.1562],[256,2.2516],[272,2.1851],[288,2.2728],[304,2.3834],[320,2.3104],[336,2.5297],[352,2.4063],[368,2.5276],[384,2.6244],[400,2.5535],[416,2.6014],[432,2.6238],[448,2.5764],[464,2.4592],[480,2.5715],[496,2.4412],[512,2.5482],[528,2.2917],[544,2.5741],[560,2.4871],[576,2.5049],[592,2.4941],[608,2.2222],[624,2.6063],[640,2.4372],[656,2.3026],[672,2.5102],[688,2.4164],[704,2.4243],[720,2.4354],[736,2.6338],[752,2.6484],[768,2.4911],[784,2.5868],[800,2.5875],[816,2.5757],[832,2.3835],[848,2.3925],[864,2.4463],[880,2.4895],[896,2.5208],[912,2.5486],[928,2.567],[944,2.5138],[960,2.5808],[976,2.2824],[992,2.3653],[1008,2.5236],[1024,2.4902],[1040,2.4708],[1056,2.4728],[1072,2.5903],[1088,2.5085],[1104,2.4589],[1120,2.3493],[1136,2.509],[1152,2.3792],[1168,2.5363],[1184,2.677],[1200,2.4591],[1216,2.4264],[1232,2.6507],[1248,2.4048],[1264,2.5219],[1280,2.6121],[1296,2.5676],[1312,2.5963],[1328,2.5113],[1344,2.5639],[1360,2.4249],[1376,2.416],[1392,2.6631],[1408,2.4819],[1424,2.418],[1440,2.5912],[1456,2.5306],[1472,2.4265],[1488,2.5925],[1504,2.4602],[1520,2.4264],[1536,2.652],[1552,2.5241],[1568,2.3897],[1584,2.4212],[1600,2.4714],[1616,2.5417],[1632,2.5372],[1648,2.6095],[1664,2.5105],[1680,2.4968],[1696,2.381],[1712,2.6633],[1728,2.2791],[1744,2.4774],[1760,2.476],[1776,2.7311],[1792,2.6538],[1808,2.5452],[1824,2.3585],[1840,2.5537],[1856,2.6188],[1872,2.5481],[1888,2.5089],[1904,2.6057],[1920,2.571],[1936,2.4875],[1952,2.6021],[1968,2.413],[1984,2.4404],[2000,2.6144],[2015,2.4222]],"finish":[[2000,0.0],[2008,0.2077],[2016,0.693],[2024,1.188],[2032,1.9088],[2040,2.3257],[2048,2.3465],[2056,2.4448],[2064,2.3552],[2072,2.4167],[2080,2.3348],[2088,2.4969],[2096,2.3628],[2104,2.4187],[2112,2.6485],[2120,2.5871],[2128,2.5358],[2136,2.493],[2144,2.3171],[2152,2.4644],[2160,2.4789],[2168,2.5058],[2176,2.6132],[2184,2.5608],[2192,2.3847],[2200,2.5161],[2208,2.4102],[2216,2.4969],[2224,2.5836],[2232,2.4761],[2240,2.4893],[2248,2.5424],[2256,2.7353],[2264,2.3747],[2272,2.5475],[2280,2.4899],[2288,2.6038],[2296,2.5643],[2304,2.5427],[2312,2.6228],[2320,2.3281],[2328,2.4822],[2336,2.6712],[2344,2.647],[2352,2.543],[2360,2.5576],[2368,2.4028],[2376,2.5582],[2384,2.3122],[2392,2.4976],[2400,2.3953],[2408,2.4021],[2416,2.4633],[2424,2.5093],[2432,2.6041],[2440,2.4508],[2448,2.4722],[2456,2.6277],[2464,2.4444],[2472,2.5517],[2480,2.3181],[2488,2.3778],[2496,2.5104],[2504,2.5475],[2512,2.5213],[2520,2.6035],[2528,2.6542],[2536,2.4777],[2544,2.406],[2552,2.634],[2560,2.4735],[2568,2.5301],[2576,2.5082],[2584,2.5103],[2592,2.5857],[2600,2.4731],[2608,2.6753],[2616,2.4104],[2624,2.6072],[2632,2.4525],[2640,2.5667],[2648,2.5299],[2656,2.4082],[2664,2.4956],[2672,2.5254],[2680,2.2947],[2688,2.5455],[2696,2.5073],[2704,2.4567],[2712,2.5285],[2720,2.4153],[2728,2.6994],[2736,2.5119],[2744,2.2986],[2752,2.5035],[2760,2.4506],[2768,2.5606],[2776,2.5792],[2784,2.6207],[2792,2.4115],[2800,2.4231],[2808,2.5773],[2816,2.4898],[2824,2.4801],[2832,2.4743],[2840,2.501],[2848,2.6239],[2856,2.4952],[2864,2.6094],[2872,2.4529],[2880,2.4365],[2888,2.5413],[2896,2.6024],[2904,2.4626],[2912,2.607],[2920,2.4112],[2928,2.525],[2936,2.3346],[2944,2.4427],[2952,2.5674],[2960,2.5543],[2968,2.6178],[2976,2.4176],[2984,2.5266],[2992,2.6823],[2999,2.4803]]},"std":{"full":[[0,0.9987],[16,1.0239],[32,0.981],[48,0.9372],[64,0.9154],[80,0.9025],[96,0.905],[112,0.9176],[128,0.9409],[144,0.9618],[160,0.9783],[176,0.9851],[192,0.9769],[208,0.9702],[224,0.9649],[240,0.9569],[256,0.9556],[272,0.9502],[288,0.9473],[304,0.9502],[320,0.9418],[336,0.9478],[352,0.9316],[368,0.9279],[384,0.9264],[400,0.919],[416,0.92],[432,0.9246],[448,0.9186],[464,0.9205],[480,0.9109],[496,0.9162],[512,0.9178],[528,0.9174],[544,0.9222],[560,0.9138],[576,0.9183],[592,0.9218],[608,0.9184],[624,0.9269],[640,0.9275],[656,0.9253],[672,0.9149],[688,0.9161],[704,0.9114],[720,0.9062],[736,0.9061],[752,0.908],[768,0.9025],[784,0.908],[800,0.9074],[816,0.9065],[832,0.9044],[848,0.8974],[864,0.8864],[880,0.8849],[896,0.8848],[912,0.8916],[928,0.8891],[944,0.8884],[960,0.8891],[976,0.8885],[992,0.8902],[1008,0.881],[1024,0.8775],[1040,0.8822],[1056,0.8872],[1072,0.8915],[1088,0.8938],[1104,0.8961],[1120,0.9042],[1136,0.9132],[1152,0.9202],[1168,0.9191],[1184,0.906],[1200,0.9033],[1216,0.9062],[1232,0.893],[1248,0.89],[1264,0.8855],[1280,0.8828],[1296,0.8757],[1312,0.8745],[1328,0.8748],[1344,0.8744],[1360,0.866],[1376,0.8599],[1392,0.8589],[1408,0.8522],[1424,0.8485],[1440,0.8453],[1456,0.8392],[1472,0.839],[1488,0.8439],[1504,0.8506],[1520,0.8454],[1536,0.8468],[1552,0.8492],[1568,0.857],[1584,0.8658],[1600,0.8669],[1616,0.8717],[1632,0.8801],[1648,0.886],[1664,0.8798],[1680,0.8759],[1696,0.874],[1712,0.8829],[1728,0.8801],[1744,0.8806],[1760,0.8693],[1776,0.8681],[1792,0.8756],[1808,0.8744],[1824,0.8815],[1840,0.8798],[1856,0.878],[1872,0.8788],[1888,0.8738],[1904,0.8746],[1920,0.8668],[1936,0.8579],[1952,0.8562],[1968,0.8584],[1984,0.8561],[2000,0.8587],[2015,0.8645]],"finish":[[2000,0.8587],[2008,0.8394],[2016,0.8433],[2024,0.8506],[2032,0.8599],[2040,0.8609],[2048,0.8579],[2056,0.8609],[2064,0.8636],[2072,0.8642],[2080,0.8748],[2088,0.884],[2096,0.8808],[2104,0.879],[2112,0.8792],[2120,0.8753],[2128,0.8753],[2136,0.8729],[2144,0.8672],[2152,0.8631],[2160,0.8649],[2168,0.8644],[2176,0.8638],[2184,0.8668],[2192,0.8736],[2200,0.8784],[2208,0.8829],[2216,0.8776],[2224,0.8783],[2232,0.8813],[2240,0.8802],[2248,0.8827],[2256,0.8862],[2264,0.8857],[2272,0.8861],[2280,0.888],[2288,0.8929],[2296,0.8956],[2304,0.8952],[2312,0.8963],[2320,0.9011],[2328,0.8975],[2336,0.8942],[2344,0.8922],[2352,0.8919],[2360,0.896],[2368,0.8918],[2376,0.8919],[2384,0.8921],[2392,0.8948],[2400,0.8908],[2408,0.8893],[2416,0.8922],[2424,0.89],[2432,0.8896],[2440,0.8905],[2448,0.8869],[2456,0.8873],[2464,0.8895],[2472,0.8914],[2480,0.8987],[2488,0.9003],[2496,0.8992],[2504,0.9001],[2512,0.8962],[2520,0.8893],[2528,0.8881],[2536,0.8867],[2544,0.8835],[2552,0.8783],[2560,0.8763],[2568,0.8761],[2576,0.8764],[2584,0.8747],[2592,0.8787],[2600,0.8829],[2608,0.882],[2616,0.8792],[2624,0.8769],[2632,0.8729],[2640,0.8758],[2648,0.8772],[2656,0.8778],[2664,0.8751],[2672,0.8727],[2680,0.8662],[2688,0.8599],[2696,0.8607],[2704,0.8653],[2712,0.8691],[2720,0.873],[2728,0.8748],[2736,0.875],[2744,0.8764],[2752,0.8759],[2760,0.8778],[2768,0.8829],[2776,0.8802],[2784,0.8812],[2792,0.88],[2800,0.881],[2808,0.8841],[2816,0.8817],[2824,0.8787],[2832,0.8821],[2840,0.8841],[2848,0.8856],[2856,0.8894],[2864,0.895],[2872,0.899],[2880,0.9015],[2888,0.906],[2896,0.9078],[2904,0.9072],[2912,0.9083],[2920,0.9034],[2928,0.9036],[2936,0.8989],[2944,0.9048],[2952,0.9112],[2960,0.9185],[2968,0.9197],[2976,0.9166],[2984,0.9123],[2992,0.9102],[2999,0.91]]},"entropy":{"full":[[0,29.7975],[16,30.1822],[32,28.9565],[48,27.5891],[64,26.7241],[80,26.1306],[96,25.9537],[112,26.0601],[128,26.426],[144,26.6853],[160,26.8513],[176,26.7802],[192,26.3662],[208,26.0272],[224,25.7252],[240,25.3294],[256,25.1532],[272,24.887],[288,24.7629],[304,24.7649],[320,24.5009],[336,24.6112],[352,24.1518],[368,24.0585],[384,24.0231],[400,23.7971],[416,23.8272],[432,23.9444],[448,23.8575],[464,23.8884],[480,23.6443],[496,23.8055],[512,23.8411],[528,23.8216],[544,23.8764],[560,23.6872],[576,23.8167],[592,23.8455],[608,23.7713],[624,24.0215],[640,24.046],[656,24.0172],[672,23.78],[688,23.7946],[704,23.6718],[720,23.5617],[736,23.5521],[752,23.6206],[768,23.5045],[784,23.6382],[800,23.6139],[816,23.6123],[832,23.5726],[848,23.393],[864,23.1479],[880,23.0832],[896,23.0084],[912,23.2199],[928,23.1868],[944,23.1405],[960,23.1541],[976,23.1201],[992,23.1908],[1008,22.9674],[1024,22.917],[1040,23.0361],[1056,23.1855],[1072,23.2806],[1088,23.3386],[1104,23.3713],[1120,23.6286],[1136,23.8856],[1152,24.0059],[1168,23.9617],[1184,23.5686],[1200,23.589],[1216,23.6605],[1232,23.3303],[1248,23.2565],[1264,23.148],[1280,23.0841],[1296,22.8838],[1312,22.8424],[1328,22.8794],[1344,22.8516],[1360,22.6975],[1376,22.5193],[1392,22.502],[1408,22.344],[1424,22.2689],[1440,22.2249],[1456,22.1158],[1472,22.0521],[1488,22.1853],[1504,22.404],[1520,22.3103],[1536,22.2809],[1552,22.3325],[1568,22.5365],[1584,22.7635],[1600,22.8091],[1616,22.9136],[1632,23.1123],[1648,23.2588],[1664,23.116],[1680,23.0174],[1696,22.9394],[1712,23.1946],[1728,23.0961],[1744,23.1243],[1760,22.8426],[1776,22.8524],[1792,23.0337],[1808,22.9601],[1824,23.0792],[1840,23.0258],[1856,23.0202],[1872,23.0591],[1888,22.9428],[1904,22.9842],[1920,22.8145],[1936,22.5865],[1952,22.5379],[1968,22.6124],[1984,22.5163],[2000,22.6634],[2015,22.7983]],"finish":[[2000,22.65],[2008,22.1912],[2016,22.27],[2024,22.4556],[2032,22.7116],[2040,22.737],[2048,22.6435],[2056,22.7168],[2064,22.8033],[2072,22.8],[2080,23.0936],[2088,23.3384],[2096,23.275],[2104,23.2225],[2112,23.1619],[2120,23.102],[2128,23.1307],[2136,23.0145],[2144,22.8848],[2152,22.7365],[2160,22.7926],[2168,22.8062],[2176,22.7945],[2184,22.8917],[2192,23.0314],[2200,23.1432],[2208,23.2425],[2216,23.1078],[2224,23.1407],[2232,23.2011],[2240,23.167],[2248,23.2886],[2256,23.3779],[2264,23.3569],[2272,23.3588],[2280,23.4148],[2288,23.5579],[2296,23.6428],[2304,23.5634],[2312,23.6013],[2320,23.6682],[2328,23.6251],[2336,23.5132],[2344,23.4741],[2352,23.4557],[2360,23.5546],[2368,23.4405],[2376,23.4679],[2384,23.481],[2392,23.5636],[2400,23.4636],[2408,23.4249],[2416,23.4834],[2424,23.429],[2432,23.3868],[2440,23.4417],[2448,23.3111],[2456,23.3376],[2464,23.41],[2472,23.4475],[2480,23.6574],[2488,23.7418],[2496,23.6919],[2504,23.7245],[2512,23.5622],[2520,23.344],[2528,23.3173],[2536,23.2717],[2544,23.2098],[2552,23.1178],[2560,23.1212],[2568,23.0958],[2576,23.1008],[2584,23.0593],[2592,23.1816],[2600,23.3007],[2608,23.3116],[2616,23.2326],[2624,23.1376],[2632,23.0295],[2640,23.1017],[2648,23.1434],[2656,23.1529],[2664,23.0534],[2672,22.9953],[2680,22.8879],[2688,22.7432],[2696,22.7432],[2704,22.8724],[2712,22.9757],[2720,23.0543],[2728,23.1097],[2736,23.1047],[2744,23.1414],[2752,23.1559],[2760,23.231],[2768,23.3746],[2776,23.2809],[2784,23.2879],[2792,23.2781],[2800,23.3149],[2808,23.3542],[2816,23.2928],[2824,23.2017],[2832,23.3016],[2840,23.3369],[2848,23.4038],[2856,23.4992],[2864,23.5997],[2872,23.7061],[2880,23.7454],[2888,23.843],[2896,23.8991],[2904,23.8673],[2912,23.8896],[2920,23.77],[2928,23.7434],[2936,23.6045],[2944,23.7335],[2952,23.908],[2960,24.0576],[2968,24.0589],[2976,23.9885],[2984,23.8901],[2992,23.8012],[2999,23.8035]]},"value":{"full":[[0,0.2528],[16,0.0595],[32,0.0156],[48,0.0159],[64,0.0137],[80,0.0149],[96,0.0222],[112,0.0399],[128,0.0692],[144,0.0599],[160,0.0393],[176,0.0298],[192,0.0253],[208,0.0219],[224,0.0177],[240,0.0178],[256,0.0202],[272,0.0195],[288,0.0208],[304,0.0164],[320,0.0168],[336,0.019],[352,0.0122],[368,0.0149],[384,0.0173],[400,0.0164],[416,0.0218],[432,0.0171],[448,0.0198],[464,0.0136],[480,0.014],[496,0.0142],[512,0.0139],[528,0.0158],[544,0.0172],[560,0.0138],[576,0.0126],[592,0.0175],[608,0.0163],[624,0.0198],[640,0.0214],[656,0.013],[672,0.0119],[688,0.0141],[704,0.0115],[720,0.0133],[736,0.0129],[752,0.0134],[768,0.0147],[784,0.0128],[800,0.0141],[816,0.0137],[832,0.0123],[848,0.0123],[864,0.0099],[880,0.011],[896,0.0131],[912,0.0102],[928,0.0129],[944,0.015],[960,0.0122],[976,0.0138],[992,0.0133],[1008,0.0129],[1024,0.0103],[1040,0.0115],[1056,0.0092],[1072,0.0132],[1088,0.0105],[1104,0.0087],[1120,0.0139],[1136,0.0189],[1152,0.0146],[1168,0.0138],[1184,0.0142],[1200,0.0107],[1216,0.0126],[1232,0.0116],[1248,0.0104],[1264,0.0131],[1280,0.0127],[1296,0.0093],[1312,0.0134],[1328,0.013],[1344,0.0098],[1360,0.0096],[1376,0.013],[1392,0.0142],[1408,0.0125],[1424,0.0109],[1440,0.0114],[1456,0.0076],[1472,0.0094],[1488,0.0116],[1504,0.0105],[1520,0.0094],[1536,0.0091],[1552,0.0118],[1568,0.0144],[1584,0.0124],[1600,0.0118],[1616,0.0132],[1632,0.0178],[1648,0.0119],[1664,0.0101],[1680,0.0092],[1696,0.0167],[1712,0.0117],[1728,0.0124],[1744,0.0102],[1760,0.0092],[1776,0.0124],[1792,0.0108],[1808,0.0111],[1824,0.0099],[1840,0.0098],[1856,0.0101],[1872,0.0074],[1888,0.0095],[1904,0.0106],[1920,0.0084],[1936,0.0079],[1952,0.0082],[1968,0.0094],[1984,0.011],[2000,0.0091],[2015,0.0117]],"finish":[[2000,0.0278],[2008,0.009],[2016,0.012],[2024,0.0126],[2032,0.0112],[2040,0.0087],[2048,0.01],[2056,0.0138],[2064,0.0119],[2072,0.0125],[2080,0.0156],[2088,0.0177],[2096,0.011],[2104,0.0099],[2112,0.016],[2120,0.0155],[2128,0.01],[2136,0.0151],[2144,0.0093],[2152,0.0128],[2160,0.0093],[2168,0.01],[2176,0.0116],[2184,0.0096],[2192,0.0154],[2200,0.0127],[2208,0.012],[2216,0.0109],[2224,0.009],[2232,0.0105],[2240,0.0112],[2248,0.0111],[2256,0.0114],[2264,0.0097],[2272,0.0151],[2280,0.0155],[2288,0.0132],[2296,0.0123],[2304,0.0133],[2312,0.0121],[2320,0.0155],[2328,0.0108],[2336,0.0142],[2344,0.0096],[2352,0.0101],[2360,0.0104],[2368,0.0161],[2376,0.0097],[2384,0.0158],[2392,0.0119],[2400,0.0113],[2408,0.0101],[2416,0.0134],[2424,0.0091],[2432,0.0095],[2440,0.0078],[2448,0.0115],[2456,0.014],[2464,0.0113],[2472,0.0131],[2480,0.0128],[2488,0.0133],[2496,0.0117],[2504,0.01],[2512,0.0101],[2520,0.0087],[2528,0.0105],[2536,0.0086],[2544,0.0085],[2552,0.0124],[2560,0.0112],[2568,0.0099],[2576,0.0112],[2584,0.0143],[2592,0.0139],[2600,0.0106],[2608,0.0104],[2616,0.0083],[2624,0.0103],[2632,0.0086],[2640,0.0093],[2648,0.0112],[2656,0.009],[2664,0.0102],[2672,0.0107],[2680,0.008],[2688,0.0101],[2696,0.0108],[2704,0.0097],[2712,0.0115],[2720,0.0153],[2728,0.0083],[2736,0.0162],[2744,0.0095],[2752,0.0123],[2760,0.0127],[2768,0.0124],[2776,0.0102],[2784,0.01],[2792,0.0094],[2800,0.0102],[2808,0.0118],[2816,0.0117],[2824,0.0108],[2832,0.0112],[2840,0.0105],[2848,0.0115],[2856,0.0145],[2864,0.0122],[2872,0.0124],[2880,0.0109],[2888,0.0169],[2896,0.0119],[2904,0.0145],[2912,0.0111],[2920,0.0137],[2928,0.0155],[2936,0.0087],[2944,0.0157],[2952,0.0128],[2960,0.0141],[2968,0.0157],[2976,0.0151],[2984,0.0098],[2992,0.011],[2999,0.0112]]},"fell":{"full":[[0,0.0],[16,1.0],[32,1.0],[48,1.0],[64,1.0],[80,1.0],[96,1.0],[112,1.0],[128,1.0],[144,1.0],[160,0.9974],[176,0.6176],[192,0.2331],[208,0.129],[224,0.0933],[240,0.0786],[256,0.0709],[272,0.0644],[288,0.0592],[304,0.0555],[320,0.0517],[336,0.0528],[352,0.0473],[368,0.0436],[384,0.0366],[400,0.0401],[416,0.0419],[432,0.0457],[448,0.0447],[464,0.0397],[480,0.0337],[496,0.0376],[512,0.0388],[528,0.0408],[544,0.039],[560,0.0366],[576,0.0369],[592,0.0374],[608,0.0373],[624,0.0393],[640,0.0384],[656,0.0366],[672,0.0329],[688,0.0305],[704,0.0308],[720,0.0309],[736,0.0294],[752,0.0313],[768,0.0299],[784,0.0268],[800,0.0281],[816,0.03],[832,0.0292],[848,0.0252],[864,0.0255],[880,0.0251],[896,0.0256],[912,0.0303],[928,0.0327],[944,0.0293],[960,0.029],[976,0.0284],[992,0.0275],[1008,0.0253],[1024,0.0242],[1040,0.026],[1056,0.0277],[1072,0.0301],[1088,0.0297],[1104,0.0327],[1120,0.0302],[1136,0.0345],[1152,0.0364],[1168,0.0334],[1184,0.029],[1200,0.0277],[1216,0.025],[1232,0.0231],[1248,0.0214],[1264,0.0222],[1280,0.0249],[1296,0.0212],[1312,0.0201],[1328,0.0227],[1344,0.0232],[1360,0.0201],[1376,0.0173],[1392,0.0175],[1408,0.0167],[1424,0.0176],[1440,0.0172],[1456,0.0173],[1472,0.0161],[1488,0.0168],[1504,0.0181],[1520,0.0181],[1536,0.0166],[1552,0.018],[1568,0.0202],[1584,0.0235],[1600,0.0242],[1616,0.024],[1632,0.022],[1648,0.0225],[1664,0.0229],[1680,0.0203],[1696,0.0201],[1712,0.0244],[1728,0.0242],[1744,0.0199],[1760,0.016],[1776,0.0157],[1792,0.0188],[1808,0.0197],[1824,0.0223],[1840,0.0188],[1856,0.0194],[1872,0.0193],[1888,0.0207],[1904,0.0184],[1920,0.0152],[1936,0.0125],[1952,0.0125],[1968,0.0132],[1984,0.0154],[2000,0.0169],[2015,0.0211]],"finish":[[2000,0.0],[2008,0.0042],[2016,0.0075],[2024,0.0136],[2032,0.0192],[2040,0.0229],[2048,0.0204],[2056,0.0209],[2064,0.0191],[2072,0.0189],[2080,0.0196],[2088,0.0245],[2096,0.026],[2104,0.0256],[2112,0.0232],[2120,0.0214],[2128,0.0204],[2136,0.0191],[2144,0.0196],[2152,0.0169],[2160,0.0174],[2168,0.0155],[2176,0.0146],[2184,0.0154],[2192,0.0187],[2200,0.0188],[2208,0.0211],[2216,0.0213],[2224,0.0214],[2232,0.0189],[2240,0.0187],[2248,0.0188],[2256,0.019],[2264,0.0206],[2272,0.0216],[2280,0.0229],[2288,0.021],[2296,0.0219],[2304,0.021],[2312,0.0203],[2320,0.0193],[2328,0.0177],[2336,0.0175],[2344,0.0172],[2352,0.0174],[2360,0.0179],[2368,0.0178],[2376,0.0186],[2384,0.0195],[2392,0.0206],[2400,0.0203],[2408,0.0203],[2416,0.0197],[2424,0.0192],[2432,0.0186],[2440,0.019],[2448,0.0171],[2456,0.0163],[2464,0.0176],[2472,0.0173],[2480,0.0194],[2488,0.0212],[2496,0.0241],[2504,0.0226],[2512,0.021],[2520,0.0158],[2528,0.0149],[2536,0.0125],[2544,0.013],[2552,0.0129],[2560,0.0143],[2568,0.0178],[2576,0.0168],[2584,0.0171],[2592,0.0192],[2600,0.0211],[2608,0.0189],[2616,0.0187],[2624,0.0171],[2632,0.0152],[2640,0.0149],[2648,0.0126],[2656,0.0145],[2664,0.0144],[2672,0.0146],[2680,0.0141],[2688,0.0136],[2696,0.0132],[2704,0.0139],[2712,0.0144],[2720,0.0157],[2728,0.0169],[2736,0.0172],[2744,0.0177],[2752,0.0177],[2760,0.0189],[2768,0.0186],[2776,0.0193],[2784,0.0179],[2792,0.0181],[2800,0.0164],[2808,0.0164],[2816,0.0156],[2824,0.0166],[2832,0.0172],[2840,0.0174],[2848,0.0183],[2856,0.0195],[2864,0.023],[2872,0.0231],[2880,0.0236],[2888,0.026],[2896,0.0258],[2904,0.0234],[2912,0.0245],[2920,0.0221],[2928,0.0215],[2936,0.0193],[2944,0.0214],[2952,0.0225],[2960,0.0267],[2968,0.0273],[2976,0.0273],[2984,0.0284],[2992,0.023],[2999,0.0211]]}},"rewardTerms":[["target_speed_exp",1.3238,1.5,"task"],["target_progress",0.3096,0.5,"task"],["heading_to_target",0.2795,0.3,"task"],["feet_air_time",0.2353,1.0,"gait"],["targets_reached",0.0122,5.0,"task"],["undesired_contacts",0.0,-1.0,"gait"],["dof_pos_limits",-0.0037,-1.0,"reg"],["termination_penalty",-0.0047,-200.0,"term"],["flat_orientation_l2",-0.0176,-1.0,"reg"],["joint_deviation_torso",-0.0479,-0.1,"reg"],["ang_vel_xy_l2",-0.0534,-0.05,"reg"],["feet_slide",-0.0581,-0.25,"gait"],["joint_deviation_hip",-0.0639,-0.2,"reg"],["dof_acc_l2",-0.1257,-1.25e-07,"reg"],["joint_deviation_arms",-0.1626,-0.2,"reg"],["dof_torques_l2",-0.1652,-1e-05,"reg"],["action_rate_l2",-0.2262,-0.005,"reg"]],"rewardSum":1.2313};</script>
 <script>
-  function setView(view) {
-    const body = document.body;
-    const execBtn = document.getElementById('btn-exec');
-    const techBtn = document.getElementById('btn-tech');
-    if (view === 'exec') {
-      body.classList.remove('view-tech');
-      body.classList.add('view-exec');
-      execBtn.classList.add('active'); execBtn.setAttribute('aria-selected', 'true');
-      techBtn.classList.remove('active'); techBtn.setAttribute('aria-selected', 'false');
-    } else {
-      body.classList.remove('view-exec');
-      body.classList.add('view-tech');
-      techBtn.classList.add('active'); techBtn.setAttribute('aria-selected', 'true');
-      execBtn.classList.remove('active'); execBtn.setAttribute('aria-selected', 'false');
-    }
-    try { localStorage.setItem('poracer-view', view); } catch (e) {}
+/* ---------------------------------------------------------------- mode + theme */
+(function(){
+  const body=document.body, e=document.getElementById('mExec'), t=document.getElementById('mTech');
+  function set(m){ body.dataset.mode=m; e.setAttribute('aria-pressed',m==='exec'); t.setAttribute('aria-pressed',m==='tech');
+    try{localStorage.setItem('poracer-mode',m)}catch(_){} }
+  e.onclick=()=>set('exec'); t.onclick=()=>set('tech');
+  let saved=null; try{saved=localStorage.getItem('poracer-mode')}catch(_){}
+  set(saved==='tech'?'tech':'exec');
+
+  const tb=document.getElementById('themeBtn');
+  function cur(){ const a=document.documentElement.getAttribute('data-theme'); if(a) return a;
+    return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'; }
+  tb.onclick=()=>{ const n=cur()==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',n);
+    try{localStorage.setItem('poracer-theme',n)}catch(_){} };
+  let st=null; try{st=localStorage.getItem('poracer-theme')}catch(_){}
+  if(st) document.documentElement.setAttribute('data-theme',st);
+})();
+
+/* ---------------------------------------------------------------- tooltip */
+const TIP=document.getElementById('tip');
+function showTip(html,x,y){ TIP.innerHTML=html; TIP.classList.add('on');
+  const r=TIP.getBoundingClientRect();
+  let L=x+14, T=y-r.height/2;
+  if(L+r.width>innerWidth-10) L=x-r.width-14;
+  T=Math.max(8,Math.min(T,innerHeight-r.height-8));
+  TIP.style.left=L+'px'; TIP.style.top=T+'px'; }
+function hideTip(){ TIP.classList.remove('on'); }
+
+/* ---------------------------------------------------------------- svg helpers */
+const NS='http://www.w3.org/2000/svg';
+function el(n,a){ const x=document.createElementNS(NS,n); for(const k in (a||{})) x.setAttribute(k,a[k]); return x; }
+function txt(s,a){ const x=el('text',a); x.textContent=s; return x; }
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function fmt(v,d){ return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('en-US',
+  {minimumFractionDigits:d,maximumFractionDigits:d}); }
+function nice(max,min){ min=min||0; const span=max-min||1; const raw=span/5;
+  const m=Math.pow(10,Math.floor(Math.log10(raw))); const s=[1,2,2.5,5,10].find(k=>k*m>=raw)*m;
+  return {step:s, lo:Math.floor(min/s)*s, hi:Math.ceil(max/s)*s}; }
+
+/* ---------------------------------------------------------------- line chart */
+function lineChart(host, series, opt){
+  opt=opt||{}; const box=document.getElementById(host); if(!box) return;
+  const W=box.clientWidth||520, H=opt.h||212, M={t:12,r:opt.mr||16,b:32,l:opt.ml||46};
+  const iw=W-M.l-M.r, ih=H-M.t-M.b;
+  const all=series.flatMap(s=>s.pts);
+  if(!all.length) return;
+  const xs=all.map(p=>p[0]), ys=all.map(p=>p[1]);
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  const yr=nice(Math.max(...ys), opt.zero?0:Math.min(...ys));
+  const X=v=>M.l+(v-x0)/((x1-x0)||1)*iw, Y=v=>M.t+ih-(v-yr.lo)/((yr.hi-yr.lo)||1)*ih;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img',
+    'aria-label':opt.aria||'line chart'});
+
+  for(let v=yr.lo; v<=yr.hi+1e-9; v+=yr.step){
+    svg.appendChild(el('line',{class:'gl',x1:M.l,x2:M.l+iw,y1:Y(v),y2:Y(v)}));
+    svg.appendChild(txt(fmt(v,opt.yd==null?0:opt.yd),{class:'tick',x:M.l-8,y:Y(v)+4,'text-anchor':'end'}));
   }
-  // Restore preference
-  try {
-    const saved = localStorage.getItem('poracer-view');
-    if (saved === 'tech') setView('tech');
-  } catch (e) {}
+  svg.appendChild(el('line',{class:'ax',x1:M.l,x2:M.l+iw,y1:M.t+ih,y2:M.t+ih}));
+  [x0,Math.round((x0+x1)/2),x1].forEach((v,i)=>{
+    svg.appendChild(txt(v.toLocaleString('en-US'),{class:'tick',x:X(v),y:M.t+ih+18,
+      'text-anchor':i===0?'start':i===2?'end':'middle'}));
+  });
+  svg.appendChild(txt(opt.xlab||'PPO iteration',{class:'alab',x:M.l+iw/2,y:H-1,'text-anchor':'middle'}));
+
+  series.forEach(s=>{
+    const d=s.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    svg.appendChild(el('path',{d,fill:'none',stroke:css(s.c),'stroke-width':2,
+      'stroke-linejoin':'round','stroke-linecap':'round'}));
+  });
+  /* direct end labels — identity never by colour alone */
+  series.forEach(s=>{
+    const p=s.pts[s.pts.length-1];
+    svg.appendChild(txt(s.name,{class:'dlab',x:X(p[0])-4,y:Y(p[1])-9,'text-anchor':'end',fill:css(s.c)}));
+  });
+
+  const cross=el('line',{class:'ax',y1:M.t,y2:M.t+ih,opacity:0,'stroke-dasharray':'3 3'});
+  svg.appendChild(cross);
+  const dots=series.map(s=>{const c=el('circle',{r:4.5,fill:css(s.c),stroke:css('--surface-1'),
+    'stroke-width':2,opacity:0}); svg.appendChild(c); return c;});
+  const hit=el('rect',{class:'hit',x:M.l,y:M.t,width:iw,height:ih});
+  svg.appendChild(hit);
+  hit.addEventListener('pointermove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const px=(ev.clientX-r.left)*(W/r.width);
+    const v=x0+(px-M.l)/iw*(x1-x0);
+    cross.setAttribute('opacity',.7); cross.setAttribute('x1',X(v)); cross.setAttribute('x2',X(v));
+    let rows='';
+    series.forEach((s,i)=>{
+      let best=s.pts[0];
+      for(const p of s.pts) if(Math.abs(p[0]-v)<Math.abs(best[0]-v)) best=p;
+      dots[i].setAttribute('opacity',1); dots[i].setAttribute('cx',X(best[0])); dots[i].setAttribute('cy',Y(best[1]));
+      rows+=`<div class="tr"><i style="background:${css(s.c)}"></i>${s.name}<b>${fmt(best[1],opt.td==null?2:opt.td)}</b></div>`;
+    });
+    showTip(`<div class="tt">${opt.xlab||'iteration'} ${Math.round(v).toLocaleString('en-US')}</div>${rows}`,
+      ev.clientX,ev.clientY);
+  });
+  hit.addEventListener('pointerleave',()=>{ hideTip(); cross.setAttribute('opacity',0);
+    dots.forEach(d=>d.setAttribute('opacity',0)); });
+  box.innerHTML=''; box.appendChild(svg);
+}
+
+/* ---------------------------------------------------------------- h-bar chart */
+function barChart(host, rows, opt){
+  opt=opt||{}; const box=document.getElementById(host); if(!box) return;
+  const W=box.clientWidth||520, lw=opt.lw||132, rw=opt.rw||64, rh=opt.rh||30;
+  const H=rows.length*rh+30, iw=W-lw-rw;
+  const max=Math.max(...rows.map(r=>r.v),opt.min||0)||1;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img','aria-label':opt.aria||'bar chart'});
+  rows.forEach((r,i)=>{
+    const y=i*rh+6, bh=rh-13, w=Math.max(2,r.v/max*iw);
+    svg.appendChild(txt(r.k,{class:'dlab',x:lw-10,y:y+bh/2+4,'text-anchor':'end',fill:css('--text-primary')}));
+    svg.appendChild(el('rect',{x:lw,y,width:iw,height:bh,rx:4,fill:css('--surface-2')}));
+    svg.appendChild(el('rect',{x:lw,y,width:w,height:bh,rx:4,fill:css(r.c||'--series-1')}));
+    svg.appendChild(txt(r.lab!=null?r.lab:fmt(r.v,opt.d==null?2:opt.d),
+      {class:'dlab',x:lw+iw+8,y:y+bh/2+4,fill:css('--text-secondary')}));
+    const hit=el('rect',{class:'hit',x:lw,y,width:iw,height:bh});
+    hit.addEventListener('pointermove',ev=>showTip(
+      `<div class="tt">${r.k}</div><div class="tr"><i style="background:${css(r.c||'--series-1')}"></i>${opt.unit||''}<b>${r.lab!=null?r.lab:fmt(r.v,2)}</b></div>${r.note?`<div style="margin-top:5px;color:var(--text-secondary)">${r.note}</div>`:''}`,
+      ev.clientX,ev.clientY));
+    hit.addEventListener('pointerleave',hideTip);
+    svg.appendChild(hit);
+  });
+  svg.appendChild(txt(opt.xlab||'',{class:'alab',x:lw,y:H-4}));
+  box.innerHTML=''; box.appendChild(svg);
+}
+
+/* ---------------------------------------------------------------- diverging bar */
+function divChart(host, rows, opt){
+  opt=opt||{}; const box=document.getElementById(host); if(!box) return;
+  const W=box.clientWidth||620, lw=opt.lw||166, rw=56, rh=25;
+  const H=rows.length*rh+40, iw=W-lw-rw;
+  /* Allocate the axis in proportion to the real magnitudes on each side, so an
+     asymmetric budget (here +1.32 earned against −0.23 worst cost) still shows
+     both. A flat 50/50 midpoint would squash every cost bar to a sliver. */
+  const maxPos=Math.max(0,...rows.map(r=>r.v)), maxNeg=Math.max(0,...rows.map(r=>-r.v));
+  const span=(maxPos+maxNeg)||1;
+  const negFrac=Math.min(0.55,Math.max(0.16,maxNeg/span));
+  const mid=lw+iw*negFrac;
+  const scale=Math.min((iw-(mid-lw))/(maxPos||1), (mid-lw)/(maxNeg||1));
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img',
+    'aria-label':opt.aria||'diverging bar chart'});
+  svg.appendChild(el('line',{class:'ax',x1:mid,x2:mid,y1:4,y2:H-26}));
+  rows.forEach((r,i)=>{
+    const y=i*rh+6, bh=rh-9, w=Math.max(1.5,Math.abs(r.v)*scale);
+    const pos=r.v>=0, x=pos?mid:mid-w;
+    svg.appendChild(txt(r.k,{class:'dlab',x:lw-10,y:y+bh/2+4,'text-anchor':'end',
+      fill:css('--text-primary')}));
+    svg.appendChild(el('rect',{x,y,width:w,height:bh,rx:3,fill:css(pos?'--pos':'--neg')}));
+    svg.appendChild(txt((r.v>=0?'+':'')+fmt(r.v,4),{class:'dlab',x:lw+iw+8,y:y+bh/2+4,
+      fill:css('--text-secondary')}));
+    const hit=el('rect',{class:'hit',x:lw,y,width:iw,height:bh});
+    hit.addEventListener('pointermove',ev=>showTip(
+      `<div class="tt">${r.k}</div><div class="tr"><i style="background:${css(r.v>=0?'--pos':'--neg')}"></i>earned / s<b>${(r.v>=0?'+':'')+fmt(r.v,4)}</b></div><div class="tr"><i style="background:var(--border-strong)"></i>configured weight<b>${r.w}</b></div><div style="margin-top:5px;color:var(--text-secondary)">${r.g}</div>`,
+      ev.clientX,ev.clientY));
+    hit.addEventListener('pointerleave',hideTip);
+    svg.appendChild(hit);
+  });
+  svg.appendChild(txt('← cost',{class:'alab',x:mid-8,y:H-8,'text-anchor':'end'}));
+  svg.appendChild(txt('earned →',{class:'alab',x:mid+8,y:H-8}));
+  box.innerHTML=''; box.appendChild(svg);
+}
+
+/* ---------------------------------------------------------------- scatter */
+function scatter(host, pts, opt){
+  opt=opt||{}; const box=document.getElementById(host); if(!box) return;
+  const W=box.clientWidth||620, H=300, M={t:16,r:22,b:44,l:52};
+  const iw=W-M.l-M.r, ih=H-M.t-M.b;
+  const xr=nice(Math.max(...pts.map(p=>p.x)),0), yr=nice(Math.max(...pts.map(p=>p.y)),0);
+  const X=v=>M.l+v/xr.hi*iw, Y=v=>M.t+ih-v/yr.hi*ih;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:'img',
+    'aria-label':'Joints against observation width per racer'});
+  for(let v=yr.lo;v<=yr.hi+1e-9;v+=yr.step){
+    svg.appendChild(el('line',{class:'gl',x1:M.l,x2:M.l+iw,y1:Y(v),y2:Y(v)}));
+    svg.appendChild(txt(v,{class:'tick',x:M.l-8,y:Y(v)+4,'text-anchor':'end'}));
+  }
+  for(let v=xr.lo;v<=xr.hi+1e-9;v+=xr.step){
+    svg.appendChild(txt(v,{class:'tick',x:X(v),y:M.t+ih+18,'text-anchor':'middle'}));
+  }
+  svg.appendChild(el('line',{class:'ax',x1:M.l,x2:M.l+iw,y1:M.t+ih,y2:M.t+ih}));
+  /* the 3N + 19 reference line */
+  svg.appendChild(el('line',{x1:X(0),y1:Y(19),x2:X(xr.hi),y2:Y(3*xr.hi+19),
+    stroke:css('--axis'),'stroke-width':1.5,'stroke-dasharray':'5 4'}));
+  svg.appendChild(txt('obs = 3N + 19',{class:'tick',x:X(xr.hi)-4,y:Y(3*xr.hi+19)+16,'text-anchor':'end'}));
+  svg.appendChild(txt('actuated joints (= action width)',{class:'alab',x:M.l+iw/2,y:H-6,'text-anchor':'middle'}));
+  svg.appendChild(txt('observations',{class:'alab',x:14,y:M.t+ih/2,'text-anchor':'middle',
+    transform:`rotate(-90 14 ${M.t+ih/2})`}));
+  pts.forEach(p=>{
+    const c=el('circle',{cx:X(p.x),cy:Y(p.y),r:6.5,fill:css(p.c),stroke:css('--surface-1'),'stroke-width':2});
+    svg.appendChild(c);
+    if(p.lab) svg.appendChild(txt(p.n,{class:'dlab',x:X(p.x)+(p.la==='e'?-11:11),y:Y(p.y)+4,
+      'text-anchor':p.la==='e'?'end':'start',fill:css('--text-secondary')}));
+    const hit=el('circle',{cx:X(p.x),cy:Y(p.y),r:13,class:'hit'});
+    hit.addEventListener('pointermove',ev=>showTip(
+      `<div class="tt">${p.n}</div><div class="tr"><i style="background:${css(p.c)}"></i>joints<b>${p.x}</b></div><div class="tr"><i style="background:${css(p.c)}"></i>observations<b>${p.y}</b></div><div style="margin-top:5px;color:var(--text-secondary)">${p.note}</div>`,
+      ev.clientX,ev.clientY));
+    hit.addEventListener('pointerleave',hideTip);
+    svg.appendChild(hit);
+  });
+  box.innerHTML='';
+  const lg=document.createElement('div'); lg.className='legend';
+  lg.innerHTML=`<span><i class="sq" style="background:${css('--series-1')}"></i>ML-Agents creature</span>
+    <span><i class="sq" style="background:${css('--series-2')}"></i>Isaac Lab port</span>
+    <span><i class="sq" style="background:${css('--series-3')}"></i>MuJoCo</span>`;
+  box.appendChild(lg); box.appendChild(svg);
+}
+
+/* ---------------------------------------------------------------- obs strip */
+function strip(host, bands, total){
+  const box=document.getElementById(host); if(!box) return;
+  const cols=['--seq-550','--seq-400','--seq-250','--series-2','--series-3','--series-1','--seq-700'];
+  const s=document.createElement('div'); s.className='strip';
+  const lg=document.createElement('div'); lg.className='striplegend';
+  bands.forEach((b,i)=>{
+    const c=css(cols[i%cols.length]);
+    const d=document.createElement('div');
+    d.style.flex=b.w; d.style.background=c;
+    d.style.color = (i%cols.length===2||i%cols.length===4) ? '#0b0b0b' : '#fff';
+    d.textContent = b.w/total>0.09 ? b.w : '';
+    d.title=`${b.k} — ${b.w} float${b.w===1?'':'s'}`;
+    d.addEventListener('pointermove',ev=>showTip(
+      `<div class="tt">${b.k}</div><div class="tr"><i style="background:${c}"></i>width<b>${b.w}</b></div><div class="tr"><i style="background:${c}"></i>indices<b>${b.r}</b></div>`,
+      ev.clientX,ev.clientY));
+    d.addEventListener('pointerleave',hideTip);
+    s.appendChild(d);
+    const sp=document.createElement('span');
+    sp.innerHTML=`<i style="background:${c}"></i>${b.k} <span style="color:var(--text-muted)">${b.w}</span>`;
+    lg.appendChild(sp);
+  });
+  box.innerHTML=''; box.appendChild(s); box.appendChild(lg);
+}
+
+/* ---------------------------------------------------------------- render all */
+function renderAll(){
+  const D=window.PORACER;
+  const C=D.curves;
+  lineChart('cReward',[{name:'full',c:'--series-1',pts:C.reward.full},
+    {name:'finish',c:'--series-2',pts:C.reward.finish}],
+    {zero:true,yd:0,td:2,aria:'Mean episode reward across PPO iterations for two runs'});
+  lineChart('cDist',[{name:'full',c:'--series-1',pts:C.dist.full},
+    {name:'finish',c:'--series-2',pts:C.dist.finish}],
+    {yd:1,td:2,aria:'Distance to target in metres across PPO iterations'});
+  lineChart('cEplen',[{name:'full',c:'--series-1',pts:C.eplen.full},
+    {name:'finish',c:'--series-2',pts:C.eplen.finish}],
+    {zero:true,yd:0,td:1,aria:'Mean episode length in steps across PPO iterations'});
+  lineChart('cReached',[{name:'full',c:'--series-1',pts:C.reached.full},
+    {name:'finish',c:'--series-2',pts:C.reached.finish}],
+    {zero:true,yd:1,td:2,aria:'Targets reached per episode across PPO iterations'});
+  lineChart('cStd',[{name:'full',c:'--series-1',pts:C.std.full},
+    {name:'finish',c:'--series-2',pts:C.std.finish}],
+    {yd:2,td:3,aria:'Policy standard deviation across PPO iterations'});
+  lineChart('cFell',[{name:'full',c:'--series-1',pts:C.fell.full},
+    {name:'finish',c:'--series-2',pts:C.fell.finish}],
+    {zero:true,yd:1,td:3,aria:'Fraction of episodes ended by base contact'});
+
+  barChart('cSpeed',[
+    {k:'Fido',v:1.60,lab:'1.60',c:'--series-3',note:'MuJoCo quadruped. Fastest gait in the project — but no heading observation, so he curves.'},
+    {k:'MujocoBiped',v:1.15,lab:'1.15',c:'--series-3',note:'Mean closing speed. Survives a full episode only 30% of the time.'},
+    {k:'IsaacBox',v:0.987,lab:'0.99',c:'--series-2',note:'model_2999.pt: mean speed 0.987 m/s, 0.939 of it toward the target, 8.09 targets/min, zero falls. Reference recording 0.953 m/s.'},
+    {k:'IsaacH1',v:0.510,lab:'0.51',c:'--series-2',note:'Velocity-command walker against a 1.0 m/s command; tracking error 0.117.'},
+    {k:'ML-Agents best',v:0.25,lab:'~0.25',c:'--series-1',note:'Estimated from map sizing: the 22 m Flat map was cut from 34 m because the fastest brain needed ~135 s.'}
+  ],{unit:'m/s ',d:2,xlab:'metres per second',lw:126,aria:'Measured locomotion speed per racer'});
+
+  barChart('cFalls',[
+    {k:'IsaacBox',v:0,lab:'0.00',c:'--good',note:'Did not fall once across the evaluation window.'},
+    {k:'IsaacH1',v:0.125,lab:'0.125',c:'--warn',note:'One fall roughly every eight robot-minutes.'},
+    {k:'MujocoBiped',v:1.40,lab:'~1.4',c:'--crit',note:'Derived: survived a full episode only 30% of the time, at 516 steps per episode.'}
+  ],{unit:'falls/min ',d:2,xlab:'falls per robot-minute (lower is better)',lw:112,
+     aria:'Falls per robot minute per port'});
+
+  divChart('cRewardTerms', D.rewardTerms.map(r=>({k:r[0],v:r[1],w:r[2],
+    g:{task:'Task reward',gait:'Gait shaping',reg:'Regularisation',term:'Terminal'}[r[3]]})),
+    {aria:'Reward term contributions, positive and negative'});
+
+  scatter('cScatter',[
+    {n:'Worm',x:5,y:34,c:'--series-1',lab:1,la:'s',note:'Six segments, serpentine wave. The curriculum clock.'},
+    {n:'Blob',x:5,y:34,c:'--series-1',lab:0,note:'Same shape as Worm; the only prismatic rig.'},
+    {n:'Kangaroo',x:6,y:37,c:'--series-1',lab:1,la:'s',note:'Two-legged hop with a counterweight tail.'},
+    {n:'Spider / Quad',x:8,y:43,c:'--series-1',lab:1,la:'s',note:'Spider is 8 legs × 1 joint; Quadruped is 4 legs × 2. Identical tensor shapes, different weights.'},
+    {n:'Fido',x:8,y:33,c:'--series-3',lab:1,la:'e',note:'Below the line: no goal, no contact bits, no terrain probes — only his own body.'},
+    {n:'Bipeds ×4',x:11,y:52,c:'--series-1',lab:1,la:'s',note:'Grandma, Grandpa, Matt, Nick. 512×3 network, no imitation warm start.'},
+    {n:'Crab / Hexapod',x:12,y:55,c:'--series-1',lab:1,la:'s',note:'Same rig budget, different phase tables.'},
+    {n:'MujocoBiped',x:12,y:49,c:'--series-3',lab:1,la:'e',note:'Below the line: 49 obs for 12 joints, MuJoCo layout.'},
+    {n:'Centipede',x:17,y:70,c:'--series-1',lab:1,la:'e',note:'The widest ML-Agents control problem.'},
+    {n:'IsaacH1',x:19,y:69,c:'--series-2',lab:1,la:'e',note:'Above the line at 69: carries previous actions and full joint-velocity blocks.'},
+    {n:'IsaacBox',x:21,y:75,c:'--series-2',lab:1,la:'e',note:'The largest control problem on the grid, and the best-behaved racer.'}
+  ]);
+
+  strip('obsStrip',[
+    {k:'joint pos / vel / contact',w:36,r:'[0, 3N) — 3 per joint, N = 12 shown'},
+    {k:'root.up',w:3,r:'[3N, 3N+3)'},
+    {k:'root.y',w:1,r:'[3N+3]'},
+    {k:'goal dir',w:3,r:'[3N+4, 3N+7)'},
+    {k:'goal dist',w:1,r:'[3N+7]'},
+    {k:'root vel',w:3,r:'[3N+8, 3N+11)'},
+    {k:'root ang vel',w:3,r:'[3N+11, 3N+14)'},
+    {k:'stamina',w:1,r:'[3N+14]'},
+    {k:'terrain probes',w:4,r:'[3N+15, 3N+19)'}
+  ],55);
+
+  strip('obsBox',[
+    {k:'base_lin_vel',w:3,r:'[0, 3)'},
+    {k:'base_ang_vel',w:3,r:'[3, 6)'},
+    {k:'projected_gravity',w:3,r:'[6, 9)'},
+    {k:'target_pos_b',w:3,r:'[9, 12)'},
+    {k:'joint_pos',w:21,r:'[12, 33)'},
+    {k:'joint_vel',w:21,r:'[33, 54)'},
+    {k:'last actions',w:21,r:'[54, 75)'}
+  ],75);
+}
+
+let rt; addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(renderAll,180);});
+addEventListener('DOMContentLoaded',renderAll);
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+new MutationObserver(renderAll).observe(document.body,{attributes:true,attributeFilter:['data-mode']});
+if(document.readyState!=='loading') renderAll();
 </script>
 </body>
 </html>

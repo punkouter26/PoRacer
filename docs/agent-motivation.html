@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What the Racers Want — PoRacer</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    /* Skin: matched to the PoRacer DOCS suite (validated categorical palette).
+       Coral is deliberately absent — red and green are reserved in this project
+       as the racer-controller legend, so the focal role uses blue instead. */
+    --color-paper:       #f6f6f4;
+    --color-paper-2:     #ffffff;
+    --color-ink:         #0b0b0b;
+    --color-muted:       #52514e;
+    --color-soft:        #8d8b83;
+    --color-rule:        rgba(11,11,11,0.12);
+    --color-rule-solid:  #dcdbd6;
+    --color-accent:      #2a78d6;
+    --color-accent-tint: rgba(42,120,214,0.12);
+    --color-link:        #eb6834;
+    --font-sans:  'Geist', system-ui, sans-serif;
+    --font-serif: 'Instrument Serif', serif;
+    --font-mono:  'Geist Mono', ui-monospace, monospace;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    padding: 3.5rem 2rem 5rem;
+    line-height: 1.6;
+  }
+  .frame { max-width: 1120px; margin: 0 auto; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted);
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-family: var(--font-serif); font-size: clamp(2rem, 3.4vw + 1rem, 3.1rem);
+    font-weight: 400; letter-spacing: -0.02em; line-height: 1.08; margin-bottom: 1rem;
+  }
+  h2 {
+    font-family: var(--font-serif); font-size: clamp(1.5rem, 2vw + 0.75rem, 2rem);
+    font-weight: 400; letter-spacing: -0.02em; line-height: 1.15;
+    margin: 4.5rem 0 0.5rem;
+  }
+  .standfirst { font-size: 1.15rem; color: var(--color-muted); max-width: 62ch; margin-bottom: 1.25rem; }
+  p { max-width: 68ch; margin-bottom: 1rem; }
+  p.sub { color: var(--color-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+  .colophon-note {
+    font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.55;
+    color: var(--color-muted); border-left: 2px solid var(--color-rule-solid);
+    padding-left: 0.9rem; max-width: 74ch; margin-bottom: 2.5rem;
+  }
+  aside.pull {
+    font-family: var(--font-serif); font-style: italic; font-size: 1.3rem; line-height: 1.4;
+    color: var(--color-ink); border-left: 2px solid var(--color-accent);
+    padding: 0.2rem 0 0.2rem 1.25rem; margin: 2rem 0; max-width: 56ch;
+  }
+  figure { margin: 2rem 0 2.5rem; }
+  svg.dgm { width: 100%; min-width: 900px; display: block; }
+  .scroller { overflow-x: auto; }
+  figcaption {
+    font-family: var(--font-mono); font-size: 0.72rem; color: var(--color-muted);
+    letter-spacing: 0.04em; margin-top: 0.9rem; padding-top: 0.7rem;
+    border-top: 1px solid var(--color-rule); max-width: 82ch;
+  }
+  .cards { display: grid; grid-template-columns: 1.15fr 1fr 0.9fr; gap: 1rem; margin: 2.5rem 0; }
+  @media (max-width: 860px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--color-paper-2); border: 1px solid var(--color-rule);
+    border-radius: 6px; padding: 1.25rem;
+  }
+  .card .eyebrow { margin-bottom: 0.6rem; }
+  .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .card-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .card-dot.ink { background: var(--color-ink); }
+  .card-dot.accent { background: var(--color-accent); }
+  .card-dot.link { background: var(--color-link); }
+  .card-dot.soft { background: var(--color-soft); }
+  .card h3 { font-size: 0.98rem; font-weight: 600; letter-spacing: -0.01em; }
+  .card ul { list-style: none; }
+  .card li { font-size: 0.86rem; color: var(--color-muted); padding-left: 0.9rem;
+    position: relative; margin-bottom: 0.45rem; line-height: 1.5; }
+  .card li::before { content: "—"; position: absolute; left: 0; color: var(--color-soft); }
+  .card li b { color: var(--color-ink); font-weight: 600; }
+  code { font-family: var(--font-mono); font-size: 0.86em; }
+  footer {
+    font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-muted);
+    border-top: 1px solid var(--color-rule); padding-top: 1.25rem; margin-top: 4rem;
+    line-height: 1.7;
+  }
+  footer a { color: var(--color-accent); }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <p class="eyebrow">PoRacer · Visual essay</p>
+  <h1>What the racers want</h1>
+  <p class="standfirst">The same system drawn as motivation rather than architecture. Not what the
+  code does — what each creature is <em>paid</em> for, what it is <em>punished</em> for, and how those
+  incentives add up to the gait you actually see on screen.</p>
+  <p class="colophon-note">Five diagrams. Every number is measured: reward weights from
+  <span style="color:var(--color-ink)">chase_env_cfg.py</span> and
+  <span style="color:var(--color-ink)">Reward_WormLoco.cs</span>, earnings from the final iteration of the
+  2,016-iteration <span style="color:var(--color-ink)">boy_chase_flat</span> run, speeds from each port's
+  <span style="color:var(--color-ink)">eval</span> manifest. Skinned to match the DOCS suite; coral is
+  deliberately absent, because red and green are reserved in this project as the racer-controller legend.</p>
+
+  <p>A trained racer has no plan. It has no map of the track, no memory of the last race, and in one
+  case no idea where the finish line is. What it has is a number that went up or down a few million
+  times during training, and a set of weights shaped by that number. Everything a racer appears to
+  <em>want</em> is a fossil of that number.</p>
+
+  <p>So the honest way to describe these creatures is not by their architecture. It is by their
+  incentives.</p>
+
+  <!-- ============================ 1. LOOP ============================ -->
+  <h2>1 · The loop that made them</h2>
+  <p class="sub">Work advances clockwise. Every pass writes back into one shared thing — the weights.</p>
+
+  <figure>
+  <div class="scroller">
+  <svg class="dgm" viewBox="0 0 1040 740" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-labelledby="am-loop-title am-loop-desc">
+    <title id="am-loop-title">The training loop that shapes a racer</title>
+    <desc id="am-loop-desc">A six-station clockwise loop — observe, decide, act, move, score, learn — in
+      which every station writes back into a shared central store of policy weights; scoring is marked as
+      the station where motivation is actually defined.</desc>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#52514e"/></marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2a78d6"/></marker>
+      <marker id="arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#8d8b83"/></marker>
+      <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#eb6834"/></marker>
+    </defs>
+
+    <rect width="100%" height="100%" fill="#f6f6f4"/>
+
+    <!-- ring arcs (clockwise, same radius, computed against box/circle intersections) -->
+    <path d="M 600.000 113.726 A 240 240 0 0 1 704.969 187.073" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M 743.285 252.000 A 240 240 0 0 1 743.722 426.882" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M 705.731 492.000 A 240 240 0 0 1 601.130 565.871" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M 440.000 566.274 A 240 240 0 0 1 335.031 492.927" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M 296.715 428.000 A 240 240 0 0 1 296.278 253.118" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M 334.269 188.000 A 240 240 0 0 1 438.870 114.129" fill="none" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <!-- dashed write-back spokes (radial, stop 6px short of the hub stroke) -->
+    <line x1="520.000" y1="132.000" x2="520.000" y2="282.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <line x1="672.574" y1="252.000" x2="615.263" y2="285.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <line x1="672.574" y1="428.000" x2="615.263" y2="395.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <line x1="520.000" y1="548.000" x2="520.000" y2="398.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <line x1="367.426" y1="428.000" x2="424.737" y2="395.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <line x1="367.426" y1="252.000" x2="424.737" y2="285.000" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+
+    <!-- spoke labels: two only, curated -->
+    <rect x="536" y="196" width="76" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="574" y="205" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace"
+          letter-spacing="0.06em" text-anchor="middle">GRADIENTS</text>
+    <rect x="536" y="472" width="72" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="572" y="481" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace"
+          letter-spacing="0.06em" text-anchor="middle">ADVANTAGE</text>
+
+    <!-- station 0 · Observe -->
+    <rect x="440" y="68" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="440" y="68" width="160" height="64" rx="6" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <rect x="448" y="74" width="36" height="12" rx="2" fill="transparent" stroke="rgba(11,11,11,0.40)" stroke-width="0.8"/>
+    <text x="466" y="83" fill="rgba(11,11,11,0.8)" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">SENSE</text>
+    <text x="520" y="104" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Observe</text>
+    <text x="520" y="120" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">75 floats, own body</text>
+
+    <!-- station 1 · Decide -->
+    <rect x="648" y="188" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="648" y="188" width="160" height="64" rx="6" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <rect x="656" y="194" width="36" height="12" rx="2" fill="transparent" stroke="rgba(11,11,11,0.40)" stroke-width="0.8"/>
+    <text x="674" y="203" fill="rgba(11,11,11,0.8)" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">POLICY</text>
+    <text x="728" y="224" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Decide</text>
+    <text x="728" y="240" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">128x3 elu, sampled</text>
+
+    <!-- station 2 · Act -->
+    <rect x="648" y="428" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="648" y="428" width="160" height="64" rx="6" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <rect x="656" y="434" width="32" height="12" rx="2" fill="transparent" stroke="rgba(11,11,11,0.40)" stroke-width="0.8"/>
+    <text x="672" y="443" fill="rgba(11,11,11,0.8)" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">DRIVE</text>
+    <text x="728" y="464" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Act</text>
+    <text x="728" y="480" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">21 joint targets</text>
+
+    <!-- station 3 · Move -->
+    <rect x="440" y="548" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="440" y="548" width="160" height="64" rx="6" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <rect x="448" y="554" width="32" height="12" rx="2" fill="transparent" stroke="rgba(11,11,11,0.40)" stroke-width="0.8"/>
+    <text x="464" y="563" fill="rgba(11,11,11,0.8)" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">SIM</text>
+    <text x="520" y="584" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Move</text>
+    <text x="520" y="600" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">200 Hz, 4 substeps</text>
+
+    <!-- station 4 · Score  [FOCAL] -->
+    <rect x="232" y="428" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="232" y="428" width="160" height="64" rx="6" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <rect x="240" y="434" width="36" height="12" rx="2" fill="transparent" stroke="rgba(42,120,214,0.55)" stroke-width="0.8"/>
+    <text x="258" y="443" fill="#2a78d6" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">REWARD</text>
+    <text x="312" y="464" fill="#2a78d6" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Score</text>
+    <text x="312" y="480" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">17 weighted terms</text>
+
+    <!-- station 5 · Learn -->
+    <rect x="232" y="188" width="160" height="64" rx="6" fill="#f6f6f4"/>
+    <rect x="232" y="188" width="160" height="64" rx="6" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <rect x="240" y="194" width="24" height="12" rx="2" fill="transparent" stroke="rgba(11,11,11,0.40)" stroke-width="0.8"/>
+    <text x="252" y="203" fill="rgba(11,11,11,0.8)" font-size="7" font-family="'Geist Mono', monospace"
+          text-anchor="middle" letter-spacing="0.08em">PPO</text>
+    <text x="312" y="224" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Learn</text>
+    <text x="312" y="240" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">5 epochs, clip 0.2</text>
+
+    <!-- hub -->
+    <rect x="420" y="288" width="200" height="104" rx="8" fill="#0b0b0b"/>
+    <text x="520" y="330" fill="#f6f6f4" font-size="13" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">The weights</text>
+    <text x="520" y="350" fill="rgba(246,246,244,0.72)" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">45,611 numbers</text>
+    <text x="520" y="366" fill="rgba(246,246,244,0.72)" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">all it will ever know</text>
+
+    <!-- legend strip -->
+    <line x1="30" y1="656" x2="1010" y2="656" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="30" y="676" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+    <line x1="130" y1="672" x2="158" y2="672" stroke="#52514e" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <text x="166" y="676" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">ONE TICK OF THE LOOP</text>
+    <line x1="360" y1="672" x2="388" y2="672" stroke="#8d8b83" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+    <text x="396" y="676" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">WRITES BACK INTO THE WEIGHTS</text>
+    <rect x="640" y="666" width="10" height="10" rx="2" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="658" y="676" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">WHERE MOTIVATION IS DEFINED</text>
+    <rect x="900" y="666" width="10" height="10" rx="2" fill="#0b0b0b"/>
+    <text x="918" y="676" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">ACCUMULATED STATE</text>
+  </svg>
+  </div>
+  <figcaption>IsaacBox's loop, run 98,304 times per iteration across 4,096 parallel bodies, 2,016
+    iterations deep. Only <b>Score</b> is authored by a human — the other five stations are mechanical.
+    Everything the finished racer appears to want was decided in that one box.</figcaption>
+  </figure>
+
+  <aside class="pull">Only one station in that ring is a design decision. The reward function is the
+  entire personality of the creature; the rest is arithmetic.</aside>
+  <!-- ============================ 2. LAYERS ============================ -->
+  <h2>2 · Five wants, stacked by how often they pay</h2>
+  <p class="sub">The same creature is chasing all five at once. They differ enormously in how often
+  they fire — and that, not their headline weight, is what actually shapes behaviour.</p>
+
+  <figure>
+  <div class="scroller">
+  <svg class="dgm" viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-labelledby="am-layers-title am-layers-desc">
+    <title id="am-layers-title">A racer's five motivations ordered by reward frequency</title>
+    <desc id="am-layers-desc">Five stacked bands of motivation for an ML-Agents creature — cross the
+      line, gain ground, hurry, move well, stay alive — ordered from the rarest payout at the top to the
+      densest at the bottom, with gaining ground marked as the term that carries the behaviour.</desc>
+    <defs>
+      <marker id="arrow2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#52514e"/></marker>
+    </defs>
+    <rect width="100%" height="100%" fill="#f6f6f4"/>
+
+    <!-- density direction indicator, left margin OUTSIDE the stack -->
+    <line x1="40" y1="72" x2="40" y2="392" stroke="rgba(11,11,11,0.28)" stroke-width="1" marker-end="url(#arrow2)"/>
+    <text x="24" y="236" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace"
+          letter-spacing="0.14em" text-anchor="middle" transform="rotate(-90 24 236)">PAYS MORE OFTEN</text>
+
+    <!-- L5 · cross the line -->
+    <rect x="88" y="72" width="824" height="64" rx="4" fill="#f6f6f4" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="104" y="100" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L5</text>
+    <text x="104" y="118" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">ONCE</text>
+    <text x="200" y="102" fill="#0b0b0b" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Cross the line</text>
+    <text x="200" y="120" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">+10 within 0.5 m of the goal, then the episode ends</text>
+    <text x="896" y="108" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">1x per episode</text>
+
+    <!-- L4 · gain ground  [FOCAL] -->
+    <rect x="88" y="136" width="824" height="64" rx="4" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="104" y="164" fill="#2a78d6" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L4</text>
+    <text x="104" y="182" fill="#2a78d6" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">EVERY TICK</text>
+    <text x="200" y="166" fill="#2a78d6" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Gain ground</text>
+    <text x="200" y="184" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">+1.0 per metre closed, clamped to 0.2 m per step, never step-scaled</text>
+    <text x="896" y="172" fill="#2a78d6" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">the load-bearing term</text>
+
+    <!-- L3 · hurry -->
+    <rect x="88" y="200" width="824" height="64" rx="4" fill="#f6f6f4" stroke="rgba(11,11,11,0.35)" stroke-width="1"/>
+    <text x="104" y="228" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L3</text>
+    <text x="104" y="246" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">200 / SEC</text>
+    <text x="200" y="230" fill="#0b0b0b" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Hurry</text>
+    <text x="200" y="248" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">-0.002 every step, so a fast finish strictly beats a slow one</text>
+    <text x="896" y="240" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">-6 over a full episode</text>
+
+    <!-- L2 · move well -->
+    <rect x="88" y="264" width="824" height="64" rx="4" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.35)" stroke-width="1"/>
+    <text x="104" y="292" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L2</text>
+    <text x="104" y="310" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">200 / SEC</text>
+    <text x="200" y="294" fill="#0b0b0b" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Move well</text>
+    <text x="200" y="312" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">-0.05 t^2 energy  ·  +0.02 upright  ·  -0.01 jerk  ·  -0.025 foot slip</text>
+    <text x="896" y="304" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">all x 0.25 at 200 Hz</text>
+
+    <!-- L1 · stay alive -->
+    <rect x="88" y="328" width="824" height="64" rx="4" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="104" y="356" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L1</text>
+    <text x="104" y="374" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">ONCE</text>
+    <text x="200" y="358" fill="#0b0b0b" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Stay alive</text>
+    <text x="200" y="376" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">-1 fell or diverged  ·  -0.5 gave up after 20 s of no progress</text>
+    <text x="896" y="368" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">terminal</text>
+
+    <!-- editorial callout -->
+    <line x1="88" y1="424" x2="912" y2="424" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="88" y="450" fill="#0b0b0b" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">
+      L4 is the only term whose episode sum is a physical quantity — metres actually closed.
+    </text>
+    <text x="88" y="470" fill="#52514e" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">
+      That is why it needs no timestep scaling, and why every other term does.
+    </text>
+
+    <!-- legend strip -->
+    <line x1="30" y1="496" x2="970" y2="496" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="30" y="516" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+    <rect x="130" y="506" width="10" height="10" rx="2" fill="#f6f6f4" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="148" y="516" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">TERMINAL — FIRES ONCE</text>
+    <rect x="360" y="506" width="10" height="10" rx="2" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.35)" stroke-width="1"/>
+    <text x="378" y="516" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">SHAPING — FIRES EVERY STEP</text>
+    <rect x="616" y="506" width="10" height="10" rx="2" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="634" y="516" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">POTENTIAL-BASED — SURVIVES THE TIMESTEP</text>
+  </svg>
+  </div>
+  <figcaption>The ML-Agents creature stack. <b>L2 and L3 fire 200 times a second and L5 fires once</b> —
+    which is why the four-day step-scaling bug did so much damage: it multiplied L2 and L3 by four
+    while leaving L4 and L5 alone, quietly rewriting what the creature wanted.</figcaption>
+  </figure>
+
+  <p>That stack is also the clearest way to see why <em>mean reward is the wrong promotion metric</em>.
+  L4 is potential-based: its sum over an episode is exactly the metres of ground the creature closed.
+  L2 and L3 accumulate per step. So a creature that survives twice as long collects twice as much
+  shaping — and outscores a faster creature that finished early. The number goes up. The racing gets
+  worse.</p>
+
+  <!-- ============================ 3. FLOWCHART ============================ -->
+  <h2>3 · How it ends, and what each ending is worth</h2>
+  <p class="sub">Four exits, checked in this order, every single step. Three of them cost the creature
+  something.</p>
+
+  <figure>
+  <div class="scroller">
+  <svg class="dgm" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-labelledby="am-flow-title am-flow-desc">
+    <title id="am-flow-title">Episode termination logic and the reward attached to each ending</title>
+    <desc id="am-flow-desc">A top-down decision flow evaluated every physics step: reaching the goal
+      earns plus ten and ends the episode, diverging costs minus one, stalling costs minus zero point
+      five as a truncation rather than a termination, and otherwise the creature keeps racing.</desc>
+    <defs>
+      <marker id="arrow3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#52514e"/></marker>
+      <marker id="arrow3a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2a78d6"/></marker>
+    </defs>
+    <rect width="100%" height="100%" fill="#f6f6f4"/>
+
+    <!-- ARROWS FIRST -->
+    <!-- start -> D1 -->
+    <line x1="260" y1="80" x2="260" y2="112" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <!-- D1 yes -> R1  (accent: the happy path) -->
+    <line x1="348" y1="160" x2="536" y2="160" stroke="#2a78d6" stroke-width="1.4" marker-end="url(#arrow3a)"/>
+    <rect x="414" y="134" width="56" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="442" y="143" fill="#2a78d6" font-size="8" font-family="'Geist Mono', monospace"
+          letter-spacing="0.06em" text-anchor="middle">YES</text>
+    <!-- D1 no -> D2 -->
+    <line x1="260" y1="204" x2="260" y2="252" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <rect x="272" y="222" width="28" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="286" y="231" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em" text-anchor="middle">NO</text>
+    <!-- D2 yes -> R2 -->
+    <line x1="348" y1="300" x2="536" y2="300" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <rect x="414" y="274" width="56" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="442" y="283" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em" text-anchor="middle">YES</text>
+    <!-- D2 no -> D3 -->
+    <line x1="260" y1="344" x2="260" y2="392" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <rect x="272" y="362" width="28" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="286" y="371" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em" text-anchor="middle">NO</text>
+    <!-- D3 yes -> R3 -->
+    <line x1="348" y1="440" x2="536" y2="440" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <rect x="414" y="414" width="56" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="442" y="423" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em" text-anchor="middle">YES</text>
+    <!-- D3 no -> end -->
+    <line x1="260" y1="484" x2="260" y2="544" stroke="#52514e" stroke-width="1" marker-end="url(#arrow3)"/>
+    <rect x="272" y="508" width="28" height="12" rx="2" fill="#f6f6f4"/>
+    <text x="286" y="517" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em" text-anchor="middle">NO</text>
+
+    <!-- NODES -->
+    <!-- start oval -->
+    <rect x="160" y="32" width="200" height="48" rx="20" fill="#f6f6f4"/>
+    <rect x="160" y="32" width="200" height="48" rx="20" fill="rgba(82,81,78,0.10)" stroke="#8d8b83" stroke-width="1"/>
+    <text x="260" y="62" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">One physics step taken</text>
+
+    <!-- D1 diamond -->
+    <polygon points="260,116 348,160 260,204 172,160" fill="#f6f6f4"/>
+    <polygon points="260,116 348,160 260,204 172,160" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <text x="260" y="156" fill="#0b0b0b" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Reached it?</text>
+    <text x="260" y="172" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">dist &lt;= 0.5 m</text>
+
+    <!-- D2 diamond -->
+    <polygon points="260,256 348,300 260,344 172,300" fill="#f6f6f4"/>
+    <polygon points="260,256 348,300 260,344 172,300" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <text x="260" y="296" fill="#0b0b0b" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Broke?</text>
+    <text x="260" y="312" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">y &lt; -1 m, 500 m, NaN</text>
+
+    <!-- D3 diamond -->
+    <polygon points="260,396 348,440 260,484 172,440" fill="#f6f6f4"/>
+    <polygon points="260,396 348,440 260,484 172,440" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <text x="260" y="436" fill="#0b0b0b" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Gave up?</text>
+    <text x="260" y="452" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no 0.05 m in 20 s</text>
+
+    <!-- end oval -->
+    <rect x="160" y="544" width="200" height="48" rx="20" fill="#f6f6f4"/>
+    <rect x="160" y="544" width="200" height="48" rx="20" fill="rgba(82,81,78,0.10)" stroke="#8d8b83" stroke-width="1"/>
+    <text x="260" y="574" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Keep racing</text>
+
+    <!-- R1 outcome (accent) -->
+    <rect x="536" y="132" width="304" height="56" rx="6" fill="#f6f6f4"/>
+    <rect x="536" y="132" width="304" height="56" rx="6" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="552" y="150" fill="#2a78d6" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">+10 · ENDEPISODE</text>
+    <text x="552" y="170" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Won</text>
+    <text x="600" y="170" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">the only ending worth anything</text>
+
+    <!-- R2 outcome -->
+    <rect x="536" y="272" width="304" height="56" rx="6" fill="#f6f6f4"/>
+    <rect x="536" y="272" width="304" height="56" rx="6" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="552" y="290" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">-1 · ENDEPISODE · FAILED = TRUE</text>
+    <text x="552" y="310" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Diverged</text>
+    <text x="628" y="310" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">caught before it reaches NaN</text>
+
+    <!-- R3 outcome -->
+    <rect x="536" y="412" width="304" height="56" rx="6" fill="#f6f6f4"/>
+    <rect x="536" y="412" width="304" height="56" rx="6" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="552" y="430" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.10em">-0.5 · EPISODEINTERRUPTED</text>
+    <text x="552" y="450" fill="#0b0b0b" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Stalled</text>
+    <text x="616" y="450" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace">truncated, so value is bootstrapped</text>
+
+    <!-- editorial callout on the -0.5 -->
+    <line x1="536" y1="492" x2="840" y2="492" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="536" y="518" fill="#0b0b0b" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">Why -0.5, and not zero?</text>
+    <text x="536" y="540" fill="#52514e" font-size="13" font-style="italic" font-family="'Instrument Serif', serif">At zero, freezing beats trying-and-falling in</text>
+    <text x="536" y="558" fill="#52514e" font-size="13" font-style="italic" font-family="'Instrument Serif', serif">expectation — that trains passive brains. Milder</text>
+    <text x="536" y="576" fill="#52514e" font-size="13" font-style="italic" font-family="'Instrument Serif', serif">than -1 so trying stays the better gamble.</text>
+
+    <!-- legend strip -->
+    <line x1="30" y1="620" x2="970" y2="620" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="30" y="640" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+    <rect x="130" y="632" width="20" height="10" rx="10" fill="rgba(82,81,78,0.10)" stroke="#8d8b83" stroke-width="1"/>
+    <text x="158" y="641" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">START / CONTINUE</text>
+    <polygon points="330,631 342,637 330,643 318,637" fill="#f6f6f4" stroke="#0b0b0b" stroke-width="1"/>
+    <text x="350" y="641" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">CHECK, EVERY STEP</text>
+    <rect x="530" y="632" width="16" height="10" rx="2" fill="rgba(11,11,11,0.04)" stroke="rgba(11,11,11,0.55)" stroke-width="1"/>
+    <text x="554" y="641" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">ENDING</text>
+    <line x1="660" y1="637" x2="684" y2="637" stroke="#2a78d6" stroke-width="1.4" marker-end="url(#arrow3a)"/>
+    <text x="694" y="641" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">THE HAPPY PATH</text>
+  </svg>
+  </div>
+  <figcaption>Checked in exactly this order, every step. The distinction that matters is
+    <b><code>EndEpisode</code> versus <code>EpisodeInterrupted</code></b>: a stall is a <em>truncation</em>,
+    so the value function is bootstrapped and the agent is not taught that the world ends when it stops
+    moving. Get that wrong and you train a creature that fears standing still more than falling over.</figcaption>
+  </figure>
+  <!-- ============================ 4. BAR ============================ -->
+  <h2>4 · What it actually earns, once trained</h2>
+  <p class="sub">IsaacBox's reward budget at the final iteration, seventeen terms grouped into eight.
+  Positive is earned; negative is what earning it cost.</p>
+
+  <figure>
+  <div class="scroller">
+  <svg class="dgm" viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-labelledby="am-bar-title am-bar-desc">
+    <title id="am-bar-title">IsaacBox reward budget by group at the end of training</title>
+    <desc id="am-bar-desc">Column chart of mean episodic reward per second across eight grouped reward
+      terms: closing on the target earns about plus 1.93 while every other group is a small cost, the
+      largest being smooth actuation at about minus 0.23.</desc>
+    <defs>
+      <marker id="arrow4" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#52514e"/></marker>
+    </defs>
+    <rect width="100%" height="100%" fill="#f6f6f4"/>
+
+    <!-- gridlines: y = 360 - v*160 ; v from -0.4 to 2.0 in 0.4 steps -->
+    <line x1="80" y1="40"  x2="920" y2="40"  stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <line x1="80" y1="104" x2="920" y2="104" stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <line x1="80" y1="168" x2="920" y2="168" stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <line x1="80" y1="232" x2="920" y2="232" stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <line x1="80" y1="296" x2="920" y2="296" stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <line x1="80" y1="424" x2="920" y2="424" stroke="rgba(11,11,11,0.08)" stroke-width="0.8"/>
+    <!-- zero baseline, heavier -->
+    <line x1="80" y1="360" x2="920" y2="360" stroke="rgba(11,11,11,0.25)" stroke-width="1"/>
+    <!-- y axis -->
+    <line x1="80" y1="40" x2="80" y2="424" stroke="rgba(11,11,11,0.25)" stroke-width="1"/>
+
+    <!-- y labels -->
+    <text x="72" y="44"  fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">+2.0</text>
+    <text x="72" y="108" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">+1.6</text>
+    <text x="72" y="172" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">+1.2</text>
+    <text x="72" y="236" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">+0.8</text>
+    <text x="72" y="300" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">+0.4</text>
+    <text x="72" y="364" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">0</text>
+    <text x="72" y="428" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">-0.4</text>
+    <text x="36" y="232" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace"
+          letter-spacing="0.14em" text-anchor="middle" transform="rotate(-90 36 232)">REWARD PER SECOND</text>
+
+    <!-- bar 0 · FOCAL · close on target  +1.9251 -->
+    <rect x="92" y="52" width="72" height="308" fill="#f6f6f4"/>
+    <rect x="92" y="52" width="72" height="308" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="128" y="44" fill="#2a78d6" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">+1.925</text>
+    <text x="128" y="380" fill="#2a78d6" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Close on</text>
+    <text x="128" y="394" fill="#2a78d6" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">the target</text>
+    <text x="128" y="410" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">4 terms</text>
+
+    <!-- bar 1 · real strides  +0.2353 -->
+    <rect x="200" y="322" width="72" height="38" fill="#f6f6f4"/>
+    <rect x="200" y="322" width="72" height="38" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="236" y="314" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">+0.235</text>
+    <text x="236" y="380" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Real</text>
+    <text x="236" y="394" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">strides</text>
+    <text x="236" y="410" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">feet_air_time</text>
+
+    <!-- bar 2 · smooth actuation  -0.2262 -->
+    <rect x="308" y="360" width="72" height="36" fill="#f6f6f4"/>
+    <rect x="308" y="360" width="72" height="36" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="344" y="410" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.226</text>
+    <text x="344" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Smooth</text>
+    <text x="344" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">actuation</text>
+    <text x="344" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">action_rate</text>
+
+    <!-- bar 3 · energy & accel  -0.2909 -->
+    <rect x="416" y="360" width="72" height="46" fill="#f6f6f4"/>
+    <rect x="416" y="360" width="72" height="46" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="452" y="420" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.291</text>
+    <text x="452" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Energy &amp;</text>
+    <text x="452" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">acceleration</text>
+    <text x="452" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">2 terms</text>
+
+    <!-- bar 4 · neutral posture  -0.2744 -->
+    <rect x="524" y="360" width="72" height="44" fill="#f6f6f4"/>
+    <rect x="524" y="360" width="72" height="44" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="560" y="418" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.274</text>
+    <text x="560" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Neutral</text>
+    <text x="560" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">posture</text>
+    <text x="560" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">3 terms</text>
+
+    <!-- bar 5 · stay level  -0.0710 -->
+    <rect x="632" y="360" width="72" height="11" fill="#f6f6f4"/>
+    <rect x="632" y="360" width="72" height="11" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="668" y="386" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.071</text>
+    <text x="668" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Stay</text>
+    <text x="668" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">level</text>
+    <text x="668" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">2 terms</text>
+
+    <!-- bar 6 · feet planted  -0.0581 -->
+    <rect x="740" y="360" width="72" height="9" fill="#f6f6f4"/>
+    <rect x="740" y="360" width="72" height="9" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="776" y="384" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.058</text>
+    <text x="776" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Feet</text>
+    <text x="776" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">planted</text>
+    <text x="776" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">2 terms</text>
+
+    <!-- bar 7 · do not fall  -0.0084 -->
+    <rect x="848" y="360" width="72" height="4" fill="#f6f6f4"/>
+    <rect x="848" y="360" width="72" height="4" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="884" y="380" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">-0.008</text>
+    <text x="884" y="440" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Do not</text>
+    <text x="884" y="454" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">fall</text>
+    <text x="884" y="470" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">weight -200</text>
+
+    <!-- legend strip -->
+    <line x1="30" y1="500" x2="970" y2="500" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="30" y="520" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+    <rect x="130" y="510" width="10" height="10" rx="2" fill="rgba(42,120,214,0.12)" stroke="#2a78d6" stroke-width="1"/>
+    <text x="148" y="520" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">THE ENGINE OF THE BEHAVIOUR</text>
+    <rect x="404" y="510" width="10" height="10" rx="2" fill="rgba(82,81,78,0.15)" stroke="#52514e" stroke-width="1"/>
+    <text x="422" y="520" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">EVERYTHING ELSE</text>
+    <text x="640" y="520" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">SUM +1.231 / SEC · x 20 S EPISODE ~ 24.6 MEAN REWARD</text>
+  </svg>
+  </div>
+  <figcaption>Read it as a budget. <b>One group earns; seven spend.</b> The largest single cost is
+    smooth actuation at -0.23 — the policy pays more for jerky movement than for anything else, which
+    is precisely why the resulting gait looks smooth rather than twitchy.</figcaption>
+  </figure>
+
+  <p>Two rows in that chart say something a weights table cannot. <code>targets_reached</code> carries
+  the largest positive weight in the entire config — <b>5.0</b> — and earns <b>0.012</b> per second,
+  because it fires perhaps twice in a twenty-second episode. And
+  <code>termination_penalty</code> carries the largest weight of all, <b>−200</b>, while costing
+  <b>0.005</b> per second. A huge penalty that is almost never collected is not a wasted term: it is
+  what a working balance term looks like from the outside.</p>
+
+  <aside class="pull">A reward weight tells you what the designer intended. What the term
+  <em>earns</em> tells you what the creature learned.</aside>
+
+  <!-- ============================ 5. QUADRANT ============================ -->
+  <h2>5 · Fast, or aimed — almost none of them are both</h2>
+  <p class="sub">Every racer placed by measured speed against whether anything in its observation
+  vector tells it where to go.</p>
+
+  <figure>
+  <div class="scroller">
+  <svg class="dgm" viewBox="0 0 1000 660" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-labelledby="am-quad-title am-quad-desc">
+    <title id="am-quad-title">Racers positioned by measured speed against goal awareness</title>
+    <desc id="am-quad-desc">A two-by-two map of the roster: Fido is the fastest but has no goal in its
+      observations, the ML-Agents creatures know where the goal is but are slow, and IsaacBox is the
+      only racer that is both reasonably fast and fully aimed at its target.</desc>
+    <defs>
+      <marker id="arrow5" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#0b0b0b"/></marker>
+    </defs>
+    <rect width="100%" height="100%" fill="#f6f6f4"/>
+
+    <!-- axes: cross through centre (500,300) -->
+    <line x1="100" y1="300" x2="880" y2="300" stroke="#0b0b0b" stroke-width="1" marker-end="url(#arrow5)"/>
+    <line x1="500" y1="540" x2="500" y2="60" stroke="#0b0b0b" stroke-width="1" marker-end="url(#arrow5)"/>
+    <text x="908" y="304" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace"
+          letter-spacing="0.18em">FASTER</text>
+    <text x="500" y="44" fill="#52514e" font-size="9" font-family="'Geist Mono', monospace"
+          letter-spacing="0.18em" text-anchor="middle">AIMED</text>
+
+    <!-- quadrant corner tags -->
+    <text x="120" y="80" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">KNOWS WHERE, CANNOT GET THERE</text>
+    <text x="860" y="80" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em" text-anchor="end">WINS RACES</text>
+    <text x="120" y="528" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">NEITHER</text>
+    <text x="860" y="528" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em" text-anchor="end">RUNS BEAUTIFULLY, NOWHERE</text>
+
+    <!-- items -->
+    <!-- ML-Agents non-finishers -->
+    <circle cx="172" cy="146" r="4" fill="#52514e"/>
+    <text x="184" y="142" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif">Worm · Spider · Centipede · Crab</text>
+    <text x="184" y="156" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace">~0.12 m/s — do not finish 22 m</text>
+
+    <!-- ML-Agents finishers -->
+    <circle cx="224" cy="216" r="4" fill="#52514e"/>
+    <text x="236" y="212" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif">Quadruped · Hexapod</text>
+    <text x="236" y="226" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace">~0.25 m/s — reach the line</text>
+
+    <!-- IsaacBox  [FOCAL] -->
+    <circle cx="538" cy="102" r="5.5" fill="#2a78d6"/>
+    <text x="552" y="98" fill="#2a78d6" font-size="12" font-weight="600" font-family="'Geist', sans-serif">IsaacBox</text>
+    <text x="552" y="112" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace">0.99 m/s · 0.94 toward target · 8.1 goals/min · 0 falls</text>
+
+    <!-- IsaacH1 -->
+    <circle cx="336" cy="322" r="4" fill="#52514e"/>
+    <text x="348" y="318" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif">IsaacH1</text>
+    <text x="348" y="332" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace">0.51 m/s — takes a velocity command, not a goal</text>
+
+    <!-- MujocoBiped -->
+    <circle cx="604" cy="278" r="4" fill="#52514e"/>
+    <text x="616" y="274" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif">MujocoBiped</text>
+    <text x="616" y="288" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace">1.15 m/s closing — survives a full episode 30% of the time</text>
+
+    <!-- Fido -->
+    <circle cx="796" cy="498" r="4" fill="#52514e"/>
+    <text x="784" y="494" fill="#0b0b0b" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="end">Fido</text>
+    <text x="784" y="508" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">1.6 m/s — no goal, no heading, 33 floats of self</text>
+
+    <!-- editorial callout -->
+    <line x1="100" y1="568" x2="880" y2="568" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="100" y="594" fill="#0b0b0b" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">
+      The vertical axis is not a training outcome. It is a list of what is in the observation vector.
+    </text>
+
+    <!-- legend strip -->
+    <line x1="30" y1="616" x2="970" y2="616" stroke="rgba(11,11,11,0.10)" stroke-width="0.8"/>
+    <text x="30" y="636" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+    <circle cx="136" cy="632" r="4" fill="#52514e"/>
+    <text x="148" y="636" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">MEASURED RACER</text>
+    <circle cx="356" cy="632" r="5.5" fill="#2a78d6"/>
+    <text x="370" y="636" fill="#52514e" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">THE ONLY ONE IN THE TOP-RIGHT</text>
+    <text x="660" y="636" fill="#8d8b83" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">BLOB &amp; KANGAROO OMITTED — NEVER RACED</text>
+  </svg>
+  </div>
+  <figcaption>Speed comes from the reward. <b>Aim comes from the observation vector.</b> Fido sits in
+    the bottom-right not because his training failed but because his 33 inputs describe only his own
+    body — gravity, velocities, joint angles, last action. Nothing tells him the finish line exists,
+    so he walks superbly in a circle.</figcaption>
+  </figure>
+
+  <p>This is the single most useful thing the five diagrams say together. A creature cannot want
+  something it cannot perceive. Fido's problem is not motivational and not an integration bug — it
+  reproduces in the original drop's own verification scene at its own settings. It is an <em>input</em>
+  problem, and the only fix is retraining with a heading term.</p>
+
+  <div class="cards">
+    <div class="card">
+      <p class="eyebrow">WHAT THE DIAGRAMS AGREE ON</p>
+      <div class="card-header"><span class="card-dot accent"></span><h3>Motivation is authored once</h3></div>
+      <ul>
+        <li>Of the six stations in the loop, <b>only the reward is a design decision</b>. The rest is arithmetic.</li>
+        <li>Shaping terms never run at race time, so they can be retuned freely — <b>until the next training run</b>.</li>
+        <li>The one term whose episode sum is a physical quantity is progress. It is also the only one that needs no timestep scaling.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">WHERE IT GOES WRONG</p>
+      <div class="card-header"><span class="card-dot link"></span><h3>Density beats weight</h3></div>
+      <ul>
+        <li>A <b>−200</b> weight collected twice an hour matters less than a <b>−0.005</b> weight collected 200 times a second.</li>
+        <li>The four-day step-scaling bug multiplied the dense terms by four and left the sparse ones alone — silently changing what the creature wanted.</li>
+        <li>Mean reward rises with survival time. <b>Promote on ELO from actual races.</b></li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">THE HARD LIMIT</p>
+      <div class="card-header"><span class="card-dot ink"></span><h3>Perception bounds desire</h3></div>
+      <ul>
+        <li>Fido: <b>33 floats, none of them a goal.</b> Fastest gait in the project, cannot aim it.</li>
+        <li>IsaacH1 gets a velocity command, not a target — it walks where told, not where it needs to be.</li>
+        <li>IsaacBox has <code>target_pos_b</code> in slots 9–12. That is the whole difference.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    <p><b>What the racers want</b> — PoRacer visual essay, 2026-09-03. Five diagrams: loop, layer stack,
+    flowchart, bar chart, quadrant. Skinned to the DOCS suite palette; coral deliberately unused because
+    red and green are reserved as this project's racer-controller legend.</p>
+    <p>Sources: <code>ISAAC/boy_tasks/boy_tasks/chase_env_cfg.py</code> ·
+    <code>ISAAC/boy_tasks/boy_tasks/agents/rsl_rl_ppo_cfg.py</code> ·
+    <code>Assets/Scripts/Rewards/Reward_WormLoco.cs</code> ·
+    <code>Assets/Scripts/Agents/Agent_Creature.cs</code> ·
+    <code>ISAAC/logs/rsl_rl/boy_chase_flat/2026-09-02_21-32-53_full</code> ·
+    <code>Assets/unity_export/*/\*_rig.json</code> · <code>Assets/Creature/policy.json</code></p>
+    <p><a href="index.html">Documentation index</a> ·
+    <a href="creatures_dashboard.html">Creatures dashboard</a> ·
+    <a href="architecture_pipeline.html">Architecture &amp; pipeline</a> ·
+    <a href="scenes_layout.html">Scenes layout</a> ·
+    <a href="onnx_summary.md">ONNX &amp; rig inventory</a></p>
+  </footer>
+
+</div>
+</body>
+</html>

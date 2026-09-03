@@ -1,42 +1,77 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "16px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart TB
-    subgraph Perception["Perception (per step)"]
-        P1["RayPerceptionSensor3D<br/>n_rays * 3 floats"]
-        P2["ArticulationBody.JointState<br/>x, xdot per DoF"]
-        P3["Root.up / Root.position.y"]
-        P4["goal - root (direction, distance)"]
-        P5["linearVelocity (root-local)"]
-        P6["Physics.Raycast 4 probes<br/>forward * d, height"]
+    subgraph SENSE["Perception feeding the reward &mdash; all read in OnActionReceived, all sanitised"]
+      direction LR
+      S1["<b>Sensor_LimbContact</b><br/>OnCollisionEnter/Exit counter per joint body<br/>&rarr; IsGrounded, one bit per joint"]
+      S2["<b>ComputeNormalizedTorque()</b><br/>&Sigma; |jointForce[0]| / (N &middot; 100 N&middot;m)<br/><i>applied torque, not the action &mdash; isometric<br/>bracing must count as work</i>"]
+      S3["<b>ComputeSkateVelocity()</b><br/>mean |linearVelocity.xz| over grounded joints"]
+      S4["<b>uprightDot</b> = dot(root.up, world.up)<br/><b>distance</b> = |goal &minus; root|.xz<br/><b>actionJerk</b> = mean |a_t &minus; a_(t&minus;1)|"]
+      S5["<b>Physics.Raycast &times; 4</b><br/>terrain height ahead<br/><i>observation only &mdash; no reward term</i>"]
     end
 
-    subgraph Reward["Reward_WormLoco.Step (NaN firewall)"]
-        R0["Sanitize inputs<br/>NaN -> previous / 0"]
-        R0 --> RP["Progress = delta_d * 1.0<br/>clamp +- 0.2 m / step"]
-        R0 --> RE["Efficiency = -0.05 * torque_sum / N"]
-        R0 --> RU["Upright = 0.02 * max(up_dot, 0)"]
-        R0 --> RT["Time = -0.002 / step"]
-        RP --> RADD["sum = progress + efficiency + upright + time"]
-        RE --> RADD
-        RU --> RADD
-        RT --> RADD
-        RADD --> RLOG["StatsRecorder<br/>Reward/Progress, /Efficiency, /Upright"]
+    FW["<b>NaN / Inf firewall</b> &mdash; Reward_WormLoco.Step()<br/>currentDistance &rarr; previousDistance &middot; torque &rarr; 0 &middot; uprightDot &rarr; 0 &middot; jerk &rarr; 0 &middot; skate &rarr; 0<br/>then a second belt zeroes a NaN delta, because the ternary clamp passes NaN through<br/><i>mlagents raises on a single NaN reward and kills the whole run</i>"]
+
+    subgraph EXT["Extrinsic reward &mdash; strength 1.0, gamma 0.995, PPO"]
+      direction TB
+      subgraph PROG["Task: potential-based progress (the load-bearing term)"]
+        direction LR
+        P1["delta = previousDistance &minus; currentDistance<br/>clamp to &plusmn;0.2 m <i>(glitch clamp; a real step is ~0.001 m at 200 Hz)</i>"]
+        P2["<b>progress = delta &times; PROGRESS_SCALE 1.0</b><br/>NOT step-scaled: the sum over an episode telescopes to<br/>net metres of approach, whatever the timestep"]
+        P3["bestDistance improves by &gt; 0.05 m &rarr; stall counter resets"]
+        P1 --> P2 --> P3
+      end
+      subgraph SHAPE["Shaping: per-step, all &times; stepScale = &Delta;t / 0.02 s = 0.25 at 200 Hz"]
+        direction LR
+        H1["<b>&minus;0.05 &middot; &tau;&#770;&sup2;</b><br/>ENERGY_PENALTY_SCALE<br/>physiological &tau;&sup2; cost"]
+        H2["<b>+0.02 &middot; max(uprightDot, 0)</b><br/>UPRIGHT_BONUS_SCALE"]
+        H3["<b>&minus;0.01 &middot; clamp(jerk, 0..2)</b><br/>JERK_PENALTY_SCALE<br/>smooth gaits"]
+        H4["<b>&minus;0.025 &middot; clamp(skate, 0..5)</b><br/>SKATE_PENALTY_SCALE<br/>no ice-skating cheat"]
+        H5["<b>&minus;0.002</b> TIME_PENALTY<br/>a full 3000-step episode costs 6,<br/>under the +10 goal bonus"]
+      end
     end
 
-    subgraph Terminal["Terminal Evaluation"]
-        RADD --> TG{"d <= 0.5 m ?<br/>GOAL (+10)"}
-        TG -- Yes --> END1["EndEpisode"]
-        TG -- No --> TB{"y < -1 ?<br/>OOB (-1)"}
-        TB -- Yes --> END2["EndEpisode"]
-        TB -- No --> TN{"no-progress steps >= 1000 ?"}
-        TN -- Yes --> END3["EpisodeInterrupted"]
-        TN -- No --> CONTINUE["continue"]
+    subgraph IMIT["Imitation signals &mdash; AllLoco8h02 only, coded-gait demos"]
+      direction LR
+      I1["<b>GAIL</b> strength 0.05, gamma 0.99<br/>demo_path Assets/Demonstrations/&lt;Name&gt;.demo"]
+      I2["<b>BC</b> strength 0.3, first 400,000 steps<br/>warm start out of random flailing"]
+      I3["<i>Deliberately absent for the four bipeds:</i><br/>a biped's coded gait is a fall, so cloning it<br/>would only teach them to face-plant faster.<br/><i>Also dropped in BrokenLoco01 &mdash; BC pulls the<br/>policy back toward the crawl being escaped</i>"]
     end
 
-    Perception --> Reward
-    RLOG -->|academy only| ACADEMY["Academy.StatsRecorder"]
+    subgraph TERM["Terminal evaluation &mdash; checked in this order, every step"]
+      direction TB
+      T1["<b>NaN root position or up-vector</b><br/>SetReward(&minus;1) &rarr; EndEpisode() &middot; Failed = true"]
+      T2["<b>Goal</b> distance &le; GOAL_RADIUS 0.5 m<br/>AddReward(+10) &rarr; EndEpisode()"]
+      T3["<b>Diverged</b> root.y &lt; &minus;1 m OR distance &gt; 500 m<br/>AddReward(&minus;1) &rarr; EndEpisode() &middot; Failed = true<br/><i>a solver blow-up reaches absurd-but-finite<br/>coordinates long before it reaches NaN</i>"]
+      T4["<b>Stalled</b> stepsSinceImprovement &ge; round(20 s / &Delta;t) = 4000<br/>AddReward(&minus;0.5) &rarr; <b>EpisodeInterrupted()</b><br/><i>truncation, not termination: the value function is<br/>bootstrapped, so the agent is not taught the world ends</i><br/><b>Why &minus;0.5 and not 0:</b> at 0, freezing beats trying-and-<br/>falling (&minus;1) in expectation, which trains passive brains.<br/>Milder than &minus;1 so trying stays the better gamble."]
+      T1 --> T2 --> T3 --> T4
+    end
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef rt fill:#238636,stroke:#0a4622,color:#fff,stroke-width:2px;
-    classDef ctrl fill:#8957e5,stroke:#4a2a8c,color:#fff,stroke-width:2px;
-    class P1,P2,P3,P4,P5,P6 ml;
-    class R0,RP,RE,RU,RT,RADD,RLOG,ACADEMY rt;
-    class TG,TB,TN,END1,END2,END3,CONTINUE ctrl;
+    STATS["<b>StatsRecorder</b> &mdash; gated on Academy.IsCommunicatorOn,<br/>so hundreds of inference-only racers pay nothing<br/>Reward/Progress &middot; Reward/EfficiencyPenalty &middot; Reward/UprightBonus<br/>Reward/JerkPenalty &middot; Reward/SkatePenalty &middot; Reward/TimePenalty &middot; Fatigue/Stamina"]
+
+    SENSE --> FW --> EXT
+    IMIT --> EXT
+    EXT --> SUM["<b>AddReward(sum)</b> this step"]
+    SUM --> TERM
+    SUM --> STATS
+
+    classDef sense fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef guard fill:#ffeaea,stroke:#d0453f,stroke-width:2px,color:#4a0f0d;
+    classDef task fill:#e6f7ec,stroke:#2e9e5b,stroke-width:2px,color:#0d3d22;
+    classDef shape fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    classDef imit fill:#f3ecff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef term fill:#ffe6f0,stroke:#c0398a,stroke-width:2px,color:#4a0a2e;
+    classDef stat fill:#f4f6fa,stroke:#9aa7bd,stroke-width:1px,color:#3a465c;
+    class S1,S2,S3,S4,S5 sense;
+    class FW guard;
+    class P1,P2,P3 task;
+    class H1,H2,H3,H4,H5 shape;
+    class I1,I2,I3 imit;
+    class T1,T2,T3,T4 term;
+    class STATS,SUM stat;

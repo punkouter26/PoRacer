@@ -1,9 +1,33 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: "17px"
+    fontFamily: "ui-sans-serif, Segoe UI, system-ui, sans-serif"
+    lineColor: "#5b6b86"
+---
 flowchart LR
-    OBS["Observation Vector<br/>N*2 + 11"] --> DENSE["Dense 256<br/>Dense 256"]
-    DENSE --> ACT["Action Vector<br/>N continuous"]
-    ACT --> JOINTS["ArticulationDrive<br/>target per joint"]
+    A["<b>What it senses</b><br/>N&times;3 + 19 floats<br/><br/>own joints &middot; feet on ground<br/>which way is up<br/>where the goal is<br/>how tired it is<br/>ground ahead"]
+    B["<b>Two hidden layers</b><br/>256 &rarr; 256<br/>swish activation"]
+    C["<b>Two heads</b><br/>mu (N)  &middot;  sigma (N)<br/>a Gaussian per joint"]
+    D["<b>N actions</b><br/>each in [-1, 1]"]
+    E["<b>N joint drives</b><br/>xDrive.target = a &middot; 45&deg;<br/>PD, forceLimit 100 N&middot;m<br/>scaled by fatigue"]
 
-    classDef ml fill:#1f6feb,stroke:#0b3d91,color:#fff,stroke-width:2px;
-    classDef phys fill:#d29922,stroke:#7a5b00,color:#fff,stroke-width:2px;
-    class OBS,DENSE,ACT ml;
-    class JOINTS phys;
+    A --> B --> C --> D --> E
+
+    A2["Worm 34 &rarr; 5<br/>Spider 43 &rarr; 8<br/>Crab 55 &rarr; 12<br/>Centipede 70 &rarr; 17"]
+    B2["Bipeds use 512 &times; 3<br/>52 &rarr; 11"]
+    E2["IsaacBox / IsaacH1 use<br/>128 &times; 3 ELU instead,<br/>and no fatigue"]
+
+    A -.- A2
+    B -.- B2
+    E -.- E2
+
+    classDef sense fill:#e3f0ff,stroke:#2f6fd0,stroke-width:2px,color:#0b2545;
+    classDef brain fill:#efe6ff,stroke:#7c4dd0,stroke-width:2px,color:#2a1055;
+    classDef act fill:#fff2dc,stroke:#c98a12,stroke-width:2px,color:#4a3200;
+    classDef note fill:#f4f6fa,stroke:#9aa7bd,stroke-width:1px,color:#3a465c,font-size:14px;
+    class A sense;
+    class B,C brain;
+    class D,E act;
+    class A2,B2,E2 note;
