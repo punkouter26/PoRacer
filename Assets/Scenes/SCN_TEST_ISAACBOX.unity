@@ -129,7 +129,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2130212051760372873, guid: 24b38cf1b79559e449ccbadb1bb6259c, type: 3}
       propertyPath: m_Name
-      value: Boy
+      value: IsaacBox
       objectReference: {fileID: 0}
     - target: {fileID: 6178442273473433680, guid: 24b38cf1b79559e449ccbadb1bb6259c, type: 3}
       propertyPath: m_LocalPosition.x
@@ -187,7 +187,7 @@ GameObject:
   - component: {fileID: 991637296}
   - component: {fileID: 991637295}
   m_Layer: 0
-  m_Name: Boy_Camera
+  m_Name: IsaacBox_Camera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -272,7 +272,7 @@ GameObject:
   - component: {fileID: 1088574762}
   - component: {fileID: 1088574761}
   m_Layer: 0
-  m_Name: Boy_Ground
+  m_Name: IsaacBox_Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -384,7 +384,7 @@ GameObject:
   - component: {fileID: 1907974356}
   - component: {fileID: 1907974355}
   m_Layer: 0
-  m_Name: Boy_Light
+  m_Name: IsaacBox_Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

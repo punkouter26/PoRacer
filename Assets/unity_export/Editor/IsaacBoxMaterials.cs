@@ -28,9 +28,14 @@ namespace IsaacBox.EditorTools
         private const string TEX_DIR = "Assets/unity_export/IsaacBox/Textures";
         private const string MAT_DIR = "Assets/unity_export/IsaacBox/Materials";
 
-        // Mobile budget: the authored head base colour is ~9.5 MB and its metallic/roughness
-        // ~11 MB of PNG, which is 4K source art. 2048 is the cap this project renders at.
-        private const int MAX_TEXTURE_SIZE = 2048;
+        // Mobile budget. The 26 MB of PNG in the repo is SOURCE, not app size - Unity
+        // compresses on build, and at these caps the whole creature costs roughly 2.8 MB of
+        // ASTC with mips. Caps are per-texture because the authored art is not uniform:
+        // the head colour and the metallic/roughness map both ship at 4096.
+        private const int MAX_SIZE_DEFAULT = 2048;
+        // Gloss/metallic is low-frequency data - 4096 of it is indistinguishable from 512 on
+        // a creature this size, and 512 costs ~0.04 MB against ~0.62 MB.
+        private const int MAX_SIZE_METALLIC_ROUGHNESS = 512;
 
         private static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
@@ -160,19 +165,21 @@ namespace IsaacBox.EditorTools
                 if (ti == null) continue;
 
                 bool isNormal = assetPath.Contains("_Normal");
+                bool isMetallicRoughness = assetPath.Contains("Metallic") || assetPath.Contains("Roughness");
                 // Metallic/roughness is data, not colour: sampling it through sRGB would skew
                 // every gloss value on the head.
-                bool isLinearData = isNormal || assetPath.Contains("Metallic") || assetPath.Contains("Roughness");
+                bool isLinearData = isNormal || isMetallicRoughness;
+                int cap = isMetallicRoughness ? MAX_SIZE_METALLIC_ROUGHNESS : MAX_SIZE_DEFAULT;
 
                 TextureImporterType wanted = isNormal ? TextureImporterType.NormalMap : TextureImporterType.Default;
                 bool dirty = ti.textureType != wanted
                              || ti.sRGBTexture != !isLinearData
-                             || ti.maxTextureSize != MAX_TEXTURE_SIZE;
+                             || ti.maxTextureSize != cap;
                 if (!dirty) continue;
 
                 ti.textureType = wanted;
                 if (!isNormal) ti.sRGBTexture = !isLinearData;
-                ti.maxTextureSize = MAX_TEXTURE_SIZE;
+                ti.maxTextureSize = cap;
                 ti.SaveAndReimport();
             }
         }

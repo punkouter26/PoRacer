@@ -93,7 +93,7 @@ namespace IsaacBox.Tests
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
             Assert.IsNotNull(prefab, $"prefab missing at {IsaacBoxPaths.Prefab} - run IsaacBox > Build Prefab");
             var go = Object.Instantiate(prefab, pos, Quaternion.identity);
-            go.name = "Boy_test";
+            go.name = "IsaacBox_test";
             _spawned.Add(go);
             var agent = go.GetComponent<IsaacBoxAgent>();
             Assert.IsNotNull(agent, "prefab has no IsaacBoxAgent");

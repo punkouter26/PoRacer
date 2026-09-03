@@ -328,31 +328,31 @@ namespace IsaacBox.EditorTools
             if (!hasGround)
             {
                 var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                ground.name = "Boy_Ground";
+                ground.name = "IsaacBox_Ground";
                 ground.transform.localScale = new Vector3(20f, 1f, 20f);
                 ground.isStatic = true;
                 var gm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(IsaacBoxPaths.Material);
                 if (gm != null) ground.GetComponent<Collider>().sharedMaterial = gm;
                 ground.GetComponent<Collider>().contactOffset = rig.physics.contactOffset;
-                createdLog.Add("Boy_Ground (200x200 m plane, PM_IsaacBox)");
+                createdLog.Add("IsaacBox_Ground (200x200 m plane, PM_IsaacBox)");
             }
 
             if (!hasLight)
             {
-                var lightGo = new GameObject("Boy_Light");
+                var lightGo = new GameObject("IsaacBox_Light");
                 var l = lightGo.AddComponent<Light>();
                 l.type = LightType.Directional;
                 l.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-                createdLog.Add("Boy_Light (directional)");
+                createdLog.Add("IsaacBox_Light (directional)");
             }
 
             if (!hasCamera)
             {
-                var camGo = new GameObject("Boy_Camera");
+                var camGo = new GameObject("IsaacBox_Camera");
                 camGo.AddComponent<Camera>();
                 camGo.transform.position = new Vector3(3f, 2f, -3f);
                 camGo.transform.LookAt(new Vector3(0f, 0.8f, 0f));
-                createdLog.Add("Boy_Camera");
+                createdLog.Add("IsaacBox_Camera");
             }
         }
 
