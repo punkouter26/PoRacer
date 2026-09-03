@@ -263,8 +263,17 @@ namespace IsaacBox.EditorTools
                 foreach (var c in root.GetComponentsInChildren<Collider>(true))
                     c.sharedMaterial = mat;
 
+                // AddComponent runs Awake IMMEDIATELY, while `rig` is still null - so the agent
+                // hits its own "no rig asset; disabling" guard and sets enabled = false. Assigning
+                // the rig on the next line does not undo that, and SaveAsPrefabAsset then bakes a
+                // DISABLED agent into the prefab. A disabled agent skips ApplyPerBodyOverrides
+                // (Awake returns before it) and never reaches Start, so decimation stays at its
+                // field initializer of 1 and the policy never runs: the creature ships as a
+                // ragdoll that fails ten rungs of the ladder with no error at test time.
+                // Re-enable explicitly AFTER the rig is set, and keep it the last word.
                 var agent = root.AddComponent<IsaacBoxAgent>();
                 agent.rig = rig;
+                agent.enabled = true;
 #if ISAACPORTS_HAS_INFERENCE
                 agent.modelAsset = AssetDatabase.LoadAssetAtPath<ModelAsset>(IsaacBoxPaths.Onnx);
                 if (agent.modelAsset == null)

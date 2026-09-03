@@ -51,18 +51,16 @@ namespace IsaacBox.EditorTools
             public readonly string[] Renderers;
             public readonly string BaseColorTex;
             public readonly string NormalTex;
-            public readonly string MetallicRoughnessTex;
             public readonly float Roughness;
             public readonly Color Tint;
 
             public Spec(string name, string[] renderers, string baseTex, string normalTex,
-                        string mrTex, float roughness, Color tint)
+                        float roughness, Color tint)
             {
                 Name = name;
                 Renderers = renderers;
                 BaseColorTex = baseTex;
                 NormalTex = normalTex;
-                MetallicRoughnessTex = mrTex;
                 Roughness = roughness;
                 Tint = tint;
             }
@@ -71,14 +69,17 @@ namespace IsaacBox.EditorTools
         // Straight out of the GLB's materials array; roughness factors are its own numbers.
         private static readonly Spec[] SPECS =
         {
-            new Spec("M_IsaacBox_Head",  new[] { "3DModel_Custom" }, "Head_BaseColor", null,
-                     "3DModel_Custom_Metallic_3DModel_Custom_Roughness", 0.5f, Color.white),
-            new Spec("M_IsaacBox_Body",  new[] { "Body" },  "Body_BaseColor",  "Body_Normal",  null, 0.48f, Color.white),
-            new Spec("M_IsaacBox_Pants", new[] { "Pants" }, "Pants_BaseColor", "Pants_Normal", null, 0.85f, Color.white),
-            new Spec("M_IsaacBox_Shirt", new[] { "Shirt" }, "Shirt_BaseColor", "Shirt_Normal", null, 0.92f, Color.white),
-            new Spec("M_IsaacBox_Shoes", new[] { "Shoes" }, "Shoes_BaseColor", "Shoes_Normal", null, 0.80f, Color.white),
+            // The head's authored metallic/roughness MAP is deliberately not used - see the
+            // channel-packing note below. Its measured content is metallic ~0.02 and roughness
+            // 0.65-0.93 (mean 0.80), so two scalars reproduce it and an 11 MB 4K map does not
+            // earn its place.
+            new Spec("M_IsaacBox_Head",  new[] { "3DModel_Custom" }, "Head_BaseColor", null, 0.80f, Color.white),
+            new Spec("M_IsaacBox_Body",  new[] { "Body" },  "Body_BaseColor",  "Body_Normal",  0.48f, Color.white),
+            new Spec("M_IsaacBox_Pants", new[] { "Pants" }, "Pants_BaseColor", "Pants_Normal", 0.85f, Color.white),
+            new Spec("M_IsaacBox_Shirt", new[] { "Shirt" }, "Shirt_BaseColor", "Shirt_Normal", 0.92f, Color.white),
+            new Spec("M_IsaacBox_Shoes", new[] { "Shoes" }, "Shoes_BaseColor", "Shoes_Normal", 0.80f, Color.white),
             // Shoe_Rubber has no maps in the GLB, only a base colour factor.
-            new Spec("M_IsaacBox_SoleRubber", new[] { "Sole_L", "Sole_R" }, null, null, null, 0.55f,
+            new Spec("M_IsaacBox_SoleRubber", new[] { "Sole_L", "Sole_R" }, null, null, 0.55f,
                      new Color(0.42f, 0.40f, 0.36f, 1f)),
         };
 
@@ -102,8 +103,13 @@ namespace IsaacBox.EditorTools
                 return;
             }
 
+            // Instantiating runs the agent's Awake in edit mode, and that Awake can disable the
+            // component; saving the instance straight back would persist the disabled state into
+            // the prefab. Guarantee it stays enabled before writing.
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             int assigned = Apply(instance);
+            var agent = instance.GetComponent<IsaacBoxAgent>();
+            if (agent != null) agent.enabled = true;
             PrefabUtility.SaveAsPrefabAsset(instance, IsaacBoxPaths.Prefab);
             Object.DestroyImmediate(instance);
             AssetDatabase.SaveAssets();
@@ -211,8 +217,15 @@ namespace IsaacBox.EditorTools
                 if (SetTex(m, BumpMap, spec.NormalTex)) m.EnableKeyword("_NORMALMAP");
                 else m.DisableKeyword("_NORMALMAP");
 
-                if (SetTex(m, MetallicGlossMap, spec.MetallicRoughnessTex)) m.EnableKeyword("_METALLICSPECGLOSSMAP");
-                else m.DisableKeyword("_METALLICSPECGLOSSMAP");
+                // NEVER put a glTF metallicRoughness map into URP's _MetallicGlossMap: the
+                // channel packing is different and the result is not subtly wrong, it is wildly
+                // wrong. glTF stores roughness in G and metallic in B, leaving R unused; URP
+                // reads metallic from R and smoothness from A. The head's map has R = 255 and
+                // A = 255 throughout, so URP rendered it as metallic 1.0 / smoothness 1.0 - a
+                // chrome mirror, which read on screen as a dark red shiny head. Roughness and
+                // metallic come from the scalars above instead.
+                m.SetTexture(MetallicGlossMap, null);
+                m.DisableKeyword("_METALLICSPECGLOSSMAP");
 
                 if (isNew) AssetDatabase.CreateAsset(m, path);
                 else EditorUtility.SetDirty(m);
