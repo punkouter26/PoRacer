@@ -49,9 +49,18 @@ namespace PoRacer.Presentation
         // scrolling; the previous 16/18/19/23 scale was sized against the older
         // 540-unit reference, where every token rendered ~21% smaller in dp than
         // its number and had been over-corrected to compensate.
-        public const float FONT_XS = 14f;
-        public const float FONT_SM = 15f;
-        public const float FONT_MD = 17f;
+        //
+        // Raised again the same day, once the roster row height was shown to be
+        // set by the CONTROL_SM count buttons rather than by its text: the labels
+        // inside a row can grow without making the row any taller, so the smallest
+        // step costs nothing vertically and 14 was uncomfortably close to the
+        // floor. On a 360 dp handset - the narrow end of the range this 420 dp
+        // reference covers - a token renders at 0.857x its number, so FONT_XS 14
+        // landed at 12.0 sp, under Android's 14 sp body-text minimum. At 15 it is
+        // 12.9 sp there and 14.7 sp on a 411 dp phone.
+        public const float FONT_XS = 15f;
+        public const float FONT_SM = 16f;
+        public const float FONT_MD = 18f;
         public const float FONT_LG = 20f;
         public const float FONT_TITLE = 28f;
         public const float FONT_BANNER = 52f;

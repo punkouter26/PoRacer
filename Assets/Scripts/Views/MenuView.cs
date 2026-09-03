@@ -184,8 +184,7 @@ namespace PoRacer.Views
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                // Scripted mode races the coded gait, so a missing brain is fine.
-                if (entry.prefab != null && (entry.HasBrain || _config.UseScriptedBrains))
+                if (entry.prefab != null && entry.HasBrain)
                 {
                     _ranked.Add(entry);
                 }
@@ -234,27 +233,11 @@ namespace PoRacer.Views
             title.style.flexShrink = 0f;
             titleRow.Add(title);
 
-            // No subtitle here. Top-centre is a reserved screen anchor - the FPS
-            // readout owns it on every screen - and a "Race Setup" line drawn on
-            // the title row lands directly under it. The screen is self-evidently
-            // race setup, so the label was costing a collision to say nothing.
-            var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
-            spacer.style.flexGrow = 1f;
-            titleRow.Add(spacer);
-
-            var brainToggle = new Button(ToggleBrains)
-            {
-                text = _config.UseScriptedBrains ? "Brains: Scripted gaits" : "Brains: RL (trained)"
-            };
-            brainToggle.style.height = UiTheme.CONTROL_SM;
-            brainToggle.style.fontSize = UiTheme.FONT_XS;
-            brainToggle.style.flexShrink = 0f;
-            UiTheme.SetMargin(brainToggle, 0f, 0f);
-            UiTheme.SetPadding(brainToggle, 0f, UiTheme.SPACE_SM);
-            UiTheme.StyleButton(brainToggle);
-            UiTheme.AddHover(brainToggle);
-            titleRow.Add(brainToggle);
-
+            // Nothing else sits on this line. Top-centre is a reserved anchor - the
+            // FPS readout owns it on every screen - and the brain-source toggle
+            // that used to sit top-right was removed: it only reached the six
+            // ML-Agents creatures, because the other four run their own inference
+            // and carry no BehaviorParameters for it to switch.
             // Accent underline gives the title a logo feel.
             var titleBar = new VisualElement { pickingMode = PickingMode.Ignore };
             titleBar.style.height = 3;
@@ -493,25 +476,15 @@ namespace PoRacer.Views
 
         private void ApplyPreset(int count)
         {
-            bool scripted = _config.UseScriptedBrains;
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && (entry.HasBrain || scripted))
+                if (entry.prefab != null && entry.HasBrain)
                 {
                     _config.SetCount(entry.id, count);
                 }
             }
             // Count buttons highlight from config state; rebuild to reflect it.
-            _root.Clear();
-            BuildMenu();
-            _config.NotifyChanged();
-        }
-
-        private void ToggleBrains()
-        {
-            _config.UseScriptedBrains = !_config.UseScriptedBrains;
-            // Availability changes with the mode, so rebuild the whole menu.
             _root.Clear();
             BuildMenu();
             _config.NotifyChanged();

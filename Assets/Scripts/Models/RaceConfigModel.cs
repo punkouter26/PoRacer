@@ -15,9 +15,6 @@ namespace PoRacer.Models
 
         public bool MenuVisible = true;
 
-        // Scripted mode races the coded gaits (no .onnx needed) instead of RL brains.
-        public bool UseScriptedBrains;
-
         // Index into Systems_MapCatalog.Entries; the menu writes it, spawn reads it.
         public int SelectedMapIndex;
 

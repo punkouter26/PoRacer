@@ -405,8 +405,7 @@ namespace PoRacer.Systems
                 {
                     continue;
                 }
-                bool scripted = _config.UseScriptedBrains;
-                if (entry.prefab == null || (!entry.HasBrain && !scripted))
+                if (entry.prefab == null || !entry.HasBrain)
                 {
                     Debug.LogWarning($"Creature '{entry.id}' has no trained brain yet; skipping its {requested} racers.");
                     continue;
@@ -468,9 +467,12 @@ namespace PoRacer.Systems
                     }
                     if (behavior != null)
                     {
-                        if (scripted || entry.model == null)
+                        if (entry.model == null)
                         {
-                            // Coded gait instead of a brain: Heuristic() drives the joints.
+                            // No .onnx to load, so fall back to the coded gait rather
+                            // than spawning a racer with no controller at all. Kept
+                            // after the scripted-brains toggle was removed: it is the
+                            // guard against a catalog entry losing its model.
                             behavior.BehaviorType = BehaviorType.HeuristicOnly;
                         }
                         else
