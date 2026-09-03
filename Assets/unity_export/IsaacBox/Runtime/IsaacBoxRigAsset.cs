@@ -1,18 +1,18 @@
 using System;
 using UnityEngine;
 
-namespace Boy
+namespace IsaacBox
 {
     /// <summary>
-    /// The Boy rig exactly as Isaac Lab simulates it. Generated from boy_rig.json by
-    /// <c>Boy/Rebuild Rig Asset From JSON</c>; do not hand-edit.
+    /// The IsaacBox rig exactly as Isaac Lab simulates it. Generated from isaacbox_rig.json by
+    /// <c>IsaacBox/Rebuild Rig Asset From JSON</c>; do not hand-edit.
     ///
     /// Every vector on this asset is in the ISAAC frame (right-handed, Z-up, X-forward,
     /// metres, radians). <see cref="PoRacer.IsaacPorts.IsaacFrameMap"/> converts, and it
-    /// does so in exactly one place - <c>BoyRigBuilder</c> - so the map is provable by
+    /// does so in exactly one place - <c>IsaacBoxRigBuilder</c> - so the map is provable by
     /// the kinematics test.
     ///
-    /// The ZERO joint pose is the authored T-pose of Boy_Character.fbx; every link frame
+    /// The ZERO joint pose is the authored T-pose of IsaacBox_Character.fbx; every link frame
     /// is world-aligned there. <see cref="BoyJointDef.defaultPosRad"/> is the standing
     /// pose the policy's actions are offset from.
     /// </summary>
@@ -135,8 +135,8 @@ namespace Boy
         public float targetSpeed = 1f;
     }
 
-    [CreateAssetMenu(fileName = "BoyRig", menuName = "Boy/Rig Asset")]
-    public class BoyRigAsset : ScriptableObject
+    [CreateAssetMenu(fileName = "BoyRig", menuName = "IsaacBox/Rig Asset")]
+    public class IsaacBoxRigAsset : ScriptableObject
     {
         public string sourceTask;
         public string trainTask;

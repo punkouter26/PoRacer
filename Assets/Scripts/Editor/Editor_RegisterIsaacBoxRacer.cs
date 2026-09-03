@@ -1,5 +1,5 @@
 using System.IO;
-using Boy;
+using IsaacBox;
 using PoRacer.Agents;
 using PoRacer.Models;
 using UnityEditor;
@@ -11,46 +11,46 @@ using Unity.InferenceEngine;
 namespace PoRacer.EditorTools
 {
     /// <summary>
-    /// Puts the Boy on the race grid: creates the <c>Assets/Prefabs/Boy_v01.prefab</c> variant
-    /// (Boy.prefab + <see cref="Agent_Boy"/>) and registers it in the CreatureCatalog, the same
+    /// Puts the IsaacBox on the race grid: creates the <c>Assets/Prefabs/IsaacBox_v01.prefab</c> variant
+    /// (IsaacBox.prefab + <see cref="Agent_IsaacBox"/>) and registers it in the CreatureCatalog, the same
     /// shape as the IsaacH1_v01 entry. Idempotent: re-running updates the existing entry, which
-    /// is how the entry picks up Boy.onnx once export_bundle.py has produced it.
+    /// is how the entry picks up IsaacBox.onnx once export_bundle.py has produced it.
     ///
     /// Until the ONNX exists the entry has no model, so <c>HasBrain</c> is false and the menu
-    /// files the Boy under "coming soon" instead of racing a brainless rig.
+    /// files the IsaacBox under "coming soon" instead of racing a brainless rig.
     /// </summary>
-    public static class Editor_RegisterBoyRacer
+    public static class Editor_RegisterIsaacBoxRacer
     {
-        private const string VARIANT_PATH = "Assets/Prefabs/Boy_v01.prefab";
-        private const string ENTRY_ID = "Boy_v01";
-        private const string DISPLAY_NAME = "Boy";
+        private const string VARIANT_PATH = "Assets/Prefabs/IsaacBox_v01.prefab";
+        private const string ENTRY_ID = "IsaacBox_v01";
+        private const string DISPLAY_NAME = "IsaacBox";
 
-        [MenuItem("PoRacer/Creatures/Register Boy Racer")]
+        [MenuItem("PoRacer/Creatures/Register IsaacBox Racer")]
         public static void Register()
         {
-            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Prefab);
+            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
             if (source == null)
             {
-                Debug.LogError($"[Boy] {BoyPaths.Prefab} not found. Run Boy > Build Prefab first.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBox > Build Prefab first.");
                 return;
             }
 
-            BoyRigAsset rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            IsaacBoxRigAsset rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
             GameObject variant = AssetDatabase.LoadAssetAtPath<GameObject>(VARIANT_PATH);
             if (variant == null)
             {
                 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(source);
                 instance.name = ENTRY_ID;
-                if (instance.GetComponent<Agent_Boy>() == null)
+                if (instance.GetComponent<Agent_IsaacBox>() == null)
                 {
-                    instance.AddComponent<Agent_Boy>();
+                    instance.AddComponent<Agent_IsaacBox>();
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(VARIANT_PATH));
                 variant = PrefabUtility.SaveAsPrefabAsset(instance, VARIANT_PATH);
                 Object.DestroyImmediate(instance);
                 if (variant == null)
                 {
-                    Debug.LogError($"[Boy] could not save {VARIANT_PATH}");
+                    Debug.LogError($"[IsaacBox] could not save {VARIANT_PATH}");
                     return;
                 }
             }
@@ -58,7 +58,7 @@ namespace PoRacer.EditorTools
             string[] guids = AssetDatabase.FindAssets("t:CreatureCatalog");
             if (guids.Length == 0)
             {
-                Debug.LogError("[Boy] no CreatureCatalog asset in the project.");
+                Debug.LogError("[IsaacBox] no CreatureCatalog asset in the project.");
                 return;
             }
             string catalogPath = AssetDatabase.GUIDToAssetPath(guids[0]);
@@ -66,7 +66,7 @@ namespace PoRacer.EditorTools
 
             Object model = null;
 #if ISAACPORTS_HAS_INFERENCE
-            model = AssetDatabase.LoadAssetAtPath<ModelAsset>(BoyPaths.Onnx);
+            model = AssetDatabase.LoadAssetAtPath<ModelAsset>(IsaacBoxPaths.Onnx);
 #endif
             // the spawner adds +0.05 m to spawnHeight; land exactly on Isaac's spawn height
             float spawnHeight = rig != null ? rig.spawnPosIsaac.z - 0.05f : 0.71f;
@@ -98,8 +98,8 @@ namespace PoRacer.EditorTools
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"[Boy] registered '{ENTRY_ID}' in {catalogPath} (entry {index}): prefab {VARIANT_PATH}, " +
-                      $"model {(model != null ? BoyPaths.Onnx : "NONE yet - 'coming soon' until export_bundle.py runs")}, " +
+            Debug.Log($"[IsaacBox] registered '{ENTRY_ID}' in {catalogPath} (entry {index}): prefab {VARIANT_PATH}, " +
+                      $"model {(model != null ? IsaacBoxPaths.Onnx : "NONE yet - 'coming soon' until export_bundle.py runs")}, " +
                       $"spawnHeight {spawnHeight:F3}");
         }
     }

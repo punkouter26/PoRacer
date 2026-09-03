@@ -8,59 +8,59 @@ using UnityEngine.SceneManagement;
 using Unity.InferenceEngine;
 #endif
 
-using Boy;
+using IsaacBox;
 using PoRacer.IsaacPorts;
 
-namespace Boy.EditorTools
+namespace IsaacBox.EditorTools
 {
     /// <summary>
-    /// Authoring tools for the Boy creature. Everything this writes lands inside
-    /// Assets/unity_export/Boy/ - it never edits a project setting, a layer, a build
+    /// Authoring tools for the IsaacBox creature. Everything this writes lands inside
+    /// Assets/unity_export/IsaacBox/ - it never edits a project setting, a layer, a build
     /// setting, another agent, or another scene's assets.
     ///
     /// Menu:
-    ///   Boy / Rebuild Rig Asset From JSON   - boy_rig.json -> BoyRig.asset
-    ///   Boy / Build Prefab                  - rig asset + Boy_Character.fbx -> Boy.prefab + material
-    ///   Boy / Spawn Into Open Scene         - window; spawns, leaves the scene dirty
-    ///   Boy / Run Reference Check           - edit-mode ONNX check vs the recording
+    ///   IsaacBox / Rebuild Rig Asset From JSON   - isaacbox_rig.json -> IsaacBoxRig.asset
+    ///   IsaacBox / Build Prefab                  - rig asset + IsaacBox_Character.fbx -> IsaacBox.prefab + material
+    ///   IsaacBox / Spawn Into Open Scene         - window; spawns, leaves the scene dirty
+    ///   IsaacBox / Run Reference Check           - edit-mode ONNX check vs the recording
     /// </summary>
-    public static class BoySetup
+    public static class IsaacBoxSetup
     {
-        public const string Root = BoyPaths.Root;
+        public const string Root = IsaacBoxPaths.Root;
 
         // ------------------------------------------------------------ rig asset --
-        [MenuItem("Boy/Rebuild Rig Asset From JSON", priority = 0)]
+        [MenuItem("IsaacBox/Rebuild Rig Asset From JSON", priority = 0)]
         public static void RebuildRigAsset()
         {
             var asset = BuildRigAssetFromJson();
             if (asset == null) return;
             Selection.activeObject = asset;
             EditorGUIUtility.PingObject(asset);
-            Debug.Log($"[Boy] rig asset rebuilt: {asset.bodies.Length} bodies, {asset.jointOrder.Length} joints, " +
-                      $"{CountColliders(asset)} collision shapes, {asset.totalMass:F1} kg -> {BoyPaths.RigAsset}");
+            Debug.Log($"[IsaacBox] rig asset rebuilt: {asset.bodies.Length} bodies, {asset.jointOrder.Length} joints, " +
+                      $"{CountColliders(asset)} collision shapes, {asset.totalMass:F1} kg -> {IsaacBoxPaths.RigAsset}");
         }
 
-        static int CountColliders(BoyRigAsset a)
+        static int CountColliders(IsaacBoxRigAsset a)
         {
             int n = 0;
             foreach (var b in a.bodies) n += b.colliders?.Length ?? 0;
             return n;
         }
 
-        public static BoyRigAsset BuildRigAssetFromJson()
+        public static IsaacBoxRigAsset BuildRigAssetFromJson()
         {
-            if (!File.Exists(BoyPaths.RigJson))
+            if (!File.Exists(IsaacBoxPaths.RigJson))
             {
-                Debug.LogError($"[Boy] {BoyPaths.RigJson} not found. Run ISAAC/boy_rig/build_boy_rig.py first.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.RigJson} not found. Run ISAAC/boy_rig/build_boy_rig.py first.");
                 return null;
             }
 
-            var raw = MiniJson.Parse(File.ReadAllText(BoyPaths.RigJson)) as Dictionary<string, object>;
-            if (raw == null) { Debug.LogError("[Boy] rig JSON did not parse to an object."); return null; }
+            var raw = MiniJson.Parse(File.ReadAllText(IsaacBoxPaths.RigJson)) as Dictionary<string, object>;
+            if (raw == null) { Debug.LogError("[IsaacBox] rig JSON did not parse to an object."); return null; }
 
-            var asset = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            var asset = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
             bool isNew = asset == null;
-            if (isNew) asset = ScriptableObject.CreateInstance<BoyRigAsset>();
+            if (isNew) asset = ScriptableObject.CreateInstance<IsaacBoxRigAsset>();
 
             asset.sourceTask = MiniJson.Str(raw, "sourceTask");
             asset.trainTask = MiniJson.Str(raw, "trainTask");
@@ -195,7 +195,7 @@ namespace Boy.EditorTools
                 asset.bodies[i] = def;
             }
 
-            if (isNew) AssetDatabase.CreateAsset(asset, BoyPaths.RigAsset);
+            if (isNew) AssetDatabase.CreateAsset(asset, IsaacBoxPaths.RigAsset);
             else EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
             return asset;
@@ -207,11 +207,11 @@ namespace Boy.EditorTools
         /// combine, which reproduces Isaac's multiply against a 1.0/1.0 ground exactly and
         /// never exceeds the Isaac pair value against a slipperier one (see the H1 port).
         /// </summary>
-        public static PhysicsMaterial CreateOrUpdateMaterial(BoyRigAsset rig)
+        public static PhysicsMaterial CreateOrUpdateMaterial(IsaacBoxRigAsset rig)
         {
-            var mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(BoyPaths.Material);
+            var mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(IsaacBoxPaths.Material);
             bool isNew = mat == null;
-            if (isNew) mat = new PhysicsMaterial("PM_Boy");
+            if (isNew) mat = new PhysicsMaterial("PM_IsaacBox");
 
             mat.staticFriction = rig.physics.robotStaticFriction;
             mat.dynamicFriction = rig.physics.robotDynamicFriction;
@@ -220,72 +220,72 @@ namespace Boy.EditorTools
             mat.bounceCombine = PhysicsMaterialCombine.Minimum;
 
             Directory.CreateDirectory(Root);
-            if (isNew) AssetDatabase.CreateAsset(mat, BoyPaths.Material);
+            if (isNew) AssetDatabase.CreateAsset(mat, IsaacBoxPaths.Material);
             else EditorUtility.SetDirty(mat);
             AssetDatabase.SaveAssets();
 
-            var back = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(BoyPaths.Material);
+            var back = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(IsaacBoxPaths.Material);
             if (back == null)
-                Debug.LogError($"[Boy] {BoyPaths.Material} did not import - colliders would ship with no friction.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Material} did not import - colliders would ship with no friction.");
             return back;
         }
 
         // ----------------------------------------------------------- build prefab --
-        [MenuItem("Boy/Build Prefab", priority = 1)]
+        [MenuItem("IsaacBox/Build Prefab", priority = 1)]
         public static void BuildPrefab() => BuildPrefab(true);
 
-        /// <summary>Builds Boy.prefab. Returns the saved prefab asset, or null.</summary>
+        /// <summary>Builds IsaacBox.prefab. Returns the saved prefab asset, or null.</summary>
         public static GameObject BuildPrefab(bool withSkin)
         {
-            var rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset) ?? BuildRigAssetFromJson();
+            var rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset) ?? BuildRigAssetFromJson();
             if (rig == null) return null;
 
             var mat = CreateOrUpdateMaterial(rig);
             if (mat == null)
             {
-                Debug.LogError("[Boy] aborting Build Prefab: the physics material did not import.");
+                Debug.LogError("[IsaacBox] aborting Build Prefab: the physics material did not import.");
                 return null;
             }
 
             GameObject fbx = null;
             if (withSkin)
             {
-                fbx = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Fbx);
+                fbx = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Fbx);
                 if (fbx == null)
-                    Debug.LogWarning($"[Boy] {BoyPaths.Fbx} not found; building the physics rig without its skin.");
+                    Debug.LogWarning($"[IsaacBox] {IsaacBoxPaths.Fbx} not found; building the physics rig without its skin.");
             }
 
             GameObject root = null;
             try
             {
-                root = BoyRigBuilder.Build(rig, fbx, out string report);
+                root = IsaacBoxRigBuilder.Build(rig, fbx, out string report);
 
                 foreach (var c in root.GetComponentsInChildren<Collider>(true))
                     c.sharedMaterial = mat;
 
-                var agent = root.AddComponent<BoyAgent>();
+                var agent = root.AddComponent<IsaacBoxAgent>();
                 agent.rig = rig;
 #if ISAACPORTS_HAS_INFERENCE
-                agent.modelAsset = AssetDatabase.LoadAssetAtPath<ModelAsset>(BoyPaths.Onnx);
+                agent.modelAsset = AssetDatabase.LoadAssetAtPath<ModelAsset>(IsaacBoxPaths.Onnx);
                 if (agent.modelAsset == null)
-                    Debug.LogWarning($"[Boy] {BoyPaths.Onnx} is not present yet (run ISAAC/scripts/export_bundle.py). " +
+                    Debug.LogWarning($"[IsaacBox] {IsaacBoxPaths.Onnx} is not present yet (run ISAAC/scripts/export_bundle.py). " +
                                      "The prefab holds the default pose until a brain is assigned.");
 #endif
-                var sampler = root.AddComponent<BoyTargetSampler>();
+                var sampler = root.AddComponent<IsaacBoxTargetSampler>();
                 sampler.ConfigureFrom(rig);
 
                 Directory.CreateDirectory(Root);
-                var prefab = PrefabUtility.SaveAsPrefabAsset(root, BoyPaths.Prefab, out bool ok);
+                var prefab = PrefabUtility.SaveAsPrefabAsset(root, IsaacBoxPaths.Prefab, out bool ok);
                 if (!ok || prefab == null)
                 {
-                    Debug.LogError($"[Boy] failed to save {BoyPaths.Prefab}");
+                    Debug.LogError($"[IsaacBox] failed to save {IsaacBoxPaths.Prefab}");
                     return null;
                 }
 
                 AssetDatabase.SaveAssets();
                 Selection.activeObject = prefab;
                 EditorGUIUtility.PingObject(prefab);
-                Debug.Log($"[Boy] prefab built -> {BoyPaths.Prefab}\n{report}" +
+                Debug.Log($"[IsaacBox] prefab built -> {IsaacBoxPaths.Prefab}\n{report}" +
                           $"  bodies {root.GetComponentsInChildren<ArticulationBody>(true).Length}, " +
                           $"colliders {root.GetComponentsInChildren<Collider>(true).Length}, " +
                           $"material {mat.staticFriction:F2}/{mat.dynamicFriction:F2} ({mat.frictionCombine} combine)");
@@ -293,7 +293,7 @@ namespace Boy.EditorTools
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[Boy] Build Prefab failed: {e.Message}");
+                Debug.LogError($"[IsaacBox] Build Prefab failed: {e.Message}");
                 return null;
             }
             finally
@@ -303,14 +303,14 @@ namespace Boy.EditorTools
         }
 
         // --------------------------------------------------------------- spawning --
-        internal static void EnsureSceneEssentials(Scene scene, BoyRigAsset rig, List<string> createdLog)
+        internal static void EnsureSceneEssentials(Scene scene, IsaacBoxRigAsset rig, List<string> createdLog)
         {
             bool hasGround = false, hasLight = false, hasCamera = false;
             foreach (var go in scene.GetRootGameObjects())
             {
                 foreach (var c in go.GetComponentsInChildren<Collider>(true))
                 {
-                    if (c.GetComponentInParent<BoyAgent>() != null) continue;
+                    if (c.GetComponentInParent<IsaacBoxAgent>() != null) continue;
                     var b = c.bounds;
                     if (b.size.x > 2f && b.size.z > 2f) { hasGround = true; break; }
                 }
@@ -325,10 +325,10 @@ namespace Boy.EditorTools
                 ground.name = "Boy_Ground";
                 ground.transform.localScale = new Vector3(20f, 1f, 20f);
                 ground.isStatic = true;
-                var gm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(BoyPaths.Material);
+                var gm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(IsaacBoxPaths.Material);
                 if (gm != null) ground.GetComponent<Collider>().sharedMaterial = gm;
                 ground.GetComponent<Collider>().contactOffset = rig.physics.contactOffset;
-                createdLog.Add("Boy_Ground (200x200 m plane, PM_Boy)");
+                createdLog.Add("Boy_Ground (200x200 m plane, PM_IsaacBox)");
             }
 
             if (!hasLight)
@@ -350,39 +350,39 @@ namespace Boy.EditorTools
             }
         }
 
-        [MenuItem("Boy/Spawn Into Open Scene", priority = 2)]
-        public static void OpenSpawnWindow() => BoySpawnWindow.Open();
+        [MenuItem("IsaacBox/Spawn Into Open Scene", priority = 2)]
+        public static void OpenSpawnWindow() => IsaacBoxSpawnWindow.Open();
 
         /// <summary>
         /// Window-free twin of "Spawn Into Open Scene", carrying the same defaults the window
         /// ships with. The menu item above opens an EditorWindow, and a modal window stalls the
         /// `unity command menu` bridge, so automated setup needs an entry point that just runs.
         /// </summary>
-        [MenuItem("Boy/Spawn Into Open Scene (Defaults)", priority = 3)]
+        [MenuItem("IsaacBox/Spawn Into Open Scene (Defaults)", priority = 3)]
         public static void SpawnIntoOpenSceneDefaults()
         {
-            var rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            var rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
             float y = rig != null ? rig.spawnPosIsaac.z : 0.764f;
             SpawnIntoOpenScene(new Vector3(0f, y, -2f), null, true);
         }
 
         public static GameObject SpawnIntoOpenScene(Vector3 position, Transform target, bool createEssentials)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Prefab);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
             if (prefab == null)
             {
-                Debug.LogError($"[Boy] {BoyPaths.Prefab} not found. Run Boy > Build Prefab.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBox > Build Prefab.");
                 return null;
             }
 
             var scene = SceneManager.GetActiveScene();
             if (!scene.IsValid())
             {
-                Debug.LogError("[Boy] no valid open scene to spawn into.");
+                Debug.LogError("[IsaacBox] no valid open scene to spawn into.");
                 return null;
             }
 
-            var rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            var rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
             var created = new List<string>();
             if (createEssentials && rig != null) EnsureSceneEssentials(scene, rig, created);
 
@@ -390,14 +390,14 @@ namespace Boy.EditorTools
             go.transform.position = position;
             go.transform.rotation = Quaternion.identity;
 
-            var agent = go.GetComponent<BoyAgent>();
+            var agent = go.GetComponent<IsaacBoxAgent>();
             if (agent != null && target != null) agent.target = target;
 
-            Undo.RegisterCreatedObjectUndo(go, "Spawn Boy");
+            Undo.RegisterCreatedObjectUndo(go, "Spawn IsaacBox");
             Selection.activeGameObject = go;
             EditorSceneManager.MarkSceneDirty(scene);
 
-            Debug.Log($"[Boy] spawned '{go.name}' at {position} in '{scene.name}'. " +
+            Debug.Log($"[IsaacBox] spawned '{go.name}' at {position} in '{scene.name}'. " +
                       (created.Count > 0 ? "Created: " + string.Join(", ", created) + ". " : "") +
                       (target != null ? $"Target: {target.name}. " : "Target: ring sampler fallback. ") +
                       "The scene is left DIRTY and has not been saved.");
@@ -405,18 +405,18 @@ namespace Boy.EditorTools
         }
 
         // -------------------------------------------------------- reference check --
-        [MenuItem("Boy/Run Reference Check", priority = 3)]
+        [MenuItem("IsaacBox/Run Reference Check", priority = 3)]
         public static void RunReferenceCheckMenu()
         {
 #if ISAACPORTS_HAS_INFERENCE
-            if (!BoyPaths.TryLoadReference(out var obs, out var acts, out string err))
+            if (!IsaacBoxPaths.TryLoadReference(out var obs, out var acts, out string err))
             {
-                Debug.LogError($"[Boy] {err}");
+                Debug.LogError($"[IsaacBox] {err}");
                 return;
             }
 
-            var modelAsset = AssetDatabase.LoadAssetAtPath<ModelAsset>(BoyPaths.Onnx);
-            if (modelAsset == null) { Debug.LogError($"[Boy] {BoyPaths.Onnx} is not a ModelAsset."); return; }
+            var modelAsset = AssetDatabase.LoadAssetAtPath<ModelAsset>(IsaacBoxPaths.Onnx);
+            if (modelAsset == null) { Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Onnx} is not a ModelAsset."); return; }
 
             var model = ModelLoader.Load(modelAsset);
             var worker = new Worker(model, BackendType.CPU);
@@ -438,8 +438,8 @@ namespace Boy.EditorTools
                     }
                 }
                 string verdict = worst < 1e-4f ? "PASS" : "FAIL";
-                Debug.Log($"[Boy] reference check (edit mode, BackendType.CPU): {verdict}\n" +
-                          $"  {obs.Length} recorded observations through Boy.onnx\n" +
+                Debug.Log($"[IsaacBox] reference check (edit mode, BackendType.CPU): {verdict}\n" +
+                          $"  {obs.Length} recorded observations through IsaacBox.onnx\n" +
                           $"  max abs diff {worst:E3} (step {worstStep}, action {worstIdx}), gate 1e-4");
             }
             finally
@@ -448,13 +448,13 @@ namespace Boy.EditorTools
                 worker.Dispose();
             }
 #else
-            Debug.LogError("[Boy] com.unity.ai.inference is not installed.");
+            Debug.LogError("[IsaacBox] com.unity.ai.inference is not installed.");
 #endif
         }
     }
 
     /// <summary>Spawn window. Position, height, and target = the current selection.</summary>
-    public class BoySpawnWindow : EditorWindow
+    public class IsaacBoxSpawnWindow : EditorWindow
     {
         Vector3 _position = new Vector3(0f, 0.764f, -2f);
         bool _useExportHeight = true;
@@ -463,7 +463,7 @@ namespace Boy.EditorTools
 
         public static void Open()
         {
-            var w = GetWindow<BoySpawnWindow>(true, "Spawn Boy", true);
+            var w = GetWindow<IsaacBoxSpawnWindow>(true, "Spawn IsaacBox", true);
             w.minSize = new Vector2(380f, 250f);
             w.PickSelectionAsTarget();
             w.Show();
@@ -472,17 +472,17 @@ namespace Boy.EditorTools
         void PickSelectionAsTarget()
         {
             if (Selection.activeTransform != null &&
-                Selection.activeTransform.GetComponentInParent<BoyAgent>() == null)
+                Selection.activeTransform.GetComponentInParent<IsaacBoxAgent>() == null)
                 _target = Selection.activeTransform;
         }
 
         void OnGUI()
         {
-            var rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            var rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
             float spawnHeight = rig != null ? rig.spawnPosIsaac.z : 0.764f;
 
             EditorGUILayout.HelpBox(
-                "Spawns the Boy prefab into the scene that is already open. The scene is left " +
+                "Spawns the IsaacBox prefab into the scene that is already open. The scene is left " +
                 "dirty and is never saved for you. A ground, light or camera is created only if " +
                 "the scene has none.", MessageType.Info);
 
@@ -518,7 +518,7 @@ namespace Boy.EditorTools
             {
                 if (GUILayout.Button("Spawn", GUILayout.Height(30f)))
                 {
-                    BoySetup.SpawnIntoOpenScene(_position, _target, _createEssentials);
+                    IsaacBoxSetup.SpawnIntoOpenScene(_position, _target, _createEssentials);
                     Close();
                 }
             }

@@ -1,21 +1,21 @@
 using System;
-using Boy;
+using IsaacBox;
 using UnityEngine;
 
 namespace PoRacer.Agents
 {
     /// <summary>
-    /// Race adapter for the Isaac Lab Boy: exposes <see cref="BoyAgent"/> (Inference Engine,
+    /// Race adapter for the Isaac Lab IsaacBox: exposes <see cref="IsaacBoxAgent"/> (Inference Engine,
     /// no ML-Agents) through <see cref="ICreatureAgent"/> so the spawner, RacerView and camera
     /// treat it like any catalog racer. Lives on the same GameObject as the Isaac agent.
     ///
-    /// Runs after <see cref="BoyAgent"/> (execution order 100) so that its Start - which builds
+    /// Runs after <see cref="IsaacBoxAgent"/> (execution order 100) so that its Start - which builds
     /// the inference worker - has already run before this component parks it.
     /// </summary>
-    [RequireComponent(typeof(BoyAgent))]
+    [RequireComponent(typeof(IsaacBoxAgent))]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(100)]
-    public sealed class Agent_Boy : MonoBehaviour, ICreatureAgent
+    public sealed class Agent_IsaacBox : MonoBehaviour, ICreatureAgent
     {
         [Tooltip("Pin the root until something solid is under it. SCN_RACE_FLAT has no ground " +
                  "in edit mode - Systems_TrackBuilder raises the track when the race starts.")]
@@ -29,8 +29,8 @@ namespace PoRacer.Agents
         [Tooltip("How long it must stay down before RacerView is told it Failed.")]
         [SerializeField] private float _fallenGraceSeconds = 1f;
 
-        private BoyAgent _agent;
-        private BoyTargetSampler _sampler;
+        private IsaacBoxAgent _agent;
+        private IsaacBoxTargetSampler _sampler;
         private Action _areaReset;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
         private bool _held;
@@ -50,8 +50,8 @@ namespace PoRacer.Agents
 
         private void Awake()
         {
-            _agent = GetComponent<BoyAgent>();
-            _sampler = GetComponent<BoyTargetSampler>();
+            _agent = GetComponent<IsaacBoxAgent>();
+            _sampler = GetComponent<IsaacBoxTargetSampler>();
             // RacerView owns rescue and retire for racers; the agent's own fall recovery would
             // teleport a racer the marshal is already handling.
             _agent.autoRecoverFromFalls = false;
@@ -107,8 +107,8 @@ namespace PoRacer.Agents
         public void SetAreaResetCallback(Action areaReset) => _areaReset = areaReset;
 
         /// <summary>
-        /// Deliberately does nothing. The Boy has no fatigue system. Calling
-        /// <see cref="BoyAgent.Reconfigure"/> here would rewrite every xDrive from the rig asset
+        /// Deliberately does nothing. The IsaacBox has no fatigue system. Calling
+        /// <see cref="IsaacBoxAgent.Reconfigure"/> here would rewrite every xDrive from the rig asset
         /// and wipe the stiffness and forceLimit a spawn quirk just wrote; the agent's per-tick
         /// drive write copies the existing ArticulationDrive and changes only its target.
         /// </summary>

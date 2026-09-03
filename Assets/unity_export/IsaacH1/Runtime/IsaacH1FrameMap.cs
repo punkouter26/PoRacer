@@ -8,7 +8,7 @@ namespace IsaacH1
     /// Isaac Lab (right-handed, Z-up, X-forward) &lt;-&gt; Unity (left-handed, Y-up, Z-forward).
     ///
     /// Since 2026-09-02 this is a thin forwarder to the shared <see cref="IsaacFrameMap"/>
-    /// in <c>Assets/unity_export/Shared/</c>, which the Boy port also uses. The maths and
+    /// in <c>Assets/unity_export/Shared/</c>, which the IsaacBox port also uses. The maths and
     /// its rationale (M for true vectors, -M for pseudovectors, anchors built at -M*axis)
     /// are documented there; the H1 tests and CONTRACT.md keep referring to this name.
     /// </summary>

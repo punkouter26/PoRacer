@@ -61,9 +61,9 @@ MonoBehaviour:
     model: {fileID: 0}
     spawnHeight: 0
     brainInPrefab: 1
-  - id: Boy_v01
-    displayName: Boy
+  - id: IsaacBox_v01
+    displayName: IsaacBox
     prefab: {fileID: 4612862146113467812, guid: 28265eb1fe356a6458fc813cbc989828, type: 3}
-    model: {fileID: 0}
+    model: {fileID: 5022602860645237092, guid: ad932bebb96cc49439bd1743d9fa4611, type: 3}
     spawnHeight: 0.714
     brainInPrefab: 0

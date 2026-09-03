@@ -4,36 +4,36 @@ using UnityEngine;
 
 using PoRacer.IsaacPorts;
 
-namespace Boy
+namespace IsaacBox
 {
     /// <summary>
-    /// Asset paths and the reference-recording loaders for the Boy port.
+    /// Asset paths and the reference-recording loaders for the IsaacBox port.
     ///
     /// These live in the RUNTIME assembly, not the editor one, so the PlayMode test
     /// assembly can reach them: a test asmdef that is Editor-only is classified as
     /// EditMode, and EditMode never runs FixedUpdate.
     /// </summary>
-    public static class BoyPaths
+    public static class IsaacBoxPaths
     {
-        public const string Root = "Assets/unity_export/Boy";
-        public const string RigJson = Root + "/boy_rig.json";
-        public const string RigAsset = Root + "/BoyRig.asset";
-        public const string Prefab = Root + "/Boy.prefab";
+        public const string Root = "Assets/unity_export/IsaacBox";
+        public const string RigJson = Root + "/isaacbox_rig.json";
+        public const string RigAsset = Root + "/IsaacBoxRig.asset";
+        public const string Prefab = Root + "/IsaacBox.prefab";
 
         /// <summary>
         /// The legacy extension on purpose: Unity 6.5 renamed the class to PhysicsMaterial
         /// but a "*.physicsMaterial" file gets DefaultImporter and never loads (verified in
         /// the IsaacH1 port).
         /// </summary>
-        public const string Material = Root + "/PM_Boy.physicMaterial";
+        public const string Material = Root + "/PM_IsaacBox.physicMaterial";
 
-        public const string Onnx = Root + "/Boy.onnx";
+        public const string Onnx = Root + "/IsaacBox.onnx";
         public const string Reference = Root + "/isaac_reference.json";
         public const string KinematicsReference = Root + "/kinematics_reference.json";
         public const string ExportReport = Root + "/export_report.json";
 
         /// <summary>The authored character; the builder reads its bones and skinned meshes.</summary>
-        public const string Fbx = "Assets/Art/Models/Boy_Character.fbx";
+        public const string Fbx = "Assets/Art/Models/IsaacBox_Character.fbx";
 
         /// <summary>Recorded observations and actions - the inference-path contract.</summary>
         public static bool TryLoadReference(out float[][] obs, out float[][] actions, out string error)

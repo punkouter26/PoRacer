@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-build_boy_rig.py - turn the authored Boy_Character rig into a physics articulation.
+build_boy_rig.py - turn the authored IsaacBox_Character rig into a physics articulation.
 
-Reads the skeletal hierarchy out of Boy_Character.glb (the glTF JSON chunk, no FBX SDK
+Reads the skeletal hierarchy out of IsaacBox_Character.glb (the glTF JSON chunk, no FBX SDK
 needed) and emits, in ONE frame (Isaac: right-handed, Z-up, X-forward, metres, radians):
 
   out/boy.usda                      the headless articulation Isaac Lab simulates:
@@ -11,9 +11,9 @@ needed) and emits, in ONE frame (Isaac: right-handed, Z-up, X-forward, metres, r
                                     torso, head), revolute joints, drive + armature.
                                     No visual meshes. Authored as text - usd-core is
                                     only used to VALIDATE it when available.
-  out/boy_rig.json                  everything Unity needs: bodies, joints, shapes,
+  out/isaacbox_rig.json                  everything Unity needs: bodies, joints, shapes,
                                     masses, inertias, gains, limits, timing, spawn.
-                                    Also copied to Assets/unity_export/Boy/.
+                                    Also copied to Assets/unity_export/IsaacBox/.
   out/kinematics_reference.json     link positions in the hips frame for 3 poses, from
                                     an independent forward-kinematics pass. The Unity
                                     play-mode test compares its rig against this.
@@ -26,7 +26,7 @@ its left side at +X. Isaac is right-handed Z-up X-forward with left at +Y, so
 The Unity side then applies M: isaac (x,y,z) -> unity (-y, z, x) exactly as the IsaacH1
 port does; see Assets/unity_export/Shared/IsaacFrameMap.cs.
 
-Design decisions (all of them are also written into boy_rig.json so the Unity builder
+Design decisions (all of them are also written into isaacbox_rig.json so the Unity builder
 and the Isaac config cannot drift apart):
 
   * The articulation ZERO pose is the authored T-pose. Every link frame is world-aligned
@@ -47,8 +47,8 @@ and the Isaac config cannot drift apart):
     get 0.2 kg / 2e-4 kg.m2 so neither solver sees a near-massless link.
 
 Usage:
-    python build_boy_rig.py [--glb Boy_Character.glb] [--out out]
-                            [--unity-dir ../../Assets/unity_export/Boy] [--total-mass 45]
+    python build_boy_rig.py [--glb IsaacBox_Character.glb] [--out out]
+                            [--unity-dir ../../Assets/unity_export/IsaacBox] [--total-mass 45]
 """
 from __future__ import annotations
 
@@ -61,11 +61,11 @@ import sys
 from collections import OrderedDict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_GLB = os.path.join(HERE, "Boy_Character.glb")
+DEFAULT_GLB = os.path.join(HERE, "IsaacBox_Character.glb")
 DEFAULT_OUT = os.path.join(HERE, "out")
-DEFAULT_UNITY = os.path.normpath(os.path.join(HERE, "..", "..", "Assets", "unity_export", "Boy"))
+DEFAULT_UNITY = os.path.normpath(os.path.join(HERE, "..", "..", "Assets", "unity_export", "IsaacBox"))
 
-CREATURE = "Boy"
+CREATURE = "IsaacBox"
 TASK = "Isaac-Chase-Flat-Boy-v0"
 PLAY_TASK = "Isaac-Chase-Flat-Boy-Play-v0"
 
@@ -576,7 +576,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--glb", default=DEFAULT_GLB)
     ap.add_argument("--out", default=DEFAULT_OUT)
-    ap.add_argument("--unity-dir", default=DEFAULT_UNITY, help="Assets/unity_export/Boy (rig json + FK reference)")
+    ap.add_argument("--unity-dir", default=DEFAULT_UNITY, help="Assets/unity_export/IsaacBox (rig json + FK reference)")
     ap.add_argument("--total-mass", type=float, default=45.0)
     args = ap.parse_args()
 
@@ -713,10 +713,10 @@ def main():
         out_bodies.append(d)
     rig["bodies"] = out_bodies
 
-    rig_path = os.path.join(args.out, "boy_rig.json")
+    rig_path = os.path.join(args.out, "isaacbox_rig.json")
     with open(rig_path, "w", encoding="utf-8") as f:
         json.dump(rig, f, indent=1)
-    with open(os.path.join(args.unity_dir, "boy_rig.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(args.unity_dir, "isaacbox_rig.json"), "w", encoding="utf-8") as f:
         json.dump(rig, f, indent=1)
 
     # ---- kinematics reference: link origins in the hips frame under 3 poses
@@ -731,7 +731,7 @@ def main():
             d = v_sub(pos, hpos)
             rel.append(r(mat_vec([[hrot[j][i] for j in range(3)] for i in range(3)], d)))
         poses.append({"name": name, "jointPosRad": [q.get(n, 0.0) for n in joint_order], "linkPosInHipsIsaac": rel})
-    kin = {"_comment": "Independent Python forward kinematics of boy_rig.json. Isaac frame, hips-relative.",
+    kin = {"_comment": "Independent Python forward kinematics of isaacbox_rig.json. Isaac frame, hips-relative.",
            "bodyOrder": rig["bodyOrder"], "jointOrder": joint_order, "poses": poses}
     for path in (os.path.join(args.out, "kinematics_reference.json"),
                  os.path.join(args.unity_dir, "kinematics_reference.json")):
@@ -754,7 +754,7 @@ def main():
             print(f"   {b['name']:16s} {b['mass']:6.3f} kg  I=({b['inertia'][0]:.5f}, {b['inertia'][1]:.5f}, "
                   f"{b['inertia'][2]:.5f})  com z {b['com'][2]:+.3f}")
     print(f"[rig] wrote {usd_path}" + (f"  (validated: {usd_stats})" if usd_stats else ""))
-    print(f"[rig] wrote {rig_path} and {os.path.join(args.unity_dir, 'boy_rig.json')}")
+    print(f"[rig] wrote {rig_path} and {os.path.join(args.unity_dir, 'isaacbox_rig.json')}")
 
 
 if __name__ == "__main__":

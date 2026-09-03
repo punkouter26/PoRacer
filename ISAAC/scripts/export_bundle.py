@@ -17,10 +17,10 @@ What it does, in order:
      The root quaternion order is verified against projected_gravity and stored as XYZW.
   5. Evaluates the policy under the task's own random targets -> speed, tracking error,
      falls, targets reached per minute.
-  6. Rewrites ``boy_rig.json``: joint order/index straight from the simulator, default
+  6. Rewrites ``isaacbox_rig.json``: joint order/index straight from the simulator, default
      pose, limits, gains and effort limits cross-checked, ``eval`` block filled in.
   7. Writes ``export_report.json`` and ``CONTRACT.md``.
-  8. Copies the bundle into ``Assets/unity_export/Boy/`` (ONNX overwritten IN PLACE so its
+  8. Copies the bundle into ``Assets/unity_export/IsaacBox/`` (ONNX overwritten IN PLACE so its
      .meta GUID survives) and the checkpoint + resolved yaml into ``ISAAC/boy_rig/out/checkpoint/``.
 """
 
@@ -62,8 +62,8 @@ parser.add_argument("--num_envs", type=int, default=64)
 parser.add_argument("--ref_steps", type=int, default=250)
 parser.add_argument("--eval_steps", type=int, default=1500)
 parser.add_argument("--ref_target_distance", type=float, default=8.0, help="Fixed target distance for the recording [m].")
-parser.add_argument("--out", type=str, default=os.path.join(REPO, "Assets", "unity_export", "Boy"))
-parser.add_argument("--rig_json", type=str, default=os.path.join(RIG_OUT, "boy_rig.json"))
+parser.add_argument("--out", type=str, default=os.path.join(REPO, "Assets", "unity_export", "IsaacBox"))
+parser.add_argument("--rig_json", type=str, default=os.path.join(RIG_OUT, "isaacbox_rig.json"))
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 args_cli.headless = True
@@ -187,9 +187,9 @@ rig_joints = {b["joint"]["name"]: b for b in rig["bodies"] if b.get("joint")}
 missing = sorted(set(rig_joints) - set(joint_names))
 extra = sorted(set(joint_names) - set(rig_joints))
 if missing or extra:
-    raise RuntimeError(f"joint set mismatch between boy_rig.json and the sim: missing {missing}, extra {extra}")
+    raise RuntimeError(f"joint set mismatch between isaacbox_rig.json and the sim: missing {missing}, extra {extra}")
 if joint_names != rig["jointOrder"]:
-    print(f"[export] NOTE: simulator joint order differs from the provisional rig order; rewriting boy_rig.json.\n"
+    print(f"[export] NOTE: simulator joint order differs from the provisional rig order; rewriting isaacbox_rig.json.\n"
           f"         sim: {joint_names}")
 for i, n in enumerate(joint_names):
     rig_joints[n]["joint"]["index"] = i
@@ -269,7 +269,7 @@ class _Exported(torch.nn.Module):
         return self.fn({self._obs_group: obs})
 
 
-onnx_path = os.path.join(OUT, "Boy.onnx")
+onnx_path = os.path.join(OUT, "IsaacBox.onnx")
 dummy = torch.zeros(1, obs_dim, device=raw.device)
 for _p in getattr(_raw_policy, "parameters", list)():
     _p.requires_grad_(False)
@@ -430,7 +430,7 @@ report = {
     "task": args_cli.task,
     "train_task": args_cli.train_task,
     "checkpoint": ckpt,
-    "onnx": dict({"file": "Boy.onnx", "io": onnx_io, "onnx_vs_torch_max_abs_diff": max_diff}, **onnx_meta),
+    "onnx": dict({"file": "IsaacBox.onnx", "io": onnx_io, "onnx_vs_torch_max_abs_diff": max_diff}, **onnx_meta),
     "observations": {"dim": obs_dim, "layout": obs_layout,
                      "corruption_enabled": bool(om.cfg.policy.enable_corruption)},
     "actions": {
@@ -491,7 +491,7 @@ with open(os.path.join(OUT, "isaac_reference.json"), "w", encoding="utf-8") as f
     }, f)
 with open(os.path.join(OUT, "export_report.json"), "w", encoding="utf-8") as f:
     json.dump(report, f, indent=2)
-for path in (os.path.join(OUT, "boy_rig.json"), args_cli.rig_json):
+for path in (os.path.join(OUT, "isaacbox_rig.json"), args_cli.rig_json):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rig, f, indent=1)
 
@@ -525,7 +525,7 @@ Checkpoint `{os.path.basename(ckpt)}`, task `{args_cli.task}`.
 
 | | |
 |---|---|
-| file | `Boy.onnx`, single file, {onnx_meta['size_bytes']:,} bytes |
+| file | `IsaacBox.onnx`, single file, {onnx_meta['size_bytes']:,} bytes |
 | input | `obs` `float32[1, {obs_dim}]` |
 | output | `actions` `float32[1, {act_dim}]` |
 | opset / IR | ai.onnx {onnx_meta['opset'][0]['version']} / IR {onnx_meta['ir_version']} |
@@ -608,11 +608,11 @@ with open(os.path.join(OUT, "CONTRACT.md"), "w", encoding="utf-8") as f:
 shutil.copy2(ckpt, os.path.join(RIG_OUT, "checkpoint", "checkpoint.pt"))
 dump_yaml(os.path.join(RIG_OUT, "checkpoint", "params", "env.yaml"), env_cfg)
 dump_yaml(os.path.join(RIG_OUT, "checkpoint", "params", "agent.yaml"), agent_cfg)
-shutil.copy2(onnx_path, os.path.join(RIG_OUT, "Boy.onnx"))
+shutil.copy2(onnx_path, os.path.join(RIG_OUT, "IsaacBox.onnx"))
 shutil.copy2(os.path.join(OUT, "export_report.json"), os.path.join(RIG_OUT, "export_report.json"))
 
 print(f"[export] wrote {OUT}\n         next: Unity > Boy > Rebuild Rig Asset From JSON, Boy > Build Prefab, "
-      f"then run the Boy play-mode tests (rung 0 checks Boy.onnx against isaac_reference.json).")
+      f"then run the IsaacBox play-mode tests (rung 0 checks IsaacBox.onnx against isaac_reference.json).")
 
 env.close()
 simulation_app.close()

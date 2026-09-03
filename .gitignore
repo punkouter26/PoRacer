@@ -80,3 +80,6 @@ Python311/
 # of third-party source and binaries; the repo only owns what ISAAC/ authors.
 ISAAC/isaaclab/
 ISAAC/logs/
+
+# Python build artifacts from the editable ISAAC task package.
+*.egg-info/

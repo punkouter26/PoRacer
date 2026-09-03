@@ -7,10 +7,10 @@ using Unity.InferenceEngine;
 
 using PoRacer.IsaacPorts;
 
-namespace Boy
+namespace IsaacBox
 {
     /// <summary>
-    /// Runs the Isaac Lab RSL-RL target-chasing policy for the Boy on a Unity
+    /// Runs the Isaac Lab RSL-RL target-chasing policy for the IsaacBox on a Unity
     /// ArticulationBody rig, through Inference Engine (NOT ML-Agents - the RSL-RL ONNX
     /// has no obs_0 / continuous_actions / version_number / memory_size tensors and
     /// cannot be attached to BehaviorParameters).
@@ -26,8 +26,8 @@ namespace Boy
     /// that differs from the project default is applied per body or per collider.
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("Boy/Boy Agent")]
-    public class BoyAgent : MonoBehaviour
+    [AddComponentMenu("IsaacBox/IsaacBox Agent")]
+    public class IsaacBoxAgent : MonoBehaviour
     {
         /// <summary>
         /// Whether Unity's ArticulationDrive applies stiffness against a radian or a degree
@@ -66,11 +66,11 @@ namespace Boy
         // ------------------------------------------------------------------ setup --
         [Header("Policy")]
 #if ISAACPORTS_HAS_INFERENCE
-        [Tooltip("Boy.onnx - obs float32[1,75] -> actions float32[1,21]. Normaliser baked in.")]
+        [Tooltip("IsaacBox.onnx - obs float32[1,75] -> actions float32[1,21]. Normaliser baked in.")]
         public ModelAsset modelAsset;
 #endif
-        [Tooltip("Generated from boy_rig.json. Holds every Isaac value this agent needs.")]
-        public BoyRigAsset rig;
+        [Tooltip("Generated from isaacbox_rig.json. Holds every Isaac value this agent needs.")]
+        public IsaacBoxRigAsset rig;
 
         [Header("Target")]
         [Tooltip("Explicit chase target. Takes priority over any ITargetProvider.")]
@@ -203,7 +203,7 @@ namespace Boy
         {
             if (rig == null || rig.bodies == null || rig.bodies.Length == 0)
             {
-                Debug.LogError($"[{name}] BoyAgent has no rig asset; disabling.", this);
+                Debug.LogError($"[{name}] IsaacBoxAgent has no rig asset; disabling.", this);
                 enabled = false;
                 return;
             }
@@ -241,7 +241,7 @@ namespace Boy
                 if (!byName.TryGetValue(def.name, out var body))
                 {
                     Debug.LogError($"[{name}] rig expects a body named '{def.name}' but the " +
-                                   "hierarchy has none. Rebuild the prefab with Boy > Build Prefab.", this);
+                                   "hierarchy has none. Rebuild the prefab with IsaacBox > Build Prefab.", this);
                     enabled = false;
                     return;
                 }
@@ -409,10 +409,10 @@ namespace Boy
 #if ISAACPORTS_HAS_INFERENCE
             if (modelAsset == null)
             {
-                // Not an error: until export_bundle.py has run there is no Boy.onnx, and the
+                // Not an error: until export_bundle.py has run there is no IsaacBox.onnx, and the
                 // rig tests (rest height, kinematics, drives) must still be able to run.
                 Debug.LogWarning($"[{name}] no ModelAsset assigned; holding the default pose. " +
-                                 "Run ISAAC/scripts/export_bundle.py and Boy > Build Prefab.", this);
+                                 "Run ISAAC/scripts/export_bundle.py and IsaacBox > Build Prefab.", this);
                 return;
             }
             _model = ModelLoader.Load(modelAsset);

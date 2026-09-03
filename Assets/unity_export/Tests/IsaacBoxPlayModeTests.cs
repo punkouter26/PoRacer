@@ -10,13 +10,13 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using Debug = UnityEngine.Debug;
 
-using Boy;
+using IsaacBox;
 using PoRacer.IsaacPorts;
 
-namespace Boy.Tests
+namespace IsaacBox.Tests
 {
     /// <summary>
-    /// The rung ladder for the Boy port.
+    /// The rung ladder for the IsaacBox port.
     ///
     /// STRICT (fail the run): kinematics vs the independent Python FK, skin attachment,
     /// per-body overrides, rest height (rung 1), zero-g momentum (rung 2), gain units
@@ -25,18 +25,18 @@ namespace Boy.Tests
     ///
     /// INFORMATIVE (always pass, print numbers): rungs 3, 4, 6 and the perf test.
     ///
-    /// Rungs that need Boy.onnx / isaac_reference.json report Assert.Ignore until
+    /// Rungs that need IsaacBox.onnx / isaac_reference.json report Assert.Ignore until
     /// ISAAC/scripts/export_bundle.py has produced them, so the rig can be validated before
     /// training and the missing brain shows up as "skipped", never as a green tick.
     ///
     /// SetUp pins Time.fixedDeltaTime to Isaac's 0.005 s (which is also this project's
     /// value); TearDown restores whatever it was.
     /// </summary>
-    public class BoyPlayModeTests
+    public class IsaacBoxPlayModeTests
     {
         static readonly float ProjectFixedDt = 0.005f;
 
-        BoyRigAsset _rig;
+        IsaacBoxRigAsset _rig;
         float _savedFixedDt;
         readonly List<GameObject> _spawned = new List<GameObject>();
 
@@ -44,8 +44,8 @@ namespace Boy.Tests
         public void SetUp()
         {
             _savedFixedDt = Time.fixedDeltaTime;
-            _rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
-            Assert.IsNotNull(_rig, $"rig asset missing at {BoyPaths.RigAsset} - run Boy > Rebuild Rig Asset From JSON");
+            _rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
+            Assert.IsNotNull(_rig, $"rig asset missing at {IsaacBoxPaths.RigAsset} - run IsaacBox > Rebuild Rig Asset From JSON");
             Time.fixedDeltaTime = _rig.isaacPhysicsDt;
         }
 
@@ -55,7 +55,7 @@ namespace Boy.Tests
             foreach (var go in _spawned)
             {
                 if (go == null) continue;
-                var a = go.GetComponent<BoyAgent>();
+                var a = go.GetComponent<IsaacBoxAgent>();
                 if (a != null) a.ReleaseWorker();
                 Object.DestroyImmediate(go);
             }
@@ -67,11 +67,11 @@ namespace Boy.Tests
 
         static void AllowDivergenceLogs() => LogAssert.ignoreFailingMessages = true;
 
-        bool HasBrain => File.Exists(BoyPaths.Onnx) && File.Exists(BoyPaths.Reference);
+        bool HasBrain => File.Exists(IsaacBoxPaths.Onnx) && File.Exists(IsaacBoxPaths.Reference);
 
         static string NoBrainMessage =>
-            $"no trained brain yet: {BoyPaths.Onnx} / {BoyPaths.Reference} missing. Run " +
-            "ISAAC/scripts/train.py then export_bundle.py, then Boy > Build Prefab.";
+            $"no trained brain yet: {IsaacBoxPaths.Onnx} / {IsaacBoxPaths.Reference} missing. Run " +
+            "ISAAC/scripts/train.py then export_bundle.py, then IsaacBox > Build Prefab.";
 
         // ------------------------------------------------------------- utilities --
         GameObject SpawnGround()
@@ -79,7 +79,7 @@ namespace Boy.Tests
             var g = GameObject.CreatePrimitive(PrimitiveType.Plane);
             g.name = "TestGround";
             g.transform.localScale = new Vector3(20f, 1f, 20f);
-            var mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(BoyPaths.Material);
+            var mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(IsaacBoxPaths.Material);
             var col = g.GetComponent<Collider>();
             if (mat != null) col.sharedMaterial = mat;
             col.contactOffset = _rig.physics.contactOffset;
@@ -87,16 +87,16 @@ namespace Boy.Tests
             return g;
         }
 
-        BoyAgent SpawnCreature(Vector3 pos, bool ground = true)
+        IsaacBoxAgent SpawnCreature(Vector3 pos, bool ground = true)
         {
             if (ground) SpawnGround();
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Prefab);
-            Assert.IsNotNull(prefab, $"prefab missing at {BoyPaths.Prefab} - run Boy > Build Prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
+            Assert.IsNotNull(prefab, $"prefab missing at {IsaacBoxPaths.Prefab} - run IsaacBox > Build Prefab");
             var go = Object.Instantiate(prefab, pos, Quaternion.identity);
             go.name = "Boy_test";
             _spawned.Add(go);
-            var agent = go.GetComponent<BoyAgent>();
-            Assert.IsNotNull(agent, "prefab has no BoyAgent");
+            var agent = go.GetComponent<IsaacBoxAgent>();
+            Assert.IsNotNull(agent, "prefab has no IsaacBoxAgent");
             return agent;
         }
 
@@ -105,7 +105,7 @@ namespace Boy.Tests
             for (int i = 0; i < n; i++) yield return new WaitForFixedUpdate();
         }
 
-        static void SetZeroGravity(BoyAgent agent)
+        static void SetZeroGravity(IsaacBoxAgent agent)
         {
             foreach (var b in agent.GetComponentsInChildren<ArticulationBody>(true))
                 b.useGravity = false;
@@ -119,13 +119,13 @@ namespace Boy.Tests
             return -1;
         }
 
-        Transform SetTarget(BoyAgent agent, Vector3 world)
+        Transform SetTarget(IsaacBoxAgent agent, Vector3 world)
         {
             var t = new GameObject("target").transform;
             t.position = world;
             _spawned.Add(t.gameObject);
             agent.target = t;
-            var sampler = agent.GetComponent<BoyTargetSampler>();
+            var sampler = agent.GetComponent<IsaacBoxTargetSampler>();
             if (sampler != null) sampler.enabled = false;
             return t;
         }
@@ -161,7 +161,7 @@ namespace Boy.Tests
             var agent = SpawnCreature(new Vector3(0f, 2f, 0f), ground: false);
             yield return Steps(2);
 
-            Assert.IsTrue(BoyPaths.TryLoadReference(out var obs, out var acts, out string err), err);
+            Assert.IsTrue(IsaacBoxPaths.TryLoadReference(out var obs, out var acts, out string err), err);
             Assert.AreEqual(_rig.obsDim, obs[0].Length, "recorded obs width != rig obsDim");
             Assert.AreEqual(_rig.actDim, acts[0].Length, "recorded action width != rig actDim");
 
@@ -180,7 +180,7 @@ namespace Boy.Tests
             yield return Steps(1);
 
             var renderers = agent.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            Assert.Greater(renderers.Length, 0, "the prefab carries no skinned mesh - was Boy_Character.fbx found at build time?");
+            Assert.Greater(renderers.Length, 0, "the prefab carries no skinned mesh - was IsaacBox_Character.fbx found at build time?");
 
             int attached = 0;
             var lines = new List<string>();
@@ -196,7 +196,7 @@ namespace Boy.Tests
                 Assert.AreEqual(link, bone.parent, $"bone '{def.boneName}' is not a direct child of link '{def.name}'");
                 float off = (bone.position - link.position).magnitude;
                 lines.Add($"    {def.boneName,-14} on {def.name,-12} offset {off * 1000f:F2} mm");
-                Assert.Less(off, BoyRigBuilderGateM, $"bone '{def.boneName}' sits {off * 1000f:F1} mm off its link origin");
+                Assert.Less(off, IsaacBoxRigBuilderGateM, $"bone '{def.boneName}' sits {off * 1000f:F1} mm off its link origin");
                 attached++;
             }
             foreach (var bn in _rig.skinBones)
@@ -208,7 +208,7 @@ namespace Boy.Tests
                       $"{verts:N0} vertices:\n" + string.Join("\n", lines));
         }
 
-        const float BoyRigBuilderGateM = 0.005f;
+        const float IsaacBoxRigBuilderGateM = 0.005f;
 
         // ============ per-body overrides are runtime-only, so assert them live (strict) ==
         [UnityTest]
@@ -272,9 +272,9 @@ namespace Boy.Tests
         [UnityTest]
         public IEnumerator Kinematics_MatchesIndependentPythonForwardKinematics()
         {
-            Assert.IsTrue(File.Exists(BoyPaths.KinematicsReference),
-                $"{BoyPaths.KinematicsReference} missing - run ISAAC/boy_rig/build_boy_rig.py");
-            var root = MiniJson.Parse(File.ReadAllText(BoyPaths.KinematicsReference)) as Dictionary<string, object>;
+            Assert.IsTrue(File.Exists(IsaacBoxPaths.KinematicsReference),
+                $"{IsaacBoxPaths.KinematicsReference} missing - run ISAAC/boy_rig/build_boy_rig.py");
+            var root = MiniJson.Parse(File.ReadAllText(IsaacBoxPaths.KinematicsReference)) as Dictionary<string, object>;
             var bodyOrder = MiniJson.StrArray(root, "bodyOrder");
             var jointOrder = MiniJson.StrArray(root, "jointOrder");
             var poses = MiniJson.Arr(root, "poses");
@@ -353,7 +353,7 @@ namespace Boy.Tests
             var agent = SpawnCreature(new Vector3(0f, _rig.spawnPosIsaac.z, 0f));
             agent.target = null;
             agent.autoRecoverFromFalls = false;
-            var sampler = agent.GetComponent<BoyTargetSampler>();
+            var sampler = agent.GetComponent<IsaacBoxTargetSampler>();
             if (sampler != null) sampler.enabled = false;   // hold pose: no target, no policy
 
             int n = Mathf.CeilToInt(3f / Time.fixedDeltaTime);
@@ -402,7 +402,7 @@ namespace Boy.Tests
             var agent = SpawnCreature(new Vector3(0f, _rig.spawnPosIsaac.z, 0f));
             agent.target = null;
             agent.autoRecoverFromFalls = false;
-            var sampler = agent.GetComponent<BoyTargetSampler>();
+            var sampler = agent.GetComponent<IsaacBoxTargetSampler>();
             if (sampler != null) sampler.enabled = false;
 
             float tFall = -1f;
@@ -428,7 +428,7 @@ namespace Boy.Tests
             var agent = SpawnCreature(new Vector3(0f, 5f, 0f), ground: false);
             SetZeroGravity(agent);
             int J = JointIndex("knee_L");
-            agent.actionOverride = BoyAgent.ActionOverride.Constant;
+            agent.actionOverride = IsaacBoxAgent.ActionOverride.Constant;
             agent.overrideJointIndex = J;
             agent.overrideAmplitude = 1f;
 
@@ -489,7 +489,7 @@ namespace Boy.Tests
                       $"    radian hypothesis {ifRadians:F2}, degree hypothesis {ifDegrees:F2}\n" +
                       $"    VERDICT: gains are {(radians ? "RADIAN" : "DEGREE")}-based; agent ships GainUnits.{agent.gainUnits}");
 
-            Assert.IsTrue(radians == (agent.gainUnits == BoyAgent.GainUnits.Radians),
+            Assert.IsTrue(radians == (agent.gainUnits == IsaacBoxAgent.GainUnits.Radians),
                 $"measured kp {kpMeasured:F2} says the drive is {(radians ? "RADIAN" : "DEGREE")}-based, but the agent " +
                 $"ships GainUnits.{agent.gainUnits}. Every joint would be off by 57.3x.");
         }
@@ -502,7 +502,7 @@ namespace Boy.Tests
             SetZeroGravity(agent);
             // a target straight ahead at 3 m: target_pos_b must read (3, 0, 0) in Isaac terms
             SetTarget(agent, new Vector3(0f, 5f, 3f));
-            agent.actionOverride = BoyAgent.ActionOverride.Constant;
+            agent.actionOverride = IsaacBoxAgent.ActionOverride.Constant;
             agent.overrideAmplitude = 0f;           // hold the default pose exactly
             yield return Steps(4);
 
@@ -541,7 +541,7 @@ namespace Boy.Tests
             SetZeroGravity(agent);
             // 20 m to the creature's LEFT (Unity -X): Isaac +Y, clipped to the obs radius
             SetTarget(agent, new Vector3(-20f, 5f, 0f));
-            agent.actionOverride = BoyAgent.ActionOverride.Constant;
+            agent.actionOverride = IsaacBoxAgent.ActionOverride.Constant;
             agent.overrideAmplitude = 0f;
             yield return Steps(4);
 
@@ -566,7 +566,7 @@ namespace Boy.Tests
                 Time.fixedDeltaTime = steps[c];
                 var agent = SpawnCreature(new Vector3(0f, 5f, 0f), ground: false);
                 SetZeroGravity(agent);
-                agent.actionOverride = BoyAgent.ActionOverride.SquareWave;
+                agent.actionOverride = IsaacBoxAgent.ActionOverride.SquareWave;
                 agent.overrideJointIndex = -1;
                 agent.overrideAmplitude = 1f;
                 agent.overrideSquareWavePeriod = 0.4f;
@@ -761,14 +761,14 @@ namespace Boy.Tests
             Time.fixedDeltaTime = ProjectFixedDt;
             SpawnGround();
 
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Prefab);
-            var agents = new List<BoyAgent>();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
+            var agents = new List<IsaacBoxAgent>();
             for (int i = 0; i < N; i++)
             {
                 var go = Object.Instantiate(prefab,
                     new Vector3((i % 4) * 2.5f - 3.75f, _rig.spawnPosIsaac.z, (i / 4) * 2.5f), Quaternion.identity);
                 _spawned.Add(go);
-                var a = go.GetComponent<BoyAgent>();
+                var a = go.GetComponent<IsaacBoxAgent>();
                 SetTarget(a, new Vector3(0f, 0f, 40f));
                 agents.Add(a);
             }

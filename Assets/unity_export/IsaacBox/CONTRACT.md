@@ -1,4 +1,4 @@
-# Boy - contract
+# IsaacBox - contract
 
 The exact interface between the Isaac Lab policy and the Unity rig. Every number here was
 read from the LIVE simulation by `ISAAC/scripts/export_bundle.py`, not from documentation.
@@ -8,7 +8,7 @@ Checkpoint `model_2000.pt`, task `Isaac-Chase-Flat-Boy-Play-v0`.
 
 | | |
 |---|---|
-| file | `Boy.onnx`, single file, 184,076 bytes |
+| file | `IsaacBox.onnx`, single file, 184,076 bytes |
 | input | `obs` `float32[1, 75]` |
 | output | `actions` `float32[1, 21]` |
 | opset / IR | ai.onnx 15 / IR 8 |

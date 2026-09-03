@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-using Boy;
+using IsaacBox;
 using PoRacer.IsaacPorts;
 
-namespace Boy.EditorTools
+namespace IsaacBox.EditorTools
 {
     /// <summary>
-    /// Builds the Boy ArticulationBody hierarchy from <see cref="BoyRigAsset"/> and hangs
+    /// Builds the IsaacBox ArticulationBody hierarchy from <see cref="IsaacBoxRigAsset"/> and hangs
     /// the authored skinned mesh on it.
     ///
     /// Two-stage, deliberately: the articulation is built FIRST from the rig JSON as clean
@@ -24,12 +24,12 @@ namespace Boy.EditorTools
     /// JSON (which came from the GLB twin) to 5 mm, after trying the four yaw alignments a
     /// model importer can plausibly produce. A mismatch aborts the build with the numbers.
     /// </summary>
-    public static class BoyRigBuilder
+    public static class IsaacBoxRigBuilder
     {
-        public const string RootName = "Boy";
+        public const string RootName = "IsaacBox";
         public const float BonePositionGateM = 0.005f;
 
-        public static GameObject Build(BoyRigAsset rig, GameObject fbxModel, out string report)
+        public static GameObject Build(IsaacBoxRigAsset rig, GameObject fbxModel, out string report)
         {
             if (rig == null) throw new ArgumentNullException(nameof(rig));
             var sb = new System.Text.StringBuilder();
@@ -79,7 +79,7 @@ namespace Boy.EditorTools
             return root;
         }
 
-        static void ConfigureBody(ArticulationBody body, BoyBodyDef def, BoyRigAsset rig)
+        static void ConfigureBody(ArticulationBody body, BoyBodyDef def, IsaacBoxRigAsset rig)
         {
             var p = rig.physics;
 
@@ -130,7 +130,7 @@ namespace Boy.EditorTools
             body.maxJointVelocity = p.maxAngularVelocity;
         }
 
-        static void AddColliders(GameObject go, BoyBodyDef def, BoyRigAsset rig)
+        static void AddColliders(GameObject go, BoyBodyDef def, IsaacBoxRigAsset rig)
         {
             if (def.colliders == null) return;
             foreach (var c in def.colliders)
@@ -168,14 +168,14 @@ namespace Boy.EditorTools
                         break;
                     }
                     default:
-                        Debug.LogWarning($"[Boy] unknown collider kind '{c.kind}' on {def.name}; skipped.");
+                        Debug.LogWarning($"[IsaacBox] unknown collider kind '{c.kind}' on {def.name}; skipped.");
                         break;
                 }
             }
         }
 
         // ------------------------------------------------------------------ skin --
-        static void AttachSkin(GameObject root, BoyRigAsset rig, Dictionary<string, GameObject> links,
+        static void AttachSkin(GameObject root, IsaacBoxRigAsset rig, Dictionary<string, GameObject> links,
                                GameObject fbxModel, System.Text.StringBuilder sb)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(fbxModel);
@@ -225,7 +225,7 @@ namespace Boy.EditorTools
             {
                 UnityEngine.Object.DestroyImmediate(instance);
                 throw new InvalidOperationException(
-                    $"Boy_Character.fbx bones do not sit on the rig positions from boy_rig.json: worst " +
+                    $"IsaacBox_Character.fbx bones do not sit on the rig positions from isaacbox_rig.json: worst " +
                     $"{bestErr * 1000f:F1} mm at {bestWhere} after trying yaws 0/90/180/270 (gate " +
                     $"{BonePositionGateM * 1000f:F0} mm). Hips bone y = {hipsY:F4} m; a value near 76 or " +
                     $"0.0076 means the FBX import scale is off (Model tab > Scale Factor / Convert Units). " +
@@ -266,7 +266,7 @@ namespace Boy.EditorTools
             sb.Append($"skin: {attached} bones attached to links, {renderers} skinned renderers, {verts:N0} vertices\n");
         }
 
-        static Vector3 RootWorldPosIsaac(BoyRigAsset rig)
+        static Vector3 RootWorldPosIsaac(IsaacBoxRigAsset rig)
         {
             foreach (var def in rig.bodies)
                 if (def.isRoot) return def.worldPosIsaac;
@@ -277,7 +277,7 @@ namespace Boy.EditorTools
         /// Worst distance between an articulated bone and its link's rest position, both
         /// expressed in the container's frame whose origin is the hips link.
         /// </summary>
-        static float WorstBoneError(BoyRigAsset rig, Dictionary<string, Transform> bones, Transform container,
+        static float WorstBoneError(IsaacBoxRigAsset rig, Dictionary<string, Transform> bones, Transform container,
                                     out string where)
         {
             float worst = 0f;

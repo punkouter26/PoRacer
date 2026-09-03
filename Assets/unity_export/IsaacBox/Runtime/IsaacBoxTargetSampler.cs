@@ -2,7 +2,7 @@ using UnityEngine;
 
 using PoRacer.IsaacPorts;
 
-namespace Boy
+namespace IsaacBox
 {
     /// <summary>
     /// Fallback target that reproduces the training command: a point on a ring around the
@@ -11,7 +11,7 @@ namespace Boy
     /// <see cref="ITargetProvider"/>. Defaults come from the rig asset's chase block.
     /// </summary>
     [DisallowMultipleComponent]
-    public class BoyTargetSampler : MonoBehaviour, ITargetProvider
+    public class IsaacBoxTargetSampler : MonoBehaviour, ITargetProvider
     {
         [Tooltip("Ring radius range [m]. Training used [3, 10].")]
         public Vector2 radiusRange = new Vector2(3f, 10f);
@@ -36,7 +36,7 @@ namespace Boy
         /// <summary>How many targets have been reached since Start.</summary>
         public int Reached { get; private set; }
 
-        public void ConfigureFrom(BoyRigAsset rig)
+        public void ConfigureFrom(IsaacBoxRigAsset rig)
         {
             if (rig == null) return;
             radiusRange = new Vector2(rig.chase.targetRadiusMin, rig.chase.targetRadiusMax);
