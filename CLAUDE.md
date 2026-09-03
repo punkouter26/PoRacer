@@ -205,6 +205,13 @@ Red and green are reserved: do not spend them on a variation, a highlight or a t
 and do not recolour a heuristic bot or the baseline RL racer to fit a palette. A new
 variation without a supplied texture waits for one rather than borrowing either colour.
 
+**"Standard RL" means the baseline policy only, not every RL racer.** A creature that came
+in with its own authored look is a variation and keeps that look. **IsaacBox is not a
+standard RL racer** (confirmed 2026-09-02): he wears the textures baked into
+`IsaacBox_Character.glb` - skin, shirt, trousers, shoes, hair - and must not be turned
+green. Anything arriving with authored art is read the same way; ask before overriding a
+creature's own materials with a legend colour.
+
 ## 4. Source Control
 * **`master` only, unless I specifically ask for a branch.** Commit directly to
   `master` — no feature branches, no `cleanup/*`, no work branches, however tidy
