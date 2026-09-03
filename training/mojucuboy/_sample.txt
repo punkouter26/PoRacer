@@ -1,1 +1,0 @@
-t=  45.4s pos=(  9.00, 0.77,  0.00) upright= 1.00 failed=False cmdHdgErr=  -90.0deg steps=0

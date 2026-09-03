@@ -65,6 +65,15 @@ W_CTRL = 0.005
 W_ACCEL = 0.03            # excessive joint accelerations
 W_IMPACT = 0.05           # impact forces beyond simply carrying body weight
 W_ACTION_RATE = 0.01
+# Paid continuously for being on its feet. This is what makes standing back up
+# worth the effort when a fall no longer ends the episode.
+W_GETUP = 0.60
+STANDING_HEIGHT = 0.77          # hips height of the calibrated stance, metres
+
+# Fraction of resets that START the racer on the ground, in a random sprawl. A
+# policy that only ever begins upright almost never sees a recoverable fallen
+# state, so it never learns the recovery -- it has to be trained on it directly.
+RESET_FALLEN_FRACTION = 0.30
 
 # Normalising scales for the saturating penalties, measured from rollouts under
 # random actions: drift ~12, joint accel ~1.8e6, constraint force ~1.4e6.
@@ -216,7 +225,10 @@ class MojucuBoyEnv:
         obs[:, 12:12 + JOINT_COUNT] = qpos[:, self.qpos_addr]
         obs[:, 12 + JOINT_COUNT:12 + 2 * JOINT_COUNT] = qvel[:, self.dof_addr]
         obs[:, 12 + 2 * JOINT_COUNT:] = self.last_action
-        return obs
+        # One diverged world must not poison the batch. A NaN here reaches the
+        # policy's mean and torch.distributions rejects the whole tensor, ending a
+        # multi-hour run over a single bad contact.
+        return torch.nan_to_num(obs, nan=0.0, posinf=0.0, neginf=0.0)
 
     # ---- reset -------------------------------------------------------------
     def reset(self, index: torch.Tensor) -> None:
@@ -238,16 +250,40 @@ class MojucuBoyEnv:
         qpos[index, 5] = 0
         qpos[index, 6] = torch.sin(yaw / 2).to(qpos.dtype)
 
+        # Start a share of the worlds already on the ground, in a random sprawl, so
+        # the policy is trained on recovery rather than only on staying up. Without
+        # this it would almost never encounter a fallen state it could still act
+        # from, and "get back up" would stay unlearned however long it trained.
+        fallen = (torch.rand(n, generator=self.generator, device=self.device)
+                  < RESET_FALLEN_FRACTION)
+        if fallen.any():
+            picked = index[fallen]
+            m = picked.numel()
+            # A random orientation, dropped just clear of the floor: face down, on
+            # its back and everything between.
+            quat = torch.randn(m, 4, generator=self.generator, device=self.device)
+            quat = quat / quat.norm(dim=1, keepdim=True).clamp_min(1e-6)
+            qpos[picked[:, None], torch.arange(3, 7, device=self.device)[None, :]] = quat.to(qpos.dtype)
+            # Drop from clear air, do NOT teleport to floor height. At an arbitrary
+            # orientation the body reaches ~0.5 m from the hips, so placing the root
+            # at 0.25 m buried half the racer in the ground; the resulting contact
+            # forces went infinite and put NaN straight into the policy input,
+            # killing the run on its first iteration. From 0.6-0.8 m he simply falls
+            # and lands in a sprawl within half a second, which is the state wanted.
+            qpos[picked, 2] = (0.60 + torch.rand(m, generator=self.generator,
+                                                 device=self.device) * 0.20).to(qpos.dtype)
+
         qvel[index] = 0
         self.last_action[index] = 0
         self.prev_action[index] = 0
         self.prev_qvel[index] = 0
         self.episode_step[index] = 0
 
-        # Command a heading near the racer's own, so the task starts tractable and
-        # the policy still has to steer.
+        # Command ANY heading, not one within 0.6 rad of the spawn yaw. The narrow
+        # band trained a racer that could only hold a lane: measured in the race
+        # scene, a 90 degree correction put him on the floor in under 5 seconds.
         self.command_heading[index] = yaw + (
-            torch.rand(n, generator=self.generator, device=self.device) * 2 - 1) * 0.6
+            torch.rand(n, generator=self.generator, device=self.device) * 2 - 1) * torch.pi
         self.command_speed[index] = TARGET_SPEED
 
         self._randomise(index)
@@ -304,14 +340,20 @@ class MojucuBoyEnv:
             mjw.step(self.wm, self.wd)
 
         obs = self.observation()
-        reward, terms = self._reward(prev_qvel)
+        reward, terms = self._reward(prev_qvel, torch.zeros(self.num_worlds, device=self.device))
 
         self.episode_step += 1
         height = self.qpos[:, 2]
         upright = -self.observation()[:, 2]   # gravity_local z, 1 when upright
         fallen = (height < MIN_HEIGHT) | (upright < MIN_UPRIGHT)
+
+        # A fall does NOT end the episode. The racer is never picked up, in
+        # training or in the race, so it has to learn to get itself back on its
+        # feet -- and it can only learn that by living through the consequences of
+        # going down. Terminating on a fall teaches the opposite: that the floor is
+        # an absorbing state, which is exactly the policy that then lies there.
         timeout = self.episode_step >= EPISODE_STEPS
-        done = fallen | timeout
+        done = timeout
 
         # Scheduled external pushes, per the brief's domain randomisation.
         pushing = (self.episode_step % PUSH_INTERVAL == 0) & ~done
@@ -326,7 +368,7 @@ class MojucuBoyEnv:
         terms["timeout"] = timeout.float()
         return obs, reward, done, terms
 
-    def _reward(self, prev_joint_qvel: torch.Tensor):
+    def _reward(self, prev_joint_qvel: torch.Tensor, fallen_now: torch.Tensor):
         rot = self.root_rotation()
         qvel = self.qvel
         obs_gravity_z = -rot[:, 2, 2]
@@ -360,10 +402,19 @@ class MojucuBoyEnv:
         weight = float(self.mjm.body_mass.sum() * abs(self.mjm.opt.gravity[2]))
         impact = (force / weight - 1.5).clamp(min=0.0)
 
+        # How much of a standing racer this is right now: 1 upright at full height,
+        # 0 flat on the floor. Speed and heading rewards are GATED on it, so a
+        # racer cannot farm the tracking term by sliding along on its face, and
+        # getting back up is the only route to the large rewards.
+        height = self.qpos[:, 2].float()
+        standing = (obs_gravity_z.clamp(min=0.0)
+                    * (height / STANDING_HEIGHT).clamp(0.0, 1.0))
+
         reward = (
-            W_TRACK * track
-            + W_HEADING * facing.clamp(min=0.0)
+            W_TRACK * track * standing
+            + W_HEADING * facing.clamp(min=0.0) * standing
             + W_UPRIGHT * obs_gravity_z.clamp(min=0.0)
+            + W_GETUP * standing
             + W_ALIVE
             - W_DRIFT * torch.tanh(drift / SCALE_DRIFT)
             - W_CTRL * ctrl_cost
@@ -374,6 +425,7 @@ class MojucuBoyEnv:
         terms = {
             "track": track, "facing": facing, "speed_along": along,
             "drift": drift, "accel": accel, "impact": impact,
+            "standing": standing, "fallen": fallen_now,
         }
         return reward, terms
 

@@ -79,17 +79,34 @@ namespace PoRacer.EditorTools
             }
             root.name = ENTRY_ID;
 
-            // Collision primitives are debug geometry and org.mujoco assigns them the
-            // built-in Standard shader, which URP renders magenta. The authored
-            // character is what should be seen.
+            // Collision primitives are debug geometry: the authored character is what
+            // should be seen, and org.mujoco assigns them the built-in Standard
+            // shader, which URP renders magenta anyway.
+            //
+            // STRIP the renderers rather than merely disabling them. A disabled
+            // MeshRenderer still REFERENCES the material org.mujoco generated into
+            // Assets/Local/MjImports/<name>/Resources/, and everything under a
+            // Resources folder is baked into every build unconditionally -- 40
+            // materials of dead weight in the shipped bundle. With no references
+            // left, the whole generated folder can be deleted below.
             int hidden = 0;
             foreach (MjGeom geom in root.GetComponentsInChildren<MjGeom>(true))
             {
                 var renderer = geom.GetComponent<MeshRenderer>();
                 if (renderer != null)
                 {
-                    renderer.enabled = false;
+                    Object.DestroyImmediate(renderer);
                     hidden++;
+                }
+                var mjFilter = geom.GetComponent<MjMeshFilter>();
+                if (mjFilter != null)
+                {
+                    Object.DestroyImmediate(mjFilter);
+                }
+                var filter = geom.GetComponent<MeshFilter>();
+                if (filter != null)
+                {
+                    Object.DestroyImmediate(filter);
                 }
             }
 
@@ -138,7 +155,16 @@ namespace PoRacer.EditorTools
             {
                 return $"ABORT: could not save {PREFAB_PATH}";
             }
-            log.Append($"prefab {PREFAB_PATH} ({hidden} collision renderers hidden)\n");
+            log.Append($"prefab {PREFAB_PATH} ({hidden} collision renderers stripped)\n");
+
+            // Nothing references the generated materials any more, so the Resources
+            // folder that would otherwise ship inside every build can go.
+            if (AssetDatabase.IsValidFolder(IMPORT_ASSETS))
+            {
+                AssetDatabase.DeleteAsset(IMPORT_ASSETS);
+                AssetDatabase.Refresh();
+                log.Append($"deleted {IMPORT_ASSETS} (Resources build bloat)\n");
+            }
 
             string[] guids = AssetDatabase.FindAssets("t:CreatureCatalog");
             if (guids.Length == 0)

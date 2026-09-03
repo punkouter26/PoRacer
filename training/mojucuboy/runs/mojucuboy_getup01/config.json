@@ -1,0 +1,26 @@
+{
+  "iterations": 2500,
+  "worlds": 8192,
+  "rollout": 24,
+  "epochs": 4,
+  "minibatches": 8,
+  "lr": 0.0003,
+  "gamma": 0.99,
+  "lam": 0.95,
+  "clip": 0.2,
+  "entropy": 0.002,
+  "port": 6007,
+  "run_id": "mojucuboy_getup01",
+  "seed": 0,
+  "obs": 75,
+  "act": 21,
+  "hidden": [
+    128,
+    128,
+    128
+  ],
+  "policy_dt": 0.019999972,
+  "decimation": 4,
+  "episode_steps": 1000,
+  "target_speed": 1.5
+}

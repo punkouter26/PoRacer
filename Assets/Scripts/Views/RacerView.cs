@@ -10,8 +10,9 @@ namespace PoRacer.Views
     /// as DNF. A knocked-out racer is deactivated so it cannot disturb the rest
     /// of the race. Also backstops the finish trigger: a racer fast enough to
     /// tunnel through the BoxCollider is finished by distance instead.
-    /// The first two knockdowns earn a marshal rescue (set upright in place);
-    /// the third is a DNF.
+    /// Knockdowns are NOT rescued: a downed racer must get up on its own, and is
+    /// a DNF only if it is still on its back and going nowhere after
+    /// KNOCKDOWN_SECONDS.
     /// A racer whose articulation solver diverges is caught by the arena bounds
     /// and put back where it was rather than deleted: PhysX can throw a long
     /// joint chain kilometres away in a single step, and a racer that silently
@@ -19,9 +20,23 @@ namespace PoRacer.Views
     /// </summary>
     public sealed class RacerView : MonoBehaviour
     {
-        private const float KNOCKDOWN_SECONDS = 7f;
+        // Long enough to be a real chance at self-recovery rather than a formality:
+        // a fallen humanoid needs several seconds to roll, brace and push up.
+        private const float KNOCKDOWN_SECONDS = 12f;
         private const float KNOCKDOWN_SPEED = 0.1f;
-        private const int MAX_RESCUES = 2;
+        /// <summary>
+        /// Zero, deliberately. A knocked-down racer is NOT stood back up: every
+        /// creature has to get off the floor under its own policy, which is what
+        /// they are now trained to do. Standing them up for free taught the
+        /// opposite lesson -- a policy that goes down and waits for the marshal is
+        /// indistinguishable from one that recovers, and only one of them is
+        /// actually racing.
+        ///
+        /// The knockdown referee still runs: a racer that is on its back and going
+        /// nowhere for KNOCKDOWN_SECONDS is a DNF. That timer is the window it has
+        /// to recover in, not a countdown to being rescued.
+        /// </summary>
+        private const int MAX_RESCUES = 0;
         // Arena bounds: the ground footprint plus a margin, so a divergence is
         // caught on the step it happens instead of after it has covered a
         // kilometre, and a racer that wanders off the edge is caught at the edge

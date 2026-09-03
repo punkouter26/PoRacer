@@ -15,7 +15,7 @@ namespace PoRacer.Agents
     [RequireComponent(typeof(IsaacBoxAgent))]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(100)]
-    public sealed class Agent_IsaacBox : MonoBehaviour, ICreatureAgent
+    public sealed class Agent_IsaacBox : MonoBehaviour, ICreatureAgent, IAuthoredAppearance
     {
         [Tooltip("Pin the root until something solid is under it. SCN_RACE_FLAT has no ground " +
                  "in edit mode - Systems_TrackBuilder raises the track when the race starts.")]

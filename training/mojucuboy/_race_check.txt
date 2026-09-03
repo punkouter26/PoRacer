@@ -1,4 +1,0 @@
-playing=True fixedDeltaTime=0.004999993
-MjScene instances=0 (must be exactly 1)
-Agent_MojucuBoy spawned=0
-Agent_Fido spawned=0

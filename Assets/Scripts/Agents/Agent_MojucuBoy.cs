@@ -54,16 +54,10 @@ namespace PoRacer.Agents
         /// </summary>
         private const float TRAINED_HIPS_HEIGHT = 0.7722f;
 
-        // The env terminates an episode below 0.45 m, so a racer under that has
-        // genuinely gone down rather than dipped through a stride.
-        private const float FALLEN_HEIGHT = 0.45f;
-        private const float FALLEN_UPRIGHT_DOT = 0.30f;
-        private const float FALLEN_GRACE_SECONDS = 1.5f;
 
         private MojucuBoyController _controller;
         private Transform _hips;
         private Transform _goal;
-        private float _fallenFor;
         private bool _failed;
 
         public bool Failed => _failed;
@@ -134,10 +128,16 @@ namespace PoRacer.Agents
                 _controller.SetGoal(_goal.position);
             }
 
-            bool down = _hips.position.y < FALLEN_HEIGHT
-                || Vector3.Dot(_hips.up, Vector3.up) < FALLEN_UPRIGHT_DOT;
-            _fallenFor = down ? _fallenFor + Time.fixedDeltaTime : 0f;
-            if (_fallenFor >= FALLEN_GRACE_SECONDS)
+            // Being on the floor is NOT a failure. He is trained to get back up and
+            // is never picked up by a marshal, so reporting failure the moment he
+            // goes down would end his race before the recovery he is trained for
+            // could start. RacerView's knockdown referee owns that call: still on
+            // his back and going nowhere after its window, and he is a DNF.
+            //
+            // Failed stays reserved for what ICreatureAgent means by it -- a
+            // physics failure the racer cannot come back from.
+            if (!float.IsFinite(_hips.position.x) || !float.IsFinite(_hips.position.y)
+                || !float.IsFinite(_hips.position.z))
             {
                 _failed = true;
             }
@@ -147,7 +147,17 @@ namespace PoRacer.Agents
         /// Unlike Fido, he observes a heading command and can be steered. Stored rather
         /// than applied once, because the heading has to be recomputed as he advances.
         /// </summary>
-        public void SetGoal(Transform goal) => _goal = goal;
+        public void SetGoal(Transform goal)
+        {
+            _goal = goal;
+            // Apply it immediately rather than waiting for the next FixedUpdate: the
+            // policy's first observation must already carry a sane heading, or he spends
+            // his opening strides correcting a course error he was never trained for.
+            if (goal != null && _controller != null)
+            {
+                _controller.SetGoal(goal.position);
+            }
+        }
 
         public void SetAreaResetCallback(Action areaReset)
         {

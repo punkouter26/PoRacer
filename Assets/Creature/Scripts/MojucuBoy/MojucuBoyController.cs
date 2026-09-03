@@ -151,6 +151,19 @@ namespace Creature.MojucuBoy
             WriteAction();
         }
 
+        /// <summary>
+        /// Points the heading command along the racer's current facing, so "no goal"
+        /// means "carry straight on" rather than "turn toward world +X".
+        /// </summary>
+        private void AlignCommandToFacing()
+        {
+            Transform body = _joints.Count > 0 ? transform : transform;
+            Vector3 forward = body.forward;
+            // Unity +Z is MuJoCo +Y and Unity +X is MuJoCo +X, so a planar heading maps
+            // across as atan2(unityZ, unityX). Same mapping SetGoal uses.
+            _commandHeading = Mathf.Atan2(forward.z, forward.x);
+        }
+
         private bool HasBrain
         {
 #if CREATURE_HAS_INFERENCE
@@ -229,6 +242,16 @@ namespace Creature.MojucuBoy
             _rangeHi = rig.RangeHi;
             _obs = new float[MojucuBoyObservation.OBS_SIZE];
             _action = new float[MojucuBoyObservation.ACTION_SIZE];
+
+            // Start the heading command pointing where he ALREADY faces.
+            //
+            // Left at its default of 0 the command means "walk toward world +X", and he
+            // spawns facing +Z -- so his very first observation reports a 90 degree
+            // heading error, nearly three times the +/-34 degree envelope he was trained
+            // in. Measured in the race scene: he went down inside 5 seconds, before the
+            // spawner's goal was ever applied. A racer with no goal must walk straight
+            // ahead, not be told to turn ninety degrees.
+            AlignCommandToFacing();
 
 #if CREATURE_HAS_INFERENCE
             if (_modelAsset != null)

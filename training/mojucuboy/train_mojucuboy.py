@@ -201,14 +201,14 @@ def main() -> int:
         with torch.no_grad():
             for t in range(args.rollout):
                 dist, _ = policy.distribution(obs)
-                raw = dist.sample()
+                raw = torch.nan_to_num(dist.sample(), nan=0.0)
                 buf_obs[t] = obs
                 buf_act[t] = raw
                 buf_logp[t] = dist.log_prob(raw).sum(-1)
                 buf_val[t] = policy.value(obs)
 
                 obs, reward, done, terms = env.step(torch.tanh(raw))
-                buf_rew[t] = reward
+                buf_rew[t] = torch.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)
                 buf_done[t] = done.float()
 
                 ep_return += reward

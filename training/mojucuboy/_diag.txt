@@ -1,4 +1,0 @@
-Fido bodyZ=0.42 bodyY=0.059
-MojucuBoyController found=True enabled=True activeInHierarchy=True _bound=True _failed=False _stepCounter=6120 _passive=False
-MojucuBoy MjBody bound=13 unbound=0
-MojucuBoy MjActuator bound=21 unbound=0

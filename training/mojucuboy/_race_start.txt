@@ -1,3 +1,0 @@
-UIDocuments: 3
-button: 'START RACING'
-invoked START
