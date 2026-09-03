@@ -126,6 +126,34 @@ namespace PoRacer.Systems
         /// and <see cref="TryGetFinishArchBounds"/> the single source both
         /// consumers already read, so nothing downstream has to know.
         /// </summary>
+        /// <summary>
+        /// Destroys a component or object from either edit mode or play mode.
+        ///
+        /// Object.Destroy is deferred to the end of the frame and does nothing at
+        /// all outside play mode. Every call here strips a collider that
+        /// GameObject.CreatePrimitive added and that the track must not keep, so
+        /// when this builder is run from the editor to bake a track, plain Destroy
+        /// left the ground with its paper-thin plane MeshCollider still attached
+        /// (racers sink straight through it) and left colliders on visual-only
+        /// bleachers. DestroyImmediate is the edit-mode equivalent; the play-mode
+        /// path is unchanged.
+        /// </summary>
+        private static void DestroyNow(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(target);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
+        }
+
         public void UseAuthored(Bounds groundBounds, bool hasArch, Bounds archBounds)
         {
             _groundBounds = groundBounds;
@@ -156,7 +184,7 @@ namespace PoRacer.Systems
         {
             for (int childIndex = parent.childCount - 1; childIndex >= 0; childIndex--)
             {
-                UnityEngine.Object.Destroy(parent.GetChild(childIndex).gameObject);
+                DestroyNow(parent.GetChild(childIndex).gameObject);
             }
 
             float sideMargin = decorate ? DECOR_MARGIN : 0f;
@@ -272,7 +300,7 @@ namespace PoRacer.Systems
             ground.GetComponent<MeshRenderer>().sharedMaterial = GroundMaterialFor(kind);
             // The plane's MeshCollider is paper-thin: heavy limbs press through it
             // and creatures sink. Swap it for a solid slab whose top is at y = 0.
-            UnityEngine.Object.Destroy(ground.GetComponent<MeshCollider>());
+            DestroyNow(ground.GetComponent<MeshCollider>());
             var slab = ground.AddComponent<BoxCollider>();
             slab.size = new Vector3(10f, 1f, 10f);
             slab.center = new Vector3(0f, -0.5f, 0f);
@@ -500,7 +528,7 @@ namespace PoRacer.Systems
         {
             var visual = GameObject.CreatePrimitive(PrimitiveType.Quad);
             visual.name = name;
-            UnityEngine.Object.Destroy(visual.GetComponent<Collider>());
+            DestroyNow(visual.GetComponent<Collider>());
             visual.transform.SetParent(parent, false);
             visual.transform.localPosition = new Vector3(0f, heightOffset, 0f);
             visual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -767,7 +795,7 @@ namespace PoRacer.Systems
                     {
                         var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
                         step.name = "Bleacher";
-                        UnityEngine.Object.Destroy(step.GetComponent<Collider>());
+                        DestroyNow(step.GetComponent<Collider>());
                         step.transform.SetParent(stand.transform, false);
                         step.transform.localPosition = new Vector3(0f, 0.2f + stepIndex * 0.45f, -0.8f * stepIndex);
                         step.transform.localScale = new Vector3(standColumns * 0.55f + 0.6f, 0.4f, 0.9f);
@@ -795,7 +823,7 @@ namespace PoRacer.Systems
             Collider[] colliders = prop.GetComponentsInChildren<Collider>(true);
             for (int colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex++)
             {
-                UnityEngine.Object.Destroy(colliders[colliderIndex]);
+                DestroyNow(colliders[colliderIndex]);
             }
             if (overrideMaterial != null)
             {

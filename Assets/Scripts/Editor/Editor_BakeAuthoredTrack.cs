@@ -54,6 +54,14 @@ namespace PoRacer.EditorTools
 
         private static string BakeInternal()
         {
+            // EditorSceneManager.OpenScene throws in play mode, and the throw
+            // reads as a Unity internal error rather than as "you are in play
+            // mode". Bake writes a scene asset, so it belongs in edit mode only.
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                return "cannot bake while in play mode - exit play mode and run this again";
+            }
+
             Scene scene = EditorSceneManager.OpenScene(SCENE_PATH, OpenSceneMode.Single);
             if (!scene.IsValid())
             {
