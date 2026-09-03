@@ -1,0 +1,104 @@
+<mujoco model="boy">
+  <compiler angle="radian"/>
+
+  <option timestep="0.005" integrator="implicitfast" jacobian="dense" iterations="10" ls_iterations="8"/>
+
+  <default>
+    <joint armature="0.02" damping="1" limited="true"/>
+    <geom solref="0.01" rgba="0.7 0.7 0.75 1"/>
+  </default>
+
+  <worldbody>
+    <geom name="floor" size="0 0 1" type="plane" rgba="0.3 0.32 0.35 1"/>
+    <body name="hips" pos="0 0 0.78565">
+      <joint name="root" type="free" armature="0" damping="0"/>
+      <geom name="pelvis" size="0.115 0.07 0.09" pos="0 0 0.07" type="box" mass="8"/>
+      <body name="torso" pos="0 0 0.14">
+        <joint name="abdomen_z" range="-0.785398 0.785398"/>
+        <joint name="abdomen_y" range="-0.610865 0.610865" axis="0 1 0"/>
+        <joint name="abdomen_x" range="-0.785398 0.436332" axis="1 0 0"/>
+        <geom name="spine" size="0.08 0.065" pos="0 0 0.065" quat="0 1 0 0" type="capsule" mass="5"/>
+        <geom name="chest" size="0.095 0.0675" pos="-1.53734e-09 -3.87107e-09 0.1975" quat="0 1 0 0" type="capsule" mass="6.6"/>
+        <geom name="clavicle_L" size="0.035 0.0679154" pos="-0.0975 -8.6144e-10 0.2575" quat="0.666921 1.00118e-07 0.745128 0" type="capsule" mass="0.7"/>
+        <geom name="clavicle_R" size="0.035 0.0679154" pos="0.0975 -8.6144e-10 0.2575" quat="0.666921 1.00118e-07 -0.745128 0" type="capsule" mass="0.7"/>
+        <body name="head" pos="-3.07468e-09 -7.74214e-09 0.265">
+          <joint name="neck_x" range="-0.610865 0.610865" axis="1 0 0"/>
+          <joint name="neck_z" range="-0.872665 0.872665"/>
+          <geom name="head" size="0.1" pos="0 0 0.09" mass="4"/>
+        </body>
+        <body name="upper_arm_L" pos="-0.165 8.20806e-09 0.265">
+          <joint name="shoulder_y_L" range="-1.74533 1.74533" axis="0 1 0"/>
+          <joint name="shoulder_z_L" range="-1.48353 1.48353"/>
+          <geom name="upper_arm_L" size="0.048 0.125169" pos="-0.125 0.0025 -0.0059999" quat="0.723856 0.0137962 0.689813 0" type="capsule" mass="1.8"/>
+          <body name="forearm_L" pos="-0.25 0.00499999 -0.0119998">
+            <joint name="elbow_L" range="-2.44346 0"/>
+            <geom name="forearm_L" size="0.04 0.110101" pos="-0.11 0.0025 -0.00399993" quat="0.719837 0.0157719 0.693964 0" type="capsule" mass="1.15"/>
+            <geom name="hand_L" size="0.045" pos="-0.22 0.005 -0.00799986" mass="0.25"/>
+          </body>
+        </body>
+        <body name="upper_arm_R" pos="0.165 8.20806e-09 0.265">
+          <joint name="shoulder_y_R" range="-1.74533 1.74533" axis="0 1 0"/>
+          <joint name="shoulder_z_R" range="-1.48353 1.48353"/>
+          <geom name="upper_arm_R" size="0.048 0.125169" pos="0.125 0.0025 -0.0059999" quat="0.723856 0.0137962 -0.689813 0" type="capsule" mass="1.8"/>
+          <body name="forearm_R" pos="0.25 0.00499999 -0.0119998">
+            <joint name="elbow_R" range="0 2.44346"/>
+            <geom name="forearm_R" size="0.04 0.110101" pos="0.11 0.0025 -0.00399993" quat="0.719837 0.0157719 -0.693964 0" type="capsule" mass="1.15"/>
+            <geom name="hand_R" size="0.045" pos="0.22 0.005 -0.00799986" mass="0.25"/>
+          </body>
+        </body>
+      </body>
+      <body name="thigh_L" pos="-0.085 2.85192e-11 0.02">
+        <joint name="hip_z_L" range="-0.785398 0.785398"/>
+        <joint name="hip_x_L" range="-0.610865 1.91986" axis="1 0 0"/>
+        <joint name="hip_y_L" range="-0.698132 0.698132" axis="0 1 0"/>
+        <geom name="thigh_L" size="0.06 0.180017" pos="-0.0025 -1.27403e-11 -0.18" quat="0.999976 -3.53873e-11 0.00694394 0" type="capsule" mass="4.5"/>
+        <body name="shin_L" pos="-0.005 -2.54807e-11 -0.36">
+          <joint name="knee_L" range="-2.79253 0" axis="1 0 0"/>
+          <geom name="shin_L" size="0.048 0.172572" pos="1.09524e-10 -0.005 -0.1725" quat="0.999895 -0.0144882 -3.17359e-10 0" type="capsule" mass="1.8"/>
+          <body name="foot_L" pos="2.19047e-10 -0.01 -0.345">
+            <joint name="ankle_L" range="-0.785398 0.785398" axis="1 0 0"/>
+            <geom name="foot_L" size="0.0470074 0.11527 0.0428248" pos="-4.17232e-09 0.0529468 -0.0578248" type="box" friction="1.2 0.02 0.001" mass="0.5"/>
+          </body>
+        </body>
+      </body>
+      <body name="thigh_R" pos="0.085 2.85192e-11 0.02">
+        <joint name="hip_z_R" range="-0.785398 0.785398"/>
+        <joint name="hip_x_R" range="-0.610865 1.91986" axis="1 0 0"/>
+        <joint name="hip_y_R" range="-0.698132 0.698132" axis="0 1 0"/>
+        <geom name="thigh_R" size="0.06 0.180017" pos="0.0025 -1.27403e-11 -0.18" quat="0.999976 -3.53873e-11 -0.00694394 0" type="capsule" mass="4.5"/>
+        <body name="shin_R" pos="0.005 -2.54807e-11 -0.36">
+          <joint name="knee_R" range="-2.79253 0" axis="1 0 0"/>
+          <geom name="shin_R" size="0.048 0.172572" pos="-1.09524e-10 -0.005 -0.1725" quat="0.999895 -0.0144882 3.17359e-10 0" type="capsule" mass="1.8"/>
+          <body name="foot_R" pos="-2.19047e-10 -0.01 -0.345">
+            <joint name="ankle_R" range="-0.785398 0.785398" axis="1 0 0"/>
+            <geom name="foot_R" size="0.0470074 0.11527 0.0428248" pos="4.17232e-09 0.0529468 -0.0578248" type="box" friction="1.2 0.02 0.001" mass="0.5"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="act_abdomen_z" joint="abdomen_z" ctrlrange="-0.785398 0.785398" forcerange="-200 200" biastype="affine" gainprm="1200" biasprm="0 -1200 -78.4282"/>
+    <general name="act_abdomen_y" joint="abdomen_y" ctrlrange="-0.610865 0.610865" forcerange="-200 200" biastype="affine" gainprm="1200" biasprm="0 -1200 -112.061"/>
+    <general name="act_abdomen_x" joint="abdomen_x" ctrlrange="-0.785398 0.436332" forcerange="-200 200" biastype="affine" gainprm="1200" biasprm="0 -1200 -82.5464"/>
+    <general name="act_neck_x" joint="neck_x" ctrlrange="-0.610865 0.610865" forcerange="-40 40" biastype="affine" gainprm="240" biasprm="0 -240 -8.10333"/>
+    <general name="act_neck_z" joint="neck_z" ctrlrange="-0.872665 0.872665" forcerange="-40 40" biastype="affine" gainprm="240" biasprm="0 -240 -5.87878"/>
+    <general name="act_shoulder_y_L" joint="shoulder_y_L" ctrlrange="-1.74533 1.74533" forcerange="-80 80" biastype="affine" gainprm="480" biasprm="0 -480 -23.0533"/>
+    <general name="act_shoulder_z_L" joint="shoulder_z_L" ctrlrange="-1.48353 1.48353" forcerange="-80 80" biastype="affine" gainprm="480" biasprm="0 -480 -23.037"/>
+    <general name="act_elbow_L" joint="elbow_L" ctrlrange="-2.44346 0" forcerange="-60 60" biastype="affine" gainprm="320" biasprm="0 -320 -8.30886"/>
+    <general name="act_shoulder_y_R" joint="shoulder_y_R" ctrlrange="-1.74533 1.74533" forcerange="-80 80" biastype="affine" gainprm="480" biasprm="0 -480 -23.0533"/>
+    <general name="act_shoulder_z_R" joint="shoulder_z_R" ctrlrange="-1.48353 1.48353" forcerange="-80 80" biastype="affine" gainprm="480" biasprm="0 -480 -23.037"/>
+    <general name="act_elbow_R" joint="elbow_R" ctrlrange="0 2.44346" forcerange="-60 60" biastype="affine" gainprm="320" biasprm="0 -320 -8.30886"/>
+    <general name="act_hip_z_L" joint="hip_z_L" ctrlrange="-0.785398 0.785398" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -13.6934"/>
+    <general name="act_hip_x_L" joint="hip_x_L" ctrlrange="-0.610865 1.91986" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -77.566"/>
+    <general name="act_hip_y_L" joint="hip_y_L" ctrlrange="-0.698132 0.698132" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -77.4672"/>
+    <general name="act_knee_L" joint="knee_L" ctrlrange="-2.79253 0" forcerange="-250 250" biastype="affine" gainprm="1200" biasprm="0 -1200 -29.761"/>
+    <general name="act_ankle_L" joint="ankle_L" ctrlrange="-0.785398 0.785398" forcerange="-100 100" biastype="affine" gainprm="480" biasprm="0 -480 -7.00999"/>
+    <general name="act_hip_z_R" joint="hip_z_R" ctrlrange="-0.785398 0.785398" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -13.6934"/>
+    <general name="act_hip_x_R" joint="hip_x_R" ctrlrange="-0.610865 1.91986" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -77.566"/>
+    <general name="act_hip_y_R" joint="hip_y_R" ctrlrange="-0.698132 0.698132" forcerange="-250 250" biastype="affine" gainprm="1400" biasprm="0 -1400 -77.4672"/>
+    <general name="act_knee_R" joint="knee_R" ctrlrange="-2.79253 0" forcerange="-250 250" biastype="affine" gainprm="1200" biasprm="0 -1200 -29.761"/>
+    <general name="act_ankle_R" joint="ankle_R" ctrlrange="-0.785398 0.785398" forcerange="-100 100" biastype="affine" gainprm="480" biasprm="0 -480 -7.00999"/>
+  </actuator>
+</mujoco>

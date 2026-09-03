@@ -67,3 +67,9 @@ MonoBehaviour:
     model: {fileID: 5022602860645237092, guid: ad932bebb96cc49439bd1743d9fa4611, type: 3}
     spawnHeight: 0.714
     brainInPrefab: 0
+  - id: MojucuBoy_v01
+    displayName: MojucuBoy
+    prefab: {fileID: 8392310930300605546, guid: 71f6919b97c9be64ba1331012ad8e9a2, type: 3}
+    model: {fileID: 5022602860645237092, guid: 6b664465891dc5e4b871f628ad716e96, type: 3}
+    spawnHeight: 0.7222
+    brainInPrefab: 0

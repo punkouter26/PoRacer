@@ -1,14 +1,27 @@
 {
     "name": "Creature.Editor",
     "rootNamespace": "CreatureEditor",
-    "references": ["Mujoco.Runtime", "Mujoco.Editor", "Creature"],
-    "includePlatforms": ["Editor"],
+    "references": [
+        "Mujoco.Runtime",
+        "Mujoco.Editor",
+        "Creature",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "",
+            "define": "CREATURE_HAS_INFERENCE"
+        }
+    ],
     "noEngineReferences": false
 }

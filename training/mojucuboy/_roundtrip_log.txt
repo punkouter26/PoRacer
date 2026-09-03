@@ -1,0 +1,33 @@
+cleared Assets/Local/MjImports/boy
+imported root: boy
+components: bodies=13 joints=22 geoms=19 actuators=21
+  actuator act_knee_L type=General gainprm=[1200,0,0] biasprm=[0,-1200,-29.761] forceRange=(-250.00, 250.00)
+  actuator act_abdomen_z type=General gainprm=[1200,0,0] biasprm=[0,-1200,-78.4282] forceRange=(-200.00, 200.00)
+  hinge hip_z_L          unityAxis=(0.000, 1.000, 0.000) range=-45.00..45.00
+  hinge abdomen_z        unityAxis=(0.000, 1.000, 0.000) range=-45.00..45.00
+  hinge neck_x           unityAxis=(1.000, 0.000, 0.000) range=-35.00..35.00
+  hinge ankle_L          unityAxis=(1.000, 0.000, 0.000) range=-45.00..45.00
+  hinge abdomen_y        unityAxis=(0.000, 0.000, 1.000) range=-35.00..35.00
+  hinge abdomen_x        unityAxis=(1.000, 0.000, 0.000) range=-45.00..25.00
+  hinge shoulder_y_L     unityAxis=(0.000, 0.000, 1.000) range=-100.00..100.00
+  hinge shoulder_z_L     unityAxis=(0.000, 1.000, 0.000) range=-85.00..85.00
+  hinge ankle_R          unityAxis=(1.000, 0.000, 0.000) range=-45.00..45.00
+  hinge hip_y_R          unityAxis=(0.000, 0.000, 1.000) range=-40.00..40.00
+  hinge shoulder_y_R     unityAxis=(0.000, 0.000, 1.000) range=-100.00..100.00
+  hinge hip_z_R          unityAxis=(0.000, 1.000, 0.000) range=-45.00..45.00
+  hinge hip_x_L          unityAxis=(1.000, 0.000, 0.000) range=-35.00..110.00
+  hinge hip_y_L          unityAxis=(0.000, 0.000, 1.000) range=-40.00..40.00
+  hinge knee_L           unityAxis=(1.000, 0.000, 0.000) range=-160.00..0.00
+  hinge hip_x_R          unityAxis=(1.000, 0.000, 0.000) range=-35.00..110.00
+  hinge neck_z           unityAxis=(0.000, 1.000, 0.000) range=-50.00..50.00
+  hinge knee_R           unityAxis=(1.000, 0.000, 0.000) range=-160.00..0.00
+  hinge elbow_L          unityAxis=(0.000, 1.000, 0.000) range=-140.00..0.00
+  hinge elbow_R          unityAxis=(0.000, 1.000, 0.000) range=0.00..140.00
+  hinge shoulder_z_R     unityAxis=(0.000, 1.000, 0.000) range=-85.00..85.00
+global settings present: True
+Time.fixedDeltaTime: 0.004999993
+UseRawGameObjectNames = true
+MjScene: MjScene
+CreateScene compiled OK
+exported: C:\Users\punko\Downloads\PoRacer\training\boy\boy_roundtrip.xml
+scene saved: Assets/Agents/Boy_v01/SCN_BOY_RIGTEST.unity

@@ -1,0 +1,20 @@
+{
+  "randomised": {
+    "episodes": 100,
+    "mean_episode_length": 1000.0,
+    "median_episode_length": 1000.0,
+    "mean_forward_speed": 2.0431900024414062,
+    "mean_return": 2336.0634765625,
+    "survival_rate": 1.0,
+    "survivors": 100
+  },
+  "nominal": {
+    "episodes": 100,
+    "mean_episode_length": 1000.0,
+    "median_episode_length": 1000.0,
+    "mean_forward_speed": 2.0222785472869873,
+    "mean_return": 2341.93359375,
+    "survival_rate": 1.0,
+    "survivors": 100
+  }
+}

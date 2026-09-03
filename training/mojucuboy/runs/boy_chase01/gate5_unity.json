@@ -1,0 +1,8 @@
+{
+  "episodes": 100,
+  "mean_episode_length": 1000,
+  "median_episode_length": 1000,
+  "mean_forward_speed": 2.0066345336436004,
+  "survivors": 100,
+  "survival_rate": 1
+}

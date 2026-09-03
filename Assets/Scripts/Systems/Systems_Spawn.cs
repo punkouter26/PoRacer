@@ -453,7 +453,7 @@ namespace PoRacer.Systems
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
                     string funName = RacerNames.Get(_nameOrder, gridIndex);
 
-                    bool isMujoco = instance.GetComponent<Agent_Fido>() != null;
+                    bool isMujoco = instance.GetComponent<IMujocoCreature>() != null;
 
                     // Fido is bare: BodyLinkView draws links between
                     // ArticulationBodies, and he has none to link.
@@ -469,10 +469,15 @@ namespace PoRacer.Systems
                     // stays shared, so batching is not broken by material clones.
                     // Alternating light/dark segments plus a touch of gloss give
                     // the primitive bodies visible form under the sun.
+                    // A racer that arrived with its own skin, clothes and shoes keeps
+                    // them; the per-slot hue exists to tell primitive bodies apart.
+                    bool authoredAppearance = instance.GetComponent<IAuthoredAppearance>() != null;
                     Color tint = Color.HSVToRGB(gridIndex * TINT_HUE_STEP % 1f, 0.6f, 1f);
                     Color darkTint = new Color(tint.r * 0.78f, tint.g * 0.78f, tint.b * 0.78f);
                     float surfaceId = SurfaceIdFor(entry.id);
-                    Renderer[] tintRenderers = instance.GetComponentsInChildren<Renderer>();
+                    Renderer[] tintRenderers = authoredAppearance
+                        ? System.Array.Empty<Renderer>()
+                        : instance.GetComponentsInChildren<Renderer>();
                     for (int rendererIndex = 0; rendererIndex < tintRenderers.Length; rendererIndex++)
                     {
                         Color segmentTint = rendererIndex % 2 == 0 ? tint : darkTint;
@@ -589,7 +594,7 @@ namespace PoRacer.Systems
                 {
                     continue;
                 }
-                if (entry.prefab.GetComponent<Agent_Fido>() != null)
+                if (entry.prefab.GetComponent<IMujocoCreature>() != null)
                 {
                     return true;
                 }

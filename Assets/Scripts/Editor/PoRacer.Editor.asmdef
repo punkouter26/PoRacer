@@ -27,6 +27,11 @@
             "name": "com.unity.ai.inference",
             "expression": "2.0.0",
             "define": "ISAACPORTS_HAS_INFERENCE"
+        },
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "2.0.0",
+            "define": "CREATURE_HAS_INFERENCE"
         }
     ],
     "noEngineReferences": false

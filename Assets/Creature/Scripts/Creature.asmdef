@@ -1,7 +1,10 @@
 {
     "name": "Creature",
     "rootNamespace": "Creature",
-    "references": ["Mujoco.Runtime"],
+    "references": [
+        "Mujoco.Runtime",
+        "Unity.InferenceEngine"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
@@ -9,6 +12,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.ai.inference",
+            "expression": "",
+            "define": "CREATURE_HAS_INFERENCE"
+        }
+    ],
     "noEngineReferences": false
 }

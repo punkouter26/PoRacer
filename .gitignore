@@ -83,3 +83,7 @@ ISAAC/logs/
 
 # Python build artifacts from the editable ISAAC task package.
 *.egg-info/
+
+# MuJoCo Warp training venv for the Boy_Character rig (Windows, Python 3.11.9).
+# Kept out of .venv on purpose: that one carries the ml-agents/torch pins.
+.venv-mjwarp/

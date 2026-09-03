@@ -28,7 +28,7 @@ namespace PoRacer.Agents
     /// </summary>
     [RequireComponent(typeof(CreatureAgent))]
     [DisallowMultipleComponent]
-    public sealed class Agent_Fido : MonoBehaviour, ICreatureAgent
+    public sealed class Agent_Fido : MonoBehaviour, ICreatureAgent, IMujocoCreature
     {
         /// <summary>
         /// The MJCF builds Fido along +X (his head sits at x = +0.21) and the importer
