@@ -1,0 +1,33 @@
+<!--
+  Managed-stripping allow-list for IL2CPP builds.
+
+  Stripping walks static references. Everything here is reached by REFLECTION
+  instead, so the linker cannot see the reference and would remove the type,
+  leaving a build that compiles, installs, and then fails at runtime on a device
+  with a null resolve or a missing method - the worst failure mode available,
+  because it never shows up in the editor.
+
+    VContainer            [Inject] method injection resolves constructors and
+                          Construct() methods reflectively.
+    MessagePipe           broker types are built from generic type arguments at
+                          registration time.
+    Unity.ML-Agents       BehaviorParameters instantiates policies by type.
+    Unity.InferenceEngine backend and layer types are selected at load time.
+    Mujoco.Runtime        MjComponent subclasses bind through the native plugin.
+    PoRacer.*             agents, views and systems are resolved through the
+                          container rather than newed up.
+
+  Without this file the project must stay on the default (Minimal) stripping
+  level. With it, Low is safe.
+-->
+<linker>
+  <assembly fullname="PoRacer.Runtime" preserve="all" />
+  <assembly fullname="PoRacer.IsaacPorts.Runtime" preserve="all" />
+  <assembly fullname="Creature" preserve="all" />
+  <assembly fullname="VContainer" preserve="all" />
+  <assembly fullname="MessagePipe" preserve="all" />
+  <assembly fullname="MessagePipe.VContainer" preserve="all" />
+  <assembly fullname="Unity.ML-Agents" preserve="all" />
+  <assembly fullname="Unity.InferenceEngine" preserve="all" />
+  <assembly fullname="Mujoco.Runtime" preserve="all" />
+</linker>

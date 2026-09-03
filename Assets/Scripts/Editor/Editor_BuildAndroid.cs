@@ -61,6 +61,14 @@ namespace PoRacer.EditorTools
             // app bundle to PoRacer.apk, which adb cannot install.
             EditorUserBuildSettings.buildAppBundle = false;
 
+            // Same texture format and stripping as the bundle. A sideloaded APK is
+            // how the release build gets checked on real hardware, so it has to be
+            // built the same way - an APK with different compression or stripping
+            // would be testing something the store never receives.
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.Low);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
+
             var options = new BuildPlayerOptions
             {
                 scenes = scenes.ToArray(),

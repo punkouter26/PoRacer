@@ -56,6 +56,28 @@ namespace PoRacer.EditorTools
             PlayerSettings.allowedAutorotateToLandscapeRight = false;
 
 
+            // --- Download size ---
+            // The first signed bundle came out at 109 MB, and the build report put
+            // 261.8 MB of its 306 MB uncompressed payload in Textures, almost all
+            // of it Boy_Character_mujoco.glb expanding from 30 MB on disk to 250 MB
+            // in the build. Nothing was setting a mobile texture format, so those
+            // textures shipped effectively uncompressed. ASTC is the right target
+            // for an ARM64, API 26+ app: universally supported on that floor, and
+            // far smaller than the uncompressed fallback.
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
+
+            // --- Code size ---
+            // libil2cpp.so was 112.8 MB uncompressed with managed stripping unset,
+            // which leaves it at Minimal. Low is safe here ONLY because Assets/link.xml
+            // preserves the assemblies that are reached by reflection rather than by
+            // a static reference - VContainer injection, MessagePipe brokers,
+            // ML-Agents policy selection, Inference Engine backends, MuJoCo
+            // components. Do not raise this past Low without extending that file
+            // and testing on a device: the failure mode is a build that installs
+            // and then dies on a null resolve, which never reproduces in the editor.
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.Low);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
+
             // Signing paths only — Unity never serializes the passwords.
             PlayerSettings.Android.useCustomKeystore = true;
             PlayerSettings.Android.keystoreName = Editor_BuildAndroidAAB.KEYSTORE_PATH;
@@ -65,7 +87,8 @@ namespace PoRacer.EditorTools
             AssetDatabase.SaveAssets();
 
             Debug.Log($"ANDROID CONFIG RESULT: id={Editor_BuildAndroidAAB.APP_ID} v{VERSION} " +
-                      $"(code {VERSION_CODE}) min=26 target=36 arch=ARM64 IL2CPP | {iconReport}");
+                      $"(code {VERSION_CODE}) min=26 target=36 arch=ARM64 IL2CPP " +
+                      $"tex=ASTC strip=Low codegen=OptimizeSize | {iconReport}");
         }
 
         private static string ApplyIcons()

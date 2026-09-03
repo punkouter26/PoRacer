@@ -102,6 +102,19 @@ namespace PoRacer.EditorTools
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)TARGET_SDK;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+
+            // --- Download size ---
+            // Re-asserted here, not just in Configure Android Release Settings,
+            // because androidBuildSubtarget lives in EditorUserBuildSettings: it is
+            // a per-machine value under Library/ that never reaches version control.
+            // A checkout that builds without running the configurator first would
+            // otherwise ship uncompressed textures and a 109 MB bundle with no
+            // warning. Stripping and codegen are PlayerSettings and do persist, but
+            // are asserted alongside it so one place describes the whole shape of a
+            // release build.
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.Low);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
             PlayerSettings.SetIl2CppCompilerConfiguration(NamedBuildTarget.Android, Il2CppCompilerConfiguration.Release);
 
             // .aab, not .apk. This is the switch Play cares about most.
