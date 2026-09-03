@@ -274,6 +274,11 @@ namespace IsaacBox.EditorTools
                 var sampler = root.AddComponent<IsaacBoxTargetSampler>();
                 sampler.ConfigureFrom(rig);
 
+                // The FBX has no textures at all, so its imported materials render flat. Put the
+                // authored materials (built from the GLB twin's images) on before saving, or every
+                // prefab rebuild silently reverts the creature to untextured.
+                int textured = IsaacBoxMaterials.Apply(root);
+
                 Directory.CreateDirectory(Root);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, IsaacBoxPaths.Prefab, out bool ok);
                 if (!ok || prefab == null)
@@ -286,6 +291,7 @@ namespace IsaacBox.EditorTools
                 Selection.activeObject = prefab;
                 EditorGUIUtility.PingObject(prefab);
                 Debug.Log($"[IsaacBox] prefab built -> {IsaacBoxPaths.Prefab}\n{report}" +
+                          $"  materials: {textured} renderers textured from the GLB\n" + 
                           $"  bodies {root.GetComponentsInChildren<ArticulationBody>(true).Length}, " +
                           $"colliders {root.GetComponentsInChildren<Collider>(true).Length}, " +
                           $"material {mat.staticFriction:F2}/{mat.dynamicFriction:F2} ({mat.frictionCombine} combine)");
