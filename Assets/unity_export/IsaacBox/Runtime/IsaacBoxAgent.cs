@@ -88,6 +88,21 @@ namespace IsaacBox
                  "learned to recover look identical to one that did.")]
         public bool autoRecoverFromFalls = false;
 
+        [Header("Arm pose")]
+        [Tooltip("How much of the policy arm action reaches the shoulder and elbow drives, " +
+                 "as a fraction of the nominal [-1,1] action range. 0 (the default) holds the " +
+                 "arms at the trained rest pose - at the sides, clear of the torso. 1 lets the " +
+                 "raw network output through. " +
+                 "This is a presentation clamp, not a fix. The chase task scored " +
+                 "joint_deviation_arms at only -0.2 against a +5.0 target bonus, so the policy " +
+                 "learned to saturate the shoulder drives: it asks for roughly -175 deg of " +
+                 "shoulder_roll where the nominal range reaches -106, and the joints just sit " +
+                 "against their limits with the arms over the head. Raising that weight and " +
+                 "retraining is the real fix; this only stops the arms flailing into the body " +
+                 "in the meantime. Legs, spine and hips are untouched, so the gait the policy " +
+                 "was actually rewarded for is bit-identical.")]
+        [Range(0f, 1f)] public float armActionLimit = 0f;
+
         [Tooltip("upright = dot(root.up, world up). Below this counts as fallen.")]
         [Range(0f, 1f)] public float fallUprightThreshold = 0.4f;
 
@@ -132,6 +147,10 @@ namespace IsaacBox
         float[] _obs;
         float[] _action;                  // raw policy output, fed back as the last obs block
         float[] _jointTargetRad;
+        // Shoulder and elbow joints - the set the Isaac task grouped under
+        // joint_deviation_arms. Matched by name so a re-export cannot silently
+        // renumber them.
+        bool[] _isArmJoint;
         Vector3 _targetObs;               // target_pos_b, Isaac convention, clipped
         bool _hasTarget;
         int _substep;
@@ -237,6 +256,7 @@ namespace IsaacBox
             _kd = new float[n];
             _effort = new float[n];
             _jointTargetRad = new float[n];
+            _isArmJoint = new bool[n];
 
             for (int i = 0; i < rig.bodies.Length; i++)
             {
@@ -260,6 +280,10 @@ namespace IsaacBox
                 _kd[j] = def.joint.damping;
                 _effort[j] = def.joint.effortLimit;
                 _jointTargetRad[j] = def.joint.defaultPosRad;
+
+                string jointName = def.joint.name ?? string.Empty;
+                _isArmJoint[j] = jointName.StartsWith("shoulder", System.StringComparison.OrdinalIgnoreCase)
+                    || jointName.StartsWith("elbow", System.StringComparison.OrdinalIgnoreCase);
             }
 
             if (_root == null)
@@ -664,7 +688,15 @@ namespace IsaacBox
             // joint_position_target[i] = default[i] + scale * action[i]
             for (int j = 0; j < _joints.Length; j++)
             {
-                float t = rig.actionScale * _action[j];
+                float action = _action[j];
+                if (_isArmJoint[j])
+                {
+                    // Clamped rather than scaled. The raw arm actions run past -3,
+                    // so scaling them down by a fraction still leaves the drive
+                    // hard against its limit; only a clamp actually bounds the pose.
+                    action = Mathf.Clamp(action, -armActionLimit, armActionLimit);
+                }
+                float t = rig.actionScale * action;
                 if (rig.useDefaultOffset) t += _defaultPos[j];
                 _jointTargetRad[j] = t;
 
