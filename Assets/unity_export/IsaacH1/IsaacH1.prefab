@@ -1148,7 +1148,7 @@ MonoBehaviour:
   maxYawRate: 1
   arriveRadius: 0
   turnSlowdown: 0.5
-  autoRecoverFromFalls: 1
+  autoRecoverFromFalls: 0
   fallUprightThreshold: 0.4
   fallGraceSeconds: 1
   actuatorMode: 0

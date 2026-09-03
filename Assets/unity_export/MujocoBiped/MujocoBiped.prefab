@@ -567,7 +567,7 @@ MonoBehaviour:
   torqueScale: 1
   linearVelocityReference: 0
   selfCollisionMode: 0
-  autoRecoverFromFalls: 1
+  autoRecoverFromFalls: 0
   fallUprightThreshold: 0.4
   fallGraceSeconds: 1
   debugLogObservations: 0

@@ -81,9 +81,12 @@ namespace IsaacBox
         public bool holdPoseWithoutTarget = true;
 
         [Header("Fall recovery")]
-        [Tooltip("Isaac terminates the episode on hips/spine contact and resets. Unity has " +
-                 "no such mechanism, so without this a single fall is final.")]
-        public bool autoRecoverFromFalls = true;
+        [Tooltip("Stands the agent back up after it has been down for fallGraceSeconds. " +
+                 "OFF by default, and it must stay off for anything that races: a racer " +
+                 "that falls stays on the ground, and getting up is something the policy " +
+                 "has to do for itself. Standing it up for free makes a policy that never " +
+                 "learned to recover look identical to one that did.")]
+        public bool autoRecoverFromFalls = false;
 
         [Tooltip("upright = dot(root.up, world up). Below this counts as fallen.")]
         [Range(0f, 1f)] public float fallUprightThreshold = 0.4f;

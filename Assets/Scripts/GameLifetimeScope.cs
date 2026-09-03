@@ -19,12 +19,11 @@ namespace PoRacer
             builder.Register<RaceModel>(Lifetime.Singleton);
             builder.Register<EloModel>(Lifetime.Singleton);
             builder.Register<RaceConfigModel>(Lifetime.Singleton);
-            builder.Register<CommentaryModel>(Lifetime.Singleton);
             builder.Register<AudioMixModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
             builder.RegisterEntryPoint<Systems_Race>().AsSelf();
-            builder.RegisterEntryPoint<Systems_Commentary>();
+            builder.RegisterEntryPoint<Systems_LeadWatcher>();
             // Entry point: its Tick runs the duck release and the menu mix slide.
             builder.RegisterEntryPoint<Systems_AudioMix>().AsSelf();
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();

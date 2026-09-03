@@ -162,7 +162,10 @@ namespace IsaacH1
         [Tooltip("Isaac terminates the episode on base contact and resets. Unity has no " +
                  "such mechanism, so without this a single fall leaves the creature on " +
                  "the floor for good.")]
-        public bool autoRecoverFromFalls = true;
+        // OFF by default: a racer that falls stays on the ground, and getting
+        // up is something the policy has to do for itself. Only a harness that
+        // is deliberately measuring something else should turn this on.
+        public bool autoRecoverFromFalls = false;
 
         [Tooltip("upright = dot(root.up, world up). Below this counts as fallen.")]
         [Range(0f, 1f)] public float fallUprightThreshold = 0.4f;

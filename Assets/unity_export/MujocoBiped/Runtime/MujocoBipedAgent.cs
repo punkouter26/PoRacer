@@ -181,7 +181,10 @@ namespace MujocoBiped
         [Tooltip("env.py ends the episode when the torso leaves [0.55, 1.1] m or tips " +
                  "past 66 degrees, and resets. Unity has no episode, so without this a " +
                  "single fall leaves the creature on the floor for good.")]
-        public bool autoRecoverFromFalls = true;
+        // OFF by default: a racer that falls stays on the ground, and getting
+        // up is something the policy has to do for itself. Only a harness that
+        // is deliberately measuring something else should turn this on.
+        public bool autoRecoverFromFalls = false;
 
         [Tooltip("env.py min_uprightness. upright = R[2,2] = dot(root up, world up).")]
         [Range(0f, 1f)] public float fallUprightThreshold = 0.4f;

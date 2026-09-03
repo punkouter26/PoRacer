@@ -18,7 +18,7 @@ namespace CreatureEditor
     /// </summary>
     public static class MojucuBoySetup
     {
-        private const string SCENE_PATH = "Assets/Agents/MojucuBoy_v01/SCN_MOJUCUBOY_RACE.unity";
+        private const string SCENE_PATH = "Assets/Scenes/SCN_TEST_MOJUCUBOY.unity";
         private const string MJCF_PATH = "Assets/Agents/MojucuBoy_v01/mojucuboy_unity.xml";
         private const string RIG_JSON = "Assets/Agents/MojucuBoy_v01/mojucuboy_rig.json";
         private const string GLB_PATH = "Assets/Boy_Character_mujoco.glb";

@@ -28,9 +28,9 @@ behaviors:
       gail:
         gamma: 0.99
         strength: 0.1
-        demo_path: Assets/Demonstrations/BipedWalk.demo
+        demo_path: training/demos/Grandma.demo
     behavioral_cloning:
-      demo_path: Assets/Demonstrations/BipedWalk.demo
+      demo_path: training/demos/Grandma.demo
       strength: 0.2
       steps: 500000
     max_steps: 30000000
@@ -39,9 +39,39 @@ behaviors:
     keep_checkpoints: 5
     checkpoint_interval: 100000
 
-  Grandpa: *biped_biomech
-  Matt: *biped_biomech
-  Nick: *biped_biomech
+  # These three shared the anchor wholesale, which pointed all four bipeds at a
+  # single training/demos/BipedWalk.demo that has never existed - the trainer
+  # aborts on the missing file before step 0. Each biped has its own capture, so
+  # they merge the shared hyperparameters and override only the demo paths.
+  Grandpa:
+    <<: *biped_biomech
+    reward_signals:
+      extrinsic: { gamma: 0.995, strength: 1.0 }
+      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Grandpa.demo }
+    behavioral_cloning:
+      demo_path: training/demos/Grandpa.demo
+      strength: 0.2
+      steps: 500000
+
+  Matt:
+    <<: *biped_biomech
+    reward_signals:
+      extrinsic: { gamma: 0.995, strength: 1.0 }
+      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Matt.demo }
+    behavioral_cloning:
+      demo_path: training/demos/Matt.demo
+      strength: 0.2
+      steps: 500000
+
+  Nick:
+    <<: *biped_biomech
+    reward_signals:
+      extrinsic: { gamma: 0.995, strength: 1.0 }
+      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Nick.demo }
+    behavioral_cloning:
+      demo_path: training/demos/Nick.demo
+      strength: 0.2
+      steps: 500000
 
   Worm: &creature_sac
     trainer_type: sac

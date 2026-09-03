@@ -87,3 +87,13 @@ ISAAC/logs/
 # MuJoCo Warp training venv for the Boy_Character rig (Windows, Python 3.11.9).
 # Kept out of .venv on purpose: that one carries the ml-agents/torch pins.
 .venv-mjwarp/
+
+# Training run binaries. The gate evidence JSON in runs/ is small and worth
+# keeping; the checkpoints and TFEvents are large, reproducible, and were being
+# written mid-run when they first got staged.
+training/*/runs/**/*.pt
+training/*/runs/**/events.out.tfevents.*
+
+# Written into the project root by the MuJoCo plug-in whenever its tests or a
+# MjScene run. Generated, never source.
+MUJOCO_LOG.TXT

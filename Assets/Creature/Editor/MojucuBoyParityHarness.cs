@@ -44,7 +44,7 @@ namespace CreatureEditor
 
             if (!MjScene.InstanceExists)
             {
-                return "ERROR: no MjScene in the open scene -- open SCN_MOJUCUBOY_RIGTEST first";
+                return "ERROR: no MjScene in the open scene -- open SCN_TEST_MOJUCUBOY_RIG first";
             }
             MjScene scene = MjScene.Instance;
 

@@ -44,9 +44,9 @@ behaviors:
       gail:
         gamma: 0.99
         strength: 0.05
-        demo_path: Assets/Demonstrations/Worm.demo
+        demo_path: training/demos/Worm.demo
     behavioral_cloning:
-      demo_path: Assets/Demonstrations/Worm.demo
+      demo_path: training/demos/Worm.demo
       strength: 0.3
       steps: 400000
     max_steps: &steps 3200000
@@ -61,8 +61,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Spider.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Spider.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Spider.demo }
+    behavioral_cloning: { demo_path: training/demos/Spider.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -75,8 +75,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Hexapod.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Hexapod.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Hexapod.demo }
+    behavioral_cloning: { demo_path: training/demos/Hexapod.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -89,8 +89,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Quad.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Quad.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Quad.demo }
+    behavioral_cloning: { demo_path: training/demos/Quad.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -103,8 +103,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Centipede.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Centipede.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Centipede.demo }
+    behavioral_cloning: { demo_path: training/demos/Centipede.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -117,8 +117,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Crab.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Crab.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Crab.demo }
+    behavioral_cloning: { demo_path: training/demos/Crab.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -131,8 +131,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Kangaroo.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Kangaroo.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Kangaroo.demo }
+    behavioral_cloning: { demo_path: training/demos/Kangaroo.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000
@@ -145,8 +145,8 @@ behaviors:
     network_settings: *net
     reward_signals:
       extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: Assets/Demonstrations/Blob.demo }
-    behavioral_cloning: { demo_path: Assets/Demonstrations/Blob.demo, strength: 0.3, steps: 400000 }
+      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Blob.demo }
+    behavioral_cloning: { demo_path: training/demos/Blob.demo, strength: 0.3, steps: 400000 }
     max_steps: *steps
     time_horizon: 1000
     summary_freq: 20000

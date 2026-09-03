@@ -39,26 +39,23 @@ namespace PoRacer.Presentation
         public const float RADIUS_XL = 18f;
 
         // ---- Font size scale ----
-        // Raised ~25% over the original scale for phone legibility: the panel is
-        // scaled on width, so on a 1080-wide handset held at arm's length the old
-        // 11-12 px steps were below comfortable reading size. Control heights move
-        // with them so text keeps its padding instead of crowding the button edge.
+        // These are REFERENCE units against the 420 dp PanelSettings reference,
+        // matched on width. 420 was chosen so one unit is ~1 dp on a real handset
+        // (phones are 400-430 dp wide), which makes these numbers readable as dp
+        // and as sp directly - no conversion factor. Android's body-text floor is
+        // 14 sp, so FONT_XS is the smallest step allowed to carry text.
         //
-        // These are REFERENCE pixels against the 540 x 960 PanelSettings reference,
-        // matched on width. To read them as Android sp:
-        //     sp = ref * (screenWidthPx / 540) / (densityDpi / 160)
-        // Measured on the Pixel 9 Pro this was verified against (960 x 2142 at
-        // density 360, i.e. scale 1.778 / density 2.25), that factor is 0.79. XS and
-        // SM were 14 and 15, which land at 11.1 sp and 11.9 sp - both under Android's
-        // 12 sp floor for body text, and they carry the version stamp and the debug
-        // strip. 16 and 18 put them at 12.6 sp and 14.2 sp.
-        public const float FONT_XS = 16f;
-        public const float FONT_SM = 18f;
-        public const float FONT_MD = 19f;
-        public const float FONT_LG = 23f;
-        public const float FONT_TITLE = 37f;
-        public const float FONT_BANNER = 62f;
-        public const float FONT_COUNTDOWN = 78f;
+        // Shrunk one step on 2026-09-03 so the menu shows its whole roster without
+        // scrolling; the previous 16/18/19/23 scale was sized against the older
+        // 540-unit reference, where every token rendered ~21% smaller in dp than
+        // its number and had been over-corrected to compensate.
+        public const float FONT_XS = 14f;
+        public const float FONT_SM = 15f;
+        public const float FONT_MD = 17f;
+        public const float FONT_LG = 20f;
+        public const float FONT_TITLE = 28f;
+        public const float FONT_BANNER = 52f;
+        public const float FONT_COUNTDOWN = 68f;
 
         // ---- Control heights (touch-ergonomic standards) ----
         // Android's minimum touch target is 48 dp. With the panel's 420 dp reference
@@ -101,6 +98,12 @@ namespace PoRacer.Presentation
         public static readonly Color ScreenBg = new(0.06f, 0.07f, 0.09f, 0.97f);
         public static readonly Color PanelBg = new(0.07f, 0.08f, 0.1f, 0.82f);
         public static readonly Color GlassBg = new(0.08f, 0.09f, 0.13f, 0.72f);
+        // Modal surfaces are OPAQUE. A dialog that the race shows through is a
+        // dialog you have to read twice - the creature behind the results panel
+        // was competing with the text on it.
+        public static readonly Color ModalBg = new(0.10f, 0.11f, 0.14f, 1f);
+        public static readonly Color ModalBorder = new(1f, 1f, 1f, 0.14f);
+        public static readonly Color Divider = new(1f, 1f, 1f, 0.10f);
         public static readonly Color GlassBorder = new(1f, 1f, 1f, 0.15f);
         public static readonly Color GlassHighlight = new(1f, 1f, 1f, 0.28f);
         public static readonly Color PanelBorder = new(1f, 1f, 1f, 0.08f);
@@ -127,7 +130,7 @@ namespace PoRacer.Presentation
         {
             /// <summary>Narrow portrait: one column, fewer optional elements.</summary>
             Compact = 0,
-            /// <summary>The reference 540x960 portrait the layout is designed for.</summary>
+            /// <summary>The reference 420 dp portrait the layout is designed for.</summary>
             Regular = 1,
             /// <summary>Tablet or a resized desktop window: room for more per row.</summary>
             Wide = 2
@@ -136,7 +139,7 @@ namespace PoRacer.Presentation
         /// <summary>
         /// Density bucket for a resolved panel width, in reference units rather
         /// than device pixels — the panel has already scaled by the time a layout
-        /// asks. The thresholds bracket the 540-unit reference width.
+        /// asks. The thresholds bracket the 420-unit reference width.
         /// </summary>
         public static Density DensityFor(float resolvedWidth)
         {
@@ -171,6 +174,30 @@ namespace PoRacer.Presentation
             SetPadding(panel, SPACE_MD, SPACE_LG);
             // Glass sits highest: it is the layer the player is meant to act on.
             AddElevation(panel, ELEVATION_HIGH);
+        }
+
+        /// <summary>
+        /// Opaque dialog surface. Same geometry as the glass panel, but nothing
+        /// shows through it: a modal is read, not looked past.
+        /// </summary>
+        public static void StyleModal(VisualElement panel)
+        {
+            panel.style.backgroundColor = ModalBg;
+            SetRadius(panel, RADIUS_LG);
+            SetBorder(panel, ModalBorder, 1f);
+            SetPadding(panel, SPACE_MD, SPACE_LG);
+            AddElevation(panel, ELEVATION_HIGH);
+        }
+
+        /// <summary>Hairline rule used to separate a dialog header from its body.</summary>
+        public static VisualElement MakeDivider()
+        {
+            var rule = new VisualElement { pickingMode = PickingMode.Ignore };
+            rule.style.height = 1f;
+            rule.style.backgroundColor = Divider;
+            rule.style.marginTop = SPACE_SM;
+            rule.style.marginBottom = SPACE_SM;
+            return rule;
         }
 
         public static void StyleRow(VisualElement row)
@@ -217,8 +244,12 @@ namespace PoRacer.Presentation
             group.style.flexDirection = FlexDirection.Row;
             group.style.backgroundColor = TrackBg;
             SetRadius(group, RADIUS_SM + 2f);
-            SetBorder(group, PanelBorder, 1f);
-            SetPadding(group, 2f, 2f);
+            // No border and no padding: the track's own inset would add 6 px to
+            // every creature row, and ten rows of that is what pushed the roster
+            // under the START button. The recessed fill reads as a track on its
+            // own, and the segment radius keeps the active cell clear of the edge.
+            SetBorder(group, Color.clear, 0f);
+            SetPadding(group, 0f, 0f);
         }
 
         /// <summary>
@@ -451,8 +482,8 @@ namespace PoRacer.Presentation
             label.style.fontSize = FONT_XS;
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
             label.style.letterSpacing = 1.5f;
-            label.style.marginTop = SPACE_SM;
-            label.style.marginBottom = SPACE_XS;
+            label.style.marginTop = SPACE_XS;
+            label.style.marginBottom = SPACE_XXS;
             ApplyFont(label);
             return label;
         }

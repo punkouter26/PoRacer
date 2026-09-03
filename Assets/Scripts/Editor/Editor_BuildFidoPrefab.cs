@@ -18,7 +18,7 @@ namespace PoRacer.Editor
     /// that also come out of the MJCF belong to the world, and Systems_MujocoWorld builds
     /// those once per race instead of once per racer.
     /// </summary>
-    internal static class Editor_BuildFidoPrefab
+    public static class Editor_BuildFidoPrefab
     {
         private const string XML_PATH = "Assets/Creature/creature.xml";
         private const string POLICY_PATH = "Assets/Creature/policy.json";
@@ -41,12 +41,14 @@ namespace PoRacer.Editor
         private const int ACTION_DECIMATION = 4;
 
         [MenuItem("PoRacer/Creatures/Rebuild Fido Prefab")]
-        private static void Build()
+        public static void Build()
         {
             string error = BuildInternal();
             if (error != null)
             {
-                EditorUtility.DisplayDialog("Rebuild Fido Prefab", error, "OK");
+                // Logged, not shown in a dialog: a modal stalls every headless
+                // and bridge-driven invocation of this action, and the message
+                // was identical to the log line beside it.
                 Debug.LogError("Editor_BuildFidoPrefab: " + error);
                 return;
             }

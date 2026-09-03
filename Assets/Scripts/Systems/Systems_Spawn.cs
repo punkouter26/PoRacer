@@ -22,19 +22,19 @@ namespace PoRacer.Systems
     {
         private const int DECISION_PERIOD = 5;
 
-        // Visible quirks: same brain, mild physics tweak, HUD badge + name prefix.
+        // Visible quirks: same brain, mild physics tweak, HUD badge. Racers are
+        // named "<creature> #n" by their position within their own group, so a
+        // quirk no longer contributes a name prefix.
         private readonly struct QuirkDef
         {
-            public readonly string Prefix;
             public readonly string Tag;
             public readonly float Power;
             public readonly float MassScale;
             public readonly float Weight;
             public readonly Color Badge;
 
-            public QuirkDef(string prefix, string tag, float power, float massScale, float weight, Color badge)
+            public QuirkDef(string tag, float power, float massScale, float weight, Color badge)
             {
-                Prefix = prefix;
                 Tag = tag;
                 Power = power;
                 MassScale = massScale;
@@ -45,12 +45,12 @@ namespace PoRacer.Systems
 
         private static readonly QuirkDef[] Quirks =
         {
-            new(string.Empty, string.Empty, 1f, 1f, 0.30f, Color.clear),
-            new("Mighty ", "MIGHTY", 1.06f, 1f, 0.16f, new Color(1f, 0.45f, 0.2f)),
-            new("Sleepy ", "SLEEPY", 0.94f, 1f, 0.16f, new Color(0.4f, 0.6f, 1f)),
-            new("Turbo ", "TURBO", 1.12f, 1f, 0.10f, new Color(1f, 0.85f, 0.2f)),
-            new("Heavy ", "HEAVY", 1f, 1.12f, 0.14f, new Color(0.65f, 0.65f, 0.7f)),
-            new("Feather ", "FEATHER", 1f, 0.9f, 0.14f, new Color(0.95f, 0.95f, 0.85f))
+            new(string.Empty, 1f, 1f, 0.30f, Color.clear),
+            new("MIGHTY", 1.06f, 1f, 0.16f, new Color(1f, 0.45f, 0.2f)),
+            new("SLEEPY", 0.94f, 1f, 0.16f, new Color(0.4f, 0.6f, 1f)),
+            new("TURBO", 1.12f, 1f, 0.10f, new Color(1f, 0.85f, 0.2f)),
+            new("HEAVY", 1f, 1.12f, 0.14f, new Color(0.65f, 0.65f, 0.7f)),
+            new("FEATHER", 1f, 0.9f, 0.14f, new Color(0.95f, 0.95f, 0.85f))
         };
 
         // Roulette map: kinds the trained brains already know from the curriculum.
@@ -105,7 +105,6 @@ namespace PoRacer.Systems
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
         private readonly List<Transform> _racerRoots = new();
-        private readonly List<int> _nameOrder = new();
         private readonly MaterialPropertyBlock _tintBlock = new();
         private bool _racingLoopActive;
         // Incremented on every BeginRacing/RequestMenu; async chains capture it and
@@ -195,6 +194,33 @@ namespace PoRacer.Systems
         }
 
         private bool IsCurrent(int generation) => _racingLoopActive && generation == _generation;
+
+        /// <summary>
+        /// True when the scene ships geometry for exactly this map. Length and
+        /// features are part of the test, not just the kind: Flat, Gale and
+        /// Roulette are all TrackKind.Flat and differ only by length and hazards,
+        /// so matching on kind alone would race the wrong track on two of them.
+        /// Roulette re-rolls its features every race and so never matches.
+        /// </summary>
+        private bool UseAuthoredTrack(Systems_MapCatalog.MapEntry map, TrackFeatures rolledFeatures)
+        {
+            return _track.AuthoredTrack != null
+                && _currentTrack == _track.AuthoredKind
+                && rolledFeatures == _track.AuthoredFeatures
+                && Mathf.Approximately(map.LengthMeters, _track.AuthoredLengthMeters);
+        }
+
+        private static void ClearChildren(Transform parent)
+        {
+            if (parent == null)
+            {
+                return;
+            }
+            for (int childIndex = parent.childCount - 1; childIndex >= 0; childIndex--)
+            {
+                UnityEngine.Object.Destroy(parent.GetChild(childIndex).gameObject);
+            }
+        }
 
         /// <summary>
         /// Crash guard around the whole spawn chain: a track-builder or prefab
@@ -299,8 +325,29 @@ namespace PoRacer.Systems
                     ? STACK_FOOTPRINT_ROWS
                     : (totalRequested + GRID_COLUMNS - 1) / GRID_COLUMNS;
                 float backMargin = Mathf.Max(CAMERA_BACKDROP_MARGIN, gridRows * GRID_ROW_SPACING + 4f);
-                _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
-                    decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
+
+                // A map whose geometry is baked into the scene is used as authored:
+                // the runtime builder is skipped entirely, so what is tuned in the
+                // Scene view is what races. Everything else is still generated.
+                // The match is on kind, length and features together, because three
+                // maps share TrackKind.Flat and differ only in those two.
+                if (UseAuthoredTrack(map, rolledFeatures))
+                {
+                    ClearChildren(_track.TrackRoot);
+                    _track.AuthoredTrack.gameObject.SetActive(true);
+                    _trackBuilder.UseAuthored(
+                        _track.AuthoredGroundBounds, _track.AuthoredHasArch, _track.AuthoredArchBounds);
+                }
+                else
+                {
+                    if (_track.AuthoredTrack != null)
+                    {
+                        _track.AuthoredTrack.gameObject.SetActive(false);
+                    }
+                    _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
+                        decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
+                }
+
                 // The finish arch has no collider, so the camera cannot discover
                 // it by sweeping; hand its volume over as an explicit keep-out.
                 if (_trackBuilder.TryGetFinishArchBounds(out Bounds archBounds))
@@ -322,7 +369,6 @@ namespace PoRacer.Systems
             var racers = new List<RacerState>();
             var pendingQuirks = new List<(GameObject instance, float power, float massScale)>();
             _racerRoots.Clear();
-            RacerNames.Shuffle(_rng, _nameOrder);
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
                 ? _track.SpawnPoints[0].parent.position
                 : Vector3.zero;
@@ -451,7 +497,6 @@ namespace PoRacer.Systems
                     // Small jitter so same-quirk siblings still differ a touch.
                     float quirkPower = quirk.Power * (0.99f + (float)_rng.NextDouble() * 0.02f);
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
-                    string funName = RacerNames.Get(_nameOrder, gridIndex);
 
                     bool isMujoco = instance.GetComponent<IMujocoCreature>() != null;
 
@@ -521,7 +566,7 @@ namespace PoRacer.Systems
                     {
                         RacerId = racerId,
                         CreatureId = entry.id,
-                        DisplayName = $"{quirk.Prefix}{funName} the {entry.displayName}",
+                        DisplayName = $"{entry.displayName} #{racerIndex + 1}",
                         Status = RacerStatus.Racing,
                         Tint = tint,
                         TintHex = ColorUtility.ToHtmlStringRGB(tint),

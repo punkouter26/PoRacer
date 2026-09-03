@@ -116,6 +116,24 @@ namespace PoRacer.Systems
             return _hasGroundBounds;
         }
 
+        /// <summary>
+        /// Adopts the footprint of a track that was authored in the scene instead
+        /// of generated here, so the camera keep-out and the runaway guard read the
+        /// same numbers either way.
+        ///
+        /// The alternative was to have the callers branch on which path produced
+        /// the track. Feeding the bounds in keeps <see cref="TryGetGroundBounds"/>
+        /// and <see cref="TryGetFinishArchBounds"/> the single source both
+        /// consumers already read, so nothing downstream has to know.
+        /// </summary>
+        public void UseAuthored(Bounds groundBounds, bool hasArch, Bounds archBounds)
+        {
+            _groundBounds = groundBounds;
+            _hasGroundBounds = true;
+            _finishArchBounds = archBounds;
+            _hasFinishArchBounds = hasArch;
+        }
+
         private readonly Material _groundMaterial;
         private readonly Material _obstacleMaterial;
         private readonly PhysicsMaterial _physicsMaterial;

@@ -535,7 +535,7 @@ namespace PoRacer.Views
             {
                 // Lighting settings has no explicit sun assigned in this scene;
                 // one-time Awake lookup only, never repeated per frame.
-                Light[] lights = FindObjectsByType<Light>(FindObjectsSortMode.None);
+                Light[] lights = FindObjectsByType<Light>();
                 for (int lightIndex = 0; lightIndex < lights.Length; lightIndex++)
                 {
                     if (lights[lightIndex].type == LightType.Directional)

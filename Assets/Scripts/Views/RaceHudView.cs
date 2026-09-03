@@ -23,6 +23,13 @@ namespace PoRacer.Views
         private const long REFRESH_INTERVAL_MS = 250;
         private const float GO_BANNER_SECONDS = 1.5f;
         private const float WINNER_BANNER_SECONDS = 3f;
+        /// <summary>
+        /// Height of the reserved top strip: the MENU button is CONTROL_SM tall
+        /// and sits SPACE_XS from the top, and the game name and fps readout share
+        /// that line. Nothing else may be drawn above this.
+        /// </summary>
+        private static readonly float TOP_FURNITURE = UiTheme.SPACE_XS + UiTheme.CONTROL_SM;
+
         private const int PODIUM_ROWS = 3;
         private const int TOP_CHIP_COUNT = 3;
         // Rail dots are pooled: a 100+ racer field shows only the leading pack.
@@ -108,12 +115,6 @@ namespace PoRacer.Views
         private readonly string[] _podiumSourceIds = new string[PODIUM_ROWS];
         private readonly int[] _podiumSourceDeltas = new int[PODIUM_ROWS];
 
-        // --- Commentary ticker ---
-        private CommentaryModel _commentary;
-        private VisualElement _ticker;
-        private readonly Label[] _tickerLines = new Label[CommentaryModel.MAX_LINES];
-        private int _tickerVersion = -1;
-
         // --- Right-edge progress rail ---
         private VisualElement _rail;
         private readonly VisualElement[] _railDots = new VisualElement[MAX_RAIL_DOTS];
@@ -138,13 +139,11 @@ namespace PoRacer.Views
             RaceModel raceModel,
             EloModel eloModel,
             RaceConfigModel configModel,
-            CommentaryModel commentary,
             Systems_Spawn spawn)
         {
             _raceModel = raceModel;
             _eloModel = eloModel;
             _configModel = configModel;
-            _commentary = commentary;
             _spawn = spawn;
         }
 
@@ -207,27 +206,34 @@ namespace PoRacer.Views
             // and the rows below are allowed to wrap rather than overflow the card.
             _podiumPanel.style.left = new Length(6f, LengthUnit.Percent);
             _podiumPanel.style.right = new Length(6f, LengthUnit.Percent);
-            UiTheme.StyleGlassPanel(_podiumPanel, glowing: true);
+            // Opaque, not glass: the race carries on behind this panel, and a
+            // creature showing through the results made both hard to read.
+            UiTheme.StyleModal(_podiumPanel);
+            // The panel is a modal, so it takes its own clicks rather than letting
+            // them fall through to whatever is behind it.
+            _podiumPanel.pickingMode = PickingMode.Position;
             _podiumPanel.style.display = DisplayStyle.None;
             var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
-            podiumTitle.style.color = UiTheme.Gold;
-            podiumTitle.style.fontSize = UiTheme.FONT_LG;
+            podiumTitle.style.color = UiTheme.TextDim;
+            podiumTitle.style.fontSize = UiTheme.FONT_XS;
             podiumTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            podiumTitle.style.letterSpacing = 2f;
             podiumTitle.style.unityTextAlign = TextAnchor.MiddleCenter;
-            podiumTitle.style.marginBottom = UiTheme.SPACE_SM;
             _podiumPanel.Add(podiumTitle);
+            _podiumPanel.Add(UiTheme.MakeDivider());
             for (int podiumIndex = 0; podiumIndex < PODIUM_ROWS; podiumIndex++)
             {
                 var row = new VisualElement { pickingMode = PickingMode.Ignore };
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
                 row.style.marginTop = UiTheme.SPACE_XS;
+                row.style.minHeight = UiTheme.SPACE_XL;
                 VisualElement medal = UiTheme.MakeSwatch(MedalColors[podiumIndex], UiTheme.SPACE_MD);
                 medal.style.marginRight = UiTheme.SPACE_SM;
                 row.Add(medal);
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.style.color = UiTheme.Text;
-                label.style.fontSize = UiTheme.FONT_MD;
+                label.style.fontSize = UiTheme.FONT_SM;
                 // A flex-row child defaults to flex-shrink 0 and no wrapping, so a
                 // long name pushed the ELO delta clean off the card's right edge.
                 // Let the label take the remaining width and wrap inside it.
@@ -247,26 +253,31 @@ namespace PoRacer.Views
             var podiumButtons = new VisualElement();
             podiumButtons.style.flexDirection = FlexDirection.Row;
             podiumButtons.style.justifyContent = Justify.Center;
-            podiumButtons.style.marginTop = UiTheme.SPACE_MD;
+            podiumButtons.style.marginTop = UiTheme.SPACE_SM;
             var raceAgainButton = new Button(() => _spawn.RaceAgain()) { text = "RACE AGAIN" };
             raceAgainButton.style.height = UiTheme.CONTROL_MD;
-            raceAgainButton.style.fontSize = UiTheme.FONT_MD;
-            raceAgainButton.style.flexGrow = 1f;
-            UiTheme.StyleButton(raceAgainButton);
-            UiTheme.AddHover(raceAgainButton);
+            raceAgainButton.style.fontSize = UiTheme.FONT_SM;
+            raceAgainButton.style.flexGrow = 2f;
+            raceAgainButton.style.flexBasis = 0f;
+            UiTheme.SetMargin(raceAgainButton, 0f, 0f);
+            // Primary action carries the accent; MENU is the quiet way out.
+            UiTheme.StyleButton(raceAgainButton, accent: true);
+            UiTheme.AddHover(raceAgainButton, accent: true);
             podiumButtons.Add(raceAgainButton);
             var backToMenuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
             backToMenuButton.style.height = UiTheme.CONTROL_MD;
-            backToMenuButton.style.fontSize = UiTheme.FONT_MD;
-            backToMenuButton.style.width = 96;
+            backToMenuButton.style.fontSize = UiTheme.FONT_SM;
+            backToMenuButton.style.flexGrow = 1f;
+            backToMenuButton.style.flexBasis = 0f;
+            UiTheme.SetMargin(backToMenuButton, 0f, 0f);
             backToMenuButton.style.marginLeft = UiTheme.SPACE_SM;
             UiTheme.StyleButton(backToMenuButton);
             UiTheme.AddHover(backToMenuButton);
             podiumButtons.Add(backToMenuButton);
+            _podiumPanel.Add(UiTheme.MakeDivider());
             _podiumPanel.Add(podiumButtons);
 
             safeRoot.Add(_podiumPanel);
-            BuildTicker(safeRoot);
 
             var menuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
             menuButton.style.position = Position.Absolute;
@@ -330,56 +341,6 @@ namespace PoRacer.Views
         }
 
         /// <summary>
-        /// Commentary ticker: the announcer lines from CommentaryModel, newest on
-        /// top, bottom-left above the safe inset. Labels are pooled; text is only
-        /// rewritten when the model version changes.
-        /// </summary>
-        private void BuildTicker(VisualElement safeRoot)
-        {
-            _ticker = new VisualElement { pickingMode = PickingMode.Ignore };
-            _ticker.style.position = Position.Absolute;
-            _ticker.style.left = UiTheme.SPACE_SM;
-            _ticker.style.right = new Length(20f, LengthUnit.Percent);
-            // Clear the DBG button, which DebugOverlayView anchors bottom-left at
-            // SPACE_SM with a CONTROL_SM-tall touch target: the ticker's lowest
-            // line used to wrap straight underneath it.
-            _ticker.style.bottom = UiTheme.SPACE_SM + UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
-            safeRoot.Add(_ticker);
-
-            for (int lineIndex = 0; lineIndex < CommentaryModel.MAX_LINES; lineIndex++)
-            {
-                var line = new Label { pickingMode = PickingMode.Ignore };
-                line.style.color = UiTheme.Text;
-                line.style.fontSize = UiTheme.FONT_SM;
-                line.style.whiteSpace = WhiteSpace.Normal;
-                line.enableRichText = true;
-                // Older lines fade back so the newest call reads first.
-                line.style.opacity = lineIndex == 0 ? 1f : 0.55f - 0.15f * lineIndex;
-                line.style.display = DisplayStyle.None;
-                _tickerLines[lineIndex] = line;
-                _ticker.Add(line);
-            }
-        }
-
-        private void RefreshTicker()
-        {
-            if (_commentary == null || _tickerVersion == _commentary.Version)
-            {
-                return;
-            }
-            _tickerVersion = _commentary.Version;
-            for (int lineIndex = 0; lineIndex < CommentaryModel.MAX_LINES; lineIndex++)
-            {
-                bool hasLine = lineIndex < _commentary.Lines.Count;
-                _tickerLines[lineIndex].style.display = hasLine ? DisplayStyle.Flex : DisplayStyle.None;
-                if (hasLine)
-                {
-                    _tickerLines[lineIndex].text = _commentary.Lines[lineIndex];
-                }
-            }
-        }
-
-        /// <summary>
         /// Up to three tiny pills under the version stamp: place, racer tint and
         /// the first word of the racer's name. Elements are built once and only
         /// their text/tint change, and only when the occupant changes.
@@ -388,10 +349,11 @@ namespace PoRacer.Views
         {
             _chipRow = new VisualElement { pickingMode = PickingMode.Ignore };
             _chipRow.style.position = Position.Absolute;
-            // Clear of the top-centre FPS readout, which sits at SPACE_XS with a
-            // FONT_SM line box. At the old SPACE_LG + SPACE_SM the chip backgrounds
-            // clipped the bottom of "60 FPS" on device.
-            _chipRow.style.top = UiTheme.SPACE_XXL + UiTheme.SPACE_XS;
+            // Below the whole top furniture band, not just below the fps text.
+            // The band is as tall as the MENU button (CONTROL_SM at SPACE_XS), and
+            // the chips used to start at SPACE_XXL + SPACE_XS = 36, which put them
+            // under the button and through the fps readout at the same time.
+            _chipRow.style.top = TOP_FURNITURE + UiTheme.SPACE_XS;
             _chipRow.style.left = 0;
             _chipRow.style.right = 0;
             _chipRow.style.flexDirection = FlexDirection.Row;
@@ -554,7 +516,6 @@ namespace PoRacer.Views
 
             RefreshPodium();
             RefreshFieldWidgets();
-            RefreshTicker();
         }
 
         /// <summary>
@@ -809,7 +770,7 @@ namespace PoRacer.Views
                 if (!string.Equals(_chipSourceNames[chipIndex], racer.DisplayName))
                 {
                     _chipSourceNames[chipIndex] = racer.DisplayName;
-                    _chipNames[chipIndex].text = FirstWord(racer.DisplayName);
+                    _chipNames[chipIndex].text = racer.DisplayName;
                 }
                 Color tint = racer.Status == RacerStatus.Dnf ? UiTheme.Dnf : racer.Tint;
                 if (_chipTints[chipIndex] != tint)
@@ -818,16 +779,6 @@ namespace PoRacer.Views
                     _chipSwatches[chipIndex].style.backgroundColor = tint;
                 }
             }
-        }
-
-        private static string FirstWord(string displayName)
-        {
-            if (string.IsNullOrEmpty(displayName))
-            {
-                return string.Empty;
-            }
-            int space = displayName.IndexOf(' ');
-            return space > 0 ? displayName.Substring(0, space) : displayName;
         }
     }
 }

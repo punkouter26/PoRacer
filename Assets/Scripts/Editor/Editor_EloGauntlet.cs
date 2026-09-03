@@ -14,10 +14,10 @@ namespace PoRacer.EditorTools
     /// Systems_Elo then rank every checkpoint on the live leaderboard. "Remove
     /// Gauntlet Entries" restores the catalog afterwards.
     /// </summary>
-    internal static class Editor_EloGauntlet
+    public static class Editor_EloGauntlet
     {
         [MenuItem("PoRacer/Training/Gauntlet - Add Selected Brains")]
-        private static void AddSelectedBrains()
+        public static void AddSelectedBrains()
         {
             CreatureCatalog catalog = LoadCatalog();
             ModelAsset[] models = Selection.GetFiltered<ModelAsset>(SelectionMode.Assets);
@@ -67,7 +67,7 @@ namespace PoRacer.EditorTools
         }
 
         [MenuItem("PoRacer/Training/Gauntlet - Remove Gauntlet Entries")]
-        private static void RemoveGauntletEntries()
+        public static void RemoveGauntletEntries()
         {
             CreatureCatalog catalog = LoadCatalog();
             if (catalog == null)

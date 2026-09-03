@@ -114,9 +114,14 @@ Shader "PoRacer/Creature"
         //
         // surfaceId selects the pattern: 1 = scales (stacked ripples), 2 = plates
         // (hard-edged cells), 3 = weave (crossed threads), anything else = speckle.
-        float PoRacerSurfaceHeight(float3 positionWS, half surfaceId)
+        // Sampled in OBJECT space, never world space. Sampled in world space the
+        // field is fixed to the arena instead of to the body, so a racer walking
+        // through it has the scales, plates and weave crawling across its skin --
+        // it reads as an animated texture. Object space pins the pattern to the
+        // model, which is what a skin does.
+        float PoRacerSurfaceHeight(float3 positionOS, half surfaceId)
         {
-            float3 p = positionWS / max(_DetailScale, 0.001);
+            float3 p = positionOS / max(_DetailScale, 0.001);
             float grain = PoRacerValueNoise(p) * 0.65 + PoRacerValueNoise(p * 2.17) * 0.35;
 
             if (surfaceId > 2.5)
@@ -144,11 +149,13 @@ Shader "PoRacer/Creature"
             return grain;
         }
 
-        // Triplanar blend weights from the world normal, so a primitive with no
-        // meaningful UVs still gets a coherent, non-stretched pattern.
-        float3 PoRacerTriplanarWeights(float3 normalWS)
+        // Triplanar blend weights from the OBJECT-space normal, so a primitive
+        // with no meaningful UVs still gets a coherent, non-stretched pattern --
+        // and one that does not swim as the body rotates, which the world normal
+        // would have done.
+        float3 PoRacerTriplanarWeights(float3 normalOS)
         {
-            float3 weights = pow(abs(normalWS), 4.0);
+            float3 weights = pow(abs(normalOS), 4.0);
             return weights / max(dot(weights, 1.0.xxx), 1e-4);
         }
         ENDHLSL
@@ -183,6 +190,10 @@ Shader "PoRacer/Creature"
                 float3 normalWS : TEXCOORD1;
                 float3 positionWS : TEXCOORD2;
                 float fogFactor : TEXCOORD3;
+                // Object space is what the surface pattern is sampled in; world
+                // space stays for lighting, shadows and fog.
+                float3 positionOS : TEXCOORD4;
+                float3 normalOS : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -196,6 +207,8 @@ Shader "PoRacer/Creature"
                 output.positionCS = positions.positionCS;
                 output.positionWS = positions.positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.positionOS = input.positionOS.xyz;
+                output.normalOS = input.normalOS;
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
                 return output;
@@ -214,28 +227,33 @@ Shader "PoRacer/Creature"
                 half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * baseColor.rgb;
                 float3 normalWS = normalize(input.normalWS);
                 float3 positionWS = input.positionWS;
+                float3 positionOS = input.positionOS;
+                float3 normalOS = normalize(input.normalOS);
 
                 // Height at this point plus two neighbours, differenced into a
                 // tangent-free normal perturbation. The offsets are scaled with the
                 // detail size so the bumps keep their shape at any _DetailScale.
                 float offset = max(_DetailScale, 0.001) * 0.35;
-                float height = PoRacerSurfaceHeight(positionWS, surfaceId);
-                float heightX = PoRacerSurfaceHeight(positionWS + float3(offset, 0, 0), surfaceId);
-                float heightZ = PoRacerSurfaceHeight(positionWS + float3(0, 0, offset), surfaceId);
+                float height = PoRacerSurfaceHeight(positionOS, surfaceId);
+                float heightX = PoRacerSurfaceHeight(positionOS + float3(offset, 0, 0), surfaceId);
+                float heightZ = PoRacerSurfaceHeight(positionOS + float3(0, 0, offset), surfaceId);
 
                 // Build the perturbation in world space and reject the component
                 // along the geometric normal, so the surface is nudged rather than
                 // flipped even where the gradient is steep.
                 float3 gradient = float3(height - heightX, 0.0, height - heightZ) * _DetailNormalStrength;
+                // Differenced in object space, so rotate it into world space before
+                // it touches the world normal the lighting uses.
+                gradient = TransformObjectToWorldDir(gradient, false);
                 gradient -= normalWS * dot(gradient, normalWS);
                 normalWS = normalize(normalWS + gradient);
 
                 // Triplanar tint of the albedo: the same height field, weighted by
                 // the face direction so the grain never smears on a capsule cap.
-                float3 weights = PoRacerTriplanarWeights(normalWS);
+                float3 weights = PoRacerTriplanarWeights(normalOS);
                 float detail = height * weights.y
-                    + PoRacerSurfaceHeight(positionWS.yzx, surfaceId) * weights.x
-                    + PoRacerSurfaceHeight(positionWS.zxy, surfaceId) * weights.z;
+                    + PoRacerSurfaceHeight(positionOS.yzx, surfaceId) * weights.x
+                    + PoRacerSurfaceHeight(positionOS.zxy, surfaceId) * weights.z;
                 albedo *= lerp(1.0h, (half)(0.6 + detail * 0.8), _DetailStrength);
 
                 float4 shadowCoord = TransformWorldToShadowCoord(positionWS);

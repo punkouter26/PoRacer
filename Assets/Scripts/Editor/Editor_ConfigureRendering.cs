@@ -21,7 +21,7 @@ namespace PoRacer.EditorTools
     /// against; switching the probe system over without a bake would replace the
     /// working trilight ambient with an unlit fallback.
     /// </summary>
-    internal static class Editor_ConfigureRendering
+    public static class Editor_ConfigureRendering
     {
         private const string MENU_PATH = "PoRacer/Configure Rendering";
 
@@ -35,7 +35,7 @@ namespace PoRacer.EditorTools
         private const float MOBILE_AO_RADIUS = 0.25f;
 
         [MenuItem(MENU_PATH)]
-        private static void Configure()
+        public static void Configure()
         {
             var report = new List<string>();
 

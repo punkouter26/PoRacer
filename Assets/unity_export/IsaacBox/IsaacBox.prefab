@@ -1261,7 +1261,7 @@ MonoBehaviour:
   rig: {fileID: 11400000, guid: d081ceccdca6ae34590e52eaad85e1f9, type: 2}
   target: {fileID: 0}
   holdPoseWithoutTarget: 1
-  autoRecoverFromFalls: 1
+  autoRecoverFromFalls: 0
   fallUprightThreshold: 0.4
   fallGraceSeconds: 1
   gainUnits: 0

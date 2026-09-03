@@ -549,10 +549,10 @@ namespace PoRacer.Views
         /// </summary>
         private void SampleSceneCounts()
         {
-            _bodyCount = FindObjectsByType<ArticulationBody>(FindObjectsSortMode.None).Length;
-            _particleSystemCount = FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None).Length;
-            _audioSourceCount = FindObjectsByType<AudioSource>(FindObjectsSortMode.None).Length;
-            _limbContactCount = FindObjectsByType<LimbContactView>(FindObjectsSortMode.None).Length;
+            _bodyCount = FindObjectsByType<ArticulationBody>().Length;
+            _particleSystemCount = FindObjectsByType<ParticleSystem>().Length;
+            _audioSourceCount = FindObjectsByType<AudioSource>().Length;
+            _limbContactCount = FindObjectsByType<LimbContactView>().Length;
         }
 
         private void UpdateLeaderSpeed(RacerState leader)

@@ -36,7 +36,6 @@ namespace PoRacer.Systems
         private CinemachineCamera _packCamera;
         private PackCameraView _pack;
         private Transform _orbitTarget;
-        private bool _followingLeader;
         private Bounds _keepOut;
         private bool _hasKeepOut;
 
@@ -79,7 +78,6 @@ namespace PoRacer.Systems
             // Re-aiming only when the front runner actually changes keeps the
             // angle cycling in OrbitCameraView on its own clock instead of being
             // reset every frame.
-            _followingLeader = true;
             if (_targetsByRacerId.TryGetValue(front.RacerId, out Transform target)
                 && target != null && target.gameObject.activeInHierarchy
                 && _orbitTarget != target)
@@ -97,7 +95,6 @@ namespace PoRacer.Systems
                 _targets.Add(targets[targetIndex]);
             }
             _targetIndex = -1;
-            _followingLeader = false;
             _orbitTarget = null;
             if (_targets.Count > 0)
             {
@@ -183,9 +180,8 @@ namespace PoRacer.Systems
             }
             if (winner != null)
             {
-                // Matches what the lead watcher would have left behind, so the
-                // next SetTargets clears the same state either way.
-                _followingLeader = true;
+                // Same shot the lead watcher would have left behind, so the
+                // next SetTargets clears the same orbit target either way.
                 OrbitAround(winner);
                 return;
             }
