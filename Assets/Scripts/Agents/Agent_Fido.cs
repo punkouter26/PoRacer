@@ -79,6 +79,9 @@ namespace PoRacer.Agents
             _torso = _creature.torso != null ? _creature.torso.transform : transform;
             // Eight racers logging their bindings and home pose would bury the console.
             _creature.logBindings = false;
+            // MuJoCo, not ML-Agents and not ONNX: the weights come from
+            // Assets/Creature/policy.json, 33 observations in, 16 actuators out.
+            NativeBrainProbe.Attach(gameObject, "Fido", "MuJoCo/json", 33, 16, _creature != null);
             SnapToTrainedStance();
         }
 

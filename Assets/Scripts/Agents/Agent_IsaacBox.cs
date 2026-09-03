@@ -56,6 +56,12 @@ namespace PoRacer.Agents
             // teleport a racer the marshal is already handling.
             _agent.autoRecoverFromFalls = false;
             _agent.showOnGuiReadout = false;
+            // Not an ML-Agents agent, so the debug overlay cannot read this off a
+            // BehaviorParameters like it does for the other six.
+            NativeBrainProbe.Attach(gameObject, "IsaacBox", "IE/Burst",
+                _agent.rig != null ? _agent.rig.obsDim : 0,
+                _agent.rig != null ? _agent.rig.actDim : 0,
+                _agent.rig != null);
         }
 
         private void Start()

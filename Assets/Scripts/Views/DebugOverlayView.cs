@@ -84,6 +84,15 @@ namespace PoRacer.Views
         private ProfilerRecorder _physicsQueries;
         private ProfilerRecorder _constraints;
         private int _refreshCounter;
+        // Brain roster, rebuilt on the slow scene beat. One entry per distinct
+        // controller, not per racer, so a 100-strong field is still a few lines.
+        /// <summary>Field separator for the grouping key; never appears in a name.</summary>
+        private const char KEY_SEP = '|';
+
+        private readonly System.Collections.Generic.List<string> _brainLines = new();
+        private int _brainsWithModel;
+        private int _brainsWithoutModel;
+
         private int _bodyCount;
         private int _particleSystemCount;
         private int _audioSourceCount;
@@ -329,6 +338,7 @@ namespace PoRacer.Views
             AppendAudio();
             AppendBiomechanics();
             AppendScene();
+            AppendBrains();
             AppendRace();
             _text.text = _builder.ToString();
             _graph.MarkDirtyRepaint();
@@ -544,6 +554,106 @@ namespace PoRacer.Views
         }
 
         /// <summary>
+        /// What is actually driving the racers. The single question this answers
+        /// is "did the brain load?" - a policy that silently failed to bind looks
+        /// exactly like one that is thinking, and the only other symptom is a
+        /// creature that stands still. Reads off the slow scene beat.
+        /// </summary>
+        private void AppendBrains()
+        {
+            if (_brainLines.Count == 0 && _brainsWithModel == 0 && _brainsWithoutModel == 0)
+            {
+                return;
+            }
+            AppendHeader("BRAINS");
+            _builder.Append("Loaded  <color=").Append(_brainsWithModel > 0 ? GOOD_COLOR : DIM_COLOR)
+                .Append('>').Append(_brainsWithModel).Append(" with a policy</color>");
+            if (_brainsWithoutModel > 0)
+            {
+                _builder.Append("  <color=").Append(BAD_COLOR).Append('>')
+                    .Append(_brainsWithoutModel).Append(" WITHOUT</color>");
+            }
+            _builder.AppendLine();
+            for (int lineIndex = 0; lineIndex < _brainLines.Count; lineIndex++)
+            {
+                _builder.AppendLine(_brainLines[lineIndex]);
+            }
+        }
+
+        /// <summary>
+        /// Groups the live agents by controller and records one line each:
+        /// creature, where the policy comes from, its observation and action
+        /// widths, and how many are running.
+        /// </summary>
+        private void SampleBrains()
+        {
+            _brainLines.Clear();
+            _brainsWithModel = 0;
+            _brainsWithoutModel = 0;
+
+            var counts = new System.Collections.Generic.Dictionary<string, int>();
+            var order = new System.Collections.Generic.List<string>();
+
+            var behaviours = FindObjectsByType<Unity.MLAgents.Policies.BehaviorParameters>(
+                FindObjectsInactive.Exclude);
+            for (int index = 0; index < behaviours.Length; index++)
+            {
+                var behaviour = behaviours[index];
+                bool hasModel = behaviour.Model != null;
+                string source = hasModel
+                    ? "ONNX/" + behaviour.InferenceDevice
+                    : "<color=" + BAD_COLOR + ">no model</color>";
+                if (behaviour.BehaviorType == Unity.MLAgents.Policies.BehaviorType.HeuristicOnly)
+                {
+                    source = "coded gait";
+                }
+                var brain = behaviour.BrainParameters;
+                string key = behaviour.BehaviorName + KEY_SEP + source + KEY_SEP
+                    + brain.VectorObservationSize + KEY_SEP + brain.ActionSpec.NumContinuousActions;
+                Tally(counts, order, key);
+                if (hasModel) { _brainsWithModel++; } else { _brainsWithoutModel++; }
+            }
+
+            // The Isaac and MuJoCo racers are not ML-Agents agents: they run their
+            // own inference and carry no BehaviorParameters, so they have to be
+            // counted separately or they read as missing.
+            var natives = FindObjectsByType<PoRacer.Agents.NativeBrainProbe>(FindObjectsInactive.Exclude);
+            for (int index = 0; index < natives.Length; index++)
+            {
+                var probe = natives[index];
+                string key = probe.CreatureName + KEY_SEP + probe.PolicySource + KEY_SEP
+                    + probe.ObservationCount + KEY_SEP + probe.ActionCount;
+                Tally(counts, order, key);
+                if (probe.HasPolicy) { _brainsWithModel++; } else { _brainsWithoutModel++; }
+            }
+
+            for (int index = 0; index < order.Count; index++)
+            {
+                string[] parts = order[index].Split(KEY_SEP);
+                _brainLines.Add(string.Format("{0,-9} {1}  obs {2} act {3}  x{4}",
+                    Trim(parts[0], 9), parts[1], parts[2], parts[3], counts[order[index]]));
+            }
+        }
+
+        private static void Tally(System.Collections.Generic.Dictionary<string, int> counts,
+            System.Collections.Generic.List<string> order, string key)
+        {
+            if (counts.TryGetValue(key, out int existing))
+            {
+                counts[key] = existing + 1;
+                return;
+            }
+            counts[key] = 1;
+            order.Add(key);
+        }
+
+        private static string Trim(string value, int width)
+        {
+            if (string.IsNullOrEmpty(value)) { return string.Empty; }
+            return value.Length <= width ? value : value.Substring(0, width);
+        }
+
+        /// <summary>
         /// Live object counts via a scene walk — too heavy for every refresh, so
         /// it runs on the slower SCENE_SAMPLE beat (debug overlay only).
         /// </summary>
@@ -553,6 +663,7 @@ namespace PoRacer.Views
             _particleSystemCount = FindObjectsByType<ParticleSystem>().Length;
             _audioSourceCount = FindObjectsByType<AudioSource>().Length;
             _limbContactCount = FindObjectsByType<LimbContactView>().Length;
+            SampleBrains();
         }
 
         private void UpdateLeaderSpeed(RacerState leader)

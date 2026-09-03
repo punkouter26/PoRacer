@@ -58,13 +58,91 @@ namespace PoRacer.Presentation
         // reference covers - a token renders at 0.857x its number, so FONT_XS 14
         // landed at 12.0 sp, under Android's 14 sp body-text minimum. At 15 it is
         // 12.9 sp there and 14.7 sp on a 411 dp phone.
-        public const float FONT_XS = 15f;
-        public const float FONT_SM = 16f;
-        public const float FONT_MD = 18f;
-        public const float FONT_LG = 20f;
-        public const float FONT_TITLE = 28f;
-        public const float FONT_BANNER = 52f;
-        public const float FONT_COUNTDOWN = 68f;
+        // Base sizes, in reference units against REFERENCE_WIDTH. Read through the
+        // properties below, never directly: on a handset narrower than the
+        // reference the properties scale these up so no body text drops under
+        // Android's minimum. See <see cref="FontScale"/>.
+        private const float FONT_XS_BASE = 15f;
+        private const float FONT_SM_BASE = 16f;
+        private const float FONT_MD_BASE = 18f;
+        private const float FONT_LG_BASE = 20f;
+        private const float FONT_TITLE_BASE = 28f;
+        private const float FONT_BANNER_BASE = 52f;
+        private const float FONT_COUNTDOWN_BASE = 68f;
+
+        /// <summary>Panel reference width in dp; must match RaceHudPanelSettings.</summary>
+        private const float REFERENCE_WIDTH = 420f;
+
+        /// <summary>Android's minimum comfortable body-text size, in sp.</summary>
+        private const float MIN_BODY_SP = 14f;
+
+        /// <summary>
+        /// Ceiling on the correction. A device reporting a nonsense DPI must not be
+        /// allowed to inflate the type until the layout bursts; 1.25 covers every
+        /// handset down to ~336 dp and stops there.
+        /// </summary>
+        private const float MAX_FONT_SCALE = 1.25f;
+
+        public static float FONT_XS => FONT_XS_BASE * FontScale;
+        public static float FONT_SM => FONT_SM_BASE * FontScale;
+        public static float FONT_MD => FONT_MD_BASE * FontScale;
+        public static float FONT_LG => FONT_LG_BASE * FontScale;
+        public static float FONT_TITLE => FONT_TITLE_BASE * FontScale;
+        public static float FONT_BANNER => FONT_BANNER_BASE * FontScale;
+        public static float FONT_COUNTDOWN => FONT_COUNTDOWN_BASE * FontScale;
+
+        private static float _fontScale = 1f;
+        private static int _fontScaleForWidth = -1;
+
+        /// <summary>
+        /// Correction that keeps the smallest text token at or above
+        /// <see cref="MIN_BODY_SP"/> on narrow handsets.
+        ///
+        /// The panel scales on width against <see cref="REFERENCE_WIDTH"/>, so one
+        /// reference unit is (deviceDpWidth / REFERENCE_WIDTH) dp. On the 411 dp
+        /// phone this was tuned against that is 0.979, near enough to 1 that the
+        /// tokens read as dp directly - which is what the 420 reference was chosen
+        /// for. On a 360 dp handset it is 0.857, and FONT_XS lands at 12.9 sp,
+        /// under the floor. This scales the whole ramp - not just the small end -
+        /// so the size relationships between steps survive.
+        ///
+        /// Scaling up costs no layout room in practice: matching on width means a
+        /// narrower screen gets proportionally MORE height in reference units (a
+        /// 360x800 dp phone resolves to 933 units tall against the 900 measured
+        /// here), so the extra line height lands in space that device already had.
+        /// </summary>
+        private static float FontScale
+        {
+            get
+            {
+                int width = Screen.width;
+                if (width == _fontScaleForWidth)
+                {
+                    return _fontScale;
+                }
+                _fontScaleForWidth = width;
+
+                float dpi = Screen.dpi;
+                if (width <= 0 || dpi <= 0f || float.IsNaN(dpi))
+                {
+                    // The editor and some devices report no usable DPI. Assume the
+                    // reference rather than guessing.
+                    _fontScale = 1f;
+                    return _fontScale;
+                }
+
+                float deviceDpWidth = width / (dpi / 160f);
+                float dpPerUnit = deviceDpWidth / REFERENCE_WIDTH;
+                if (dpPerUnit <= 0f)
+                {
+                    _fontScale = 1f;
+                    return _fontScale;
+                }
+                float needed = MIN_BODY_SP / (FONT_XS_BASE * dpPerUnit);
+                _fontScale = Mathf.Clamp(needed, 1f, MAX_FONT_SCALE);
+                return _fontScale;
+            }
+        }
 
         // ---- Control heights (touch-ergonomic standards) ----
         // Android's minimum touch target is 48 dp. With the panel's 420 dp reference
