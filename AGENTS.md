@@ -103,6 +103,64 @@ Start-Process -FilePath ".\.venv\Scripts\tensorboard.exe" -ArgumentList "--logdi
 
 ---
 
+# OPERATING RULES — non-negotiable checklist
+
+Read this section before doing anything in the project. These are the rules that
+must hold on every session, on every commit, on every training run. The detailed
+spec behind each one lives above in sections 1–4; this block is the short form.
+
+## A. Source control
+* **`master` only, no other branches.** Commit directly to `master` — no feature
+  branches, no `cleanup/*`, no work branches, no matter how tidy the intent. The
+  single exception is an explicit request for a branch; absent that, do not
+  create one, and any branch that does get made must be merged back and deleted
+  in the same session.
+* Commit real, working increments. Compile clean, and for anything touching
+  runtime, do a play-mode check as well.
+
+## B. Project context — read first, every time
+* At the start of every task, check the repo root for a `DOCS/` folder and
+  **read it before touching code**. It is the project's own summary: roster
+  state, scene layout, brain catalogue, agent motivation, worked example plan,
+  the lot. Use it as the source of truth over memory whenever the two disagree.
+
+## C. Training — TensorBoard is mandatory
+* **Always start TensorBoard before `mlagents-learn`**, every run, no exceptions.
+  Run it in the background on port `6006` with `--logdir results`:
+  ```powershell
+  Start-Process -FilePath ".\.venv\Scripts\tensorboard.exe" `
+    -ArgumentList "--logdir","results","--port","6006"
+  ```
+  Then launch the trainer. A training run without TensorBoard going up first is
+  a blind run — do not ship it.
+* **Prune obsolete TensorBoard runs before starting a new one.** Dead
+  experiments crowd the active curve and make the useful one unreadable. Use
+  `scripts/Clean-TrainingArtifacts.ps1` (it knows both run-id conventions and
+  protects the newest run of each prefix). Confirm port `6006` is free first —
+  a crashed run leaks its TensorBoard listener, and the next launch then trains
+  blind.
+
+## D. Racer colours are a legend, not decoration
+A viewer must be able to tell what is driving a racer at a glance. Colour
+encodes the controller, never the creature.
+
+| Racer kind | Colour |
+|---|---|
+| Heuristic / hand-coded bots | **RED**, always |
+| The standard RL policy (the baseline, before per-creature variations) | **GREEN**, always |
+| RL variations derived from that baseline | custom textures, supplied by the user |
+
+* Red and green are reserved: do not spend them on a variation, a highlight or
+  a team tint, and do not recolour a heuristic bot or the baseline RL racer to
+  fit a palette.
+* A new variation without a supplied texture **waits for one** rather than
+  borrowing either colour.
+* **"Standard RL" means the baseline policy only, not every RL racer.** A
+  creature that came in with its own authored look is a variation and keeps
+  that look.
+
+---
+
 ## 5. FILE INTEGRITY & EXCLUSIONS
 
 * **Critical Exclusion List:** NEVER edit, format, corrupt, or manually regenerate:
