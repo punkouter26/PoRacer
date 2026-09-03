@@ -1,8 +1,8 @@
-# IsaacBox - contract
+# Boy - contract
 
 The exact interface between the Isaac Lab policy and the Unity rig. Every number here was
 read from the LIVE simulation by `ISAAC/scripts/export_bundle.py`, not from documentation.
-Checkpoint `model_2000.pt`, task `Isaac-Chase-Flat-Boy-Play-v0`.
+Checkpoint `model_2999.pt`, task `Isaac-Chase-Flat-Boy-Play-v0`.
 
 ## 1. Policy I/O
 
@@ -14,7 +14,7 @@ Checkpoint `model_2000.pt`, task `Isaac-Chase-Flat-Boy-Play-v0`.
 | opset / IR | ai.onnx 15 / IR 8 |
 | operators | Concat, Div, Elu, Gemm, Sub |
 | normaliser | **baked into the graph** (yes): feed RAW observations |
-| onnxruntime vs PyTorch | max abs diff 2.384e-06 over 250 real observations (gate 1e-4) |
+| onnxruntime vs PyTorch | max abs diff 1.967e-06 over 250 real observations (gate 1e-4) |
 | runtime | Unity Inference Engine `com.unity.ai.inference`, `BackendType.CPU`, driven directly (NOT ML-Agents) |
 
 ## 2. Observation vector - 75 floats
@@ -95,15 +95,15 @@ pose, so the mesh follows for free.
 ## 6. Reference recording (`isaac_reference.json`)
 
 Env 0, target fixed 8.0 m straight ahead, 250 policy steps. Quaternions stored XYZW
-(verified against projected_gravity: residual 0.0000 vs 494.7230 for the other order).
-Mean forward speed after the first second: **0.962 m/s**, 4.76 m travelled.
+(verified against projected_gravity: residual 0.0000 vs 492.8656 for the other order).
+Mean forward speed after the first second: **0.953 m/s**, 4.78 m travelled.
 
 ## 7. Isaac evaluation (64 robots, 30 s, random targets)
 
 | metric | value |
 |---|---|
-| mean speed | 0.992 m/s |
-| mean speed toward target | 0.949 m/s |
-| mean \|v_along - 1.0\| | 0.071 m/s |
+| mean speed | 0.987 m/s |
+| mean speed toward target | 0.939 m/s |
+| mean \|v_along - 1.0\| | 0.079 m/s |
 | falls | 0 (0.000 per robot per minute) |
-| targets reached | 253 (7.91 per robot per minute) |
+| targets reached | 259 (8.09 per robot per minute) |

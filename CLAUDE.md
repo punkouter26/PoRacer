@@ -168,6 +168,52 @@ is no `.onnx` and no Inference Engine involved, which is why `CreatureEntry` car
 * **Hierarchical Anchors:** Derive anchors from segment lengths so moving a segment naturally shifts downstream joints.
 * **Joint Range Verification:** Test joint ranges in **parent-local** space with gravity disabled to verify body counter-rotation and detect world-space drift while measuring `jointAngle` sign.
 
+### IsaacBox — the Isaac Lab humanoid
+
+The one racer trained in **Isaac Lab / Isaac Sim**, not ML-Agents and not MuJoCo. A 22-link,
+21-joint, 45 kg humanoid on a target-chasing task, driven by a 75 -> 128x128x128 -> 21 MLP
+read through Unity's Inference Engine. Everything about him is in `Assets/unity_export/IsaacBox/`
+(`CONTRACT.md` is the observation/action contract; `export_report.json` the Isaac-side numbers).
+
+* **The names differ on purpose across the boundary.** Unity calls him **IsaacBox**; the Isaac
+  Lab side is still `boy_*` — `ISAAC/boy_rig/`, `ISAAC/boy_tasks/`, task ids
+  `Isaac-Chase-Flat-Boy-v0`, `experiment_name = "boy_chase_flat"`. That was a deliberate call
+  (2026-09-02): renaming the Isaac package would orphan the trained run's logs for no gain in
+  the app. What crosses the boundary *is* aligned — the export output path, `isaacbox_rig.json`,
+  and `IsaacBox_Character.{fbx,glb}`. Do not "tidy" one side into the other.
+* **The FBX has NO textures — none at all.** No embedded images, no texture references. Unity
+  builds his geometry and skinning from the FBX, so the materials it imports are untextured and
+  he renders flat grey. The **GLB twin** carries all ten images and six materials; those are
+  extracted to `Textures/` and rebuilt into URP materials by `IsaacBoxMaterials`, which
+  `IsaacBoxSetup.BuildPrefab` calls before saving. **Do not remove that call** — without it the
+  next Build Prefab silently reverts him to untextured, and it reads as textures randomly
+  breaking. Materials are matched by *renderer name*, never by material index, because FBX
+  material order is an import detail a re-import can reshuffle.
+* **He is NOT a standard RL racer**, so the GREEN legend colour does not apply — see the racer
+  colour rules above. He wears his authored skin/shirt/trousers/shoes.
+* **`ISAACPORTS_HAS_INFERENCE` is per-assembly, and forgetting it fails silently.** It is a
+  `versionDefines` entry, not a project-wide define. Any assembly that touches `ModelAsset`
+  needs it: the three `PoRacer.IsaacPorts.*` asmdefs **and `PoRacer.Editor`**, which registers
+  the racer. Without it the `LoadAssetAtPath<ModelAsset>` is compiled out, the catalog entry is
+  written with a null model, `HasBrain` stays false, and MenuView quietly files the creature
+  under "coming soon" — a brainless rig that can never race, with no error anywhere.
+* **Timing already matches the project**: 200 Hz physics, decimation 4, 50 Hz policy — the same
+  `Time.fixedDeltaTime` everything else is locked to, so he needs no special casing.
+* **Quaternion storage is wxyz**, detected at export against projected gravity and stored XYZW
+  in the reference; the check is decisive (residual 3.8e-06 vs 494.7), so if it ever flips the
+  export aborts rather than shipping a silently mirrored policy.
+
+**Retraining / re-exporting.** `ISAAC/install.ps1` builds the environment and asserts the GPU
+can actually run it; `ISAAC/README.md` has the pipeline. Call the venv python **directly** —
+`isaaclab.bat` resolves its interpreter from PATH, picks the system Python, and still exits 0
+while printing the traceback. The environment traps are documented in `install.ps1` itself and
+are all silent failures: a bare `torch==2.7.0` is satisfied by the CPU build, `usd-core` in the
+venv shadows kit's own `pxr`, `tensordict` newer than 0.8.x hard-crashes against torch 2.7, and
+`isaaclab.bat` uninstalls torchaudio without restoring it. Both scripts line-buffer stdout
+because `simulation_app.close()` exits via `os._exit()` and would otherwise discard every
+`print()` — a successful run then looks like a silent exit 0 that never trained.
+
+
 ## 3. Display
 * **UI Architecture:** C# UI Toolkit at runtime exclusively — no UGUI, IMGUI, `.uxml`, or `.uss` assets.
 * **Framerate & Orientation:** Target Portrait 9:16 aspect ratio at 60 FPS (`vSyncCount = 0` to ensure `targetFrameRate` is honored).

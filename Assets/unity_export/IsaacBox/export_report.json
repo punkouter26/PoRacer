@@ -1,9 +1,9 @@
 {
   "task": "Isaac-Chase-Flat-Boy-Play-v0",
   "train_task": "Isaac-Chase-Flat-Boy-v0",
-  "checkpoint": "C:\\Users\\punko\\Downloads\\PoRacer\\ISAAC\\logs\\rsl_rl\\boy_chase_flat\\2026-09-02_21-32-53_full\\model_2000.pt",
+  "checkpoint": "C:\\Users\\punko\\Downloads\\PoRacer\\ISAAC\\logs\\rsl_rl\\boy_chase_flat\\2026-09-03_09-03-04_finish\\model_2999.pt",
   "onnx": {
-    "file": "Boy.onnx",
+    "file": "IsaacBox.onnx",
     "io": {
       "inputs": [
         [
@@ -26,7 +26,7 @@
         ]
       ]
     },
-    "onnx_vs_torch_max_abs_diff": 2.384185791015625e-06,
+    "onnx_vs_torch_max_abs_diff": 1.9669532775878906e-06,
     "opset": [
       {
         "domain": "ai.onnx",
@@ -899,18 +899,18 @@
     "num_envs": 64,
     "policy_steps": 1500,
     "sim_seconds": 30.0,
-    "mean_speed_m_s": 0.9916085897783439,
-    "mean_speed_toward_target_m_s": 0.9490491454017659,
-    "mean_target_speed_error_m_s": 0.07127597461765012,
+    "mean_speed_m_s": 0.9869019758900006,
+    "mean_speed_toward_target_m_s": 0.9389001798803608,
+    "mean_target_speed_error_m_s": 0.07861594133948287,
     "falls": 0,
     "falls_per_robot_per_minute": 0.0,
-    "targets_reached": 253,
-    "targets_reached_per_robot_per_minute": 7.90625,
+    "targets_reached": 259,
+    "targets_reached_per_robot_per_minute": 8.09375,
     "reference_run": {
       "target_distance_m": 8.0,
       "steps": 250,
-      "mean_forward_speed_after_1s_m_s": 0.9624445816874504,
-      "x_travelled_m": 4.764433860778809
+      "mean_forward_speed_after_1s_m_s": 0.9530509775876999,
+      "x_travelled_m": 4.784699440002441
     }
   },
   "rig_sim_deviations_resolved": []
