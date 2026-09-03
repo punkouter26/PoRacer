@@ -70,3 +70,13 @@ test-results.xml
 # Play publishing tooling venv. Kept out of .venv on purpose: that one carries
 # load-bearing ml-agents/torch pins a stray resolve would walk over.
 Tools/publish-venv/
+
+# Local Python 3.11 for the Isaac Lab side. Installed into the repo folder on
+# purpose (this machine has no system 3.11, and .venv's 3.10 carries the
+# load-bearing ml-agents/torch pins). Binaries — never committed.
+Python311/
+
+# Isaac Lab checkout + Isaac Sim wheels, cloned by ISAAC/install.ps1. Tens of GB
+# of third-party source and binaries; the repo only owns what ISAAC/ authors.
+ISAAC/isaaclab/
+ISAAC/logs/

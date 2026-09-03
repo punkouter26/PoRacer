@@ -15,7 +15,7 @@ MonoBehaviour:
   sourceTask: Isaac-Chase-Flat-Boy-Play-v0
   trainTask: Isaac-Chase-Flat-Boy-v0
   sourceModel: Boy_Character.glb
-  checkpoint: 
+  checkpoint: model_2000.pt
   jointOrder:
   - spine_pitch
   - hip_yaw_L
@@ -729,9 +729,9 @@ MonoBehaviour:
       radius: 0
       height: 0
       axis: 
-  isaacMeanSpeed: 0
-  isaacMeanSpeedTowardTarget: 0
-  isaacReferenceForwardSpeed: 0
+  isaacMeanSpeed: 0.99160856
+  isaacMeanSpeedTowardTarget: 0.9490492
+  isaacReferenceForwardSpeed: 0.9624446
   isaacReferenceTargetDistance: 8
   isaacFallsPerRobotPerMinute: 0
-  isaacTargetsReachedPerMinute: 0
+  isaacTargetsReachedPerMinute: 7.90625

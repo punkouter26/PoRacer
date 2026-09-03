@@ -30,6 +30,22 @@ import json
 import math
 import os
 import shutil
+import sys
+
+# Line-buffer before anything prints: this script ends at simulation_app.close(), which exits
+# via os._exit() inside Isaac Sim and therefore skips Python's atexit flush. Redirected to a
+# file or pipe, stdout is block-buffered and every export message - including the ONNX parity
+# numbers and the evaluation results - is discarded, leaving a silent exit code 0.
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+# onnx / onnxruntime MUST be imported BEFORE the SimulationApp starts. Kit loads its own
+# ONNX Runtime DLLs, and a pip onnxruntime imported afterwards cannot initialise on top of
+# them - it fails with "DLL load failed while importing onnxruntime_pybind11_state" even
+# though the identical import succeeds in the same interpreter standalone. Loading ours
+# first makes it the resident copy. Same failure family as usd-core shadowing kit's pxr.
+import onnx  # noqa: E402
+import onnxruntime as ort  # noqa: E402
 
 from isaaclab.app import AppLauncher
 
@@ -59,8 +75,6 @@ import importlib.metadata as metadata  # noqa: E402
 
 import gymnasium as gym  # noqa: E402
 import numpy as np  # noqa: E402
-import onnx  # noqa: E402
-import onnxruntime as ort  # noqa: E402
 import torch  # noqa: E402
 
 import boy_tasks  # noqa: E402,F401
@@ -149,7 +163,20 @@ print(f"[export] checkpoint: {ckpt}")
 
 runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=raw.device)
 runner.load(ckpt)
-policy = runner.get_inference_policy(device=raw.device)
+_raw_policy = runner.get_inference_policy(device=raw.device)
+
+
+def policy(obs):
+    """Flat-tensor facade over the rsl-rl inference policy.
+
+    rsl-rl-lib 5.x feeds its models a DICT keyed by observation group - MLPModel.get_latent
+    does ``obs[group] for group in self.obs_groups`` - while every call site in this script
+    (the ONNX trace, the reference recording, the evaluation rollout) holds a flat
+    (N, obsDim) tensor, which is also what Unity's BoyAgent will hand the ONNX. Older rsl-rl
+    took the flat tensor directly; passing one to 5.x dies with "IndexError: too many indices
+    for tensor of dimension 2". Adapt once here so the graph and every rollout stay flat.
+    """
+    return _raw_policy({"policy": obs})
 
 # --------------------------------------------------------------------------------------------------
 # 1. joint order from the SIMULATOR, cross-checked against the rig JSON
@@ -225,19 +252,30 @@ assert obs_dim == rig["obsDim"] and act_dim == rig["actDim"], (obs_dim, act_dim,
 
 
 class _Exported(torch.nn.Module):
-    def __init__(self, fn):
+    """Traceable shell that keeps the ONNX input flat.
+
+    It wraps the RAW rsl-rl policy, not the `policy` shim above: a plain Python closure hides
+    the module from the tracer, which then treats its weights as grad-requiring constants and
+    fails with "Cannot insert a Tensor that requires grad as a constant". Holding the module
+    registers the parameters properly, so the dict adaptation is repeated here instead.
+    """
+
+    def __init__(self, fn, obs_group="policy"):
         super().__init__()
         self.fn = fn
+        self._obs_group = obs_group
 
     def forward(self, obs):
-        return self.fn(obs)
+        return self.fn({self._obs_group: obs})
 
 
 onnx_path = os.path.join(OUT, "Boy.onnx")
 dummy = torch.zeros(1, obs_dim, device=raw.device)
+for _p in getattr(_raw_policy, "parameters", list)():
+    _p.requires_grad_(False)
 with torch.inference_mode():
     torch.onnx.export(
-        _Exported(policy).eval(), dummy, onnx_path,
+        _Exported(_raw_policy).eval(), dummy, onnx_path,
         export_params=True, opset_version=15, do_constant_folding=True,
         input_names=["obs"], output_names=["actions"], dynamic_axes=None, dynamo=False,
     )
@@ -324,11 +362,14 @@ ref_travel = ref[-1]["root_pos_w"][0] - ref[0]["root_pos_w"][0]
 # --------------------------------------------------------------------------------------------------
 # 4. evaluation under the task's own random targets
 # --------------------------------------------------------------------------------------------------
-env.reset()
-obs = env.get_observations()
 speed_sum, along_sum, along_err, n, falls, reached = 0.0, 0.0, 0.0, 0, 0, 0
 target_speed = float(rig["chase"]["targetSpeed"])
+# reset INSIDE inference_mode: the reference recording above already ran under it, so the
+# env's sim buffers are inference tensors. Resetting outside writes to them in place and
+# PhysX raises "Inplace update to inference tensor outside InferenceMode is not allowed".
 with torch.inference_mode():
+    env.reset()
+    obs = env.get_observations()
     for i in range(args_cli.eval_steps):
         dd = robot.data
         delta = (cmd_term.target_pos_w - T(dd.root_pos_w))[:, :2]

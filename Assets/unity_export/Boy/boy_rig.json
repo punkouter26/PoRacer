@@ -80,37 +80,44 @@
   {
    "term": "base_lin_vel",
    "start": 0,
-   "end": 3
+   "end": 3,
+   "dim": 3
   },
   {
    "term": "base_ang_vel",
    "start": 3,
-   "end": 6
+   "end": 6,
+   "dim": 3
   },
   {
    "term": "projected_gravity",
    "start": 6,
-   "end": 9
+   "end": 9,
+   "dim": 3
   },
   {
    "term": "target_pos_b",
    "start": 9,
-   "end": 12
+   "end": 12,
+   "dim": 3
   },
   {
    "term": "joint_pos",
    "start": 12,
-   "end": 33
+   "end": 33,
+   "dim": 21
   },
   {
    "term": "joint_vel",
    "start": 33,
-   "end": 54
+   "end": 54,
+   "dim": 21
   },
   {
    "term": "actions",
    "start": 54,
-   "end": 75
+   "end": 75,
+   "dim": 21
   }
  ],
  "timing": {
@@ -174,11 +181,13 @@
   "isaacSolverType": "TGS"
  },
  "eval": {
-  "_note": "filled in by export_bundle.py after training",
-  "meanSpeed": 0.0,
-  "meanTargetSpeedError": 0.0,
+  "meanSpeed": 0.9916085897783439,
+  "meanSpeedTowardTarget": 0.9490491454017659,
+  "meanTargetSpeedError": 0.07127597461765012,
   "fallsPerRobotPerMinute": 0.0,
-  "targetsReachedPerMinute": 0.0
+  "targetsReachedPerMinute": 7.90625,
+  "referenceForwardSpeed": 0.9624445816874504,
+  "referenceTargetDistance": 8.0
  },
  "totalMass": 45.0,
  "bodies": [
@@ -1449,5 +1458,15 @@
     }
    ]
   }
- ]
+ ],
+ "checkpoint": "model_2000.pt",
+ "network": {
+  "actor_hidden_dims": [
+   128,
+   128,
+   128
+  ],
+  "activation": "elu",
+  "obs_normalization_baked_into_onnx": true
+ }
 }

@@ -353,6 +353,19 @@ namespace Boy.EditorTools
         [MenuItem("Boy/Spawn Into Open Scene", priority = 2)]
         public static void OpenSpawnWindow() => BoySpawnWindow.Open();
 
+        /// <summary>
+        /// Window-free twin of "Spawn Into Open Scene", carrying the same defaults the window
+        /// ships with. The menu item above opens an EditorWindow, and a modal window stalls the
+        /// `unity command menu` bridge, so automated setup needs an entry point that just runs.
+        /// </summary>
+        [MenuItem("Boy/Spawn Into Open Scene (Defaults)", priority = 3)]
+        public static void SpawnIntoOpenSceneDefaults()
+        {
+            var rig = AssetDatabase.LoadAssetAtPath<BoyRigAsset>(BoyPaths.RigAsset);
+            float y = rig != null ? rig.spawnPosIsaac.z : 0.764f;
+            SpawnIntoOpenScene(new Vector3(0f, y, -2f), null, true);
+        }
+
         public static GameObject SpawnIntoOpenScene(Vector3 position, Transform target, bool createEssentials)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoyPaths.Prefab);

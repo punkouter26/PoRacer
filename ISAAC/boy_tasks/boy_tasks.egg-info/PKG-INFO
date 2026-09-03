@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: boy_tasks
+Version: 0.1.0
+Summary: Isaac Lab target-chasing locomotion task for the PoRacer Boy character
+Requires-Python: >=3.10

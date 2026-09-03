@@ -16,6 +16,21 @@
 | **ML-Agents (C#)** | `com.unity.ml-agents` 4.1.0 |
 | **ML-Agents (Python)** | `.venv\Scripts\mlagents-learn.exe` — `mlagents` 1.1.0, torch 2.4.1, numpy 1.23.5, protobuf 3.20.3 |
 
+### Read `DOCS/` first
+
+`DOCS/` at the repo root is the project's own summary — read it before starting
+work, so the overall shape is in hand before touching code:
+
+| File | What |
+|---|---|
+| `index.html` | entry point; links the rest |
+| `FeatureBrief-CreatureRace.md` | what the game is |
+| `creatures_dashboard.html` | the roster and each creature's state |
+| `architecture_pipeline.html` | training -> export -> Unity flow |
+| `scenes_layout.html` | scene structure |
+| `onnx_summary.md` | exported brains |
+| `Plan-P1-Worm.md` | worked example of a creature plan |
+
 ### Detected Packages
 
 Direct dependencies only — `Packages/manifest.json` was pruned on 2026-08-27 to
@@ -175,12 +190,28 @@ is no `.onnx` and no Inference Engine involved, which is why `CreatureEntry` car
   fonts at or above 14 (Android's body-text minimum) and any control a finger
   touches at or above `CONTROL_SM` = 48 (Android's touch-target minimum).
 
+### Racer colours are a legend, not decoration
+
+A viewer must be able to tell what is driving a racer at a glance, so colour encodes the
+controller, never the creature:
+
+| Racer kind | Colour |
+|---|---|
+| Heuristic / hand-coded bots | **RED**, always |
+| The standard RL policy (the baseline, before per-creature variations) | **GREEN**, always |
+| RL variations derived from that baseline | custom textures, supplied by the user |
+
+Red and green are reserved: do not spend them on a variation, a highlight or a team tint,
+and do not recolour a heuristic bot or the baseline RL racer to fit a palette. A new
+variation without a supplied texture waits for one rather than borrowing either colour.
+
 ## 4. Source Control
-* **`master` only. Never create a branch.** Commit directly to `master` — no
-  feature branches, no `cleanup/*`, no work branches, however tidy the intent.
-  This overrides the usual "branch before committing on the default branch"
-  habit: in this project that habit is wrong, and any branch that does get made
-  must be merged back and deleted in the same session.
+* **`master` only, unless I specifically ask for a branch.** Commit directly to
+  `master` — no feature branches, no `cleanup/*`, no work branches, however tidy
+  the intent. This overrides the usual "branch before committing on the default
+  branch" habit: in this project that habit is wrong. The single exception is an
+  explicit request for a branch; absent that, do not create one, and any branch
+  that does get made must be merged back and deleted in the same session.
 * Commit real, working increments. Verify before committing — compile clean, and
   for anything touching runtime, a play-mode check as well.
 
@@ -202,6 +233,18 @@ is no `.onnx` and no Inference Engine involved, which is why `CreatureEntry` car
   Embedding the package to patch it costs 40 MB and a fork to maintain; that was
   tried on 2026-08-29 and reverted as a bad trade. Do not redo it without asking.
 * **TensorBoard is not optional:** **start `.venv\Scripts\tensorboard.exe --logdir results --port 6006` BEFORE every `mlagents-learn` launch, without exception — no training run without it.** It goes up first, before the trainer, so the run is observable from step 0; a run you cannot watch is a run you cannot judge. Launch scripts must start it themselves rather than assume it is already running. Kill TensorBoard before `--force` wipes (Windows file handles will silently fail the wipe).
+  * The Isaac Lab side is the same rule with its own paths: `ISAAC/scripts/train.py`
+    starts TensorBoard on `--logdir ISAAC/logs/rsl_rl` before the simulator and tears it
+    down last. Never pass `--no_tensorboard` for a real run.
+  * **Port 6006 must be free before launching.** A crashed run leaks its TensorBoard, and
+    the next launch prints "TensorBoard exited immediately (port busy?)" and then trains
+    blind. Kill the listener first; do not just accept the warning.
+* **Prune obsolete runs before starting a new one.** TensorBoard shows every run under the
+  logdir, so dead experiments crowd out the one being watched and make the useful curve
+  unreadable. Before each launch, clear the runs that no longer mean anything —
+  `scripts/Clean-TrainingArtifacts.ps1` knows both run-id conventions and protects the
+  newest run of each prefix; on the Isaac side delete stale folders under
+  `ISAAC/logs/rsl_rl/<experiment>/` directly. Keep only the runs a decision still rests on.
 * **Telemetry & Shutdown:** Output telemetry via HTTP *and* `StatsRecorder`. Tear down in strict order: trainer → envs → TensorBoard.
 * **Model Evaluation:** Evaluate self-play policies using ELO ratings, not mean reward metrics.
 

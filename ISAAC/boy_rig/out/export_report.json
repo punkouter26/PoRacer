@@ -1,0 +1,917 @@
+{
+  "task": "Isaac-Chase-Flat-Boy-Play-v0",
+  "train_task": "Isaac-Chase-Flat-Boy-v0",
+  "checkpoint": "C:\\Users\\punko\\Downloads\\PoRacer\\ISAAC\\logs\\rsl_rl\\boy_chase_flat\\2026-09-02_21-32-53_full\\model_2000.pt",
+  "onnx": {
+    "file": "Boy.onnx",
+    "io": {
+      "inputs": [
+        [
+          "obs",
+          [
+            1,
+            75
+          ],
+          "tensor(float)"
+        ]
+      ],
+      "outputs": [
+        [
+          "actions",
+          [
+            1,
+            21
+          ],
+          "tensor(float)"
+        ]
+      ]
+    },
+    "onnx_vs_torch_max_abs_diff": 2.384185791015625e-06,
+    "opset": [
+      {
+        "domain": "ai.onnx",
+        "version": 15
+      }
+    ],
+    "ir_version": 8,
+    "operators": [
+      "Concat",
+      "Div",
+      "Elu",
+      "Gemm",
+      "Sub"
+    ],
+    "initializers": 10,
+    "size_bytes": 184076,
+    "normalizer_baked": true
+  },
+  "observations": {
+    "dim": 75,
+    "layout": [
+      {
+        "term": "base_lin_vel",
+        "start": 0,
+        "end": 3,
+        "dim": 3
+      },
+      {
+        "term": "base_ang_vel",
+        "start": 3,
+        "end": 6,
+        "dim": 3
+      },
+      {
+        "term": "projected_gravity",
+        "start": 6,
+        "end": 9,
+        "dim": 3
+      },
+      {
+        "term": "target_pos_b",
+        "start": 9,
+        "end": 12,
+        "dim": 3
+      },
+      {
+        "term": "joint_pos",
+        "start": 12,
+        "end": 33,
+        "dim": 21
+      },
+      {
+        "term": "joint_vel",
+        "start": 33,
+        "end": 54,
+        "dim": 21
+      },
+      {
+        "term": "actions",
+        "start": 54,
+        "end": 75,
+        "dim": 21
+      }
+    ],
+    "corruption_enabled": false
+  },
+  "actions": {
+    "dim": 21,
+    "type": "JointPositionAction",
+    "scale": 0.5,
+    "use_default_offset": true,
+    "offset_default_joint_pos_rad": [
+      0.0,
+      0.0,
+      0.0,
+      -1.350000023841858,
+      1.350000023841858,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.20000000298023224,
+      -0.20000000298023224,
+      0.0,
+      0.0,
+      0.4000000059604645,
+      0.4000000059604645,
+      -0.4000000059604645,
+      0.4000000059604645,
+      -0.20000000298023224,
+      -0.20000000298023224,
+      0.0,
+      0.0
+    ],
+    "formula": "joint_position_target[i] = default[i] + scale * action[i]",
+    "clip": null
+  },
+  "joints": {
+    "order": [
+      "spine_pitch",
+      "hip_yaw_L",
+      "hip_yaw_R",
+      "shoulder_roll_L",
+      "shoulder_roll_R",
+      "hip_roll_L",
+      "hip_roll_R",
+      "shoulder_pitch_L",
+      "shoulder_pitch_R",
+      "hip_pitch_L",
+      "hip_pitch_R",
+      "shoulder_yaw_L",
+      "shoulder_yaw_R",
+      "knee_L",
+      "knee_R",
+      "elbow_L",
+      "elbow_R",
+      "ankle_pitch_L",
+      "ankle_pitch_R",
+      "ankle_roll_L",
+      "ankle_roll_R"
+    ],
+    "count": 21,
+    "pos_limits_rad": [
+      [
+        -0.5,
+        0.5
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -1.75,
+        0.6000000238418579
+      ],
+      [
+        -0.6000000238418579,
+        1.75
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -2.5,
+        1.0
+      ],
+      [
+        -1.0,
+        2.5
+      ],
+      [
+        -2.0,
+        0.800000011920929
+      ],
+      [
+        -2.0,
+        0.800000011920929
+      ],
+      [
+        -1.0,
+        1.0
+      ],
+      [
+        -1.0,
+        1.0
+      ],
+      [
+        0.0,
+        2.4000000953674316
+      ],
+      [
+        0.0,
+        2.4000000953674316
+      ],
+      [
+        -2.299999952316284,
+        0.0
+      ],
+      [
+        0.0,
+        2.299999952316284
+      ],
+      [
+        -0.8999999761581421,
+        0.8999999761581421
+      ],
+      [
+        -0.8999999761581421,
+        0.8999999761581421
+      ],
+      [
+        -0.5,
+        0.5
+      ],
+      [
+        -0.5,
+        0.5
+      ]
+    ],
+    "default_pos_rad": [
+      0.0,
+      0.0,
+      0.0,
+      -1.350000023841858,
+      1.350000023841858,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.20000000298023224,
+      -0.20000000298023224,
+      0.0,
+      0.0,
+      0.4000000059604645,
+      0.4000000059604645,
+      -0.4000000059604645,
+      0.4000000059604645,
+      -0.20000000298023224,
+      -0.20000000298023224,
+      0.0,
+      0.0
+    ],
+    "soft_limit_factor": 0.9
+  },
+  "actuators": {
+    "resolved_per_joint": {
+      "stiffness": [
+        400.0,
+        80.0,
+        80.0,
+        30.0,
+        30.0,
+        100.0,
+        100.0,
+        30.0,
+        30.0,
+        150.0,
+        150.0,
+        30.0,
+        30.0,
+        150.0,
+        150.0,
+        20.0,
+        20.0,
+        30.0,
+        30.0,
+        20.0,
+        20.0
+      ],
+      "damping": [
+        15.0,
+        3.0,
+        3.0,
+        3.0,
+        3.0,
+        4.0,
+        4.0,
+        3.0,
+        3.0,
+        5.0,
+        5.0,
+        3.0,
+        3.0,
+        5.0,
+        5.0,
+        2.0,
+        2.0,
+        3.0,
+        3.0,
+        2.0,
+        2.0
+      ],
+      "effort_limit": [
+        200.0,
+        150.0,
+        150.0,
+        40.0,
+        40.0,
+        150.0,
+        150.0,
+        40.0,
+        40.0,
+        150.0,
+        150.0,
+        40.0,
+        40.0,
+        150.0,
+        150.0,
+        40.0,
+        40.0,
+        50.0,
+        50.0,
+        50.0,
+        50.0
+      ],
+      "armature": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "cfg": {
+      "legs": {
+        "class_type": "isaaclab.actuators.actuator_pd:ImplicitActuator",
+        "joint_names_expr": [
+          "hip_yaw_L",
+          "hip_yaw_R",
+          "hip_roll_L",
+          "hip_roll_R",
+          "hip_pitch_L",
+          "hip_pitch_R",
+          "knee_L",
+          "knee_R"
+        ],
+        "effort_limit": null,
+        "velocity_limit": null,
+        "effort_limit_sim": {
+          "hip_yaw_L": 150.0,
+          "hip_yaw_R": 150.0,
+          "hip_roll_L": 150.0,
+          "hip_roll_R": 150.0,
+          "hip_pitch_L": 150.0,
+          "hip_pitch_R": 150.0,
+          "knee_L": 150.0,
+          "knee_R": 150.0
+        },
+        "velocity_limit_sim": null,
+        "stiffness": {
+          "hip_yaw_L": 80.0,
+          "hip_yaw_R": 80.0,
+          "hip_roll_L": 100.0,
+          "hip_roll_R": 100.0,
+          "hip_pitch_L": 150.0,
+          "hip_pitch_R": 150.0,
+          "knee_L": 150.0,
+          "knee_R": 150.0
+        },
+        "damping": {
+          "hip_yaw_L": 3.0,
+          "hip_yaw_R": 3.0,
+          "hip_roll_L": 4.0,
+          "hip_roll_R": 4.0,
+          "hip_pitch_L": 5.0,
+          "hip_pitch_R": 5.0,
+          "knee_L": 5.0,
+          "knee_R": 5.0
+        },
+        "armature": {
+          "hip_yaw_L": 0.0,
+          "hip_yaw_R": 0.0,
+          "hip_roll_L": 0.0,
+          "hip_roll_R": 0.0,
+          "hip_pitch_L": 0.0,
+          "hip_pitch_R": 0.0,
+          "knee_L": 0.0,
+          "knee_R": 0.0
+        },
+        "friction": null,
+        "dynamic_friction": null,
+        "viscous_friction": null
+      },
+      "feet": {
+        "class_type": "isaaclab.actuators.actuator_pd:ImplicitActuator",
+        "joint_names_expr": [
+          "ankle_pitch_L",
+          "ankle_pitch_R",
+          "ankle_roll_L",
+          "ankle_roll_R"
+        ],
+        "effort_limit": null,
+        "velocity_limit": null,
+        "effort_limit_sim": {
+          "ankle_pitch_L": 50.0,
+          "ankle_pitch_R": 50.0,
+          "ankle_roll_L": 50.0,
+          "ankle_roll_R": 50.0
+        },
+        "velocity_limit_sim": null,
+        "stiffness": {
+          "ankle_pitch_L": 30.0,
+          "ankle_pitch_R": 30.0,
+          "ankle_roll_L": 20.0,
+          "ankle_roll_R": 20.0
+        },
+        "damping": {
+          "ankle_pitch_L": 3.0,
+          "ankle_pitch_R": 3.0,
+          "ankle_roll_L": 2.0,
+          "ankle_roll_R": 2.0
+        },
+        "armature": {
+          "ankle_pitch_L": 0.0,
+          "ankle_pitch_R": 0.0,
+          "ankle_roll_L": 0.0,
+          "ankle_roll_R": 0.0
+        },
+        "friction": null,
+        "dynamic_friction": null,
+        "viscous_friction": null
+      },
+      "spine": {
+        "class_type": "isaaclab.actuators.actuator_pd:ImplicitActuator",
+        "joint_names_expr": [
+          "spine_pitch"
+        ],
+        "effort_limit": null,
+        "velocity_limit": null,
+        "effort_limit_sim": {
+          "spine_pitch": 200.0
+        },
+        "velocity_limit_sim": null,
+        "stiffness": {
+          "spine_pitch": 400.0
+        },
+        "damping": {
+          "spine_pitch": 15.0
+        },
+        "armature": {
+          "spine_pitch": 0.0
+        },
+        "friction": null,
+        "dynamic_friction": null,
+        "viscous_friction": null
+      },
+      "arms": {
+        "class_type": "isaaclab.actuators.actuator_pd:ImplicitActuator",
+        "joint_names_expr": [
+          "shoulder_roll_L",
+          "shoulder_roll_R",
+          "shoulder_pitch_L",
+          "shoulder_pitch_R",
+          "shoulder_yaw_L",
+          "shoulder_yaw_R",
+          "elbow_L",
+          "elbow_R"
+        ],
+        "effort_limit": null,
+        "velocity_limit": null,
+        "effort_limit_sim": {
+          "shoulder_roll_L": 40.0,
+          "shoulder_roll_R": 40.0,
+          "shoulder_pitch_L": 40.0,
+          "shoulder_pitch_R": 40.0,
+          "shoulder_yaw_L": 40.0,
+          "shoulder_yaw_R": 40.0,
+          "elbow_L": 40.0,
+          "elbow_R": 40.0
+        },
+        "velocity_limit_sim": null,
+        "stiffness": {
+          "shoulder_roll_L": 30.0,
+          "shoulder_roll_R": 30.0,
+          "shoulder_pitch_L": 30.0,
+          "shoulder_pitch_R": 30.0,
+          "shoulder_yaw_L": 30.0,
+          "shoulder_yaw_R": 30.0,
+          "elbow_L": 20.0,
+          "elbow_R": 20.0
+        },
+        "damping": {
+          "shoulder_roll_L": 3.0,
+          "shoulder_roll_R": 3.0,
+          "shoulder_pitch_L": 3.0,
+          "shoulder_pitch_R": 3.0,
+          "shoulder_yaw_L": 3.0,
+          "shoulder_yaw_R": 3.0,
+          "elbow_L": 2.0,
+          "elbow_R": 2.0
+        },
+        "armature": {
+          "shoulder_roll_L": 0.0,
+          "shoulder_roll_R": 0.0,
+          "shoulder_pitch_L": 0.0,
+          "shoulder_pitch_R": 0.0,
+          "shoulder_yaw_L": 0.0,
+          "shoulder_yaw_R": 0.0,
+          "elbow_L": 0.0,
+          "elbow_R": 0.0
+        },
+        "friction": null,
+        "dynamic_friction": null,
+        "viscous_friction": null
+      }
+    },
+    "drive_model": "implicit PD: tau = kp*(q_target - q) - kd*qd, clamped to effort_limit"
+  },
+  "bodies": {
+    "names": [
+      "hips",
+      "spine",
+      "hip_yaw_link_L",
+      "hip_yaw_link_R",
+      "shoulder_roll_link_L",
+      "shoulder_roll_link_R",
+      "hip_roll_link_L",
+      "hip_roll_link_R",
+      "shoulder_pitch_link_L",
+      "shoulder_pitch_link_R",
+      "thigh_L",
+      "thigh_R",
+      "upper_arm_L",
+      "upper_arm_R",
+      "shin_L",
+      "shin_R",
+      "forearm_L",
+      "forearm_R",
+      "ankle_pitch_link_L",
+      "ankle_pitch_link_R",
+      "foot_L",
+      "foot_R"
+    ],
+    "masses_kg": [
+      6.105999946594238,
+      18.74799919128418,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.20000000298023224,
+      4.300000190734863,
+      4.300000190734863,
+      1.2039999961853027,
+      1.2039999961853027,
+      1.9994999170303345,
+      1.9994999170303345,
+      0.9459999203681946,
+      0.9459999203681946,
+      0.20000000298023224,
+      0.20000000298023224,
+      0.6234999895095825,
+      0.6234999895095825
+    ],
+    "total_mass_kg": 44.999999195337296,
+    "rig_json_masses_kg": {
+      "hips": 6.106,
+      "spine": 18.748,
+      "hip_yaw_link_L": 0.2,
+      "hip_yaw_link_R": 0.2,
+      "shoulder_roll_link_L": 0.2,
+      "shoulder_roll_link_R": 0.2,
+      "hip_roll_link_L": 0.2,
+      "hip_roll_link_R": 0.2,
+      "shoulder_pitch_link_L": 0.2,
+      "shoulder_pitch_link_R": 0.2,
+      "thigh_L": 4.3,
+      "thigh_R": 4.3,
+      "upper_arm_L": 1.204,
+      "upper_arm_R": 1.204,
+      "shin_L": 1.9995,
+      "shin_R": 1.9995,
+      "forearm_L": 0.946,
+      "forearm_R": 0.946,
+      "ankle_pitch_link_L": 0.2,
+      "ankle_pitch_link_R": 0.2,
+      "foot_L": 0.6235,
+      "foot_R": 0.6235
+    },
+    "rig_json_inertias": {
+      "hips": [
+        0.04742327,
+        0.02951233,
+        0.05088333
+      ],
+      "spine": [
+        0.77271842,
+        0.71794978,
+        0.16598734
+      ],
+      "hip_yaw_link_L": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "hip_yaw_link_R": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "shoulder_roll_link_L": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "shoulder_roll_link_R": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "hip_roll_link_L": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "hip_roll_link_R": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "shoulder_pitch_link_L": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "shoulder_pitch_link_R": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "thigh_L": [
+        0.04141519,
+        0.04141519,
+        0.0113136
+      ],
+      "thigh_R": [
+        0.04141519,
+        0.04141519,
+        0.0113136
+      ],
+      "upper_arm_L": [
+        0.00558038,
+        0.00115266,
+        0.00558038
+      ],
+      "upper_arm_R": [
+        0.00558038,
+        0.00115266,
+        0.00558038
+      ],
+      "shin_L": [
+        0.01762676,
+        0.01762676,
+        0.00288046
+      ],
+      "shin_R": [
+        0.01762676,
+        0.01762676,
+        0.00288046
+      ],
+      "forearm_L": [
+        0.0103034,
+        0.00073397,
+        0.0103034
+      ],
+      "forearm_R": [
+        0.0103034,
+        0.00073397,
+        0.0103034
+      ],
+      "ankle_pitch_link_L": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "ankle_pitch_link_R": [
+        0.0002,
+        0.0002,
+        0.0002
+      ],
+      "foot_L": [
+        0.00081185,
+        0.00380465,
+        0.00403197
+      ],
+      "foot_R": [
+        0.00081185,
+        0.00380465,
+        0.00403197
+      ]
+    }
+  },
+  "timing": {
+    "physics_dt_s": 0.005,
+    "physics_hz": 200.0,
+    "decimation": 4,
+    "policy_dt_s": 0.02,
+    "policy_hz": 50.0,
+    "episode_length_s": 40.0
+  },
+  "physics": {
+    "gravity_m_s2": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "up_axis": "Z (Isaac)",
+    "ground_material": {
+      "func": "isaaclab.sim.spawners.materials.physics_materials:spawn_rigid_body_material",
+      "static_friction": 1.0,
+      "dynamic_friction": 1.0,
+      "restitution": 0.0,
+      "friction_combine_mode": "multiply",
+      "restitution_combine_mode": "multiply",
+      "compliant_contact_stiffness": 0.0,
+      "compliant_contact_damping": 0.0
+    },
+    "robot_material_play": {
+      "asset_cfg": {
+        "name": "robot",
+        "joint_names": null,
+        "joint_ids": "slice(None, None, None)",
+        "fixed_tendon_names": null,
+        "fixed_tendon_ids": "slice(None, None, None)",
+        "body_names": ".*",
+        "body_ids": "slice(None, None, None)",
+        "object_collection_names": null,
+        "object_collection_ids": "slice(None, None, None)",
+        "preserve_order": false
+      },
+      "static_friction_range": [
+        0.8,
+        0.8
+      ],
+      "dynamic_friction_range": [
+        0.6,
+        0.6
+      ],
+      "restitution_range": [
+        0.0,
+        0.0
+      ],
+      "num_buckets": 64
+    },
+    "terrain_type": "plane",
+    "solver": {
+      "articulation_enabled": null,
+      "enabled_self_collisions": false,
+      "solver_position_iteration_count": 4,
+      "solver_velocity_iteration_count": 4,
+      "sleep_threshold": null,
+      "stabilization_threshold": null,
+      "fix_root_link": null
+    },
+    "rigid_props": {
+      "rigid_body_enabled": null,
+      "kinematic_enabled": null,
+      "disable_gravity": false,
+      "linear_damping": 0.0,
+      "angular_damping": 0.0,
+      "max_linear_velocity": 1000.0,
+      "max_angular_velocity": 1000.0,
+      "max_depenetration_velocity": 1.0,
+      "max_contact_impulse": null,
+      "enable_gyroscopic_forces": null,
+      "retain_accelerations": false,
+      "solver_position_iteration_count": null,
+      "solver_velocity_iteration_count": null,
+      "sleep_threshold": null,
+      "stabilization_threshold": null
+    }
+  },
+  "spawn": {
+    "pos_isaac_xyz_m": [
+      0.0,
+      0.0,
+      0.764
+    ],
+    "rot_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "joint_pos_rad": {
+      "spine_pitch": 0.0,
+      "hip_yaw_L": 0.0,
+      "hip_yaw_R": 0.0,
+      "shoulder_roll_L": -1.35,
+      "shoulder_roll_R": 1.35,
+      "hip_roll_L": 0.0,
+      "hip_roll_R": 0.0,
+      "shoulder_pitch_L": 0.0,
+      "shoulder_pitch_R": 0.0,
+      "hip_pitch_L": -0.2,
+      "hip_pitch_R": -0.2,
+      "shoulder_yaw_L": 0.0,
+      "shoulder_yaw_R": 0.0,
+      "knee_L": 0.4,
+      "knee_R": 0.4,
+      "elbow_L": -0.4,
+      "elbow_R": 0.4,
+      "ankle_pitch_L": -0.2,
+      "ankle_pitch_R": -0.2,
+      "ankle_roll_L": 0.0,
+      "ankle_roll_R": 0.0
+    },
+    "usd_path": "C:\\Users\\punko\\Downloads\\PoRacer\\ISAAC\\boy_rig\\out\\boy.usda"
+  },
+  "task_parameters": {
+    "command": {
+      "class_type": "boy_tasks.mdp.commands:TargetPositionCommand",
+      "resampling_time_range": [
+        8.0,
+        12.0
+      ],
+      "debug_vis": false,
+      "asset_name": "robot",
+      "radius_range": [
+        3.0,
+        10.0
+      ],
+      "reach_radius": 0.5,
+      "max_obs_distance": 5.0
+    },
+    "reference_target_distance_m": 8.0,
+    "quaternion_order_in_reference": "xyzw",
+    "terminations": [
+      "time_out",
+      "base_contact"
+    ],
+    "rewards": [
+      "target_speed_exp",
+      "target_progress",
+      "heading_to_target",
+      "targets_reached",
+      "termination_penalty",
+      "feet_air_time",
+      "feet_slide",
+      "undesired_contacts",
+      "ang_vel_xy_l2",
+      "flat_orientation_l2",
+      "dof_torques_l2",
+      "dof_acc_l2",
+      "action_rate_l2",
+      "dof_pos_limits",
+      "joint_deviation_hip",
+      "joint_deviation_arms",
+      "joint_deviation_torso"
+    ]
+  },
+  "network": {
+    "actor_hidden_dims": [
+      128,
+      128,
+      128
+    ],
+    "activation": "elu",
+    "obs_normalization_baked_into_onnx": true
+  },
+  "evaluation": {
+    "num_envs": 64,
+    "policy_steps": 1500,
+    "sim_seconds": 30.0,
+    "mean_speed_m_s": 0.9916085897783439,
+    "mean_speed_toward_target_m_s": 0.9490491454017659,
+    "mean_target_speed_error_m_s": 0.07127597461765012,
+    "falls": 0,
+    "falls_per_robot_per_minute": 0.0,
+    "targets_reached": 253,
+    "targets_reached_per_robot_per_minute": 7.90625,
+    "reference_run": {
+      "target_distance_m": 8.0,
+      "steps": 250,
+      "mean_forward_speed_after_1s_m_s": 0.9624445816874504,
+      "x_travelled_m": 4.764433860778809
+    }
+  },
+  "rig_sim_deviations_resolved": []
+}

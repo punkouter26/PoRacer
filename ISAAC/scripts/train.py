@@ -20,6 +20,15 @@ import sys
 import time
 from datetime import datetime
 
+# Unbuffer stdout/stderr BEFORE anything prints. Isaac Sim ends the process inside
+# simulation_app.close() with os._exit(), which skips Python's atexit flush - so when stdout
+# is a file or a pipe (any redirected/detached run) every print() still sitting in the 8 KB
+# block buffer is silently discarded. Kit's own C++ log lines bypass that buffer and survive,
+# which makes a perfectly good run look like it died right after startup: no training output,
+# no traceback, exit code 0. Only the checkpoints on disk give it away.
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train the Boy chase policy (RSL-RL PPO).")
@@ -61,7 +70,21 @@ def start_tensorboard(logdir, port):
     return proc
 
 
-# the experiment name is known before the simulator starts: read it from the registry cfg
+# TensorBoard points at the log ROOT, not the experiment directory. It scans recursively, so
+# it still picks up <log_root>/<experiment>/<run> the moment the trainer creates it - and this
+# way nothing from isaaclab_tasks has to be imported yet. That matters: reading the experiment
+# name from the registry pulls isaaclab.envs -> isaaclab.utils.mesh -> `from pxr import Usd`,
+# and pxr does not exist until the SimulationApp has initialised kit. Importing it here failed
+# with "No module named 'pxr'" (or, with a PyPI usd-core installed to paper over that, the far
+# more confusing "DLL load failed while importing _tf"). Simulator first, registry after.
+if not args_cli.no_tensorboard:
+    _tb = start_tensorboard(os.path.abspath(args_cli.log_root), args_cli.tensorboard_port)
+
+# ------------------------------------------------------------------------ simulator --
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+
+# ---- everything below needs kit to be live ------------------------------------------
 import importlib  # noqa: E402
 
 import gymnasium as gym  # noqa: E402
@@ -79,12 +102,6 @@ except Exception:  # noqa: BLE001  (older Isaac Lab: no shim needed)
     pass
 
 experiment_dir = os.path.abspath(os.path.join(args_cli.log_root, agent_cfg.experiment_name))
-if not args_cli.no_tensorboard:
-    _tb = start_tensorboard(experiment_dir, args_cli.tensorboard_port)
-
-# ------------------------------------------------------------------------ simulator --
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
 
 import torch  # noqa: E402
 
@@ -149,6 +166,15 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except BaseException:  # noqa: BLE001
+        # PRINT BEFORE THE finally. simulation_app.close() ends the process with os._exit()
+        # inside Isaac Sim, which discards the in-flight exception and hands back exit code 0
+        # - so an unguarded failure here looks like a clean run that simply never trained.
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        raise
     finally:
         simulation_app.close()
         if _tb is not None:
