@@ -19,7 +19,11 @@ $ErrorActionPreference = 'Stop'
 $App = 'PoRacer'
 $BuildMethod = 'PoRacer.EditorTools.Editor_BuildAndroidAAB.Build'
 $Proj = Split-Path $PSScriptRoot -Parent
-$Python = 'C:\Users\punko\Downloads\PlayStoreUploads\publish-venv\Scripts\python.exe'
+# The publish venv lives in the repo, NOT beside another project's uploads — the
+# path this used to carry (…\PlayStoreUploads\publish-venv) does not exist here, so
+# the script died on its own Test-Path guard before it could build anything. It is
+# deliberately separate from .venv, which carries load-bearing ml-agents/torch pins.
+$Python = Join-Path $Proj 'Tools\publish-venv\Scripts\python.exe'
 $Creds = 'C:\Users\punko\Downloads\PoRacer-Release\play-service-account.json'
 $Aab = Join-Path $Proj "Builds\Android\$App.aab"
 

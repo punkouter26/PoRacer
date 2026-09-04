@@ -415,6 +415,32 @@ Unity does not serialize keystore passwords into `ProjectSettings`, so both Andr
 builders read `PORACER_KEYSTORE_PASS` first and fall back to the `.pass` file.
 Without either, the build **aborts** rather than producing an unsigned artifact.
 
+### glTFast textures never get compressed — cap them at the source
+
+**A .glb's textures do not obey any Android build setting.** glTFast imports through a
+ScriptedImporter that builds its `Texture2D` sub-assets itself, so they never pass through
+a `TextureImporter`: no platform override, no compression, no max size.
+`EditorUserBuildSettings.androidBuildSubtarget = ASTC` cannot reach them, and glTFast 6.19
+exposes no compression setting of its own. They ship as raw RGBA32 with a full mip chain.
+
+This cost 212 MB. `Assets/Boy_Character_mujoco.glb` was 30.6 MB on disk and **250.2 MB in
+the build** — 82% of a 306 MB payload — and the commit that enabled ASTC moved the texture
+total from 261.8 MB to 261.4 MB, which read as "compression is on" while nothing had
+changed. The tell is in the same build report: `IsaacBox/Textures/Head_BaseColor.png` is
+9.5 MB on disk but 2.4 MB in the build, because *it* is a real `.png` with an importer.
+
+The only lever is the resolution inside the file. `Tools/downscale_glb_textures.py` rewrites
+the embedded images in place (head 1024, metallic/roughness 512, normals 512), keeping the
+GUID so every prefab and scene reference survives; `--dry-run` reports without writing, and
+`git checkout --` restores the original. After it: textures 49.4 MB, payload 94.5 MB,
+signed APK/AAB **95.4 MB → 57.6/57.5 MB**.
+
+Two things to know before touching it. The rewrite re-lays-out the whole binary chunk, so
+verify afterwards that every accessor payload is byte-identical — geometry must not move.
+And glTFast materials use `Shader Graphs/glTF-pbrMetallicRoughness` with `baseColorTexture`
+and `normalTexture`, **not** URP Lit's `_BaseMap`: checking the wrong property makes a
+perfectly good rig look untextured.
+
 ### There are no editor menu items — invoke by method
 
 **Removed 2026-09-03.** Every `[MenuItem]` in project code (39 of them, across the
