@@ -60,6 +60,9 @@ stop listing indirect and unused packages.
 - URP 17.5.0, Cinemachine 3.1.7, glTFast 6.19.0
 - VContainer, MessagePipe (+ VContainer bridge), UniTask — all git
 - Input System 1.20.0, Test Framework 1.7.0
+- `com.unity.ide.rider` was removed 2026-09-04 (no JetBrains install on this machine).
+  `com.unity.modules.ui` stays even though the project has no UGUI: it is a hard
+  dependency of `com.unity.modules.uielements`, which UI Toolkit needs.
 
 glTFast is a real dependency: `Assets/Art/Models/RIGGED_*.glb` and
 `Assets/Resources/Props/*.glb` are loaded through it. UniTask currently earns one
@@ -76,21 +79,41 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
 
 ### Architecture
 
-- Assembly definitions — six, and no more: `PoRacer.Runtime` (`Assets/Scripts/`),
+- Assembly definitions — six PoRacer ones, and no more: `PoRacer.Runtime` (`Assets/Scripts/`),
   `PoRacer.Editor` (`Assets/Scripts/Editor/`), `PoRacer.Tests` (`Assets/Tests/`),
   and `PoRacer.IsaacPorts.{Runtime,Editor,Tests}` (`Assets/unity_export/`,
   `.../Editor/`, `.../Tests/`). The Isaac ports were 11 assemblies until
   2026-08-29; if you are adding a new port, add it to the existing three, do not
-  give it a triad of its own.
+  give it a triad of its own. The MuJoCo racers (Fido, MojucuBoy) arrived with two
+  more, `Creature` and `Creature.Editor` under `Assets/Creature/`; they exist because
+  they reference the `Mujoco.Runtime` plug-in assembly. Fold them into the PoRacer
+  pair rather than adding a third MuJoCo assembly.
 - Shared port types live in `Assets/unity_export/Shared/` under namespace
   `PoRacer.IsaacPorts`: `ITargetProvider` (`bool TryGetTarget(out Vector3)`) and
   `MiniJson`. Both were duplicated per-rig before the merge — do not re-copy them.
 - Python training sources are NOT in `Assets/`. They live in top-level `training/`
   beside `Config/` and `scripts/`. Only exported `.onnx` and rig data belong under
   `Assets/unity_export/`.
-- Scenes in build: `Assets/Scenes/SCN_RACE_FLAT.unity` (the only non-training scene)
+- Scenes in build: `Assets/Scenes/SCN_RACE_FLAT.unity` (the only shipped scene)
 - Training scenes, not in the build list: `SCN_TRAIN_ALL`, `SCN_TRAIN_HUMANOIDS`,
   `SCN_TRAIN_FOCUSED`
+- Verification scenes, not in the build list: `SCN_TEST_MOJUCUBOY` and
+  `SCN_TEST_MOJUCUBOY_RIG` (driven by `MojucuBoyParityHarness`), and
+  `Assets/Creature/CreatureVerification.unity` (Fido, built by `CreatureSceneBuilder`).
+  `SCN_TEST_ISAACBOX` was an empty three-object shell and was removed 2026-09-04.
+- **The race maps are authored scene objects, not runtime generation (2026-09-04).**
+  `Editor_BakeAuthoredTrack.Bake()` bakes every deterministic map — Flat, Lumpy,
+  Swamp, Gale — into `SCN_RACE_FLAT` as `AuthoredTrack_<Map>` subtrees listed on
+  `RaceTrackView`; `Systems_Spawn` shows the one matching the selected map and skips
+  `Systems_TrackBuilder` entirely, so what is tuned in the Scene view is what races.
+  Only Roulette still runs the builder, because it re-rolls terrain and hazards every
+  race by design. Tune the subtrees by hand; re-running Bake discards those edits.
+  Hazard views that build assets in `Awake` must keep their settings in serialized
+  fields (see `GustZoneView`), because `Awake` does not run during a bake.
+- Play-mode smoke run: `Editor_SmokeRace.Start("0,1,2,3,4", 60f)` races every map with
+  the default roster, samples frame time, collects every error and exception, and
+  writes `Logs/smoke_<stamp>.json`; `Status()` reports progress, `StartScene(path, s)`
+  just plays one scene. It survives the play-mode domain reload via `SessionState`.
 - Project rules live in `.claude/rules/*.md` (MVS pattern, VContainer, MessagePipe, UniTask, performance, serialization) — follow them for all C# work
 
 ---
@@ -171,6 +194,17 @@ encodes the controller, never the creature.
   implementing `ICreatureAgent`; that adapter is what the spawner, RacerView and
   camera talk to. Port folders under `unity_export/` are PascalCase and must match
   their namespace (`IsaacH1`, not `h1`).
+* **Cleaned (2026-09-04).** The unreferenced KIRI fruit-and-veg pack
+  (`Assets/KIRI_Asset_Pack_Fruit_and_Veg/`, 1,695 files, 653 MB, nothing in the project
+  referenced any of it) is gone from the tree; it is one
+  `git checkout 1ff62b9 -- Assets/KIRI_Asset_Pack_Fruit_and_Veg` away if a decor pass
+  ever wants it. Also gone: the `_Gauntlet` brains left over from the lost Worm/Spider
+  ELO gauntlet, `training/export_tools/spider/`, the dead Worm/Spider body-plan cases
+  in `Systems_Spawn`, and the `Worm`/`Spider` behaviours in `Humanoids02_Biomechanical.yaml`
+  (the `&creature_sac` anchor now hangs off `Crab`). MojucuBoy's brain was renamed from
+  `mojucuboy_policy.onnx` to `MojucuBoy_v01.onnx` to match every other brain, with
+  `training/mojucuboy/export_onnx.py` writing the new name. `Assets/ML-Agents/` (timer
+  dumps) and `Assets/Temp/` (captures) are now git-ignored.
 * **Removed (2026-09-04): the Worm and the Spider.** Both were retrained for 7.6 h
   and both LOST the ELO gauntlet against the very brains they were meant to replace
   (Worm -217.9, Spider -13.6 over 21 races); Worm's reward had flatlined after 1.9 h.

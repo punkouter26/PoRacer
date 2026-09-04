@@ -11,7 +11,8 @@
         "Unity.RenderPipelines.Core.Runtime",
         "Mujoco.Runtime",
         "Mujoco.Editor",
-        "Creature"
+        "Creature",
+        "VContainer"
     ],
     "includePlatforms": [
         "Editor"

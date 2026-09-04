@@ -22,7 +22,7 @@ namespace CreatureEditor
         private const string MJCF_PATH = "Assets/Agents/MojucuBoy_v01/mojucuboy_unity.xml";
         private const string RIG_JSON = "Assets/Agents/MojucuBoy_v01/mojucuboy_rig.json";
         private const string GLB_PATH = "Assets/Boy_Character_mujoco.glb";
-        private const string ONNX_PATH = "Assets/Agents/MojucuBoy_v01/mojucuboy_policy.onnx";
+        private const string ONNX_PATH = "Assets/Agents/MojucuBoy_v01/MojucuBoy_v01.onnx";
         private const string IMPORT_ASSETS = "Assets/Local/MjImports/mojucuboy";
 
         public static string Build()

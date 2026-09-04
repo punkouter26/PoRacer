@@ -97,3 +97,8 @@ training/*/runs/**/events.out.tfevents.*
 # Written into the project root by the MuJoCo plug-in whenever its tests or a
 # MjScene run. Generated, never source.
 MUJOCO_LOG.TXT
+
+# ML-Agents timer dumps and editor captures; regenerated on every play
+Assets/ML-Agents/
+Assets/Temp/
+Assets/InitTestScene*

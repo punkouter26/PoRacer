@@ -59,14 +59,5 @@ namespace PoRacer.Models
             return _userGains[index] * master * GlobalMix;
         }
 
-        /// <summary>Resets every bus to unity. Used by tests and by a settings reset.</summary>
-        public void ResetGains()
-        {
-            for (int busIndex = 0; busIndex < BUS_COUNT; busIndex++)
-            {
-                _userGains[busIndex] = 1f;
-            }
-            GlobalMix = 1f;
-        }
     }
 }

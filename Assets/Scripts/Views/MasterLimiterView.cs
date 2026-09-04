@@ -47,20 +47,6 @@ namespace PoRacer.Views
 
         private float _envelope = 1f;
 
-        /// <summary>Adds the limiter to the active AudioListener if it has none.</summary>
-        internal static void EnsureOnListener()
-        {
-            AudioListener listener = FindAnyObjectByType<AudioListener>();
-            if (listener == null)
-            {
-                return;
-            }
-            if (!listener.TryGetComponent(out MasterLimiterView _))
-            {
-                listener.gameObject.AddComponent<MasterLimiterView>();
-            }
-        }
-
         private void OnAudioFilterRead(float[] data, int channels)
         {
             float envelope = _envelope;

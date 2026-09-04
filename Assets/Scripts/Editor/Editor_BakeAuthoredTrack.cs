@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using PoRacer.Systems;
 using PoRacer.Views;
 using UnityEditor;
@@ -9,41 +10,35 @@ using UnityEngine.SceneManagement;
 namespace PoRacer.EditorTools
 {
     /// <summary>
-    /// Bakes the Flat map into SCN_RACE_FLAT as ordinary scene objects, once,
-    /// so it can be tuned by hand instead of being regenerated on every race.
+    /// Bakes every deterministic map into SCN_RACE_FLAT as ordinary scene objects,
+    /// once, so each can be tuned by hand instead of being regenerated on every race.
     ///
-    /// Systems_TrackBuilder still owns the other maps — Lumpy and Swamp have
-    /// terrain meshes and scattered hazards, and Roulette re-rolls both every
-    /// race, so those stay procedural. Flat is the one map with nothing random
-    /// in it, which is what makes it worth freezing: the geometry it produced
-    /// was identical every time, and nobody could move a crowd stand.
+    /// One subtree per map (AuthoredTrack_Flat, _Lumpy, _Swamp, _Gale), all listed on
+    /// RaceTrackView. Systems_Spawn shows the one matching the selected map and hides
+    /// the rest; only Roulette still goes through Systems_TrackBuilder at runtime,
+    /// because it re-rolls terrain and hazards every race by design.
     ///
-    /// Determinism. The generated version varied only in its decoration, which
-    /// is drawn from the per-race RNG. This bakes one roll from a fixed seed and
-    /// keeps it; after that the scene is the source of truth and re-running this
-    /// discards any hand edits, which is why it asks first.
+    /// Determinism. The generated maps varied only in decoration and hazard placement,
+    /// both drawn from the per-race RNG. This bakes one roll per map from a fixed seed
+    /// and keeps it; after that the scene is the source of truth and re-running this
+    /// discards any hand edits.
     ///
     /// Invoke: unity command eval --code "PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake()"
     ///         (or -executeMethod PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake)
-    /// The [MenuItem] was removed on 2026-09-03 so all editor work goes through MCP / the CLI.
-    /// Once baked, the subtree is ordinary GameObjects - edit it with the MCP scene
-    /// commands (find_gameobjects / set_component_properties) rather than re-running this,
-    /// which discards hand edits.
+    /// Once baked, the subtrees are ordinary GameObjects - edit them with the MCP scene
+    /// commands (find_gameobjects / set_component_properties) rather than re-running this.
     /// </summary>
     public static class Editor_BakeAuthoredTrack
     {
         private const string SCENE_PATH = "Assets/Scenes/SCN_RACE_FLAT.unity";
-        private const string AUTHORED_NAME = "AuthoredTrack_Flat";
+        private const string AUTHORED_PREFIX = "AuthoredTrack_";
 
-        // Must match what Systems_Spawn passes for the Flat map. Width and
-        // backMargin are constants there; backMargin resolves to
-        // CAMERA_BACKDROP_MARGIN at every roster size, because the deepest grid
-        // (3 rows x 1.6 m + 4) is 8.8 m and never reaches 24.
+        // Must match what Systems_Spawn passes. Width and backMargin are constants
+        // there; backMargin resolves to CAMERA_BACKDROP_MARGIN at every roster
+        // size, because the deepest grid (3 rows x 1.6 m + 4) is 8.8 m and never
+        // reaches 24.
         private const float TRACK_WIDTH = 24f;
-        private const float TRACK_LENGTH = 22f;
         private const float BACK_MARGIN = 24f;
-        private const TrackKind KIND = TrackKind.Flat;
-        private const TrackFeatures FEATURES = TrackFeatures.None;
         private const int DECOR_SEED = 20260903;
 
         public static void Bake()
@@ -81,51 +76,91 @@ namespace PoRacer.EditorTools
                 return "RaceTrackView has no TrackRoot assigned";
             }
 
-            // Replace any previous bake rather than layering a second one under it.
-            Transform existing = track.transform.Find(AUTHORED_NAME);
-            if (existing != null)
+            // Replace every previous bake rather than layering a second one under it.
+            for (int childIndex = track.transform.childCount - 1; childIndex >= 0; childIndex--)
             {
-                Object.DestroyImmediate(existing.gameObject);
+                Transform child = track.transform.GetChild(childIndex);
+                if (child.name.StartsWith(AUTHORED_PREFIX))
+                {
+                    Object.DestroyImmediate(child.gameObject);
+                }
             }
-
-            var authored = new GameObject(AUTHORED_NAME);
-            authored.transform.SetParent(track.transform, worldPositionStays: false);
-            authored.transform.localPosition = track.TrackRoot.localPosition;
-            authored.transform.localRotation = track.TrackRoot.localRotation;
-            authored.transform.localScale = track.TrackRoot.localScale;
 
             var builder = new Systems_TrackBuilder(
                 track.GroundMaterial, track.ObstacleMaterial, track.PhysicsMaterial);
-            float finishZ = track.FinishLine != null ? track.FinishLine.position.z : -1f;
+            var baked = new List<RaceTrackView.AuthoredTrack>();
+            var summary = new System.Text.StringBuilder();
 
-            // The parent is brand new, so the clear pass at the top of Build finds
-            // no children — its Destroy would otherwise be illegal in edit mode.
-            builder.Build(KIND, authored.transform, TRACK_WIDTH, TRACK_LENGTH,
-                new System.Random(DECOR_SEED), decorate: true, finishZ: finishZ,
-                features: FEATURES, backMargin: BACK_MARGIN);
-
-            if (!builder.TryGetGroundBounds(out Bounds groundBounds))
+            IReadOnlyList<Systems_MapCatalog.MapEntry> maps = Systems_MapCatalog.Entries;
+            for (int mapIndex = 0; mapIndex < maps.Count; mapIndex++)
             {
-                Object.DestroyImmediate(authored);
-                return "builder produced no ground bounds; nothing baked";
-            }
-            bool hasArch = builder.TryGetFinishArchBounds(out Bounds archBounds);
+                Systems_MapCatalog.MapEntry map = maps[mapIndex];
+                if (map.Randomize || !map.Available)
+                {
+                    continue;
+                }
 
-            int objectCount = authored.GetComponentsInChildren<Transform>(true).Length - 1;
-            if (objectCount == 0)
-            {
-                Object.DestroyImmediate(authored);
-                return "builder produced no geometry; nothing baked";
+                var authored = new GameObject(AUTHORED_PREFIX + map.DisplayName);
+                authored.transform.SetParent(track.transform, worldPositionStays: false);
+                authored.transform.localPosition = track.TrackRoot.localPosition;
+                authored.transform.localRotation = track.TrackRoot.localRotation;
+                authored.transform.localScale = track.TrackRoot.localScale;
+
+                // The finish line sits at the map's length at race time; bake against
+                // that position so the arch and decoration land where the race sees them.
+                float finishZ = map.LengthMeters - 2f;
+
+                // The parent is brand new, so the clear pass at the top of Build finds
+                // no children - its Destroy would otherwise be illegal in edit mode.
+                builder.Build(map.Kind, authored.transform, TRACK_WIDTH, map.LengthMeters,
+                    new System.Random(DECOR_SEED + mapIndex), decorate: true, finishZ: finishZ,
+                    features: map.Features, backMargin: BACK_MARGIN);
+
+                if (!builder.TryGetGroundBounds(out Bounds groundBounds))
+                {
+                    Object.DestroyImmediate(authored);
+                    return map.DisplayName + ": builder produced no ground bounds; nothing baked";
+                }
+                bool hasArch = builder.TryGetFinishArchBounds(out Bounds archBounds);
+
+                int objectCount = authored.GetComponentsInChildren<Transform>(true).Length - 1;
+                if (objectCount == 0)
+                {
+                    Object.DestroyImmediate(authored);
+                    return map.DisplayName + ": builder produced no geometry; nothing baked";
+                }
+
+                // Only the first map is visible behind the menu; the race shows the rest.
+                authored.SetActive(baked.Count == 0);
+                baked.Add(new RaceTrackView.AuthoredTrack
+                {
+                    root = authored.transform,
+                    kind = map.Kind,
+                    lengthMeters = map.LengthMeters,
+                    features = map.Features,
+                    groundBounds = groundBounds,
+                    hasArch = hasArch,
+                    archBounds = archBounds,
+                });
+                summary.Append($"\n  {authored.name}: {objectCount} objects, ground {groundBounds.size}, " +
+                    $"arch {(hasArch ? archBounds.size.ToString() : "none")}");
             }
 
             var serialized = new SerializedObject(track);
-            serialized.FindProperty("_authoredTrack").objectReferenceValue = authored.transform;
-            serialized.FindProperty("_authoredKind").enumValueIndex = (int)KIND;
-            serialized.FindProperty("_authoredLengthMeters").floatValue = TRACK_LENGTH;
-            serialized.FindProperty("_authoredFeatures").intValue = (int)FEATURES;
-            serialized.FindProperty("_authoredGroundBounds").boundsValue = groundBounds;
-            serialized.FindProperty("_authoredHasArch").boolValue = hasArch;
-            serialized.FindProperty("_authoredArchBounds").boundsValue = archBounds;
+            SerializedProperty list = serialized.FindProperty("_authoredTracks");
+            list.arraySize = baked.Count;
+            for (int bakedIndex = 0; bakedIndex < baked.Count; bakedIndex++)
+            {
+                SerializedProperty element = list.GetArrayElementAtIndex(bakedIndex);
+                RaceTrackView.AuthoredTrack entry = baked[bakedIndex];
+                element.FindPropertyRelative("root").objectReferenceValue = entry.root;
+                element.FindPropertyRelative("kind").enumValueIndex = (int)entry.kind;
+                element.FindPropertyRelative("lengthMeters").floatValue = entry.lengthMeters;
+                element.FindPropertyRelative("features").intValue = (int)entry.features;
+                element.FindPropertyRelative("groundBounds").boundsValue = entry.groundBounds;
+                element.FindPropertyRelative("hasArch").boolValue = entry.hasArch;
+                element.FindPropertyRelative("archBounds").boundsValue = entry.archBounds;
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -134,9 +169,8 @@ namespace PoRacer.EditorTools
                 return "SaveScene failed for " + SCENE_PATH;
             }
 
-            Debug.Log($"Baked authored Flat track into {SCENE_PATH}: {objectCount} objects under " +
-                $"{AUTHORED_NAME}, ground {groundBounds.size}, arch {(hasArch ? archBounds.size.ToString() : "none")}. " +
-                "Systems_Spawn now skips the runtime builder for the Flat map; edit the subtree by hand.");
+            Debug.Log($"Baked {baked.Count} authored tracks into {SCENE_PATH}:{summary}\n" +
+                "Systems_Spawn now skips the runtime builder for these maps; edit the subtrees by hand.");
             return null;
         }
     }

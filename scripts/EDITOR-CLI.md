@@ -46,9 +46,12 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | PoRacer/Creatures/Build Boy Race Scene | `CreatureEditor.MojucuBoySetup.Build` |
 | PoRacer/Build Shared Training Scene (SCN_TRAIN_ALL) | `PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildScene` |
 | PoRacer/Build Humanoid Training Scene | `…Editor_BuildSharedTrainingScene.BuildHumanoidScene` |
+| PoRacer/Build Focused Training Scene (SCN_TRAIN_FOCUSED) | `…Editor_BuildSharedTrainingScene.BuildFocusedScene` |
+| PoRacer/Bake Authored Tracks into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake` |
+| PoRacer/Smoke-race every map in play mode | `PoRacer.EditorTools.Editor_SmokeRace.Start` / `.Status` |
+| PoRacer/Smoke-play one scene | `PoRacer.EditorTools.Editor_SmokeRace.StartScene` |
 | PoRacer/Build All-Creatures Training Env | `…Editor_BuildSharedTrainingScene.BuildEnv` |
 | PoRacer/Build Humanoid Training Env | `…Editor_BuildSharedTrainingScene.BuildHumanoidEnv` |
-| PoRacer/Build Worm Rough Training Env | `…Editor_BuildSharedTrainingScene.BuildWormRoughEnv` |
 | PoRacer/Training/Enable Demo Recorders In Open Scene | `…Editor_RecordDemos.EnableRecorders` |
 | PoRacer/Training/Disable Demo Recorders In Open Scene | `…Editor_RecordDemos.DisableRecorders` |
 | PoRacer/Training/Gauntlet - Add Selected Brains | `…Editor_EloGauntlet.AddSelectedBrains` ¹ |

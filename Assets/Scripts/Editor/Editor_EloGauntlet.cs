@@ -9,7 +9,7 @@ namespace PoRacer.EditorTools
     /// <summary>
     /// ELO gauntlet (project rule: evaluate policies by ELO, not mean reward).
     /// Select checkpoint .onnx assets in the Project window and run "Add Selected
-    /// Brains": each becomes its own catalog entry (id "worm@Worm-4999588") racing
+    /// Brains": each becomes its own catalog entry (id "crab@Crab-4199986") racing
     /// under the base creature's prefab. Run races as usual — the endless loop and
     /// Systems_Elo then rank every checkpoint on the live leaderboard. "Remove
     /// Gauntlet Entries" restores the catalog afterwards.
@@ -140,7 +140,7 @@ namespace PoRacer.EditorTools
                     continue;
                 }
                 // Catalog ids are versioned ("Worm_v01") while checkpoint files are
-                // "Worm-4999588.onnx": match on the creature name before "_v".
+                // "Crab-4199986.onnx": match on the creature name before "_v".
                 int versionCut = id.IndexOf("_v", System.StringComparison.OrdinalIgnoreCase);
                 string creature = (versionCut > 0 ? id.Substring(0, versionCut) : id).ToLowerInvariant();
                 if (lowered.StartsWith(creature))

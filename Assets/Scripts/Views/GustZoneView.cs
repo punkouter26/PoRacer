@@ -21,31 +21,49 @@ namespace PoRacer.Views
         private const float STREAK_RATE = 50f;
 
 
+        // Serialized so a zone baked into the scene by Editor_BakeAuthoredTrack
+        // keeps its wind; the streaks themselves are still built at Awake.
+        [SerializeField] private float _direction = 1f;
+        [SerializeField] private float _phaseOffset;
+        [SerializeField] private float _zoneWidth = 10f;
+
         private readonly List<ArticulationBody> _bodiesInZone = new();
-        private float _direction = 1f;
-        private float _phaseOffset;
         private ParticleSystem _streaks;
         private float _gust;
 
-        /// <summary>Called by the track builder right after AddComponent.</summary>
+        /// <summary>
+        /// Called by the track builder right after AddComponent. In play mode Awake
+        /// has already built the streaks and the wind is applied now; in edit mode
+        /// (baking) only the settings are stored and Awake applies them on load.
+        /// </summary>
         public void Initialize(float direction, float phaseOffset, float zoneWidth)
         {
             _direction = direction;
             _phaseOffset = phaseOffset;
-            ParticleSystem.VelocityOverLifetimeModule velocity = _streaks.velocityOverLifetime;
-            velocity.enabled = true;
-            // All three axes must share one curve mode (two-constants here),
-            // or Unity rejects the whole module.
-            velocity.x = new ParticleSystem.MinMaxCurve(4f * direction, 7f * direction);
-            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
-            ParticleSystem.ShapeModule shape = _streaks.shape;
-            shape.scale = new Vector3(zoneWidth, 1.2f, 3f);
+            _zoneWidth = zoneWidth;
+            if (_streaks != null)
+            {
+                ApplyWind();
+            }
         }
 
         private void Awake()
         {
             _streaks = BuildStreaks();
+            ApplyWind();
+        }
+
+        private void ApplyWind()
+        {
+            ParticleSystem.VelocityOverLifetimeModule velocity = _streaks.velocityOverLifetime;
+            velocity.enabled = true;
+            // All three axes must share one curve mode (two-constants here),
+            // or Unity rejects the whole module.
+            velocity.x = new ParticleSystem.MinMaxCurve(4f * _direction, 7f * _direction);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            ParticleSystem.ShapeModule shape = _streaks.shape;
+            shape.scale = new Vector3(_zoneWidth, 1.2f, 3f);
         }
 
         private void OnTriggerStay(Collider other)

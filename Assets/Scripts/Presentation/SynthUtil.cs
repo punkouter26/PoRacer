@@ -31,27 +31,6 @@ namespace PoRacer.Presentation
             return phase;
         }
 
-        /// <summary>
-        /// Linear fade in/out over the first and last <paramref name="fadeSamples"/>
-        /// of a span. Used to guarantee a seamless loop point (and click-free chord
-        /// joins) without the deep amplitude scoop a full sine window would impose.
-        /// </summary>
-        internal static float EdgeFade(int sampleIndex, int spanSamples, int fadeSamples)
-        {
-            if (fadeSamples <= 0)
-            {
-                return 1f;
-            }
-            int fromStart = sampleIndex;
-            int toEnd = spanSamples - 1 - sampleIndex;
-            int nearest = fromStart < toEnd ? fromStart : toEnd;
-            if (nearest >= fadeSamples)
-            {
-                return 1f;
-            }
-            return nearest <= 0 ? 0f : nearest / (float)fadeSamples;
-        }
-
         /// <summary>White noise in [-1, 1] from a seeded generator (deterministic clips).</summary>
         internal static float White(System.Random rng)
         {

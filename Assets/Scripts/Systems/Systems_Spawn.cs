@@ -196,18 +196,42 @@ namespace PoRacer.Systems
         private bool IsCurrent(int generation) => _racingLoopActive && generation == _generation;
 
         /// <summary>
-        /// True when the scene ships geometry for exactly this map. Length and
+        /// The scene's baked geometry for exactly this map, or null. Length and
         /// features are part of the test, not just the kind: Flat, Gale and
         /// Roulette are all TrackKind.Flat and differ only by length and hazards,
         /// so matching on kind alone would race the wrong track on two of them.
         /// Roulette re-rolls its features every race and so never matches.
         /// </summary>
-        private bool UseAuthoredTrack(Systems_MapCatalog.MapEntry map, TrackFeatures rolledFeatures)
+        private RaceTrackView.AuthoredTrack FindAuthoredTrack(
+            Systems_MapCatalog.MapEntry map, TrackFeatures rolledFeatures)
         {
-            return _track.AuthoredTrack != null
-                && _currentTrack == _track.AuthoredKind
-                && rolledFeatures == _track.AuthoredFeatures
-                && Mathf.Approximately(map.LengthMeters, _track.AuthoredLengthMeters);
+            IReadOnlyList<RaceTrackView.AuthoredTrack> authored = _track.AuthoredTracks;
+            for (int authoredIndex = 0; authoredIndex < authored.Count; authoredIndex++)
+            {
+                RaceTrackView.AuthoredTrack candidate = authored[authoredIndex];
+                if (candidate.root != null
+                    && candidate.kind == _currentTrack
+                    && candidate.features == rolledFeatures
+                    && Mathf.Approximately(candidate.lengthMeters, map.LengthMeters))
+                {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>Shows one authored subtree and hides the rest; null hides them all.</summary>
+        private void ShowAuthoredTrack(RaceTrackView.AuthoredTrack shown)
+        {
+            IReadOnlyList<RaceTrackView.AuthoredTrack> authored = _track.AuthoredTracks;
+            for (int authoredIndex = 0; authoredIndex < authored.Count; authoredIndex++)
+            {
+                Transform root = authored[authoredIndex].root;
+                if (root != null)
+                {
+                    root.gameObject.SetActive(authored[authoredIndex] == shown);
+                }
+            }
         }
 
         private static void ClearChildren(Transform parent)
@@ -331,19 +355,16 @@ namespace PoRacer.Systems
                 // Scene view is what races. Everything else is still generated.
                 // The match is on kind, length and features together, because three
                 // maps share TrackKind.Flat and differ only in those two.
-                if (UseAuthoredTrack(map, rolledFeatures))
+                RaceTrackView.AuthoredTrack authoredTrack = FindAuthoredTrack(map, rolledFeatures);
+                ShowAuthoredTrack(authoredTrack);
+                if (authoredTrack != null)
                 {
                     ClearChildren(_track.TrackRoot);
-                    _track.AuthoredTrack.gameObject.SetActive(true);
                     _trackBuilder.UseAuthored(
-                        _track.AuthoredGroundBounds, _track.AuthoredHasArch, _track.AuthoredArchBounds);
+                        authoredTrack.groundBounds, authoredTrack.hasArch, authoredTrack.archBounds);
                 }
                 else
                 {
-                    if (_track.AuthoredTrack != null)
-                    {
-                        _track.AuthoredTrack.gameObject.SetActive(false);
-                    }
                     _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
                         decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
                 }
@@ -456,7 +477,7 @@ namespace PoRacer.Systems
                     instance.name = racerId;
 
                     // Any ICreatureAgent races: ML-Agents creatures carry BehaviorParameters,
-                    // Inference-Engine creatures (Isaac spider) drive their own policy.
+                    // Inference-Engine creatures (IsaacBox, IsaacH1) drive their own policy.
                     ICreatureAgent agent = FindCreatureAgent(instance);
                     BehaviorParameters behavior = instance.GetComponentInChildren<BehaviorParameters>();
                     if (agent == null || (agent is Unity.MLAgents.Agent && behavior == null))
@@ -651,16 +672,14 @@ namespace PoRacer.Systems
 
         private static float SurfaceIdFor(string creatureId)
         {
-            // Catalog ids carry a version suffix ("Worm_v01"); the pattern is a
+            // Catalog ids carry a version suffix ("Crab_v01"); the pattern is a
             // property of the body plan, not of the brain revision.
             int suffixIndex = creatureId.IndexOf('_');
             string bodyPlan = suffixIndex > 0 ? creatureId.Substring(0, suffixIndex) : creatureId;
             switch (bodyPlan.ToLowerInvariant())
             {
-                case "worm":
                 case "centipede":
                     return SURFACE_SCALES;
-                case "spider":
                 case "crab":
                 case "hexapod":
                 case "quad":

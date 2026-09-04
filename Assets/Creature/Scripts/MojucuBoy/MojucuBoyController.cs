@@ -37,7 +37,7 @@ namespace Creature.MojucuBoy
         public const float ACTION_SCALE = 0.6f;
 
 #if CREATURE_HAS_INFERENCE
-        [Tooltip("mojucuboy_policy.onnx, exported by training/mojucuboy/export_onnx.py.")]
+        [Tooltip("MojucuBoy_v01.onnx, exported by training/mojucuboy/export_onnx.py.")]
         [SerializeField] private ModelAsset _modelAsset;
 #endif
 
@@ -78,12 +78,6 @@ namespace Creature.MojucuBoy
             // maps across as atan2(unityZ, unityX). See MjEngineTool.UnityVector3.
             Vector3 here = transform.position;
             _commandHeading = Mathf.Atan2(worldTarget.z - here.z, worldTarget.x - here.x);
-        }
-
-        public void SetCommand(float headingRadians, float speed)
-        {
-            _commandHeading = headingRadians;
-            _commandSpeed = speed;
         }
 
         private void OnEnable()

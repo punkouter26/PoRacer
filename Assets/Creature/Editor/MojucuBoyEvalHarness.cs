@@ -32,7 +32,7 @@ namespace CreatureEditor
     public static class MojucuBoyEvalHarness
     {
         private const string RIG_JSON = "Assets/Agents/MojucuBoy_v01/mojucuboy_rig.json";
-        private const string ONNX_PATH = "Assets/Agents/MojucuBoy_v01/mojucuboy_policy.onnx";
+        private const string ONNX_PATH = "Assets/Agents/MojucuBoy_v01/MojucuBoy_v01.onnx";
         private const int EPISODE_STEPS = 1000;
         private const int DECIMATION = 4;
         private const float ACTION_SCALE = MojucuBoyController.ACTION_SCALE;

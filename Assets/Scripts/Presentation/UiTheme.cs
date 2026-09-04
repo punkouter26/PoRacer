@@ -351,13 +351,6 @@ namespace PoRacer.Presentation
             return rule;
         }
 
-        public static void StyleRow(VisualElement row)
-        {
-            row.style.backgroundColor = RowBg;
-            SetRadius(row, RADIUS_SM);
-            SetPadding(row, SPACE_SM, SPACE_SM);
-        }
-
         /// <summary>
         /// Rounded selectable tile (map picker, creature entry). Selected tiles
         /// carry the accent border and a translucent accent wash.
@@ -626,28 +619,6 @@ namespace PoRacer.Presentation
             {
                 element.style.unityFont = font;
             }
-        }
-
-        /// <summary>
-        /// Label for a value that changes every frame — a clock, a distance, an ELO
-        /// score.
-        ///
-        /// Unity's default face has proportional digits, so "11.1" is visibly
-        /// narrower than "88.8" and a running counter jitters, dragging whatever
-        /// sits beside it back and forth. Until a font with tabular figures is
-        /// supplied, the fix is to stop the label from resizing at all: reserve the
-        /// width the widest value needs and align inside it.
-        /// </summary>
-        public static Label MakeNumericLabel(float reservedWidth, float fontSize, Color color)
-        {
-            var label = new Label { pickingMode = PickingMode.Ignore };
-            label.style.width = reservedWidth;
-            label.style.flexShrink = 0f;
-            label.style.fontSize = fontSize;
-            label.style.color = color;
-            label.style.unityTextAlign = TextAnchor.MiddleRight;
-            ApplyFont(label);
-            return label;
         }
 
         /// <summary>Uppercase, letter-spaced section label used above each block.</summary>

@@ -4,7 +4,7 @@
 
 Two artefacts:
 
-  mojucuboy_policy.onnx        opset 15, fixed batch 1, observation normaliser baked
+  MojucuBoy_v01.onnx        opset 15, fixed batch 1, observation normaliser baked
                          INTO the graph. Unity feeds raw observations and gets
                          actions back -- there are no normalisation statistics
                          for the C# side to hold, get wrong, or forget to update.
@@ -51,7 +51,7 @@ def main() -> int:
     policy.load_state_dict(checkpoint["model"])
     policy.eval()
 
-    onnx_path = run_dir / "mojucuboy_policy.onnx"
+    onnx_path = run_dir / "MojucuBoy_v01.onnx"
     dummy = torch.zeros(1, OBS_SIZE)
     torch.onnx.export(
         policy, (dummy,), str(onnx_path),

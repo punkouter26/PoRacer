@@ -73,7 +73,7 @@ behaviors:
       strength: 0.2
       steps: 500000
 
-  Worm: &creature_sac
+  Crab: &creature_sac
     trainer_type: sac
     hyperparameters:
       learning_rate: 0.0003
@@ -99,8 +99,6 @@ behaviors:
     keep_checkpoints: 5
     checkpoint_interval: 100000
 
-  Spider: *creature_sac
-  Crab: *creature_sac
   Hexapod: *creature_sac
 
 # ==============================================================================
