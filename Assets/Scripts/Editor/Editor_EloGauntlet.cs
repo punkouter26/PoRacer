@@ -18,11 +18,40 @@ namespace PoRacer.EditorTools
     {
         public static void AddSelectedBrains()
         {
-            CreatureCatalog catalog = LoadCatalog();
-            ModelAsset[] models = Selection.GetFiltered<ModelAsset>(SelectionMode.Assets);
-            if (catalog == null || models.Length == 0)
+            AddBrains(Selection.GetFiltered<ModelAsset>(SelectionMode.Assets));
+        }
+
+        /// <summary>
+        /// Same as <see cref="AddSelectedBrains"/> but takes the models explicitly, for
+        /// driving the gauntlet from MCP / the Unity CLI.
+        ///
+        /// Selection is unusable headlessly: setting Selection.objects from one eval and
+        /// reading it back from the next returns nothing, because the editor never ticks a
+        /// selection change through while unfocused. Measured, not assumed - the selection
+        /// reported 4 on the way in and 0 on the way out.
+        /// </summary>
+        public static string AddBrainsAtPaths(string folder)
+        {
+            var models = new System.Collections.Generic.List<ModelAsset>();
+            foreach (string file in System.IO.Directory.GetFiles(folder, "*.onnx"))
             {
-                Debug.LogWarning("Select one or more .onnx model assets first (and ensure a CreatureCatalog exists).");
+                var m = AssetDatabase.LoadAssetAtPath<ModelAsset>(file.Replace('\\', '/'));
+                if (m != null) models.Add(m);
+            }
+            if (models.Count == 0)
+            {
+                return "no ModelAssets under " + folder + " (is the .onnx imported?)";
+            }
+            AddBrains(models.ToArray());
+            return "registered " + models.Count + " candidate(s) from " + folder;
+        }
+
+        private static void AddBrains(ModelAsset[] models)
+        {
+            CreatureCatalog catalog = LoadCatalog();
+            if (catalog == null || models == null || models.Length == 0)
+            {
+                Debug.LogWarning("No model assets given (and ensure a CreatureCatalog exists).");
                 return;
             }
 

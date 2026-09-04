@@ -1,27 +1,15 @@
-# Run-id: broken_loco01 (launch: .\scripts\train_broken_1h.ps1)
+# Run-id: broken_loco01 (launch: .\scripts	rain_broken_1h.ps1)
 # One-hour attended fine-tune of the creatures that do not reach the finish on
-# the 20 m Flat race (Worm, Spider, Centipede, Crab), 2026-09-02. Differences
-# from AllLoco8h02, all in service of "run at the finish line, now":
-#   - init_path: every behavior continues from its all8h_20260826_2244
-#     checkpoint instead of starting over from BC/GAIL demos. Global step is
-#     reset, so max_steps below counts fresh.
-#   - Extrinsic reward only. BC/GAIL would pull the policy back toward the
-#     coded gait, which is exactly the crawl we are trying to leave behind.
-#   - No curriculum. Every environment parameter is pinned to what the Flat
-#     race actually asks for: a straight 20 m goal on flat ground, no hazards,
-#     race-day quirk spread. An hour is not long enough to climb the lesson
-#     ladder, and the ladder was training them for goals the race never sets.
-#   - max_steps sized to the time box (~300k steps/behavior/hour on 8
-#     behaviors x 4 envs); the launcher's hard stop is the real end.
-# Quad, Hexapod, Kangaroo and Blob are here only because Builds/AllEnv
-# contains them (mlagents aborts on any unlisted behavior). Ship a retrained
-# brain ONLY if it beats the incumbent in an actual race.
+# the 20 m Flat race. Worm and Spider were removed from the app on 2026-09-04
+# and are gone from here too.
+# NOTE the init_path values point at results/all8h_20260826_2244, which is not in
+# this tree - this config cannot run until those checkpoints exist again.
 behaviors:
-  Worm:
+  Centipede:
     trainer_type: ppo
     threaded: true
-    init_path: results/all8h_20260826_2244/Worm/checkpoint.pt
-    hyperparameters: &hp
+    init_path: results/all8h_20260826_2244/Centipede/checkpoint.pt
+    hyperparameters: &id001
       batch_size: 2048
       buffer_size: 20480
       learning_rate: 0.0003
@@ -30,39 +18,15 @@ behaviors:
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 3
-    network_settings: &net
+    network_settings: &id002
       normalize: true
       hidden_units: 256
       num_layers: 2
-    reward_signals: &rs
+    reward_signals: &id003
       extrinsic:
         gamma: 0.995
         strength: 1.0
-    max_steps: &steps 300000
-    time_horizon: 1000
-    summary_freq: 10000
-    keep_checkpoints: 8
-    checkpoint_interval: 40000
-  Spider:
-    trainer_type: ppo
-    threaded: true
-    init_path: results/all8h_20260826_2244/Spider/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
-    time_horizon: 1000
-    summary_freq: 10000
-    keep_checkpoints: 8
-    checkpoint_interval: 40000
-  Centipede:
-    trainer_type: ppo
-    threaded: true
-    init_path: results/all8h_20260826_2244/Centipede/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
@@ -71,10 +35,10 @@ behaviors:
     trainer_type: ppo
     threaded: true
     init_path: results/all8h_20260826_2244/Crab/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals: *id003
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
@@ -83,10 +47,10 @@ behaviors:
     trainer_type: ppo
     threaded: true
     init_path: results/all8h_20260826_2244/Quad/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals: *id003
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
@@ -95,10 +59,10 @@ behaviors:
     trainer_type: ppo
     threaded: true
     init_path: results/all8h_20260826_2244/Hexapod/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals: *id003
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
@@ -107,10 +71,10 @@ behaviors:
     trainer_type: ppo
     threaded: true
     init_path: results/all8h_20260826_2244/Kangaroo/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals: *id003
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
@@ -119,17 +83,14 @@ behaviors:
     trainer_type: ppo
     threaded: true
     init_path: results/all8h_20260826_2244/Blob/checkpoint.pt
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals: *rs
-    max_steps: *steps
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals: *id003
+    max_steps: 300000
     time_horizon: 1000
     summary_freq: 10000
     keep_checkpoints: 8
     checkpoint_interval: 40000
-
-# Pinned to the Flat race: straight 20 m goal, flat clean ground, race-day
-# quirk spread. No lessons, no clock.
 environment_parameters:
   goal_distance_max: 20.0
   goal_angle_span: 0.0

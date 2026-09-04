@@ -1,11 +1,6 @@
-# Generated from AllLoco8h02.yaml - four weakest coded-gait creatures only.
-# Pairs with Builds/FocusedEnv (SCN_TRAIN_FOCUSED). The config must declare
-# exactly what the env contains or mlagents-learn aborts on the first
-# unrecognised behaviour.
-# max_steps is calibrated to measured throughput so the linear LR schedule
-# actually anneals inside the time box.
+# Generated from AllLoco8h02. Worm and Spider removed 2026-09-04.
 behaviors:
-  Worm:
+  Centipede:
     trainer_type: ppo
     threaded: true
     hyperparameters: &id001
@@ -25,46 +20,6 @@ behaviors:
       extrinsic: &id003
         gamma: 0.995
         strength: 1.0
-      gail:
-        gamma: 0.99
-        strength: 0.05
-        demo_path: training/demos/Worm.demo
-    behavioral_cloning:
-      demo_path: training/demos/Worm.demo
-      strength: 0.3
-      steps: 400000
-    max_steps: 4500000
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 10
-    checkpoint_interval: 200000
-  Spider:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *id001
-    network_settings: *id002
-    reward_signals:
-      extrinsic: *id003
-      gail:
-        gamma: 0.99
-        strength: 0.05
-        demo_path: training/demos/Spider.demo
-    behavioral_cloning:
-      demo_path: training/demos/Spider.demo
-      strength: 0.3
-      steps: 400000
-    max_steps: 4500000
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 10
-    checkpoint_interval: 200000
-  Centipede:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *id001
-    network_settings: *id002
-    reward_signals:
-      extrinsic: *id003
       gail:
         gamma: 0.99
         strength: 0.05
@@ -104,14 +59,14 @@ environment_parameters:
     - name: near
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.1
         min_lesson_length: 100
       value: 8.0
     - name: mid
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.3
         min_lesson_length: 100
       value: 14.0
@@ -122,14 +77,14 @@ environment_parameters:
     - name: straight
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.15
         min_lesson_length: 100
       value: 0.0
     - name: gentle_turns
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.35
         min_lesson_length: 100
       value: 20.0
@@ -140,14 +95,14 @@ environment_parameters:
     - name: gentle
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.1
         min_lesson_length: 100
       value: 0.35
     - name: medium
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.3
         min_lesson_length: 100
       value: 0.7
@@ -158,14 +113,14 @@ environment_parameters:
     - name: flat
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.15
         min_lesson_length: 200
       value: 0.0
     - name: lumpy
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.4
         min_lesson_length: 200
       value: 6.0
@@ -176,14 +131,14 @@ environment_parameters:
     - name: clean
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.2
         min_lesson_length: 200
       value: 0.0
     - name: mud_and_boost
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.45
         min_lesson_length: 200
       value: 1.0
@@ -194,14 +149,14 @@ environment_parameters:
     - name: none
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.1
         min_lesson_length: 100
       value: 0.0
     - name: mild
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.3
         min_lesson_length: 100
       value: 0.05
@@ -212,14 +167,14 @@ environment_parameters:
     - name: none
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.1
         min_lesson_length: 100
       value: 0.0
     - name: mild
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.3
         min_lesson_length: 100
       value: 0.06
@@ -230,14 +185,14 @@ environment_parameters:
     - name: none
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.1
         min_lesson_length: 100
       value: 0.0
     - name: mild
       completion_criteria:
         measure: progress
-        behavior: Worm
+        behavior: Crab
         threshold: 0.3
         min_lesson_length: 100
       value: 0.15

@@ -1,30 +1,12 @@
-# Run-id: all8h_<timestamp> (launch: .\scripts	rain_all_8h.ps1 -ConfigPath Config\AllLoco8h02.yaml)
-# AllLoco8h01 plus the four .glb bipeds. Builds/AllEnv contains all THIRTEEN
-# behaviors, so a config listing only the nine coded-gait creatures aborts the
-# run at startup - which is exactly what happened to all8h_20260826_2233.
-# Run-id: all8h_<timestamp> (launch: .\scripts\train_all_8h.ps1)
-# Fourth-generation unattended 8-hour all-creatures run (3.2M steps at ~400k steps/behavior/hour). New versus AllLoco5h01:
-#   - OBSERVATION CHANGE: agents now see per-limb ground contact, root angular
-#     velocity, stamina, and terrain probes (N*3 + 19). Run
-#     "PoRacer/Sync Agent Observation Sizes", rebuild Builds/AllEnv, and
-#     RE-RECORD DEMOS before this run — old .demo files carry the old obs size
-#     and mlagents will reject them.
-#   - BC + GAIL warm start from coded-gait demos (record via
-#     "PoRacer/Training/Enable Demo Recorders In Open Scene" in SCN_TRAIN_ALL).
-#   - Reward adds a jerk penalty (smooth gaits); fatigue drains joint power
-#     under sustained high torque, in training and races alike.
-#   - Curriculum gates on PROGRESS (fraction of max_steps), not on the Worm's
-#     reward: every behavior steps at the same rate, so lessons advance on a
-#     shared clock and slow learners are no longer dragged by the Worm's score.
-#     (completion_criteria still requires a behavior name; Worm is just the clock.)
-#   - New curriculum knobs: goal_angle_span (steering), hazard_level (mud/boost,
-#     then gusts/gates), quirk_mass_span and quirk_friction_span (race-day
-#     physics spread).
+# Worm and Spider removed 2026-09-04: both lost their ELO gauntlet against the
+# brains they were retrained to replace. The curriculum clock moved from Worm to
+# Crab - it was never special, just the behaviour every lesson gated its
+# progress measure on, and it has to name a behaviour that still exists.
 behaviors:
-  Worm:
+  Hexapod:
     trainer_type: ppo
     threaded: true
-    hyperparameters: &hp
+    hyperparameters: &id001
       batch_size: 2048
       buffer_size: 20480
       learning_rate: 0.0003
@@ -33,51 +15,23 @@ behaviors:
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 3
-    network_settings: &net
+    network_settings: &id002
       normalize: true
       hidden_units: 256
       num_layers: 2
     reward_signals:
-      extrinsic: &ext
+      extrinsic: &id003
         gamma: 0.995
         strength: 1.0
       gail:
         gamma: 0.99
         strength: 0.05
-        demo_path: training/demos/Worm.demo
+        demo_path: training/demos/Hexapod.demo
     behavioral_cloning:
-      demo_path: training/demos/Worm.demo
+      demo_path: training/demos/Hexapod.demo
       strength: 0.3
       steps: 400000
-    max_steps: &steps 3200000
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 5
-    checkpoint_interval: 250000
-  Spider:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Spider.demo }
-    behavioral_cloning: { demo_path: training/demos/Spider.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 5
-    checkpoint_interval: 250000
-  Hexapod:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *hp
-    network_settings: *net
-    reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Hexapod.demo }
-    behavioral_cloning: { demo_path: training/demos/Hexapod.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
@@ -85,13 +39,19 @@ behaviors:
   Quad:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *hp
-    network_settings: *net
+    hyperparameters: *id001
+    network_settings: *id002
     reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Quad.demo }
-    behavioral_cloning: { demo_path: training/demos/Quad.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Quad.demo
+    behavioral_cloning:
+      demo_path: training/demos/Quad.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
@@ -99,13 +59,19 @@ behaviors:
   Centipede:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *hp
-    network_settings: *net
+    hyperparameters: *id001
+    network_settings: *id002
     reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Centipede.demo }
-    behavioral_cloning: { demo_path: training/demos/Centipede.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Centipede.demo
+    behavioral_cloning:
+      demo_path: training/demos/Centipede.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
@@ -113,13 +79,19 @@ behaviors:
   Crab:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *hp
-    network_settings: *net
+    hyperparameters: *id001
+    network_settings: *id002
     reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Crab.demo }
-    behavioral_cloning: { demo_path: training/demos/Crab.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Crab.demo
+    behavioral_cloning:
+      demo_path: training/demos/Crab.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
@@ -127,13 +99,19 @@ behaviors:
   Kangaroo:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *hp
-    network_settings: *net
+    hyperparameters: *id001
+    network_settings: *id002
     reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Kangaroo.demo }
-    behavioral_cloning: { demo_path: training/demos/Kangaroo.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Kangaroo.demo
+    behavioral_cloning:
+      demo_path: training/demos/Kangaroo.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
@@ -141,31 +119,24 @@ behaviors:
   Blob:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *hp
-    network_settings: *net
+    hyperparameters: *id001
+    network_settings: *id002
     reward_signals:
-      extrinsic: *ext
-      gail: { gamma: 0.99, strength: 0.05, demo_path: training/demos/Blob.demo }
-    behavioral_cloning: { demo_path: training/demos/Blob.demo, strength: 0.3, steps: 400000 }
-    max_steps: *steps
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Blob.demo
+    behavioral_cloning:
+      demo_path: training/demos/Blob.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 5
     checkpoint_interval: 250000
-
-  # --- The four .glb bipeds -------------------------------------------------
-  # Present in Builds/AllEnv, so they must be configured here or mlagents aborts
-  # at startup with "behavior name Grandma has not been specified". Settings are
-  # lifted from Config/Humanoids01.yaml and differ from the nine coded-gait
-  # creatures on purpose:
-  #   - NO BC/GAIL: a biped's coded gait is a fall, so cloning it would only
-  #     teach these four to face-plant faster. Extrinsic reward only.
-  #   - Wider network (512x3, the shape ML-Agents' own Walker sample uses):
-  #     eleven joints of balance is a far larger control problem than a worm's.
-  #   - max_steps far past what one session reaches; the launcher's time box is
-  #     the real stop. They therefore ignore the progress curriculum below,
-  #     which keys off Worm's step count.
-  Grandma: &biped
+  Grandma: &id004
     trainer_type: ppo
     threaded: true
     hyperparameters:
@@ -190,94 +161,151 @@ behaviors:
     summary_freq: 20000
     keep_checkpoints: 5
     checkpoint_interval: 100000
-  Grandpa: *biped
-  Matt: *biped
-  Nick: *biped
-
-# All lessons gate on progress (behavior step count / max_steps) so the schedule
-# is a shared clock, fair to every creature. Order of arrival:
-#   10%: goals get longer, terrain roughens, power/mass/friction quirks begin
-#   15%: goals swing off-center (steering), map moves flat -> lumpy
-#   20%: mud pits + boost pads appear
-#   30-45%: everything at race-day full strength, gusts + gates last
+  Grandpa: *id004
+  Matt: *id004
+  Nick: *id004
 environment_parameters:
   goal_distance_max:
     curriculum:
-      - name: near
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.10, min_lesson_length: 100 }
-        value: 8.0
-      - name: mid
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.30, min_lesson_length: 100 }
-        value: 14.0
-      - name: far
-        value: 20.0
+    - name: near
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 8.0
+    - name: mid
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 14.0
+    - name: far
+      value: 20.0
   goal_angle_span:
     curriculum:
-      - name: straight
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.15, min_lesson_length: 100 }
-        value: 0.0
-      - name: gentle_turns
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.35, min_lesson_length: 100 }
-        value: 20.0
-      - name: sharp_turns
-        value: 40.0
+    - name: straight
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.15
+        min_lesson_length: 100
+      value: 0.0
+    - name: gentle_turns
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.35
+        min_lesson_length: 100
+      value: 20.0
+    - name: sharp_turns
+      value: 40.0
   rough_amplitude:
     curriculum:
-      - name: gentle
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.10, min_lesson_length: 100 }
-        value: 0.35
-      - name: medium
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.30, min_lesson_length: 100 }
-        value: 0.7
-      - name: full
-        value: 1.0
+    - name: gentle
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.35
+    - name: medium
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.7
+    - name: full
+      value: 1.0
   track_kind:
     curriculum:
-      - name: flat
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.15, min_lesson_length: 200 }
-        value: 0.0
-      - name: lumpy
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.40, min_lesson_length: 200 }
-        value: 6.0
-      - name: swamp
-        value: 7.0
+    - name: flat
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.15
+        min_lesson_length: 200
+      value: 0.0
+    - name: lumpy
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.4
+        min_lesson_length: 200
+      value: 6.0
+    - name: swamp
+      value: 7.0
   hazard_level:
     curriculum:
-      - name: clean
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.20, min_lesson_length: 200 }
-        value: 0.0
-      - name: mud_and_boost
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.45, min_lesson_length: 200 }
-        value: 1.0
-      - name: full_hazards
-        value: 2.0
+    - name: clean
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.2
+        min_lesson_length: 200
+      value: 0.0
+    - name: mud_and_boost
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.45
+        min_lesson_length: 200
+      value: 1.0
+    - name: full_hazards
+      value: 2.0
   quirk_power_span:
     curriculum:
-      - name: none
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.10, min_lesson_length: 100 }
-        value: 0.0
-      - name: mild
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.30, min_lesson_length: 100 }
-        value: 0.05
-      - name: race
-        value: 0.08
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.05
+    - name: race
+      value: 0.08
   quirk_mass_span:
     curriculum:
-      - name: none
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.10, min_lesson_length: 100 }
-        value: 0.0
-      - name: mild
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.30, min_lesson_length: 100 }
-        value: 0.06
-      - name: race
-        value: 0.12
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.06
+    - name: race
+      value: 0.12
   quirk_friction_span:
     curriculum:
-      - name: none
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.10, min_lesson_length: 100 }
-        value: 0.0
-      - name: mild
-        completion_criteria: { measure: progress, behavior: Worm, threshold: 0.30, min_lesson_length: 100 }
-        value: 0.15
-      - name: slippery_or_grippy
-        value: 0.3
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.15
+    - name: slippery_or_grippy
+      value: 0.3

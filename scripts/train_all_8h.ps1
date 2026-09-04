@@ -2,14 +2,13 @@
 # Usage: .\scripts\train_all_8h.ps1 [-ConfigPath Config\AllLoco8h02.yaml] [-Hours 8]
 # max_steps in the config (3.2M) is calibrated to finish near the 8 h mark; the
 # time box here is the hard stop. Starts TensorBoard first (project rule).
-# num-envs: this env holds 26 articulated areas per instance (13 creatures x 2
-# track variants), so instances are CPU-heavy; cores/3 capped at 4 leaves torch
-# its share (recorded per MLOps rule). The four .glb bipeds train separately
-# via scripts/train_humanoids.ps1.
+# num-envs: this env holds 12 articulated areas per instance (6 creatures x 2
+# track variants) since Worm and Spider were removed on 2026-09-04; instances are
+# CPU-heavy, so cores/3 capped at 4 leaves torch its share (recorded per MLOps
+# rule). The four .glb bipeds train separately via scripts/train_humanoids.ps1.
 #
-# Default config is AllLoco8h02: it declares all 13 behaviours AllEnv contains.
-# The old default AllLoco8h01 declared only 9, so mlagents-learn aborted the run
-# on the first unrecognised behaviour. It has been deleted.
+# The config must declare exactly the behaviours AllEnv contains: mlagents-learn
+# aborts on the first one it reports that the config does not name.
 param(
     [string]$ConfigPath = "Config\AllLoco8h02.yaml",
     [string]$EnvExe = "Builds\AllEnv\AllEnv.exe",
@@ -35,12 +34,12 @@ if (-not (Test-Path $config)) { throw "Config missing: $config" }
 if (-not (Test-Path $mlagents)) { throw "mlagents-learn missing: $mlagents" }
 $settings = Get-Content (Join-Path $root "ProjectSettings\ProjectSettings.asset") -Raw
 if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
-# The config warm-starts the eight coded-gait creatures from BC/GAIL demos, by
-# exact filename - a stale recording session leaves "Worm_1.demo" behind while
-# "Worm.demo" is missing, which mlagents only complains about minutes in. The
+# The config warm-starts the coded-gait creatures from BC/GAIL demos, by exact
+# filename - a stale recording session leaves "Crab_1.demo" behind while
+# "Crab.demo" is missing, which mlagents only complains about minutes in. The
 # four humanoids are deliberately absent: a biped's coded gait is a fall, so they
 # train on extrinsic reward alone.
-$demoBehaviors = @("Worm", "Spider", "Hexapod", "Quad", "Centipede", "Crab", "Kangaroo", "Blob")
+$demoBehaviors = @("Hexapod", "Quad", "Centipede", "Crab", "Kangaroo", "Blob")
 # training\demos, NOT Assets\Demonstrations: that is where the demos actually live
 # and, more to the point, it is the path the config's demo_path entries resolve to.
 # Checking the other folder made this preflight throw on a tree where every demo was

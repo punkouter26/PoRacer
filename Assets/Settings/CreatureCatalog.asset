@@ -13,18 +13,6 @@ MonoBehaviour:
   m_Name: CreatureCatalog
   m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Models.CreatureCatalog
   _entries:
-  - id: Worm_v01
-    displayName: Worm
-    prefab: {fileID: 5071429042841699206, guid: f0948a40df5e7364f93cf03c340eae26, type: 3}
-    model: {fileID: 5022602860645237092, guid: e7b6a3eac2dea3a43a0f190ef081bd01, type: 3}
-    spawnHeight: 0.15
-    brainInPrefab: 0
-  - id: Spider_v01
-    displayName: Spider
-    prefab: {fileID: 2008265692840570716, guid: d8ff3715ba81a6b489c1d6cea63f09eb, type: 3}
-    model: {fileID: 5022602860645237092, guid: 543425b6b5e223c4e9183710fff1fb99, type: 3}
-    spawnHeight: 0.5
-    brainInPrefab: 0
   - id: Quad_v01
     displayName: Quadruped
     prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}

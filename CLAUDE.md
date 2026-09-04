@@ -90,7 +90,7 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   `Assets/unity_export/`.
 - Scenes in build: `Assets/Scenes/SCN_RACE_FLAT.unity` (the only non-training scene)
 - Training scenes, not in the build list: `SCN_TRAIN_ALL`, `SCN_TRAIN_HUMANOIDS`,
-  `SCN_TRAIN_WORM_ROUGH`
+  `SCN_TRAIN_FOCUSED`
 - Project rules live in `.claude/rules/*.md` (MVS pattern, VContainer, MessagePipe, UniTask, performance, serialization) — follow them for all C# work
 
 ---
@@ -171,6 +171,18 @@ encodes the controller, never the creature.
   implementing `ICreatureAgent`; that adapter is what the spawner, RacerView and
   camera talk to. Port folders under `unity_export/` are PascalCase and must match
   their namespace (`IsaacH1`, not `h1`).
+* **Removed (2026-09-04): the Worm and the Spider.** Both were retrained for 7.6 h
+  and both LOST the ELO gauntlet against the very brains they were meant to replace
+  (Worm -217.9, Spider -13.6 over 21 races); Worm's reward had flatlined after 1.9 h.
+  Gone: catalog entries, prefabs, `Assets/Agents/{Worm,Spider}_v01`, their demos,
+  `SCN_TRAIN_WORM_ROUGH`, `Config/WormRough01.yaml`, and their behaviours in every
+  config. The roster is 8.
+  Two things that READ as theirs are not, and must stay: `Reward_WormLoco` is the
+  shared locomotion reward `Agent_Creature` gives EVERY creature, and `M_Worm.mat` is
+  the obstacle material every training area is built from. And mind the curriculum
+  clock - every `completion_criteria` gated on `behavior: Worm` and had to be
+  repointed (to `Crab`) or training aborts. Worm was never special there, it was just
+  the behaviour the shared progress measure was read from.
 * **Removed (2026-09-02):** the IsaacSpider and IsaacBiped2 ports and the Snake.
   The two ports had raced brainless since the 2026-08-29 assembly merge renamed
   their inference define and silently compiled their policies out; the Snake never
@@ -504,7 +516,7 @@ ml-agents versions must stay in exact parity.
   0. `Assets/Scenes/SCN_RACE_FLAT.unity`
 
 It is a hardcoded list, not whatever is ticked in Build Settings, because Build
-Settings also carries SCN_TRAIN_ALL, SCN_TRAIN_HUMANOIDS and SCN_TRAIN_WORM_ROUGH — training scenes that would bloat the bundle
+Settings also carries SCN_TRAIN_ALL, SCN_TRAIN_HUMANOIDS and SCN_TRAIN_FOCUSED — training scenes that would bloat the bundle
 and, depending on order, boot a tester straight into a training rig. A scene named
 here that is missing on disk **aborts** the build.
 

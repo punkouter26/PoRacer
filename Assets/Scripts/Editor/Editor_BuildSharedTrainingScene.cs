@@ -20,10 +20,13 @@ namespace PoRacer.Editor
         private const float AREA_SPACING_X = 40f;
         private const float AREA_SPACING_Z = 60f;
 
+        // Worm and Spider were removed on 2026-09-04. Both were retrained for 7.6 h and
+        // both LOST their own ELO gauntlet against the brains they were meant to replace
+        // (Worm -217.9, Spider -13.6 over 21 races), and Worm's reward had flatlined after
+        // 1.9 h. Note this is the roster, not the reward: Reward_WormLoco stays, because
+        // despite the name it is the shared locomotion reward every creature uses.
         private static readonly string[] CreaturePrefabs =
         {
-            "Assets/Prefabs/Worm_v01.prefab",
-            "Assets/Prefabs/Spider_v01.prefab",
             "Assets/Prefabs/Hexapod_v01.prefab",
             "Assets/Prefabs/Quad_v01.prefab",
             "Assets/Prefabs/Centipede_v01.prefab",
@@ -146,14 +149,6 @@ namespace PoRacer.Editor
         public static void BuildHumanoidEnv()
         {
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");
-        }
-
-        // Folded in from the old Editor_BuildWormEnv, whose other two menu items
-        // pointed at SCN_TRAIN_WORM and SCN_TRAIN_SPIDER - scenes that no longer
-        // exist. Every env build now lives here and names a scene that does.
-        public static void BuildWormRoughEnv()
-        {
-            BuildEnvFrom("Assets/Scenes/SCN_TRAIN_WORM_ROUGH.unity", "Builds/WormRoughEnv/WormRoughEnv.exe");
         }
 
         private static void BuildEnvFrom(string scenePath, string outputPath)

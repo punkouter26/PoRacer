@@ -79,7 +79,16 @@ namespace PoRacer.EditorTools
                         : kind == "aab" ? AAB_PATH
                         : kind == "allenv" ? ALLENV_PATH
                         : FOCUSEDENV_PATH;
-            DateTime before = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
+            // Same file Run() will judge by - see the note there on env scene data.
+            string watch = path;
+            if (kind == "allenv" || kind == "focusedenv")
+            {
+                string d = Path.GetDirectoryName(path);
+                string stem = Path.GetFileNameWithoutExtension(path);
+                string lvl = Path.Combine(d, stem + "_Data", "level0");
+                if (File.Exists(lvl)) watch = lvl;
+            }
+            DateTime before = File.Exists(watch) ? File.GetLastWriteTimeUtc(watch) : DateTime.MinValue;
 
             _state = "running";
             _detail = kind + " queued at " + DateTime.Now.ToString("HH:mm:ss");
@@ -136,11 +145,24 @@ namespace PoRacer.EditorTools
 
             // The artifact is the evidence. An unchanged timestamp means the builder
             // returned without writing - an early abort it already logged the reason for.
-            var info = new FileInfo(path);
-            if (!info.Exists || File.GetLastWriteTimeUtc(path) <= before)
+            //
+            // For an env, watch the SCENE DATA, not the .exe: the player executable is a
+            // launcher stub that comes out byte-identical every time, so its timestamp does
+            // not move and a correct build reported "failed". The scene lands in
+            // <Name>_Data/level0, which does change.
+            string watched = path;
+            if (kind == "allenv" || kind == "focusedenv")
+            {
+                string dir = Path.GetDirectoryName(path);
+                string stem = Path.GetFileNameWithoutExtension(path);
+                string level0 = Path.Combine(dir, stem + "_Data", "level0");
+                if (File.Exists(level0)) watched = level0;
+            }
+            var info = new FileInfo(watched);
+            if (!info.Exists || File.GetLastWriteTimeUtc(watched) <= before)
             {
                 _state = "failed";
-                _detail = kind + " wrote no new artifact at " + path +
+                _detail = kind + " wrote no new artifact at " + watched +
                           " — check the console for the builder's abort reason";
                 Debug.LogError("ASYNC BUILD RESULT: " + _detail);
                 return;
