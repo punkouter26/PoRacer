@@ -89,6 +89,60 @@ namespace PoRacer.Editor
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_ALL.unity", "Builds/AllEnv/AllEnv.exe");
         }
 
+        /// <summary>
+        /// Builds a scene holding only the named creatures, for a run that concentrates a
+        /// time box on a few of them instead of spreading it across the whole fleet.
+        ///
+        /// The point is throughput, not tidiness. Every behaviour in the shared scene trains
+        /// simultaneously and max_steps is PER BEHAVIOUR, so halving the roster roughly halves
+        /// the areas each env instance has to simulate and lets more instances run at once -
+        /// the surviving behaviours get several times the steps in the same wall clock. With no
+        /// checkpoints to warm-start from, that concentration is the only way a fresh run beats
+        /// brains that already had eight hours.
+        ///
+        /// The config must declare exactly what the scene contains: mlagents-learn aborts on
+        /// the first behaviour the env reports that the config does not name.
+        ///
+        /// <paramref name="names"/> is comma-separated and matches the prefab stem, e.g.
+        /// "Worm,Spider,Centipede,Crab".
+        /// </summary>
+        public static string BuildFocusedScene(string names)
+        {
+            string[] wanted = (names ?? string.Empty).Split(',');
+            var paths = new System.Collections.Generic.List<string>();
+            var missing = new System.Collections.Generic.List<string>();
+            foreach (string raw in wanted)
+            {
+                string name = raw.Trim();
+                if (name.Length == 0) continue;
+                string path = "Assets/Prefabs/" + name + "_v01.prefab";
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+                {
+                    missing.Add(path);
+                    continue;
+                }
+                paths.Add(path);
+            }
+            if (missing.Count > 0)
+            {
+                return "ABORT: prefab(s) not found: " + string.Join(", ", missing);
+            }
+            if (paths.Count == 0)
+            {
+                return "ABORT: no creature names given";
+            }
+
+            BuildSceneFrom(paths.ToArray(), FocusedScenePath);
+            return "focused scene built with " + paths.Count + " creatures: " + string.Join(", ", paths);
+        }
+
+        public static void BuildFocusedEnv()
+        {
+            BuildEnvFrom(FocusedScenePath, "Builds/FocusedEnv/FocusedEnv.exe");
+        }
+
+        private const string FocusedScenePath = "Assets/Scenes/SCN_TRAIN_FOCUSED.unity";
+
         public static void BuildHumanoidEnv()
         {
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");

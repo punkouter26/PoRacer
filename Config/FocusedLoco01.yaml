@@ -1,0 +1,245 @@
+# Generated from AllLoco8h02.yaml - four weakest coded-gait creatures only.
+# Pairs with Builds/FocusedEnv (SCN_TRAIN_FOCUSED). The config must declare
+# exactly what the env contains or mlagents-learn aborts on the first
+# unrecognised behaviour.
+# max_steps is calibrated to measured throughput so the linear LR schedule
+# actually anneals inside the time box.
+behaviors:
+  Worm:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: &id001
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings: &id002
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic: &id003
+        gamma: 0.995
+        strength: 1.0
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Worm.demo
+    behavioral_cloning:
+      demo_path: training/demos/Worm.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Spider:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Spider.demo
+    behavioral_cloning:
+      demo_path: training/demos/Spider.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Centipede:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Centipede.demo
+    behavioral_cloning:
+      demo_path: training/demos/Centipede.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Crab:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Crab.demo
+    behavioral_cloning:
+      demo_path: training/demos/Crab.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 3200000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+environment_parameters:
+  goal_distance_max:
+    curriculum:
+    - name: near
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 8.0
+    - name: mid
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 14.0
+    - name: far
+      value: 20.0
+  goal_angle_span:
+    curriculum:
+    - name: straight
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.15
+        min_lesson_length: 100
+      value: 0.0
+    - name: gentle_turns
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.35
+        min_lesson_length: 100
+      value: 20.0
+    - name: sharp_turns
+      value: 40.0
+  rough_amplitude:
+    curriculum:
+    - name: gentle
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.35
+    - name: medium
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.7
+    - name: full
+      value: 1.0
+  track_kind:
+    curriculum:
+    - name: flat
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.15
+        min_lesson_length: 200
+      value: 0.0
+    - name: lumpy
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.4
+        min_lesson_length: 200
+      value: 6.0
+    - name: swamp
+      value: 7.0
+  hazard_level:
+    curriculum:
+    - name: clean
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.2
+        min_lesson_length: 200
+      value: 0.0
+    - name: mud_and_boost
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.45
+        min_lesson_length: 200
+      value: 1.0
+    - name: full_hazards
+      value: 2.0
+  quirk_power_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.05
+    - name: race
+      value: 0.08
+  quirk_mass_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.06
+    - name: race
+      value: 0.12
+  quirk_friction_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: progress
+        behavior: Worm
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 0.15
+    - name: slippery_or_grippy
+      value: 0.3

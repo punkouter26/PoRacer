@@ -41,8 +41,12 @@ if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
 # four humanoids are deliberately absent: a biped's coded gait is a fall, so they
 # train on extrinsic reward alone.
 $demoBehaviors = @("Worm", "Spider", "Hexapod", "Quad", "Centipede", "Crab", "Kangaroo", "Blob")
-$missingDemos = $demoBehaviors | Where-Object { -not (Test-Path (Join-Path $root "Assets\Demonstrations\$_.demo")) }
-if ($missingDemos) { throw "Missing demos: $($missingDemos -join ', '). Record via PoRacer/Training menu (delete the old .demo files first, or the new ones land as <Name>_1.demo)." }
+# training\demos, NOT Assets\Demonstrations: that is where the demos actually live
+# and, more to the point, it is the path the config's demo_path entries resolve to.
+# Checking the other folder made this preflight throw on a tree where every demo was
+# present and correct - a guard that blocked the run it was meant to protect.
+$missingDemos = $demoBehaviors | Where-Object { -not (Test-Path (Join-Path $root "training\demos\$_.demo")) }
+if ($missingDemos) { throw "Missing demos: $($missingDemos -join ', ') under training\demos. Re-record with Editor_RecordDemos.EnableRecorders() (delete the old .demo files first, or the new ones land as <Name>_1.demo)." }
 
 # TensorBoard first (project rule).
 $tbUp = $false
