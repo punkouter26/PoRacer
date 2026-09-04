@@ -56,7 +56,7 @@ From Punkouter Software.
 |---|---|---|
 | App icon | 512x512 PNG, under 1 MB | `StoreAssets/PlayStoreIcon_512.png` — ready |
 | Feature graphic | 1024x500 PNG or JPEG | `StoreAssets/FeatureGraphic_1024x500.png` — ready |
-| Phone screenshots | 2–8, portrait, each side 320–3840 px | **TODO** — capture from a device or emulator |
+| Phone screenshots | 2-8, portrait, each side 320-3840 px | `phone_portrait_01_menu.png` + `phone_portrait_02_race.png` - captured on a Pixel 9 Pro at 960x2142, validated portrait and in range. The four `menu/race_*/worms_*` files beside them are the OLD 1280x720 **landscape** set for a portrait-locked app: do not upload them |
 | Tablet screenshots | 7-inch and 10-inch | **TODO**, and only if you want tablet distribution |
 | Promo video | YouTube URL | Optional — skip |
 
