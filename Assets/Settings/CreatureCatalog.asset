@@ -61,3 +61,27 @@ MonoBehaviour:
     model: {fileID: 5022602860645237092, guid: 6b664465891dc5e4b871f628ad716e96, type: 3}
     spawnHeight: 0.7222
     brainInPrefab: 0
+  - id: Centipede_v01@Centipede-599939
+    displayName: 'Centipede [Centipede-599939]'
+    prefab: {fileID: 2521974577969091722, guid: 8a2c392fa95349348997b69b7bd62395, type: 3}
+    model: {fileID: 5022602860645237092, guid: 1f7f27d13d5895348a57c302bfa24b01, type: 3}
+    spawnHeight: 0.25
+    brainInPrefab: 0
+  - id: Crab_v01@Crab-599966
+    displayName: 'Crab [Crab-599966]'
+    prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
+    model: {fileID: 5022602860645237092, guid: a1a3b84bdaf51ed46a2a0292b792cec0, type: 3}
+    spawnHeight: 0.75
+    brainInPrefab: 0
+  - id: Hexapod_v01@Hexapod-599486
+    displayName: 'Hexapod [Hexapod-599486]'
+    prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
+    model: {fileID: 5022602860645237092, guid: 61ac0265ec0c8284ba25c37f2860a4ec, type: 3}
+    spawnHeight: 0.75
+    brainInPrefab: 0
+  - id: Quad_v01@Quad-599851
+    displayName: 'Quadruped [Quad-599851]'
+    prefab: {fileID: 2653277382801529525, guid: d496737e018cf50418f157c4e4a1f3ee, type: 3}
+    model: {fileID: 5022602860645237092, guid: 159faae4bb8c5054bbdef76661930c15, type: 3}
+    spawnHeight: 0.85
+    brainInPrefab: 0
