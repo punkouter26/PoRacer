@@ -164,6 +164,19 @@ Read this section before doing anything in the project. These are the rules that
 must hold on every session, on every commit, on every training run. The detailed
 spec behind each one lives in `UNITY_RULES` below; this block is the short form.
 
+## 0. Standing rules (restated 2026-09-04, in the user's words)
+* Only use the `master` branch for all work; use other branches only if specifically asked to.
+* Check for a `DOCS/` folder in the root to get an overall summary of the project.
+* Always start TensorBoard when training is started so progress can be viewed.
+* When starting training, check that no obsolete behaviours are on TensorBoard taking up
+  room. If there are, remove them.
+* The heuristic coded bots are always RED.
+* The standard RL policy (before variations for other creatures) is always GREEN.
+* The other RL variations get custom textures supplied by the user.
+* RL learning apps always have a heuristic coded bot, a reference bot, and zero to many
+  custom bots, often with custom textures and custom skinned meshes.
+* At the end of any answer longer than 100 words, add a 20-word TL;DR.
+
 ## A. Source control
 * **`master` only, no other branches.** Commit directly to `master` — no feature
   branches, no `cleanup/*`, no work branches, no matter how tidy the intent. The

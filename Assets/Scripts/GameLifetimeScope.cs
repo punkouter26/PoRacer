@@ -30,7 +30,7 @@ namespace PoRacer
             builder.RegisterEntryPoint<Systems_AudioMix>().AsSelf();
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();
             // Entry point so its RaceFinishedMessage subscription exists before the first race ends.
-            builder.RegisterEntryPoint<Systems_FruitPour>();
+            builder.RegisterEntryPoint<Systems_FruitPour>().AsSelf();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);
             // Entry point: its Tick watches for the final stretch to re-aim the shot.
