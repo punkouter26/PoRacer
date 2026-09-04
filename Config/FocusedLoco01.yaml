@@ -33,7 +33,7 @@ behaviors:
       demo_path: training/demos/Worm.demo
       strength: 0.3
       steps: 400000
-    max_steps: 3200000
+    max_steps: 4500000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 10
@@ -53,7 +53,7 @@ behaviors:
       demo_path: training/demos/Spider.demo
       strength: 0.3
       steps: 400000
-    max_steps: 3200000
+    max_steps: 4500000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 10
@@ -73,7 +73,7 @@ behaviors:
       demo_path: training/demos/Centipede.demo
       strength: 0.3
       steps: 400000
-    max_steps: 3200000
+    max_steps: 4500000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 10
@@ -93,7 +93,7 @@ behaviors:
       demo_path: training/demos/Crab.demo
       strength: 0.3
       steps: 400000
-    max_steps: 3200000
+    max_steps: 4500000
     time_horizon: 1000
     summary_freq: 20000
     keep_checkpoints: 10

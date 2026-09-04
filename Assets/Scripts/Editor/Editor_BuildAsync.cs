@@ -39,6 +39,13 @@ namespace PoRacer.EditorTools
     {
         private const string APK_PATH = "Builds/Android/PoRacer.apk";
         private const string AAB_PATH = "Builds/Android/PoRacer.aab";
+        // Training envs. These MUST go through Editor_BuildSharedTrainingScene, which names
+        // its scene explicitly - the CLI's generic `build` command silently ignores --scenes
+        // and ships whatever EditorBuildSettings holds. That produced an "env" running
+        // SCN_RACE_FLAT: no agents, so the Academy never initialised, so mlagents-learn sat
+        // there until it timed out with UnityTimeOutException and no clue in any log.
+        private const string ALLENV_PATH = "Builds/AllEnv/AllEnv.exe";
+        private const string FOCUSEDENV_PATH = "Builds/FocusedEnv/FocusedEnv.exe";
 
         private static string _state = "idle";
         private static string _detail = string.Empty;
@@ -55,9 +62,10 @@ namespace PoRacer.EditorTools
             }
 
             string kind = (target ?? string.Empty).Trim().ToLowerInvariant();
-            if (kind != "apk" && kind != "aab")
+            if (kind != "apk" && kind != "aab" && kind != "allenv" && kind != "focusedenv")
             {
-                return "REFUSED: target must be \"apk\" or \"aab\", got \"" + target + "\"";
+                return "REFUSED: target must be \"apk\", \"aab\", \"allenv\" or \"focusedenv\", got \""
+                       + target + "\"";
             }
 
             // Both builders abort on this, but they do it minutes of Gradle later in the
@@ -67,7 +75,10 @@ namespace PoRacer.EditorTools
                 return "REFUSED: exit play mode first";
             }
 
-            string path = kind == "apk" ? APK_PATH : AAB_PATH;
+            string path = kind == "apk" ? APK_PATH
+                        : kind == "aab" ? AAB_PATH
+                        : kind == "allenv" ? ALLENV_PATH
+                        : FOCUSEDENV_PATH;
             DateTime before = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
 
             _state = "running";
@@ -99,13 +110,20 @@ namespace PoRacer.EditorTools
             var started = DateTime.Now;
             try
             {
-                if (kind == "apk")
+                switch (kind)
                 {
-                    Editor_BuildAndroid.Build();
-                }
-                else
-                {
-                    Editor_BuildAndroidAAB.Build();
+                    case "apk":
+                        Editor_BuildAndroid.Build();
+                        break;
+                    case "aab":
+                        Editor_BuildAndroidAAB.Build();
+                        break;
+                    case "allenv":
+                        PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildEnv();
+                        break;
+                    default:
+                        PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildFocusedEnv();
+                        break;
                 }
             }
             catch (Exception e)
