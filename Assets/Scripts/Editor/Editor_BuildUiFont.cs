@@ -30,8 +30,10 @@ namespace PoRacer.EditorTools
     /// atlas big enough for this UI and multi-atlas support so it can grow rather than
     /// silently drop glyphs.
     ///
-    /// LiberationSans is Unity's own bundled font (SIL Open Font License), so this adds no
-    /// new redistribution question.
+    /// The source is Inter-Regular, copied out of the editor's own Resources/Fonts into
+    /// Assets/UI/PoRacerFont.ttf. It is SIL Open Font License, so it adds no redistribution
+    /// question, and it is the face the editor was already rendering this UI with - so
+    /// binding it changes what SHIPS without changing how anything looks.
     ///
     /// Invoke: unity command eval --code "PoRacer.EditorTools.Editor_BuildUiFont.Build()"
     /// Re-run after changing the size ramp in UiTheme - the sampling point size below wants
@@ -40,6 +42,7 @@ namespace PoRacer.EditorTools
     public static class Editor_BuildUiFont
     {
         private const string FONT_DIR = "Assets/UI";
+        private const string SOURCE_TTF = FONT_DIR + "/PoRacerFont.ttf";
         private const string FONT_ASSET_PATH = FONT_DIR + "/PoRacerFont SDF.asset";
         private const string TEXT_SETTINGS_PATH = FONT_DIR + "/PoRacerTextSettings.asset";
         private const string PANEL_SETTINGS_PATH = FONT_DIR + "/RaceHudPanelSettings.asset";
@@ -56,15 +59,15 @@ namespace PoRacer.EditorTools
 
         public static string Build()
         {
-            Font source = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // A real .ttf in the project, NOT Resources.GetBuiltinResource: the builtin
+            // font cannot be rasterised into a FontAsset (CreateFontAsset returns null),
+            // and a builtin would not be embedded in an Android player anyway. This is
+            // Unity's own Inter-Regular, copied in - SIL Open Font License, and the same
+            // face the editor already renders this UI with, so the look does not shift.
+            var source = AssetDatabase.LoadAssetAtPath<Font>(SOURCE_TTF);
             if (source == null)
             {
-                // Older editors named it Arial.ttf.
-                source = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            }
-            if (source == null)
-            {
-                return "ABORT: no builtin font found (tried LegacyRuntime.ttf, Arial.ttf)";
+                return "ABORT: " + SOURCE_TTF + " not found. Copy a .ttf there first.";
             }
 
             FontAsset font = FontAsset.CreateFontAsset(
