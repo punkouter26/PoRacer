@@ -53,6 +53,7 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | PoRacer/Place the Acrobat course into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BuildCourseTrack.Build` |
 | PoRacer/Build Acrobat Training Scene (SCN_TRAIN_ACROBAT) | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.Build` |
 | PoRacer/Build Acrobat Training Env | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.BuildEnv` (player build: queue it, do not eval it) |
+| PoRacer/Build Fruit Catalog (produce shower) | `PoRacer.EditorTools.Editor_BuildFruitCatalog.Build` |
 | PoRacer/Build All-Creatures Training Env | `…Editor_BuildSharedTrainingScene.BuildEnv` |
 | PoRacer/Build Humanoid Training Env | `…Editor_BuildSharedTrainingScene.BuildHumanoidEnv` |
 | PoRacer/Training/Enable Demo Recorders In Open Scene | `…Editor_RecordDemos.EnableRecorders` |

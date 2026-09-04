@@ -143,6 +143,9 @@ namespace PoRacer.Systems
             _audioMix = audioMix;
         }
 
+        /// <summary>The authored course being raced, or null on builder maps.</summary>
+        public RaceCourseView ActiveCourse => _course;
+
         public void Start()
         {
             // Every raceable creature enters with 1 racer by default; the menu
@@ -688,7 +691,8 @@ namespace PoRacer.Systems
                     // Progress is measured from the common start line (grid row 0),
                     // not this racer's own spawn row — otherwise back-row racers
                     // report inflated progress and corrupt the leader ranking.
-                    view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds);
+                    view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds,
+                        entry.spawnHeight);
                     if (courseGoal != null)
                     {
                         view.SetCourse(courseGoal, coursePath, _course.Bounds);

@@ -57,11 +57,18 @@ namespace PoRacer.Views
         // burning the whole recovery budget inside a single settling frame.
         private const int MAX_RECOVERIES = 3;
         private const float RECOVERY_COOLDOWN_SECONDS = 1f;
-        private const float RECOVERY_LIFT = 0.25f;
+        // Clearance above the surface on top of the racer's own rest height, the
+        // same +0.05 m the spawner uses so nobody is born intersecting the ground.
+        private const float RECOVERY_LIFT = 0.05f;
 
         private string _racerId;
         private Systems_Race _race;
         private float _startZ;
+        // Height of the articulation root above the ground in the authored rest
+        // pose (the catalog's spawnHeight): IsaacBox's root is his pelvis, 0.71 m
+        // up, and a rescue that lifted every rig a flat 0.25 m stood him back up
+        // half-sunk in the track.
+        private float _restHeight;
         private Agents.ICreatureAgent _agent;
         private Transform _transform;
         private float _flippedSeconds;
@@ -89,13 +96,14 @@ namespace PoRacer.Views
         public string RacerId => _racerId;
 
         public void Initialize(string racerId, Systems_Race race, Vector3 gridOrigin,
-            Agents.ICreatureAgent agent, float finishZ, TrackKind track, Bounds groundBounds)
+            Agents.ICreatureAgent agent, float finishZ, TrackKind track, Bounds groundBounds, float restHeight)
         {
             _racerId = racerId;
             _race = race;
             _gridOrigin = gridOrigin;
             _startZ = gridOrigin.z;
             _agent = agent;
+            _restHeight = Mathf.Max(0f, restHeight);
             _track = track;
             _transform = transform;
             _finishDistance = finishZ - _startZ;
@@ -354,7 +362,7 @@ namespace PoRacer.Views
             }
             Quaternion upright = Quaternion.Euler(0f, yaw, 0f)
                 * (_agent != null ? _agent.RestRotation : Quaternion.identity);
-            root.TeleportRoot(position + Vector3.up * RECOVERY_LIFT, upright);
+            root.TeleportRoot(position + Vector3.up * (_restHeight + RECOVERY_LIFT), upright);
             for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
             {
                 ArticulationBody body = bodies[bodyIndex];

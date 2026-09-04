@@ -110,6 +110,14 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   race by design. Tune the subtrees by hand; re-running Bake discards those edits.
   Hazard views that build assets in `Awake` must keep their settings in serialized
   fields (see `GustZoneView`), because `Awake` does not run during a bake.
+- **The produce shower (2026-09-04).** Every race end - podium complete, full time, or
+  everyone knocked out - `Systems_FruitPour` rains 150 pieces from the KIRI pack over the
+  raced area (across the ground footprint on builder maps, along the road on a course)
+  as real rigidbodies with convex hulls, scaled to 0.3-0.7 m on spawn (the scans are
+  real-size: an apple is 9 cm, and the FBX root carries the file's x100 unit scale, so
+  scale is multiplied, never replaced). They pile up until the next race starts or the
+  menu returns. `Editor_BuildFruitCatalog.Build()` lists every model in
+  `Assets/Settings/FruitCatalog.asset` and wires it into `GameLifetimeScope`. No sound.
 - **The Acrobat course (2026-09-04).** `Assets/Art/Models/AcrobatTrack.glb` is an
   authored mountain road (Blender source in `Assets/Art/Models/Source~/`, hidden from
   Unity by the tilde): 55 centreline knots, four start markers, checkpoint and finish
@@ -226,11 +234,11 @@ encodes the controller, never the creature.
   implementing `ICreatureAgent`; that adapter is what the spawner, RacerView and
   camera talk to. Port folders under `unity_export/` are PascalCase and must match
   their namespace (`IsaacH1`, not `h1`).
-* **Cleaned (2026-09-04).** The unreferenced KIRI fruit-and-veg pack
-  (`Assets/KIRI_Asset_Pack_Fruit_and_Veg/`, 1,695 files, 653 MB, nothing in the project
-  referenced any of it) is gone from the tree; it is one
-  `git checkout 1ff62b9 -- Assets/KIRI_Asset_Pack_Fruit_and_Veg` away if a decor pass
-  ever wants it. Also gone: the `_Gauntlet` brains left over from the lost Worm/Spider
+* **Cleaned (2026-09-04).** The KIRI fruit-and-veg pack was removed as unreferenced and
+  then brought back the same day, trimmed, for the produce shower (below): albedo and
+  roughness only, normal/AO/height maps deleted, every texture capped at 512 in its
+  importer meta (`Assets/KIRI_Asset_Pack_Fruit_and_Veg/`, 423 files, 165 MB on disk).
+  Also gone: the `_Gauntlet` brains left over from the lost Worm/Spider
   ELO gauntlet, `training/export_tools/spider/`, the dead Worm/Spider body-plan cases
   in `Systems_Spawn`, and the `Worm`/`Spider` behaviours in `Humanoids02_Biomechanical.yaml`
   (the `&creature_sac` anchor now hangs off `Crab`). MojucuBoy's brain was renamed from

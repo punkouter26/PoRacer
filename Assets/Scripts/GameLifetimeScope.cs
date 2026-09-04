@@ -11,10 +11,12 @@ namespace PoRacer
     public sealed class GameLifetimeScope : LifetimeScope
     {
         [SerializeField] private CreatureCatalog _catalog;
+        [SerializeField] private FruitCatalog _fruitCatalog;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(_catalog);
+            builder.RegisterInstance(_fruitCatalog);
 
             builder.Register<RaceModel>(Lifetime.Singleton);
             builder.Register<EloModel>(Lifetime.Singleton);
@@ -27,6 +29,8 @@ namespace PoRacer
             // Entry point: its Tick runs the duck release and the menu mix slide.
             builder.RegisterEntryPoint<Systems_AudioMix>().AsSelf();
             builder.RegisterEntryPoint<Systems_Spawn>().AsSelf();
+            // Entry point so its RaceFinishedMessage subscription exists before the first race ends.
+            builder.RegisterEntryPoint<Systems_FruitPour>();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);
             // Entry point: its Tick watches for the final stretch to re-aim the shot.

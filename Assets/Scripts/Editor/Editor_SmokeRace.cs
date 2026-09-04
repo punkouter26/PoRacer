@@ -36,6 +36,10 @@ namespace PoRacer.EditorTools
         private const float SCOPE_TIMEOUT_SECONDS = 20f;
         private const float START_TIMEOUT_SECONDS = 30f;
         private const float COOLDOWN_SECONDS = 2f;
+        // Results stay up this long before the menu is requested, so what happens
+        // at race end (the produce shower) is exercised and counted.
+        private const float RESULTS_HOLD_SECONDS = 8f;
+        private const string FRUIT_ROOT = "FruitPour";
 
         [Serializable]
         private sealed class Job
@@ -61,6 +65,7 @@ namespace PoRacer.EditorTools
             public int finished;
             public int timedOut;
             public int dnf;
+            public int fruitPieces;
             public string[] placings;
         }
 
@@ -91,6 +96,7 @@ namespace PoRacer.EditorTools
             WaitScope,
             WaitRaceStart,
             Racing,
+            Results,
             Cooldown,
             Playing,
         }
@@ -100,6 +106,7 @@ namespace PoRacer.EditorTools
         private static StepReport _step;
         private static Phase _phase;
         private static double _phaseStart;
+        private static double _stepStart;
         private static int _lastFrame;
         private static Systems_Spawn _spawn;
         private static RaceConfigModel _config;
@@ -249,10 +256,19 @@ namespace PoRacer.EditorTools
                     if (!_raceModel.RaceActive)
                     {
                         _step.raceEnded = true;
-                        EndRaceStep();
+                        _phase = Phase.Results;
+                        _phaseStart = EditorApplication.timeSinceStartup;
                     }
                     else if (elapsed > _job.secondsPerStep)
                     {
+                        EndRaceStep();
+                    }
+                    break;
+                case Phase.Results:
+                    if (elapsed > RESULTS_HOLD_SECONDS)
+                    {
+                        GameObject fruitRoot = GameObject.Find(FRUIT_ROOT);
+                        _step.fruitPieces = fruitRoot != null ? fruitRoot.transform.childCount : 0;
                         EndRaceStep();
                     }
                     break;
@@ -331,6 +347,7 @@ namespace PoRacer.EditorTools
         private static void BeginStep(string name)
         {
             _step = new StepReport { name = name, fpsMin = float.MaxValue };
+            _stepStart = EditorApplication.timeSinceStartup;
             _report.steps.Add(_step);
         }
 
@@ -340,7 +357,7 @@ namespace PoRacer.EditorTools
             {
                 return;
             }
-            _step.seconds = (float)(EditorApplication.timeSinceStartup - _phaseStart);
+            _step.seconds = (float)(EditorApplication.timeSinceStartup - _stepStart);
             if (_step.frames > 0)
             {
                 _step.fpsAvg = _step.frames / Mathf.Max(_step.seconds, 0.001f);

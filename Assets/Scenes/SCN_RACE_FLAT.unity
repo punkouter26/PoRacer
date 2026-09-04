@@ -9253,6 +9253,7 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   _catalog: {fileID: 11400000, guid: 03135a740cc58b64ca27be659fd785dc, type: 2}
+  _fruitCatalog: {fileID: 11400000, guid: 6a3c95c20ba518944bf3a9b60012fae0, type: 2}
 --- !u!4 &661664840
 Transform:
   m_ObjectHideFlags: 0
