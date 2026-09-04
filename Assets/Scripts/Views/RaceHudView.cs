@@ -28,7 +28,12 @@ namespace PoRacer.Views
         /// and sits SPACE_XS from the top, and the game name and fps readout share
         /// that line. Nothing else may be drawn above this.
         /// </summary>
-        private static readonly float TOP_FURNITURE = UiTheme.SPACE_XS + UiTheme.CONTROL_SM;
+        // A property, not a static readonly field: CONTROL_SM now reads Screen.dpi to
+        // hold the touch target at 48 dp, and Unity forbids that from a static field
+        // initializer on a MonoBehaviour ("get_dpi is not allowed to be called from a
+        // MonoBehaviour constructor"). Evaluating on access also picks up a resolution
+        // change, which a field initializer never would.
+        private static float TopFurniture => UiTheme.SPACE_XS + UiTheme.CONTROL_SM;
 
         private const int PODIUM_ROWS = 3;
         private const int TOP_CHIP_COUNT = 3;
@@ -353,7 +358,7 @@ namespace PoRacer.Views
             // The band is as tall as the MENU button (CONTROL_SM at SPACE_XS), and
             // the chips used to start at SPACE_XXL + SPACE_XS = 36, which put them
             // under the button and through the fps readout at the same time.
-            _chipRow.style.top = TOP_FURNITURE + UiTheme.SPACE_XS;
+            _chipRow.style.top = TopFurniture + UiTheme.SPACE_XS;
             _chipRow.style.left = 0;
             _chipRow.style.right = 0;
             _chipRow.style.flexDirection = FlexDirection.Row;

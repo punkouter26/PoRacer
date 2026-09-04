@@ -33,7 +33,11 @@ namespace PoRacer.Views
         // and sits SPACE_SM off the bottom edge, and the version stamp shares that
         // line. Screen content stops above it - a START button drawn into this
         // band puts two live touch targets on the same pixels.
-        private const float BOTTOM_FURNITURE = UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
+        // A property, not a const - see the note on RaceHudView.TopFurniture. CONTROL_SM
+        // now scales with screen width to hold the touch target at 48 dp, so it reads
+        // Screen.dpi, which Unity forbids from a static field initializer on a
+        // MonoBehaviour and which is not a compile-time constant either way.
+        private static float BottomFurniture => UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
 
         private const float MAP_CARD_WIDTH = 138f;
         private const float MAP_STRIP_HEIGHT = 54f;
@@ -430,7 +434,7 @@ namespace PoRacer.Views
             // The padding baked into the glass helper is sized for a content panel;
             // the footer holds a single button and does not need that inset.
             UiTheme.SetPadding(footer, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
-            footer.style.marginBottom = BOTTOM_FURNITURE;
+            footer.style.marginBottom = BottomFurniture;
             _content.Add(footer);
 
             // The counter lives on the furniture line, centred between the DBG

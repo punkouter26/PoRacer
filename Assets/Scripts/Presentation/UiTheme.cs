@@ -93,6 +93,11 @@ namespace PoRacer.Presentation
 
         private static float _fontScale = 1f;
         private static int _fontScaleForWidth = -1;
+        // Keyed on DPI as well as width, because the first read usually happens in
+        // edit mode where Screen.dpi is 0 and the scale falls back to 1. Keyed on
+        // width alone, that fallback was cached against the game-view width and then
+        // returned unchanged in play mode - the correction silently never applied.
+        private static float _fontScaleForDpi = -1f;
 
         /// <summary>
         /// Correction that keeps the smallest text token at or above
@@ -116,13 +121,13 @@ namespace PoRacer.Presentation
             get
             {
                 int width = Screen.width;
-                if (width == _fontScaleForWidth)
+                float dpi = Screen.dpi;
+                if (width == _fontScaleForWidth && dpi == _fontScaleForDpi)
                 {
                     return _fontScale;
                 }
                 _fontScaleForWidth = width;
-
-                float dpi = Screen.dpi;
+                _fontScaleForDpi = dpi;
                 if (width <= 0 || dpi <= 0f || float.IsNaN(dpi))
                 {
                     // The editor and some devices report no usable DPI. Assume the
@@ -150,9 +155,68 @@ namespace PoRacer.Presentation
         // CONTROL_SM was 38 (30 dp on a Pixel 9 Pro) and CONTROL_MD was 52 (41 dp) -
         // both under spec - back when the panel referenced a 540 dp-wide screen that
         // no phone actually has.
-        public const float CONTROL_SM = 48f;
-        public const float CONTROL_MD = 56f;
-        public const float CONTROL_LG = 64f;
+        //
+        // "One UI unit is ~1 dp on a phone" is only true AT the 420 dp reference, and
+        // every real handset is narrower, so a bare 48 always resolved to less than
+        // 48 dp: 47.0 on a 411 dp Pixel, and 41.1 on a 360 dp handset - measured in
+        // play mode, not estimated. The fonts already correct for this through
+        // FontScale; these did not, which put the MENU and DBG buttons under Android's
+        // minimum touch target on every device the game actually ships to. Read these
+        // through the properties, never the _BASE fields.
+        private const float CONTROL_SM_BASE = 48f;
+        private const float CONTROL_MD_BASE = 56f;
+        private const float CONTROL_LG_BASE = 64f;
+
+        public static float CONTROL_SM => CONTROL_SM_BASE * ControlScale;
+        public static float CONTROL_MD => CONTROL_MD_BASE * ControlScale;
+        public static float CONTROL_LG => CONTROL_LG_BASE * ControlScale;
+
+        /// <summary>Android's minimum touch target, in dp.</summary>
+        private const float MIN_TOUCH_DP = 48f;
+
+        private static float _controlScale = 1f;
+        private static int _controlScaleForWidth = -1;
+        private static float _controlScaleForDpi = -1f;
+
+        /// <summary>
+        /// Correction that keeps <see cref="CONTROL_SM"/> at or above
+        /// <see cref="MIN_TOUCH_DP"/> on any handset, the same way
+        /// <see cref="FontScale"/> keeps the smallest text above its floor.
+        ///
+        /// It scales the whole control ramp rather than only the small end, so the
+        /// proportions between SM/MD/LG survive - and it only ever scales UP, so a
+        /// screen at or wider than the reference is left exactly as authored.
+        /// </summary>
+        private static float ControlScale
+        {
+            get
+            {
+                int width = Screen.width;
+                float dpi = Screen.dpi;
+                if (width == _controlScaleForWidth && dpi == _controlScaleForDpi)
+                {
+                    return _controlScale;
+                }
+                _controlScaleForWidth = width;
+                _controlScaleForDpi = dpi;
+                if (width <= 0 || dpi <= 0f || float.IsNaN(dpi))
+                {
+                    _controlScale = 1f;
+                    return _controlScale;
+                }
+
+                float deviceDpWidth = width / (dpi / 160f);
+                float dpPerUnit = deviceDpWidth / REFERENCE_WIDTH;
+                if (dpPerUnit <= 0f)
+                {
+                    _controlScale = 1f;
+                    return _controlScale;
+                }
+                float needed = MIN_TOUCH_DP / (CONTROL_SM_BASE * dpPerUnit);
+                _controlScale = Mathf.Clamp(needed, 1f, MAX_FONT_SCALE);
+                return _controlScale;
+            }
+        }
 
         // ---- Elevation ----
         // Vertical offset and opacity of the shadow plate behind a raised element.
