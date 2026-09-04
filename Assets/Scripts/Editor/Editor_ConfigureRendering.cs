@@ -23,8 +23,6 @@ namespace PoRacer.EditorTools
     /// </summary>
     public static class Editor_ConfigureRendering
     {
-        private const string MENU_PATH = "PoRacer/Configure Rendering";
-
         // Desktop SSAO: full resolution, the wider radius the primitive bodies
         // need to read as sitting on the ground.
         private const float PC_AO_INTENSITY = 0.55f;
@@ -34,7 +32,6 @@ namespace PoRacer.EditorTools
         private const float MOBILE_AO_INTENSITY = 0.45f;
         private const float MOBILE_AO_RADIUS = 0.25f;
 
-        [MenuItem(MENU_PATH)]
         public static void Configure()
         {
             var report = new List<string>();

@@ -15,7 +15,6 @@ namespace PoRacer.EditorTools
     {
         private const string OUTPUT_PATH = "Builds/Android/PoRacer.apk";
 
-        [MenuItem("PoRacer/Build Android APK")]
         public static void Build()
         {
             if (EditorApplication.isPlaying)

@@ -26,7 +26,6 @@ namespace PoRacer.EditorTools
         /// </summary>
         private const string DEMO_DIRECTORY = "training/demos";
 
-        [MenuItem("PoRacer/Training/Enable Demo Recorders In Open Scene")]
         public static void EnableRecorders()
         {
             int count = 0;
@@ -55,7 +54,6 @@ namespace PoRacer.EditorTools
                 $".demo files are written to {DEMO_DIRECTORY}/.");
         }
 
-        [MenuItem("PoRacer/Training/Disable Demo Recorders In Open Scene")]
         public static void DisableRecorders()
         {
             int count = 0;

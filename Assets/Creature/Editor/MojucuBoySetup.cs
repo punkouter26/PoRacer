@@ -25,7 +25,6 @@ namespace CreatureEditor
         private const string ONNX_PATH = "Assets/Agents/MojucuBoy_v01/mojucuboy_policy.onnx";
         private const string IMPORT_ASSETS = "Assets/Local/MjImports/mojucuboy";
 
-        [MenuItem("PoRacer/Creatures/Build Boy Race Scene")]
         public static string Build()
         {
             var log = new System.Text.StringBuilder();

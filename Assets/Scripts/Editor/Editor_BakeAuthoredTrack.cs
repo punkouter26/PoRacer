@@ -23,8 +23,12 @@ namespace PoRacer.EditorTools
     /// keeps it; after that the scene is the source of truth and re-running this
     /// discards any hand edits, which is why it asks first.
     ///
-    /// Headless: unity cmd menu --path "PoRacer/Track/Bake Authored Flat Track"
-    ///           (or -executeMethod PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake)
+    /// Invoke: unity command eval --code "PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake()"
+    ///         (or -executeMethod PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake)
+    /// The [MenuItem] was removed on 2026-09-03 so all editor work goes through MCP / the CLI.
+    /// Once baked, the subtree is ordinary GameObjects - edit it with the MCP scene
+    /// commands (find_gameobjects / set_component_properties) rather than re-running this,
+    /// which discards hand edits.
     /// </summary>
     public static class Editor_BakeAuthoredTrack
     {
@@ -42,7 +46,6 @@ namespace PoRacer.EditorTools
         private const TrackFeatures FEATURES = TrackFeatures.None;
         private const int DECOR_SEED = 20260903;
 
-        [MenuItem("PoRacer/Track/Bake Authored Flat Track")]
         public static void Bake()
         {
             string error = BakeInternal();

@@ -14,7 +14,6 @@ namespace PoRacer.Editor
     /// </summary>
     public static class Editor_ReportOrphanedBrains
     {
-        [MenuItem("PoRacer/Report Orphaned Creature Brains")]
         public static void Report()
         {
             const string agentsRoot = "Assets/Agents";

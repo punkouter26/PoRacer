@@ -17,7 +17,6 @@ namespace PoRacer.Editor
     {
         private const string FOLDER = "Assets/Resources/FX";
 
-        [MenuItem("PoRacer/Build FX Particle Materials")]
         public static void Build()
         {
             if (!AssetDatabase.IsValidFolder("Assets/Resources"))

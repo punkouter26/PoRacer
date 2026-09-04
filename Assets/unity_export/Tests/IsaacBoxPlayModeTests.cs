@@ -45,7 +45,7 @@ namespace IsaacBox.Tests
         {
             _savedFixedDt = Time.fixedDeltaTime;
             _rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
-            Assert.IsNotNull(_rig, $"rig asset missing at {IsaacBoxPaths.RigAsset} - run IsaacBox > Rebuild Rig Asset From JSON");
+            Assert.IsNotNull(_rig, $"rig asset missing at {IsaacBoxPaths.RigAsset} - run IsaacBoxSetup.RebuildRigAsset()");
             Time.fixedDeltaTime = _rig.isaacPhysicsDt;
         }
 
@@ -71,7 +71,7 @@ namespace IsaacBox.Tests
 
         static string NoBrainMessage =>
             $"no trained brain yet: {IsaacBoxPaths.Onnx} / {IsaacBoxPaths.Reference} missing. Run " +
-            "ISAAC/scripts/train.py then export_bundle.py, then IsaacBox > Build Prefab.";
+            "ISAAC/scripts/train.py then export_bundle.py, then IsaacBoxSetup.BuildPrefab().";
 
         // ------------------------------------------------------------- utilities --
         GameObject SpawnGround()
@@ -91,7 +91,7 @@ namespace IsaacBox.Tests
         {
             if (ground) SpawnGround();
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
-            Assert.IsNotNull(prefab, $"prefab missing at {IsaacBoxPaths.Prefab} - run IsaacBox > Build Prefab");
+            Assert.IsNotNull(prefab, $"prefab missing at {IsaacBoxPaths.Prefab} - run IsaacBoxSetup.BuildPrefab()");
             var go = Object.Instantiate(prefab, pos, Quaternion.identity);
             go.name = "IsaacBox_test";
             _spawned.Add(go);

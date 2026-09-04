@@ -25,13 +25,12 @@ namespace PoRacer.EditorTools
         private const string ENTRY_ID = "IsaacBox_v01";
         private const string DISPLAY_NAME = "IsaacBox";
 
-        [MenuItem("PoRacer/Creatures/Register IsaacBox Racer")]
         public static void Register()
         {
             GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
             if (source == null)
             {
-                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBox > Build Prefab first.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBoxSetup.BuildPrefab() first.");
                 return;
             }
 

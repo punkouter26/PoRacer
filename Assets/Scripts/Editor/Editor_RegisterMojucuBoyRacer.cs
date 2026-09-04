@@ -44,7 +44,6 @@ namespace PoRacer.EditorTools
         /// </summary>
         private const float TRAINED_HIPS_HEIGHT = 0.7722f;
 
-        [MenuItem("PoRacer/Creatures/Register MojucuBoy Racer")]
         public static void Register() => Debug.Log(Build());
 
         public static string Build()

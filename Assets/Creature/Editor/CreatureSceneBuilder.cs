@@ -12,8 +12,9 @@ namespace CreatureEditor {
 /// <summary>
 /// Builds a ready-to-play scene that verifies the trained policy in Unity.
 ///
-/// Menu: MuJoCo Creature > Build Verification Scene
-/// Headless: Unity -batchmode -quit -executeMethod CreatureEditor.CreatureSceneBuilder.Build
+/// Invoke: unity command eval --code "CreatureEditor.CreatureSceneBuilder.BuildFromMenu()"
+/// (or Unity -batchmode -quit -executeMethod CreatureEditor.CreatureSceneBuilder.Build)
+/// The [MenuItem] was removed on 2026-09-03 so all editor work goes through MCP / the CLI.
 ///
 /// Everything the scene needs is set here on purpose -- especially Fixed
 /// Timestep, which the plug-in takes from Time.fixedDeltaTime and NOT from the
@@ -32,7 +33,6 @@ public static class CreatureSceneBuilder {
   const int PixelsPerMetre = 128;
   const float GroundHalf = 40f;       // push the plane forward; the creature runs +Z
 
-  [MenuItem("MuJoCo Creature/Build Verification Scene")]
   public static void BuildFromMenu() {
     if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) {
       return;

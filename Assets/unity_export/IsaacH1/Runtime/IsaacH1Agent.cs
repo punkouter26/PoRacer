@@ -350,7 +350,7 @@ namespace IsaacH1
                 {
                     Debug.LogError($"[{name}] rig expects a body named '{def.name}' but the " +
                                    "hierarchy has none. Rebuild the prefab with " +
-                                   "IsaacH1 > Build Prefab.", this);
+                                   "IsaacH1Setup.BuildPrefab().", this);
                     enabled = false;
                     return;
                 }

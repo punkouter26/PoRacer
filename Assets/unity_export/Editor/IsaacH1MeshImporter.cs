@@ -23,7 +23,6 @@ namespace IsaacH1.EditorTools
         const string Magic = "IH1M";
         const int Version = 1;
 
-        [MenuItem("IsaacH1/Import Original Meshes", priority = 4)]
         public static void ImportMeshes()
         {
             var lib = Build();
@@ -34,14 +33,12 @@ namespace IsaacH1.EditorTools
                       $"{LibraryPath}\n" +
                       $"  {lib.totalVertices:N0} vertices, {lib.totalTriangles:N0} triangles\n" +
                       $"  Source: robot/usd/instanceable_meshes.usd (the URDF's *.STL files " +
-                      $"are not present in the export). Re-run IsaacH1 > Build Prefab to put " +
+                      $"are not present in the export). Re-run IsaacH1Setup.BuildPrefab() to put " +
                       $"them on the creature.");
         }
 
-        [MenuItem("IsaacH1/Import Decimated Meshes", priority = 5)]
         public static void ImportDecimatedMeshes() => ReplaceInPlace(DecimatedMeshDir, "decimated");
 
-        [MenuItem("IsaacH1/Restore Full-Detail Meshes", priority = 6)]
         public static void RestoreFullDetailMeshes() => ReplaceInPlace(MeshDir, "full-detail");
 
         /// <summary>
@@ -60,7 +57,7 @@ namespace IsaacH1.EditorTools
             if (lib == null)
             {
                 Debug.LogError($"[IsaacH1] no mesh library at {LibraryPath}. " +
-                               "Run IsaacH1 > Import Original Meshes first.");
+                               "Run IsaacH1MeshImporter.ImportMeshes() first.");
                 return;
             }
             if (!Directory.Exists(meshDir))

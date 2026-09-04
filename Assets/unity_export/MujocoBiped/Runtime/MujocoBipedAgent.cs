@@ -338,7 +338,7 @@ namespace MujocoBiped
                 {
                     Debug.LogError($"[{name}] the rig expects a link named '{def.name}' but " +
                                    "the hierarchy has none. Rebuild the prefab with " +
-                                   "MujocoBiped > Build Prefab.", this);
+                                   "MujocoBipedSetup.BuildPrefab().", this);
                     return;
                 }
 

@@ -32,7 +32,6 @@ namespace PoRacer.EditorTools
         private const string VERSION = "1.0.0";
         private const int VERSION_CODE = 1;
 
-        [MenuItem("PoRacer/Configure Android Release Settings")]
         public static void Apply()
         {
             PlayerSettings.companyName = "Punkouter Software";

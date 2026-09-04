@@ -24,7 +24,7 @@ namespace PoRacer.Views
             + "the kind, length and features below, Systems_Spawn enables this subtree "
             + "and skips the runtime builder entirely — so it can be tuned by hand here "
             + "and what you see in the Scene view is what races. Leave empty to always "
-            + "generate. Rebuild with PoRacer > Track > Bake Authored Flat Track.")]
+            + "generate. Rebuild with Editor_BakeAuthoredTrack.Bake().")]
         [SerializeField] private Transform _authoredTrack;
         [SerializeField] private TrackKind _authoredKind = TrackKind.Flat;
         [SerializeField] private float _authoredLengthMeters = 22f;

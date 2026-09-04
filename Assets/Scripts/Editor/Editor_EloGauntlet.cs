@@ -16,7 +16,6 @@ namespace PoRacer.EditorTools
     /// </summary>
     public static class Editor_EloGauntlet
     {
-        [MenuItem("PoRacer/Training/Gauntlet - Add Selected Brains")]
         public static void AddSelectedBrains()
         {
             CreatureCatalog catalog = LoadCatalog();
@@ -66,7 +65,6 @@ namespace PoRacer.EditorTools
                 "and compare ELO on the leaderboard; remove entries via the Gauntlet menu when done.");
         }
 
-        [MenuItem("PoRacer/Training/Gauntlet - Remove Gauntlet Entries")]
         public static void RemoveGauntletEntries()
         {
             CreatureCatalog catalog = LoadCatalog();

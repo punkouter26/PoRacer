@@ -264,7 +264,7 @@ namespace IsaacBox
                 if (!byName.TryGetValue(def.name, out var body))
                 {
                     Debug.LogError($"[{name}] rig expects a body named '{def.name}' but the " +
-                                   "hierarchy has none. Rebuild the prefab with IsaacBox > Build Prefab.", this);
+                                   "hierarchy has none. Rebuild the prefab with IsaacBoxSetup.BuildPrefab().", this);
                     enabled = false;
                     return;
                 }
@@ -439,7 +439,7 @@ namespace IsaacBox
                 // Not an error: until export_bundle.py has run there is no IsaacBox.onnx, and the
                 // rig tests (rest height, kinematics, drives) must still be able to run.
                 Debug.LogWarning($"[{name}] no ModelAsset assigned; holding the default pose. " +
-                                 "Run ISAAC/scripts/export_bundle.py and IsaacBox > Build Prefab.", this);
+                                 "Run ISAAC/scripts/export_bundle.py and IsaacBoxSetup.BuildPrefab().", this);
                 return;
             }
             _model = ModelLoader.Load(modelAsset);

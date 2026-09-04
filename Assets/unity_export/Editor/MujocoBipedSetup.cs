@@ -17,11 +17,16 @@ namespace MujocoBiped.EditorTools
     /// Assets/unity_export/MujocoBiped/ - it never edits a project setting, a layer, a
     /// build setting, another agent, or another scene's assets.
     ///
-    /// Menu:
-    ///   MujocoBiped / Rebuild Rig Asset From JSON  - MujocoBiped_rig.json -> the asset
-    ///   MujocoBiped / Build Prefab                 - rig asset -> prefab + physics material
-    ///   MujocoBiped / Spawn Into Open Scene        - window; spawns, leaves the scene dirty
-    ///   MujocoBiped / Run Reference Check          - edit-mode ONNX check vs the recording
+    /// Entry points. These carried [MenuItem] attributes until 2026-09-03; the editor UI
+    /// was removed so that all authoring goes through MCP / the Unity CLI. Call them with
+    ///   unity command eval --code "MujocoBiped.EditorTools.MujocoBipedSetup.RebuildRigAsset()"
+    /// NOTE the CLI's eval has a 5 s main-thread budget, so anything long-running (a
+    /// player build) has to go through the async build/build_status pair instead.
+    ///
+    ///   RebuildRigAsset()   - MujocoBiped_rig.json -> the asset
+    ///   BuildPrefab()       - rig asset -> prefab + physics material
+    ///   RunReferenceCheck() - edit-mode ONNX check vs the recording
+    ///   OpenSpawnWindow()   - the interactive spawn window; needs a human at the editor
     /// </summary>
     public static class MujocoBipedSetup
     {
@@ -33,7 +38,6 @@ namespace MujocoBiped.EditorTools
         public const string OnnxPath = MujocoBipedPaths.Onnx;
 
         // ------------------------------------------------------------- rig asset --
-        [MenuItem("MujocoBiped/Rebuild Rig Asset From JSON", priority = 0)]
         public static void RebuildRigAsset()
         {
             var asset = BuildRigAssetFromJson();
@@ -262,7 +266,6 @@ namespace MujocoBiped.EditorTools
         }
 
         // ----------------------------------------------------------- build prefab --
-        [MenuItem("MujocoBiped/Build Prefab", priority = 1)]
         public static void BuildPrefab()
         {
             var rig = AssetDatabase.LoadAssetAtPath<MujocoBipedRigAsset>(RigAssetPath)
@@ -322,7 +325,6 @@ namespace MujocoBiped.EditorTools
         }
 
         // ------------------------------------------------------- reference check --
-        [MenuItem("MujocoBiped/Run Reference Check", priority = 20)]
         public static void RunReferenceCheck()
         {
 #if ISAACPORTS_HAS_INFERENCE
@@ -369,7 +371,6 @@ namespace MujocoBiped.EditorTools
         }
 
         // ------------------------------------------------------------ spawn window --
-        [MenuItem("MujocoBiped/Spawn Into Open Scene", priority = 40)]
         public static void OpenSpawnWindow() => MujocoBipedSpawnWindow.Open();
     }
 
@@ -430,7 +431,7 @@ namespace MujocoBiped.EditorTools
             if (prefab == null)
             {
                 Debug.LogError($"[MujocoBiped] {MujocoBipedPaths.Prefab} not found. Run " +
-                               "MujocoBiped > Build Prefab first.");
+                               "MujocoBipedSetup.BuildPrefab() first.");
                 return;
             }
 

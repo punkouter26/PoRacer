@@ -10,7 +10,7 @@ namespace PoRacer.Editor
     /// <summary>
     /// Builds the racing prefab for Fido out of Assets/Creature/creature.xml.
     ///
-    /// Menu: PoRacer > Creatures > Rebuild Fido Prefab
+    /// Invoke: unity command eval --code "PoRacer.EditorTools.Editor_BuildFidoPrefab.Build()"
     ///
     /// The MJCF importer is Editor-only, so the rig cannot be produced at runtime. Run
     /// this whenever creature.xml changes; the catalog points at the prefab it writes.
@@ -40,7 +40,6 @@ namespace PoRacer.Editor
         /// </summary>
         private const int ACTION_DECIMATION = 4;
 
-        [MenuItem("PoRacer/Creatures/Rebuild Fido Prefab")]
         public static void Build()
         {
             string error = BuildInternal();

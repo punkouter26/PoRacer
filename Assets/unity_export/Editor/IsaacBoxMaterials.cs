@@ -83,7 +83,6 @@ namespace IsaacBox.EditorTools
                      new Color(0.42f, 0.40f, 0.36f, 1f)),
         };
 
-        [MenuItem("IsaacBox/Rebuild Materials From GLB Textures", priority = 4)]
         public static void RebuildMenu()
         {
             if (!Directory.Exists(TEX_DIR))
@@ -99,7 +98,7 @@ namespace IsaacBox.EditorTools
             if (prefab == null)
             {
                 Debug.LogWarning($"[IsaacBox] materials built, but {IsaacBoxPaths.Prefab} does not exist yet. " +
-                                 "Run IsaacBox > Build Prefab.");
+                                 "Run IsaacBoxSetup.BuildPrefab().");
                 return;
             }
 
@@ -137,7 +136,7 @@ namespace IsaacBox.EditorTools
             if (byRenderer.Count == 0)
             {
                 Debug.LogWarning("[IsaacBox] no authored materials found; leaving the FBX's own " +
-                                 "(untextured) materials in place. Run IsaacBox > Rebuild Materials.");
+                                 "(untextured) materials in place. Run IsaacBoxMaterials.RebuildMenu().");
                 return 0;
             }
 

@@ -18,18 +18,23 @@ namespace IsaacBox.EditorTools
     /// Assets/unity_export/IsaacBox/ - it never edits a project setting, a layer, a build
     /// setting, another agent, or another scene's assets.
     ///
-    /// Menu:
-    ///   IsaacBox / Rebuild Rig Asset From JSON   - isaacbox_rig.json -> IsaacBoxRig.asset
-    ///   IsaacBox / Build Prefab                  - rig asset + IsaacBox_Character.fbx -> IsaacBox.prefab + material
-    ///   IsaacBox / Spawn Into Open Scene         - window; spawns, leaves the scene dirty
-    ///   IsaacBox / Run Reference Check           - edit-mode ONNX check vs the recording
+    /// Entry points. These carried [MenuItem] attributes until 2026-09-03; the editor UI
+    /// was removed so that all authoring goes through MCP / the Unity CLI. Call them with
+    ///   unity command eval --code "IsaacBox.EditorTools.IsaacBoxSetup.RebuildRigAsset()"
+    /// NOTE the CLI's eval has a 5 s main-thread budget, so anything long-running (a
+    /// player build) has to go through the async build/build_status pair instead.
+    ///
+    ///   RebuildRigAsset()          - isaacbox_rig.json -> IsaacBoxRig.asset
+    ///   BuildPrefab()              - rig asset + IsaacBox_Character.fbx -> IsaacBox.prefab + material
+    ///   SpawnIntoOpenSceneDefaults() - spawns, leaves the scene dirty
+    ///   RunReferenceCheckMenu()    - edit-mode ONNX check vs the recording
+    ///   OpenSpawnWindow()          - the interactive spawn window; needs a human at the editor
     /// </summary>
     public static class IsaacBoxSetup
     {
         public const string Root = IsaacBoxPaths.Root;
 
         // ------------------------------------------------------------ rig asset --
-        [MenuItem("IsaacBox/Rebuild Rig Asset From JSON", priority = 0)]
         public static void RebuildRigAsset()
         {
             var asset = BuildRigAssetFromJson();
@@ -231,7 +236,6 @@ namespace IsaacBox.EditorTools
         }
 
         // ----------------------------------------------------------- build prefab --
-        [MenuItem("IsaacBox/Build Prefab", priority = 1)]
         public static void BuildPrefab() => BuildPrefab(true);
 
         /// <summary>Builds IsaacBox.prefab. Returns the saved prefab asset, or null.</summary>
@@ -365,7 +369,6 @@ namespace IsaacBox.EditorTools
             }
         }
 
-        [MenuItem("IsaacBox/Spawn Into Open Scene", priority = 2)]
         public static void OpenSpawnWindow() => IsaacBoxSpawnWindow.Open();
 
         /// <summary>
@@ -373,7 +376,6 @@ namespace IsaacBox.EditorTools
         /// ships with. The menu item above opens an EditorWindow, and a modal window stalls the
         /// `unity command menu` bridge, so automated setup needs an entry point that just runs.
         /// </summary>
-        [MenuItem("IsaacBox/Spawn Into Open Scene (Defaults)", priority = 3)]
         public static void SpawnIntoOpenSceneDefaults()
         {
             var rig = AssetDatabase.LoadAssetAtPath<IsaacBoxRigAsset>(IsaacBoxPaths.RigAsset);
@@ -386,7 +388,7 @@ namespace IsaacBox.EditorTools
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(IsaacBoxPaths.Prefab);
             if (prefab == null)
             {
-                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBox > Build Prefab.");
+                Debug.LogError($"[IsaacBox] {IsaacBoxPaths.Prefab} not found. Run IsaacBoxSetup.BuildPrefab().");
                 return null;
             }
 
@@ -420,7 +422,6 @@ namespace IsaacBox.EditorTools
         }
 
         // -------------------------------------------------------- reference check --
-        [MenuItem("IsaacBox/Run Reference Check", priority = 3)]
         public static void RunReferenceCheckMenu()
         {
 #if ISAACPORTS_HAS_INFERENCE

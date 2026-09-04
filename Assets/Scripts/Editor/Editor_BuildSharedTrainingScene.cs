@@ -48,13 +48,11 @@ namespace PoRacer.Editor
 
         private static readonly TrackKind[] Variants = { TrackKind.Walls, TrackKind.Lumpy };
 
-        [MenuItem("PoRacer/Build Shared Training Scene (SCN_TRAIN_ALL)")]
         public static void BuildScene()
         {
             BuildSceneFrom(CreaturePrefabs, "Assets/Scenes/SCN_TRAIN_ALL.unity");
         }
 
-        [MenuItem("PoRacer/Build Humanoid Training Scene (SCN_TRAIN_HUMANOIDS)")]
         public static void BuildHumanoidScene()
         {
             BuildSceneFrom(HumanoidPrefabs, "Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity");
@@ -86,13 +84,11 @@ namespace PoRacer.Editor
             Debug.Log($"{System.IO.Path.GetFileNameWithoutExtension(scenePath)} saved with {built} training areas.");
         }
 
-        [MenuItem("PoRacer/Build All-Creatures Training Env")]
         public static void BuildEnv()
         {
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_ALL.unity", "Builds/AllEnv/AllEnv.exe");
         }
 
-        [MenuItem("PoRacer/Build Humanoid Training Env")]
         public static void BuildHumanoidEnv()
         {
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");
@@ -101,7 +97,6 @@ namespace PoRacer.Editor
         // Folded in from the old Editor_BuildWormEnv, whose other two menu items
         // pointed at SCN_TRAIN_WORM and SCN_TRAIN_SPIDER - scenes that no longer
         // exist. Every env build now lives here and names a scene that does.
-        [MenuItem("PoRacer/Build Worm Rough Training Env")]
         public static void BuildWormRoughEnv()
         {
             BuildEnvFrom("Assets/Scenes/SCN_TRAIN_WORM_ROUGH.unity", "Builds/WormRoughEnv/WormRoughEnv.exe");

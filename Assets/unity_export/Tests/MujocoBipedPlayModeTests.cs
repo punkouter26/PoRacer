@@ -56,7 +56,7 @@ namespace MujocoBiped.Tests
 #endif
             if (_rig == null)
                 Assert.Ignore($"{MujocoBipedPaths.RigAsset} not found - run " +
-                              "MujocoBiped > Rebuild Rig Asset From JSON.");
+                              "MujocoBipedSetup.RebuildRigAsset().");
         }
 
         [TearDown]
@@ -108,7 +108,7 @@ namespace MujocoBiped.Tests
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MujocoBipedPaths.Prefab);
             if (prefab == null)
                 Assert.Ignore($"{MujocoBipedPaths.Prefab} not found - run " +
-                              "MujocoBiped > Build Prefab.");
+                              "MujocoBipedSetup.BuildPrefab().");
             _creature = Object.Instantiate(prefab, position, Quaternion.identity);
 #else
             Assert.Ignore("these tests need the Editor to load the prefab");

@@ -18,11 +18,16 @@ namespace IsaacH1.EditorTools
     /// Assets/unity_export/IsaacH1/ - it never edits a project setting, a layer, a build
     /// setting, another agent, or another scene's assets.
     ///
-    /// Menu:
-    ///   IsaacH1 / Rebuild Rig Asset From JSON   - IsaacH1_rig.json -> IsaacH1Rig.asset
-    ///   IsaacH1 / Build Prefab                  - rig asset -> IsaacH1.prefab + material
-    ///   IsaacH1 / Spawn Into Open Scene         - window; spawns, leaves the scene dirty
-    ///   IsaacH1 / Run Reference Check           - edit-mode ONNX check vs the recording
+    /// Entry points. These carried [MenuItem] attributes until 2026-09-03; the editor UI
+    /// was removed so that all authoring goes through MCP / the Unity CLI. Call them with
+    ///   unity command eval --code "IsaacH1.EditorTools.IsaacH1Setup.RebuildRigAsset()"
+    /// NOTE the CLI's eval has a 5 s main-thread budget, so anything long-running (a
+    /// player build) has to go through the async build/build_status pair instead.
+    ///
+    ///   RebuildRigAsset()       - IsaacH1_rig.json -> IsaacH1Rig.asset
+    ///   BuildPrefab()           - rig asset -> IsaacH1.prefab + material
+    ///   RunReferenceCheckMenu() - edit-mode ONNX check vs the recording
+    ///   OpenSpawnWindow()       - the interactive spawn window; needs a human at the editor
     /// </summary>
     public static class IsaacH1Setup
     {
@@ -37,7 +42,6 @@ namespace IsaacH1.EditorTools
         public const string ReferencePath = IsaacH1Paths.Reference;
 
         // ------------------------------------------------------------ rig asset --
-        [MenuItem("IsaacH1/Rebuild Rig Asset From JSON", priority = 0)]
         public static void RebuildRigAsset()
         {
             var asset = BuildRigAssetFromJson();
@@ -243,7 +247,6 @@ namespace IsaacH1.EditorTools
         }
 
         // ----------------------------------------------------------- build prefab --
-        [MenuItem("IsaacH1/Build Prefab", priority = 1)]
         public static void BuildPrefab()
         {
             var rig = AssetDatabase.LoadAssetAtPath<IsaacH1RigAsset>(RigAssetPath)
@@ -266,7 +269,7 @@ namespace IsaacH1.EditorTools
                 if (meshLib == null)
                     Debug.Log("[IsaacH1] no mesh library found - building with primitive " +
                               "visual proxies. Run: python extract_meshes.py, then " +
-                              "IsaacH1 > Import Original Meshes, for the real Isaac geometry.");
+                              "IsaacH1MeshImporter.ImportMeshes(), for the real Isaac geometry.");
 
                 root = IsaacH1RigBuilder.Build(rig, IsaacH1Agent.ArmatureMode.None, meshLib);
 
@@ -361,7 +364,6 @@ namespace IsaacH1.EditorTools
             }
         }
 
-        [MenuItem("IsaacH1/Spawn Into Open Scene", priority = 2)]
         public static void OpenSpawnWindow() => IsaacH1SpawnWindow.Open();
 
         /// <summary>
@@ -374,7 +376,7 @@ namespace IsaacH1.EditorTools
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (prefab == null)
             {
-                Debug.LogError($"[IsaacH1] {PrefabPath} not found. Run IsaacH1 > Build Prefab.");
+                Debug.LogError($"[IsaacH1] {PrefabPath} not found. Run IsaacH1Setup.BuildPrefab().");
                 return null;
             }
 
@@ -408,7 +410,6 @@ namespace IsaacH1.EditorTools
         }
 
         // -------------------------------------------------------- reference check --
-        [MenuItem("IsaacH1/Run Reference Check", priority = 3)]
         public static void RunReferenceCheckMenu()
         {
 #if ISAACPORTS_HAS_INFERENCE

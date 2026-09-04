@@ -43,7 +43,7 @@ namespace IsaacH1.Tests
             _savedFixedDt = Time.fixedDeltaTime;
             _rig = AssetDatabase.LoadAssetAtPath<IsaacH1RigAsset>(RigAssetPath);
             Assert.IsNotNull(_rig, $"rig asset missing at {RigAssetPath} - run " +
-                                   "IsaacH1 > Rebuild Rig Asset From JSON");
+                                   "IsaacH1Setup.RebuildRigAsset()");
             // The exact divisor: policy_dt / isaacDecimation == Isaac's own physics step.
             Time.fixedDeltaTime = _rig.isaacPhysicsDt;
         }
@@ -96,7 +96,7 @@ namespace IsaacH1.Tests
         {
             if (ground) SpawnGround();
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            Assert.IsNotNull(prefab, $"prefab missing at {PrefabPath} - run IsaacH1 > Build Prefab");
+            Assert.IsNotNull(prefab, $"prefab missing at {PrefabPath} - run IsaacH1Setup.BuildPrefab()");
             var go = Object.Instantiate(prefab, pos, Quaternion.identity);
             go.name = "IsaacH1_test";
             _spawned.Add(go);

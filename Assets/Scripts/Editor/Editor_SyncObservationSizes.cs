@@ -17,7 +17,6 @@ namespace PoRacer.Editor
         private const int OBSERVATIONS_PER_JOINT = 3;
         private const int FIXED_OBSERVATIONS = 19;
 
-        [MenuItem("PoRacer/Sync Agent Observation Sizes")]
         public static void Sync()
         {
             string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" });

@@ -54,7 +54,6 @@ namespace PoRacer.EditorTools
             "Assets/Scenes/SCN_RACE_FLAT.unity",
         };
 
-        [MenuItem("PoRacer/Build Android AAB (Play release)")]
         public static void Build()
         {
             if (EditorApplication.isPlaying)
