@@ -141,7 +141,7 @@ namespace PoRacer.Views
             stripRow.style.flexDirection = FlexDirection.Row;
             stripRow.style.justifyContent = Justify.Center;
             stripRow.style.alignItems = Align.Center;
-            _fpsLabel = new Label { pickingMode = PickingMode.Ignore };
+            _fpsLabel = new Label { pickingMode = PickingMode.Ignore, name = UiTheme.FURNITURE_FPS };
             _fpsLabel.style.fontSize = UiTheme.FONT_SM;
             _fpsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             _fpsLabel.style.color = FpsGood;
@@ -163,7 +163,7 @@ namespace PoRacer.Views
             safeRoot.Add(stripRow);
             root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
 
-            var toggle = new Button(TogglePanel) { text = "DBG" };
+            var toggle = new Button(TogglePanel) { text = "DBG", name = UiTheme.FURNITURE_DBG };
             toggle.style.position = Position.Absolute;
             toggle.style.bottom = UiTheme.SPACE_SM;
             toggle.style.left = UiTheme.SPACE_SM;

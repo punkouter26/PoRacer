@@ -170,6 +170,7 @@ namespace PoRacer.Views
             titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             // Sits straight on the race with nothing behind it - see AddTextShadow.
             UiTheme.AddTextShadow(titleLabel);
+            titleLabel.name = UiTheme.FURNITURE_TITLE;
             safeRoot.Add(titleLabel);
 
             var versionLabel = new Label($"v{Application.version}")
@@ -182,6 +183,7 @@ namespace PoRacer.Views
             versionLabel.style.color = UiTheme.TextDim;
             versionLabel.style.fontSize = UiTheme.FONT_SM;
             UiTheme.AddTextShadow(versionLabel);
+            versionLabel.name = UiTheme.FURNITURE_VERSION;
             safeRoot.Add(versionLabel);
 
             // The fps readout lives on DebugOverlayView's strip, which now ships in
@@ -296,6 +298,7 @@ namespace PoRacer.Views
             menuButton.style.fontSize = UiTheme.FONT_SM;
             UiTheme.StyleButton(menuButton);
             UiTheme.AddHover(menuButton);
+            menuButton.name = UiTheme.FURNITURE_MENU;
             safeRoot.Add(menuButton);
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);

@@ -25,7 +25,10 @@ namespace PoRacer.Systems
     /// </summary>
     public sealed class Systems_FruitPour : IStartable, ITickable, IDisposable
     {
-        private const int PIECES_PER_POUR = 150;
+        // A phone gets half the shower: 150 convex rigidbodies is a desktop budget.
+        private const int PIECES_PER_POUR_DESKTOP = 150;
+        private const int PIECES_PER_POUR_MOBILE = 80;
+        private static int PIECES_PER_POUR => Application.isMobilePlatform ? PIECES_PER_POUR_MOBILE : PIECES_PER_POUR_DESKTOP;
         private const float POUR_SECONDS = 4f;
         // Smallest and largest extent a piece is scaled to, metres.
         private const float MIN_PIECE_SIZE = 0.3f;
@@ -57,7 +60,9 @@ namespace PoRacer.Systems
         private const float ROLL_RELEASE_HEIGHT = 0.6f;
         private const float ROLL_SPEED = 3f;
         // Frame-rate guard: the oldest pieces go when a fresh release would exceed this.
-        private const int MAX_LIVE_PIECES = 300;
+        private const int MAX_LIVE_PIECES_DESKTOP = 300;
+        private const int MAX_LIVE_PIECES_MOBILE = 160;
+        private static int MAX_LIVE_PIECES => Application.isMobilePlatform ? MAX_LIVE_PIECES_MOBILE : MAX_LIVE_PIECES_DESKTOP;
         // Anything this far under the lowest ground has left the world; there is no
         // floor under the mountain, and a piece that tunnels through the road
         // would otherwise fall for the rest of the race.
@@ -72,7 +77,7 @@ namespace PoRacer.Systems
         private readonly RaceModel _raceModel;
         private readonly ISubscriber<RaceFinishedMessage> _finished;
         private readonly ISubscriber<RaceStartedMessage> _started;
-        private readonly List<GameObject> _live = new(PIECES_PER_POUR);
+        private readonly List<GameObject> _live = new(PIECES_PER_POUR_DESKTOP);
         private readonly System.Random _rng = new();
         private IDisposable _subscriptions;
         private CancellationTokenSource _pourCts;

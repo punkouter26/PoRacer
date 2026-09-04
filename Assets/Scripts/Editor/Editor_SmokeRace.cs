@@ -8,6 +8,8 @@ using PoRacer.Systems;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.UIElements;
+using PoRacer.Presentation;
 using VContainer;
 using VContainer.Unity;
 
@@ -40,6 +42,13 @@ namespace PoRacer.EditorTools
         // at race end (the produce shower) is exercised and counted.
         private const float RESULTS_HOLD_SECONDS = 8f;
         private const string FRUIT_ROOT = "FruitPour";
+        // Portrait readability gate, in panel units (dp at the 420 dp reference):
+        // Android's body-text and touch-target minimums, and how far into a corner
+        // each piece of screen furniture must sit as a fraction of the panel.
+        private const float MIN_BODY_DP = 14f;
+        private const float MIN_TOUCH_DP = 48f;
+        private const float CORNER_FRACTION = 0.34f;
+        private const float RACE_AUDIT_DELAY_SECONDS = 4f;
 
         [Serializable]
         private sealed class Job
@@ -108,6 +117,7 @@ namespace PoRacer.EditorTools
         private static double _phaseStart;
         private static double _stepStart;
         private static int _lastFrame;
+        private static bool _raceAudited;
         private static Systems_Spawn _spawn;
         private static RaceConfigModel _config;
         private static RaceModel _raceModel;
@@ -231,6 +241,7 @@ namespace PoRacer.EditorTools
                 case Phase.WaitScope:
                     if (TryResolve())
                     {
+                        AuditUi("menu");
                         StartRaceStep();
                     }
                     else if (elapsed > SCOPE_TIMEOUT_SECONDS)
@@ -253,6 +264,11 @@ namespace PoRacer.EditorTools
                     }
                     break;
                 case Phase.Racing:
+                    if (!_raceAudited && elapsed > RACE_AUDIT_DELAY_SECONDS)
+                    {
+                        _raceAudited = true;
+                        AuditUi("race");
+                    }
                     if (!_raceModel.RaceActive)
                     {
                         _step.raceEnded = true;
@@ -308,6 +324,144 @@ namespace PoRacer.EditorTools
             _config = scope.Container.Resolve<RaceConfigModel>();
             _raceModel = scope.Container.Resolve<RaceModel>();
             return _spawn != null && _config != null && _raceModel != null;
+        }
+
+        /// <summary>
+        /// Walks every visible label and button in every UI document on screen and
+        /// records a violation for text under MIN_BODY_DP, controls under
+        /// MIN_TOUCH_DP, and any of the five furniture anchors out of its corner.
+        /// Violations land in the report as errors, so a build that breaks the
+        /// HUD layout fails the smoke run the same way an exception would.
+        /// </summary>
+        private static void AuditUi(string when)
+        {
+            _raceAudited = when == "race";
+            UIDocument[] documents = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
+            int labels = 0;
+            int buttons = 0;
+            var found = new Dictionary<string, Rect>();
+            Rect panel = default;
+            for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
+            {
+                VisualElement root = documents[documentIndex].rootVisualElement;
+                if (root == null || root.resolvedStyle.display == DisplayStyle.None)
+                {
+                    continue;
+                }
+                if (panel.width <= 0f)
+                {
+                    panel = root.worldBound;
+                }
+                root.Query<Label>().ForEach(label =>
+                {
+                    if (!IsShown(label) || string.IsNullOrEmpty(label.text))
+                    {
+                        return;
+                    }
+                    labels++;
+                    float size = label.resolvedStyle.fontSize;
+                    if (size < MIN_BODY_DP - 0.01f)
+                    {
+                        Record("error", $"ui-audit[{when}]: label '{Trim(label.text)}' is {size:0.0} dp, under {MIN_BODY_DP}", string.Empty);
+                    }
+                    if (!string.IsNullOrEmpty(label.name) && label.name.StartsWith("Furniture."))
+                    {
+                        found[label.name] = label.worldBound;
+                    }
+                });
+                root.Query<Button>().ForEach(button =>
+                {
+                    if (!IsShown(button))
+                    {
+                        return;
+                    }
+                    buttons++;
+                    Rect bound = button.worldBound;
+                    if (bound.height < MIN_TOUCH_DP - 0.5f)
+                    {
+                        Record("error", $"ui-audit[{when}]: button '{Trim(button.text)}' is {bound.height:0} dp tall, under {MIN_TOUCH_DP}", string.Empty);
+                    }
+                    if (!string.IsNullOrEmpty(button.name) && button.name.StartsWith("Furniture."))
+                    {
+                        found[button.name] = bound;
+                    }
+                });
+            }
+            if (panel.width <= 0f)
+            {
+                Record("error", "ui-audit[" + when + "]: no UI document on screen", string.Empty);
+                return;
+            }
+            // The five anchors. The menu screen has no MENU button or FPS readout of
+            // its own by design (DebugOverlay owns FPS on every screen).
+            ExpectCorner(when, found, panel, UiTheme.FURNITURE_TITLE, left: true, top: true);
+            ExpectCorner(when, found, panel, UiTheme.FURNITURE_VERSION, left: false, top: false);
+            ExpectCorner(when, found, panel, UiTheme.FURNITURE_DBG, left: true, top: false);
+            ExpectCentreTop(when, found, panel, UiTheme.FURNITURE_FPS);
+            if (when == "race")
+            {
+                ExpectCorner(when, found, panel, UiTheme.FURNITURE_MENU, left: false, top: true);
+            }
+            Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, {found.Count} furniture anchors checked");
+        }
+
+        private static bool IsShown(VisualElement element)
+        {
+            if (element.resolvedStyle.display == DisplayStyle.None || element.resolvedStyle.visibility == Visibility.Hidden)
+            {
+                return false;
+            }
+            Rect bound = element.worldBound;
+            if (bound.width <= 0f || bound.height <= 0f || float.IsNaN(bound.x))
+            {
+                return false;
+            }
+            for (VisualElement parent = element.parent; parent != null; parent = parent.parent)
+            {
+                if (parent.resolvedStyle.display == DisplayStyle.None)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static string Trim(string text)
+        {
+            text = (text ?? string.Empty).Replace('\n', ' ');
+            return text.Length > 32 ? text.Substring(0, 32) + "..." : text;
+        }
+
+        private static void ExpectCorner(string when, Dictionary<string, Rect> found, Rect panel, string name, bool left, bool top)
+        {
+            if (!found.TryGetValue(name, out Rect bound))
+            {
+                Record("error", $"ui-audit[{when}]: {name} is not on screen", string.Empty);
+                return;
+            }
+            float cx = (bound.center.x - panel.x) / panel.width;
+            float cy = (bound.center.y - panel.y) / panel.height;
+            bool okX = left ? cx < CORNER_FRACTION : cx > 1f - CORNER_FRACTION;
+            bool okY = top ? cy < CORNER_FRACTION : cy > 1f - CORNER_FRACTION;
+            if (!okX || !okY)
+            {
+                Record("error", $"ui-audit[{when}]: {name} sits at ({cx:0.00}, {cy:0.00}) of the panel, expected {(top ? "top" : "bottom")}-{(left ? "left" : "right")}", string.Empty);
+            }
+        }
+
+        private static void ExpectCentreTop(string when, Dictionary<string, Rect> found, Rect panel, string name)
+        {
+            if (!found.TryGetValue(name, out Rect bound))
+            {
+                Record("error", $"ui-audit[{when}]: {name} is not on screen", string.Empty);
+                return;
+            }
+            float cx = (bound.center.x - panel.x) / panel.width;
+            float cy = (bound.center.y - panel.y) / panel.height;
+            if (cx < CORNER_FRACTION || cx > 1f - CORNER_FRACTION || cy > CORNER_FRACTION)
+            {
+                Record("error", $"ui-audit[{when}]: {name} sits at ({cx:0.00}, {cy:0.00}) of the panel, expected top-centre", string.Empty);
+            }
         }
 
         private static void StartRaceStep()

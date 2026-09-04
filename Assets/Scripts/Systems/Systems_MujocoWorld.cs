@@ -42,6 +42,24 @@ namespace PoRacer.Systems
         internal static bool Exists => _world != null;
 
         /// <summary>
+        /// The plug-in ships mujoco.dll and nothing else, so MuJoCo creatures can only
+        /// step on Windows; anywhere else every call is a DllNotFoundException.
+        /// </summary>
+        internal static bool IsSupported =>
+            Application.platform == RuntimePlatform.WindowsEditor
+            || Application.platform == RuntimePlatform.WindowsPlayer;
+
+        /// <summary>The roster gate: a brain to race with, and a simulator that runs here.</summary>
+        internal static bool CanRace(PoRacer.Models.CreatureCatalog.CreatureEntry entry)
+        {
+            if (entry.prefab == null || !entry.HasBrain)
+            {
+                return false;
+            }
+            return IsSupported || entry.prefab.GetComponentInChildren<PoRacer.Agents.IMujocoCreature>(true) == null;
+        }
+
+        /// <summary>
         /// Stands up the MuJoCo world: solver options matching training, a ground plane at
         /// y = 0, and the MjScene that compiles them together with every Fido already in
         /// the scene. Safe to call when no Fido is racing — the caller decides that; this
@@ -49,7 +67,7 @@ namespace PoRacer.Systems
         /// </summary>
         internal static void Build()
         {
-            if (_world != null)
+            if (_world != null || !IsSupported)
             {
                 return;
             }

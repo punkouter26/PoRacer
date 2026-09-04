@@ -153,7 +153,7 @@ namespace PoRacer.Systems
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && entry.HasBrain)
+                if (Systems_MujocoWorld.CanRace(entry))
                 {
                     _config.SetCount(entry.id, 1);
                 }
@@ -481,9 +481,9 @@ namespace PoRacer.Systems
                 {
                     continue;
                 }
-                if (entry.prefab == null || !entry.HasBrain)
+                if (!Systems_MujocoWorld.CanRace(entry))
                 {
-                    Debug.LogWarning($"Creature '{entry.id}' has no trained brain yet; skipping its {requested} racers.");
+                    Debug.LogWarning($"Creature '{entry.id}' has no brain that runs on this platform; skipping its {requested} racers.");
                     continue;
                 }
                 if (coursePath != null && entry.prefab.GetComponentInChildren<IMujocoCreature>(true) != null)

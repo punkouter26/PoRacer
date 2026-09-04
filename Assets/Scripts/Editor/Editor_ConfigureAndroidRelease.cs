@@ -29,8 +29,8 @@ namespace PoRacer.EditorTools
         private const string ADAPTIVE_FOREGROUND = ICON_DIR + "AppIcon_Adaptive_Foreground.png";
         private const string LEGACY = ICON_DIR + "AppIcon_Legacy.png";
 
-        private const string VERSION = "1.0.0";
-        private const int VERSION_CODE = 1;
+        private const string VERSION = "1.1.0";
+        private const int VERSION_CODE = 2;
 
         public static void Apply()
         {

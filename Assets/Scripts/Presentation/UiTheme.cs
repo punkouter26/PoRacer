@@ -20,7 +20,7 @@ namespace PoRacer.Presentation
     /// any handset. <see cref="DensityFor"/> exists for the cases where scaling is
     /// not enough and a layout genuinely needs to drop a column.
     /// </summary>
-    internal static class UiTheme
+    public static class UiTheme
     {
         // ---- Spacing scale (the only allowed gaps) ----
         public const float SPACE_XXS = 2f;
@@ -62,6 +62,13 @@ namespace PoRacer.Presentation
         // properties below, never directly: on a handset narrower than the
         // reference the properties scale these up so no body text drops under
         // Android's minimum. See <see cref="FontScale"/>.
+        // The five fixed screen-furniture anchors, by element name, so a play-mode
+        // audit can find each one and assert its corner (see Editor_SmokeRace).
+        public const string FURNITURE_TITLE = "Furniture.Title";
+        public const string FURNITURE_FPS = "Furniture.Fps";
+        public const string FURNITURE_MENU = "Furniture.Menu";
+        public const string FURNITURE_DBG = "Furniture.Dbg";
+        public const string FURNITURE_VERSION = "Furniture.Version";
         private const float FONT_XS_BASE = 15f;
         private const float FONT_SM_BASE = 16f;
         private const float FONT_MD_BASE = 18f;

@@ -514,6 +514,27 @@ Unity does not serialize keystore passwords into `ProjectSettings`, so both Andr
 builders read `PORACER_KEYSTORE_PASS` first and fall back to the `.pass` file.
 Without either, the build **aborts** rather than producing an unsigned artifact.
 
+### Two device-only traps found on the 1.1.0 build (2026-09-04)
+
+**Post-processing shader stripping blanks the camera.** `PostFxView` builds its
+`VolumeProfile` in code at runtime, so no asset in the project references Bloom or
+Depth of Field. With `m_StripUnusedPostProcessingVariants: 1` in
+`UniversalRenderPipelineGlobalSettings.asset` the build stripper therefore removed the
+UberPost and Bokeh shaders, the device logged "Shader ... is not supported ...
+PostProcessing render passes will not execute", and the camera never presented a frame:
+the menu ghosted under the race HUD and the intro banner smeared. It does not reproduce
+in the editor, where nothing is stripped. The flag is now 0; do not turn it back on
+while the volume profile lives in code.
+
+**MuJoCo has no Android binary.** `Packages/org.mujoco` ships `mujoco.dll` only, so on a
+phone every MuJoCo call throws `DllNotFoundException`. `Systems_MujocoWorld.IsSupported`
+is true only on Windows, `CanRace(entry)` folds it into the roster gate, and Fido and
+MojucuBoy are simply absent from the roster on Android. Shipping them there means
+building libmujoco.so for arm64 and adding it to the plug-in.
+
+Known and harmless: the `TensorProxy` finalizer NullReferenceException (see MLOps)
+now logs without a stack trace in the IL2CPP release build, ~200/s during a race.
+
 ### glTFast textures never get compressed — cap them at the source
 
 **A .glb's textures do not obey any Android build setting.** glTFast imports through a

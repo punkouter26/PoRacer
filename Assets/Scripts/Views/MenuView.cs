@@ -175,6 +175,7 @@ namespace PoRacer.Views
             versionLabel.style.right = UiTheme.SPACE_XS;
             versionLabel.style.fontSize = UiTheme.FONT_XS;
             versionLabel.style.color = UiTheme.TextDim;
+            versionLabel.name = UiTheme.FURNITURE_VERSION;
             _content.Add(versionLabel);
 
             BuildHeader();
@@ -210,7 +211,7 @@ namespace PoRacer.Views
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && entry.HasBrain)
+                if (Systems_MujocoWorld.CanRace(entry))
                 {
                     _ranked.Add(entry);
                 }
@@ -252,7 +253,7 @@ namespace PoRacer.Views
             titleRow.style.alignItems = Align.Center;
             header.Add(titleRow);
 
-            var title = new Label("PoRacer");
+            var title = new Label("PoRacer") { name = UiTheme.FURNITURE_TITLE };
             title.style.fontSize = UiTheme.FONT_TITLE;
             title.style.color = UiTheme.Accent;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -565,7 +566,7 @@ namespace PoRacer.Views
             for (int entryIndex = 0; entryIndex < _catalog.Entries.Count; entryIndex++)
             {
                 CreatureCatalog.CreatureEntry entry = _catalog.Entries[entryIndex];
-                if (entry.prefab != null && entry.HasBrain)
+                if (Systems_MujocoWorld.CanRace(entry))
                 {
                     _config.SetCount(entry.id, count);
                 }
