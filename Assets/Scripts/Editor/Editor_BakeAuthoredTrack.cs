@@ -76,11 +76,24 @@ namespace PoRacer.EditorTools
                 return "RaceTrackView has no TrackRoot assigned";
             }
 
-            // Replace every previous bake rather than layering a second one under it.
+            // Course entries (GLB tracks placed by Editor_BuildCourseTrack) are not
+            // ours to rebuild: keep them and their subtrees, replace only the
+            // builder maps rather than layering a second bake under the first.
+            var baked = new List<RaceTrackView.AuthoredTrack>();
+            var keptRoots = new HashSet<Transform>();
+            IReadOnlyList<RaceTrackView.AuthoredTrack> existing = track.AuthoredTracks;
+            for (int existingIndex = 0; existingIndex < existing.Count; existingIndex++)
+            {
+                if (existing[existingIndex].course != null && existing[existingIndex].root != null)
+                {
+                    baked.Add(existing[existingIndex]);
+                    keptRoots.Add(existing[existingIndex].root);
+                }
+            }
             for (int childIndex = track.transform.childCount - 1; childIndex >= 0; childIndex--)
             {
                 Transform child = track.transform.GetChild(childIndex);
-                if (child.name.StartsWith(AUTHORED_PREFIX))
+                if (child.name.StartsWith(AUTHORED_PREFIX) && !keptRoots.Contains(child))
                 {
                     Object.DestroyImmediate(child.gameObject);
                 }
@@ -88,14 +101,13 @@ namespace PoRacer.EditorTools
 
             var builder = new Systems_TrackBuilder(
                 track.GroundMaterial, track.ObstacleMaterial, track.PhysicsMaterial);
-            var baked = new List<RaceTrackView.AuthoredTrack>();
             var summary = new System.Text.StringBuilder();
 
             IReadOnlyList<Systems_MapCatalog.MapEntry> maps = Systems_MapCatalog.Entries;
             for (int mapIndex = 0; mapIndex < maps.Count; mapIndex++)
             {
                 Systems_MapCatalog.MapEntry map = maps[mapIndex];
-                if (map.Randomize || !map.Available)
+                if (map.Randomize || !map.Available || map.Kind == TrackKind.Course)
                 {
                     continue;
                 }
@@ -130,8 +142,8 @@ namespace PoRacer.EditorTools
                     return map.DisplayName + ": builder produced no geometry; nothing baked";
                 }
 
-                // Only the first map is visible behind the menu; the race shows the rest.
-                authored.SetActive(baked.Count == 0);
+                // Only the first builder map is visible behind the menu; the race shows the rest.
+                authored.SetActive(baked.Count == keptRoots.Count);
                 baked.Add(new RaceTrackView.AuthoredTrack
                 {
                     root = authored.transform,
@@ -160,6 +172,7 @@ namespace PoRacer.EditorTools
                 element.FindPropertyRelative("groundBounds").boundsValue = entry.groundBounds;
                 element.FindPropertyRelative("hasArch").boolValue = entry.hasArch;
                 element.FindPropertyRelative("archBounds").boundsValue = entry.archBounds;
+                element.FindPropertyRelative("course").objectReferenceValue = entry.course;
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
 

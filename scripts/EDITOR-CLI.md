@@ -50,6 +50,9 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | PoRacer/Bake Authored Tracks into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake` |
 | PoRacer/Smoke-race every map in play mode | `PoRacer.EditorTools.Editor_SmokeRace.Start` / `.Status` |
 | PoRacer/Smoke-play one scene | `PoRacer.EditorTools.Editor_SmokeRace.StartScene` |
+| PoRacer/Place the Acrobat course into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BuildCourseTrack.Build` |
+| PoRacer/Build Acrobat Training Scene (SCN_TRAIN_ACROBAT) | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.Build` |
+| PoRacer/Build Acrobat Training Env | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.BuildEnv` (player build: queue it, do not eval it) |
 | PoRacer/Build All-Creatures Training Env | `…Editor_BuildSharedTrainingScene.BuildEnv` |
 | PoRacer/Build Humanoid Training Env | `…Editor_BuildSharedTrainingScene.BuildHumanoidEnv` |
 | PoRacer/Training/Enable Demo Recorders In Open Scene | `…Editor_RecordDemos.EnableRecorders` |

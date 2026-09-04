@@ -1,0 +1,137 @@
+# Acrobat course training. Pairs with SCN_TRAIN_ACROBAT / Builds/AcrobatEnv, built by
+# Editor_BuildCourseTrainingScene: one copy of the authored mountain course per
+# creature, each driven by Systems_CourseTrainingArea along the centreline.
+# The four behaviours below are exactly what that scene contains.
+#
+# Warm start from the flat-ground demos: a coded gait is still a gait on a road.
+# The curriculum widens where episodes START along the course (course_start_span)
+# so the policy meets the climb, the tunnel and the switchbacks long before it can
+# run 212 m to reach them, and jitters the start across the road so it learns to
+# hold a line rather than a rail.
+behaviors:
+  Centipede:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: &id001
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings: &id002
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic: &id003
+        gamma: 0.995
+        strength: 1.0
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Centipede.demo
+    behavioral_cloning:
+      demo_path: training/demos/Centipede.demo
+      strength: 0.3
+      steps: 300000
+    max_steps: 4500000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Crab:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Crab.demo
+    behavioral_cloning:
+      demo_path: training/demos/Crab.demo
+      strength: 0.3
+      steps: 300000
+    max_steps: 4500000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Hexapod:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Hexapod.demo
+    behavioral_cloning:
+      demo_path: training/demos/Hexapod.demo
+      strength: 0.3
+      steps: 300000
+    max_steps: 4500000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+  Quad:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters: *id001
+    network_settings: *id002
+    reward_signals:
+      extrinsic: *id003
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Quad.demo
+    behavioral_cloning:
+      demo_path: training/demos/Quad.demo
+      strength: 0.3
+      steps: 300000
+    max_steps: 4500000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    checkpoint_interval: 200000
+environment_parameters:
+  # Metres of course the episode start is drawn from. 0 is the start line; the
+  # course is 212 m, so the last lesson starts anywhere on it.
+  course_start_span:
+    curriculum:
+    - name: start_line
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.1
+        min_lesson_length: 100
+      value: 0.0
+    - name: first_climb
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.3
+        min_lesson_length: 100
+      value: 60.0
+    - name: whole_course
+      value: 200.0
+  # Start jitter across the road, metres either side of the centreline.
+  course_lateral_span:
+    curriculum:
+    - name: on_the_line
+      completion_criteria:
+        measure: progress
+        behavior: Crab
+        threshold: 0.2
+        min_lesson_length: 100
+      value: 0.5
+    - name: anywhere_on_the_road
+      value: 2.0

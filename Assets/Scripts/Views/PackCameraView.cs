@@ -28,6 +28,9 @@ namespace PoRacer.Views
         private const float DEFAULT_ASPECT = 0.5625f;       // portrait 9:16
 
         private readonly List<Transform> _targets = new();
+        // Set for authored courses: "ahead" is the centreline's heading at the
+        // front runner, and the lead window is measured along the course, not +Z.
+        private Systems.Systems_CoursePath _course;
         private Camera _mainCamera;
         private Vector3 _center;
         private float _distance = MIN_DISTANCE;
@@ -43,6 +46,22 @@ namespace PoRacer.Views
             _hasFrame = false;
         }
 
+        public void SetCourse(Systems.Systems_CoursePath course)
+        {
+            _course = course;
+            _hasFrame = false;
+        }
+
+        private static bool IsFinite(Vector3 position)
+        {
+            return float.IsFinite(position.x) && float.IsFinite(position.y) && float.IsFinite(position.z);
+        }
+
+        private float LeadMetric(Vector3 position)
+        {
+            return _course != null ? _course.Project(position) : position.z;
+        }
+
         private void Awake()
         {
             _mainCamera = Camera.main;
@@ -55,11 +74,11 @@ namespace PoRacer.Views
             for (int targetIndex = 0; targetIndex < _targets.Count; targetIndex++)
             {
                 Transform target = _targets[targetIndex];
-                if (target == null || !target.gameObject.activeInHierarchy)
+                if (target == null || !target.gameObject.activeInHierarchy || !IsFinite(target.position))
                 {
                     continue;
                 }
-                leaderZ = Mathf.Max(leaderZ, target.position.z);
+                leaderZ = Mathf.Max(leaderZ, LeadMetric(target.position));
             }
             if (float.IsNegativeInfinity(leaderZ))
             {
@@ -73,8 +92,8 @@ namespace PoRacer.Views
             for (int targetIndex = 0; targetIndex < _targets.Count; targetIndex++)
             {
                 Transform target = _targets[targetIndex];
-                if (target == null || !target.gameObject.activeInHierarchy
-                    || target.position.z < leaderZ - LEAD_WINDOW_METERS)
+                if (target == null || !target.gameObject.activeInHierarchy || !IsFinite(target.position)
+                    || LeadMetric(target.position) < leaderZ - LEAD_WINDOW_METERS)
                 {
                     continue;
                 }
@@ -118,9 +137,10 @@ namespace PoRacer.Views
             _center = Vector3.Lerp(_center, center, blend);
             _distance = Mathf.Lerp(_distance, targetDistance, blend);
 
+            Vector3 ahead = _course != null ? _course.HeadingAt(leaderZ) : Vector3.forward;
             transform.position = _center
-                + new Vector3(0f, _distance * HEIGHT_RATIO, -_distance * BACK_RATIO);
-            transform.LookAt(_center + Vector3.forward * (_distance * 0.1f));
+                + Vector3.up * (_distance * HEIGHT_RATIO) - ahead * (_distance * BACK_RATIO);
+            transform.LookAt(_center + ahead * (_distance * 0.1f));
         }
     }
 }

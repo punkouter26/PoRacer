@@ -114,6 +114,15 @@ namespace PoRacer.Systems
         /// arch is collider-free decoration, so nothing else stops the orbit shot
         /// from sweeping straight into it as the leader crosses the line.
         /// </summary>
+        /// <summary>The course being raced, or null on builder maps; the pack camera frames along it.</summary>
+        public void SetCourse(Systems_CoursePath course)
+        {
+            if (_pack != null)
+            {
+                _pack.SetCourse(course);
+            }
+        }
+
         public void SetKeepOut(Bounds keepOut)
         {
             _keepOut = keepOut;

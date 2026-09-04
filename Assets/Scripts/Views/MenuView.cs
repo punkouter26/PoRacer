@@ -39,8 +39,7 @@ namespace PoRacer.Views
         // MonoBehaviour and which is not a compile-time constant either way.
         private static float BottomFurniture => UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
 
-        private const float MAP_CARD_WIDTH = 138f;
-        private const float MAP_STRIP_HEIGHT = 54f;
+        private const float MAP_CARD_HEIGHT = 64f;
         private const float AVATAR_SIZE = 24f;
 
         private CreatureCatalog _catalog;
@@ -51,7 +50,6 @@ namespace PoRacer.Views
         private VisualElement _content;
         private Label _totalLabel;
         private Button _startButton;
-        private Label _mapBlurbLabel;
         private VisualElement[] _mapCards;
         private Label[] _mapCardNames;
         private VisualElement _creatureList;
@@ -62,6 +60,9 @@ namespace PoRacer.Views
         private readonly List<VisualElement> _rowElements = new();
         private readonly List<CreatureCatalog.CreatureEntry> _ranked = new();
         private bool _wasVisible;
+        // Two screens: pick the map, then pick the racers. The menu always comes
+        // back to the map screen after a race.
+        private bool _mapStep = true;
         // Entrance stagger plays once; menu rebuilds (preset / brain toggle) must
         // not re-animate the whole screen under the user's finger.
         private bool _playEntrance = true;
@@ -105,6 +106,12 @@ namespace PoRacer.Views
                 // Ratings moved while the race ran; re-read them on the way back in
                 // instead of polling them every frame.
                 RefreshRatings();
+                if (!_mapStep)
+                {
+                    _mapStep = true;
+                    _root.Clear();
+                    BuildMenu();
+                }
             }
             _wasVisible = _config.MenuVisible;
             RefreshTotals();
@@ -123,6 +130,10 @@ namespace PoRacer.Views
         /// </summary>
         private void RefreshTotals()
         {
+            if (_totalLabel == null)
+            {
+                return;
+            }
             if (_totalLabel == null)
             {
                 return;
@@ -167,7 +178,18 @@ namespace PoRacer.Views
             _content.Add(versionLabel);
 
             BuildHeader();
-            BuildMapPicker();
+            if (_mapStep)
+            {
+                BuildMapList();
+                BuildMapFooter();
+                if (_playEntrance)
+                {
+                    PlayEntrance();
+                    _playEntrance = false;
+                }
+                return;
+            }
+            BuildRosterHeader();
             BuildPresetRow();
 
             // The roster is sized to fit without scrolling on a phone; the
@@ -251,45 +273,24 @@ namespace PoRacer.Views
             header.Add(titleBar);
         }
 
-        private void BuildMapPicker()
+        /// <summary>
+        /// Screen one: every playable map as a full-width card, name and length on
+        /// the first line, the blurb under it. Tapping selects; NEXT moves on.
+        /// </summary>
+        private void BuildMapList()
         {
-            // Section label and the blurb for the selected map share one line; the
-            // blurb had a full row to itself and used a fifth of it.
-            var mapHeader = new VisualElement();
-            mapHeader.style.flexDirection = FlexDirection.Row;
-            mapHeader.style.alignItems = Align.Center;
-            _content.Add(mapHeader);
+            Label mapLabel = UiTheme.MakeSectionHeader("PICK A MAP");
+            _content.Add(mapLabel);
 
-            Label mapLabel = UiTheme.MakeSectionHeader("MAP");
-            mapLabel.style.flexShrink = 0f;
-            mapHeader.Add(mapLabel);
-
-            _mapBlurbLabel = new Label { pickingMode = PickingMode.Ignore };
-            _mapBlurbLabel.style.color = UiTheme.TextDim;
-            _mapBlurbLabel.style.fontSize = UiTheme.FONT_XS;
-            _mapBlurbLabel.style.marginLeft = UiTheme.SPACE_SM;
-            _mapBlurbLabel.style.flexShrink = 1f;
-            _mapBlurbLabel.style.minWidth = 0f;
-            _mapBlurbLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _mapBlurbLabel.style.overflow = Overflow.Hidden;
-            _mapBlurbLabel.style.textOverflow = TextOverflow.Ellipsis;
-            mapHeader.Add(_mapBlurbLabel);
-
-            // Only playable maps get cards; unfinished slots stay out of the UI
-            // entirely instead of filling the strip with dead "Soon" placeholders.
             int mapCount = Systems_MapCatalog.Entries.Count;
             _mapCards = new VisualElement[mapCount];
             _mapCardNames = new Label[mapCount];
 
-            var strip = new ScrollView(ScrollViewMode.Horizontal);
-            strip.style.height = MAP_STRIP_HEIGHT;
-            strip.style.flexShrink = 0f;
-            strip.contentContainer.style.flexDirection = FlexDirection.Row;
-            // A swipe strip: the partly-visible next card is the affordance, so
-            // the bar is dead chrome and its reserved height was eating into the
-            // cards and clipping their blurbs.
-            UiTheme.StyleScrollView(strip, hideBar: true);
-            _content.Add(strip);
+            var list = new ScrollView(ScrollViewMode.Vertical);
+            list.style.flexGrow = 1f;
+            list.style.flexShrink = 1f;
+            UiTheme.StyleScrollView(list);
+            _content.Add(list);
 
             for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
             {
@@ -304,42 +305,125 @@ namespace PoRacer.Views
                     _config.SetMap(capturedIndex);
                     RefreshMapButtons();
                 });
-                card.style.width = MAP_CARD_WIDTH;
+                card.style.height = MAP_CARD_HEIGHT;
                 card.style.flexShrink = 0f;
-                card.style.flexDirection = FlexDirection.Row;
-                card.style.alignItems = Align.Center;
-                card.style.justifyContent = Justify.SpaceBetween;
-                UiTheme.SetMargin(card, 0f, UiTheme.SPACE_XXS);
+                card.style.flexDirection = FlexDirection.Column;
+                card.style.alignItems = Align.Stretch;
+                card.style.justifyContent = Justify.Center;
+                UiTheme.SetMargin(card, UiTheme.SPACE_XXS, 0f);
                 UiTheme.StyleCard(card, mapIndex == _config.SelectedMapIndex);
-                UiTheme.SetPadding(card, UiTheme.SPACE_XXS, UiTheme.SPACE_SM);
+                UiTheme.SetPadding(card, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
 
-                // Name and length sit side by side rather than stacked: the two-line
-                // card forced a 72 px strip for two short strings.
+                var titleRow = new VisualElement { pickingMode = PickingMode.Ignore };
+                titleRow.style.flexDirection = FlexDirection.Row;
+                titleRow.style.justifyContent = Justify.SpaceBetween;
+                titleRow.style.alignItems = Align.Center;
+                card.Add(titleRow);
+
                 var name = new Label(map.DisplayName) { pickingMode = PickingMode.Ignore };
-                name.style.fontSize = UiTheme.FONT_SM;
+                name.style.fontSize = UiTheme.FONT_MD;
                 name.style.unityFontStyleAndWeight = FontStyle.Bold;
                 name.style.unityTextAlign = TextAnchor.MiddleLeft;
                 name.style.color = UiTheme.Text;
-                name.style.flexShrink = 1f;
-                name.style.minWidth = 0f;
-                name.style.overflow = Overflow.Hidden;
-                name.style.textOverflow = TextOverflow.Ellipsis;
-                card.Add(name);
+                titleRow.Add(name);
 
                 var lengthLabel = new Label($"{map.LengthMeters:0} m") { pickingMode = PickingMode.Ignore };
                 lengthLabel.style.fontSize = UiTheme.FONT_XS;
                 lengthLabel.style.color = UiTheme.AccentSoft;
                 lengthLabel.style.unityTextAlign = TextAnchor.MiddleRight;
-                lengthLabel.style.marginLeft = UiTheme.SPACE_XS;
-                lengthLabel.style.flexShrink = 0f;
-                card.Add(lengthLabel);
+                titleRow.Add(lengthLabel);
+
+                var blurb = new Label(map.Blurb) { pickingMode = PickingMode.Ignore };
+                blurb.style.fontSize = UiTheme.FONT_XS;
+                blurb.style.color = UiTheme.TextDim;
+                blurb.style.unityTextAlign = TextAnchor.MiddleLeft;
+                blurb.style.whiteSpace = WhiteSpace.NoWrap;
+                blurb.style.overflow = Overflow.Hidden;
+                blurb.style.textOverflow = TextOverflow.Ellipsis;
+                card.Add(blurb);
 
                 _mapCards[mapIndex] = card;
                 _mapCardNames[mapIndex] = name;
-                strip.Add(card);
+                list.Add(card);
             }
 
             RefreshMapButtons();
+        }
+
+        /// <summary>Screen one's footer: the only way forward is to the roster.</summary>
+        private void BuildMapFooter()
+        {
+            var footer = new VisualElement();
+            footer.style.flexShrink = 0f;
+            footer.style.marginTop = UiTheme.SPACE_XXS;
+            UiTheme.StyleGlassPanel(footer, glowing: true);
+            UiTheme.SetPadding(footer, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
+            footer.style.marginBottom = BottomFurniture;
+            _content.Add(footer);
+
+            var nextButton = new Button(() =>
+            {
+                _mapStep = false;
+                Rebuild();
+            }) { text = "NEXT: PICK RACERS" };
+            nextButton.style.height = UiTheme.CONTROL_MD;
+            nextButton.style.fontSize = UiTheme.FONT_LG;
+            UiTheme.SetMargin(nextButton, 0f, 0f);
+            UiTheme.StyleButton(nextButton, accent: true);
+            UiTheme.SetRadius(nextButton, UiTheme.RADIUS_LG);
+            UiTheme.AddHover(nextButton, accent: true);
+            footer.Add(nextButton);
+        }
+
+        /// <summary>
+        /// Screen two's first line: the chosen map, as a button that goes back to
+        /// screen one, beside the roster's section header.
+        /// </summary>
+        private void BuildRosterHeader()
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.justifyContent = Justify.SpaceBetween;
+            row.style.flexShrink = 0f;
+            _content.Add(row);
+
+            Label rosterLabel = UiTheme.MakeSectionHeader("PICK YOUR RACERS");
+            rosterLabel.style.flexShrink = 1f;
+            row.Add(rosterLabel);
+
+            Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
+            if (selected.Kind == TrackKind.Course)
+            {
+                // MuJoCo steps its own world and cannot see Unity colliders, so
+                // Fido and MojucuBoy fall through an authored course; Systems_Spawn
+                // leaves them on the grid, and the roster should say so up front.
+                var note = new Label("Fido and MojucuBoy sit this course out") { pickingMode = PickingMode.Ignore };
+                note.style.fontSize = UiTheme.FONT_XS;
+                note.style.color = UiTheme.TextDim;
+                note.style.flexShrink = 0f;
+                _content.Add(note);
+            }
+            var mapButton = new Button(() =>
+            {
+                _mapStep = true;
+                Rebuild();
+            }) { text = "< MAP: " + selected.DisplayName.ToUpperInvariant() };
+            mapButton.style.height = UiTheme.CONTROL_SM;
+            mapButton.style.fontSize = UiTheme.FONT_SM;
+            mapButton.style.flexShrink = 0f;
+            UiTheme.SetMargin(mapButton, 0f, 0f);
+            UiTheme.StyleButton(mapButton);
+            UiTheme.AddHover(mapButton);
+            row.Add(mapButton);
+        }
+
+        /// <summary>Tears the screen down and builds the current step again.</summary>
+        private void Rebuild()
+        {
+            _root.Clear();
+            BuildMenu();
+            _config.NotifyChanged();
         }
 
         private void RefreshMapButtons()
@@ -355,8 +439,6 @@ namespace PoRacer.Views
                 UiTheme.SetPadding(_mapCards[mapIndex], UiTheme.SPACE_XXS, UiTheme.SPACE_SM);
                 _mapCardNames[mapIndex].style.color = isSelected ? UiTheme.AccentSoft : UiTheme.Text;
             }
-            Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
-            _mapBlurbLabel.text = selected.Blurb;
         }
 
         /// <summary>

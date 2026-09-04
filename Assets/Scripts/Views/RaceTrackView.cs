@@ -17,7 +17,9 @@ namespace PoRacer.Views
         /// One map's geometry, baked into the scene as ordinary GameObjects under
         /// <see cref="root"/>. Kind, length and features together identify the map
         /// it stands in for; the bounds are its footprint, read instead of measuring
-        /// the hierarchy every race.
+        /// the hierarchy every race. A track with a <see cref="course"/> is an
+        /// authored course (a GLB with its own centreline and start markers) rather
+        /// than a builder map, and races along that centreline.
         /// </summary>
         [Serializable]
         public sealed class AuthoredTrack
@@ -29,6 +31,7 @@ namespace PoRacer.Views
             public Bounds groundBounds;
             public bool hasArch;
             public Bounds archBounds;
+            public RaceCourseView course;
         }
 
         [SerializeField] private Transform[] _spawnPoints;
@@ -43,8 +46,9 @@ namespace PoRacer.Views
             + "When the selected map matches an entry's kind, length and features, "
             + "Systems_Spawn enables that subtree and skips the runtime builder entirely, "
             + "so it can be tuned by hand here and what you see in the Scene view is what "
-            + "races. Roulette re-rolls every race and is always generated. Rebuild all "
-            + "entries with Editor_BakeAuthoredTrack.Bake(); that discards hand edits.")]
+            + "races. Roulette re-rolls every race and is always generated. Rebuild the "
+            + "builder-map entries with Editor_BakeAuthoredTrack.Bake() (that discards hand "
+            + "edits); course entries come from Editor_BuildCourseTrack.")]
         [SerializeField] private AuthoredTrack[] _authoredTracks = Array.Empty<AuthoredTrack>();
 
         public IReadOnlyList<Transform> SpawnPoints => _spawnPoints;

@@ -18,6 +18,7 @@ namespace PoRacer.Systems
         // rest are scored as non-finishers and the race ends immediately.
         public const int PODIUM_FINISHERS = 3;
         private const float MIN_PROGRESS_DELTA = 0.05f;
+        private float _timeLimitSeconds = RACE_TIMEOUT_SECONDS;
 
         private readonly RaceModel _model;
         private readonly IPublisher<RaceStartedMessage> _startedPublisher;
@@ -62,6 +63,13 @@ namespace PoRacer.Systems
 
         public void StartRace(IReadOnlyList<RacerState> racers)
         {
+            StartRace(racers, RACE_TIMEOUT_SECONDS);
+        }
+
+        /// <summary>Starts a race with its own full-time clock; authored courses run far longer than builder maps.</summary>
+        public void StartRace(IReadOnlyList<RacerState> racers, float timeLimitSeconds)
+        {
+            _timeLimitSeconds = timeLimitSeconds > 0f ? timeLimitSeconds : RACE_TIMEOUT_SECONDS;
             _model.SetRacers(racers);
             _lastProgress.Clear();
             _lastProgressTime.Clear();
@@ -204,7 +212,7 @@ namespace PoRacer.Systems
             }
             _model.ElapsedSeconds += deltaSeconds;
 
-            if (_model.ElapsedSeconds >= RACE_TIMEOUT_SECONDS)
+            if (_model.ElapsedSeconds >= _timeLimitSeconds)
             {
                 // Full time: the race is decided by distance instead of ending
                 // with an empty podium. Everyone still racing is ranked by how far

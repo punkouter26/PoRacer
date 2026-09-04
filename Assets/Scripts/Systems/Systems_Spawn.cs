@@ -91,6 +91,15 @@ namespace PoRacer.Systems
         // quarter of a portrait screen was empty black past the ground's edge.
         private const float CAMERA_BACKDROP_MARGIN = 24f;
         private const float STACK_LAYER_HEIGHT = 1.5f;
+        // Course starts: rows step this far along the road from its first knot,
+        // columns sit this far apart across it (as many as the road's width holds,
+        // which on the Acrobat road is one - single file down the centreline), and
+        // the whole line starts a little past the knot so nobody is born on the
+        // start gate's footing. Generous on purpose: every racer needs clear road
+        // ahead and behind to get going, and the course is long enough to spend it.
+        private const float COURSE_ROW_SPACING = 2.5f;
+        private const float COURSE_COLUMN_SPACING = 1.4f;
+        private const float COURSE_START_OFFSET = 1.5f;
         private const float STACK_JITTER = 0.35f;
 
         private readonly CreatureCatalog _catalog;
@@ -111,6 +120,8 @@ namespace PoRacer.Systems
         // bail out after each await if a newer session has superseded them.
         private int _generation;
         private TrackKind _currentTrack = TrackKind.Flat;
+        // The authored course being raced, or null on builder maps.
+        private RaceCourseView _course;
 
         public Systems_Spawn(
             CreatureCatalog catalog,
@@ -209,9 +220,17 @@ namespace PoRacer.Systems
             for (int authoredIndex = 0; authoredIndex < authored.Count; authoredIndex++)
             {
                 RaceTrackView.AuthoredTrack candidate = authored[authoredIndex];
-                if (candidate.root != null
-                    && candidate.kind == _currentTrack
-                    && candidate.features == rolledFeatures
+                if (candidate.root == null || candidate.kind != _currentTrack)
+                {
+                    continue;
+                }
+                // A course carries its own length and has no builder features;
+                // there is one per kind, so the kind is the whole match.
+                if (candidate.course != null)
+                {
+                    return candidate;
+                }
+                if (candidate.features == rolledFeatures
                     && Mathf.Approximately(candidate.lengthMeters, map.LengthMeters))
                 {
                     return candidate;
@@ -356,7 +375,33 @@ namespace PoRacer.Systems
                 // The match is on kind, length and features together, because three
                 // maps share TrackKind.Flat and differ only in those two.
                 RaceTrackView.AuthoredTrack authoredTrack = FindAuthoredTrack(map, rolledFeatures);
+                _course = authoredTrack != null ? authoredTrack.course : null;
+                if (_currentTrack == TrackKind.Course && _course == null)
+                {
+                    // The builder cannot make a course; without the scene entry the
+                    // race would run on nothing. Fall back to the first map, loudly.
+                    Debug.LogError($"Map '{map.DisplayName}' needs an authored course in the scene " +
+                        "(run Editor_BuildCourseTrack.Build()); racing Flat instead.");
+                    map = Systems_MapCatalog.Get(0);
+                    _currentTrack = map.Kind;
+                    _raceModel.TrackName = map.DisplayName;
+                    authoredTrack = FindAuthoredTrack(map, rolledFeatures);
+                }
                 ShowAuthoredTrack(authoredTrack);
+                // The scene's z-line finish gate has no meaning on a course, which
+                // carries its own finish trigger; hide it there and restore it after.
+                if (_track.FinishLine != null)
+                {
+                    _track.FinishLine.gameObject.SetActive(_course == null);
+                }
+                if (_course != null)
+                {
+                    CourseFinishView courseFinish = _course.GetComponentInChildren<CourseFinishView>(true);
+                    if (courseFinish != null)
+                    {
+                        courseFinish.Initialize(_race);
+                    }
+                }
                 if (authoredTrack != null)
                 {
                     ClearChildren(_track.TrackRoot);
@@ -393,7 +438,14 @@ namespace PoRacer.Systems
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
                 ? _track.SpawnPoints[0].parent.position
                 : Vector3.zero;
-            if (_track.FinishLine != null)
+            Systems_CoursePath coursePath = _course != null ? _course.Path : null;
+            _cameraDirector.SetCourse(coursePath);
+            if (coursePath != null)
+            {
+                gridOrigin = coursePath.Start;
+                _raceModel.TrackLengthMeters = Mathf.Max(1f, coursePath.Length);
+            }
+            else if (_track.FinishLine != null)
             {
                 _raceModel.TrackLengthMeters = Mathf.Max(1f, _track.FinishLine.position.z - gridOrigin.z);
             }
@@ -431,6 +483,13 @@ namespace PoRacer.Systems
                     Debug.LogWarning($"Creature '{entry.id}' has no trained brain yet; skipping its {requested} racers.");
                     continue;
                 }
+                if (coursePath != null && entry.prefab.GetComponentInChildren<IMujocoCreature>(true) != null)
+                {
+                    // MuJoCo steps its own world and cannot see Unity colliders: on
+                    // a course it would fall straight through the road to y = 0.
+                    Debug.LogWarning($"Creature '{entry.id}' is simulated by MuJoCo and cannot run an authored course; skipping.");
+                    continue;
+                }
                 for (int racerIndex = 0; racerIndex < requested; racerIndex++)
                 {
                     // Spread large spawns over frames: 800 articulated bodies in one
@@ -460,17 +519,51 @@ namespace PoRacer.Systems
                         localZ += ((float)_rng.NextDouble() - 0.5f) * 2f * STACK_JITTER;
                     }
                     // Small extra drop height so nobody is born intersecting the ground.
-                    Vector3 position = gridOrigin + new Vector3(
-                        localX,
-                        Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight + 0.05f
-                            + layer * STACK_LAYER_HEIGHT,
-                        localZ);
+                    Vector3 position;
+                    Quaternion rotation = entry.prefab.transform.rotation;
+                    if (coursePath != null)
+                    {
+                        // The foot of the course: rows step along the road from its
+                        // first knot, columns fan across it as far as the road is
+                        // wide, and each racer is set down on the surface the probe
+                        // finds under it - never at a guessed height. Every racer
+                        // faces down the road.
+                        int courseColumns = Mathf.Max(1, Mathf.FloorToInt(_course.HalfWidth * 2f / COURSE_COLUMN_SPACING));
+                        int courseRow = gridIndex / courseColumns;
+                        int courseColumn = gridIndex % courseColumns;
+                        float along = COURSE_START_OFFSET + courseRow * COURSE_ROW_SPACING;
+                        float lateral = (courseColumn - (courseColumns - 1) * 0.5f) * COURSE_COLUMN_SPACING;
+                        Vector3 heading = coursePath.HeadingAt(along);
+                        Vector3 across = Vector3.Cross(Vector3.up, heading);
+                        Vector3 centre = coursePath.PointAt(along);
+                        Vector3 surface = centre;
+                        // Over the verge the probe finds the hillside instead of the
+                        // road; pull in toward the centreline until it finds the road.
+                        for (int attempt = 0; attempt < 3; attempt++)
+                        {
+                            if (_course.TrySurfaceAt(centre + across * lateral, centre.y, out surface))
+                            {
+                                break;
+                            }
+                            lateral *= 0.5f;
+                            surface = centre;
+                        }
+                        position = surface + Vector3.up * (entry.spawnHeight + 0.05f + layer * STACK_LAYER_HEIGHT);
+                        rotation = Quaternion.LookRotation(heading, Vector3.up) * rotation;
+                    }
+                    else
+                    {
+                        position = gridOrigin + new Vector3(
+                            localX,
+                            Systems_TrackBuilder.SurfaceHeight(_currentTrack, localX, localZ) + entry.spawnHeight + 0.05f
+                                + layer * STACK_LAYER_HEIGHT,
+                            localZ);
+                    }
 
                     // The prefab's own rotation, not identity: the Centipede is
                     // authored lying down (90 deg on X) and spawns as a
                     // collapsing vertical tower of capsules without it.
-                    GameObject instance = UnityEngine.Object.Instantiate(
-                        entry.prefab, position, entry.prefab.transform.rotation);
+                    GameObject instance = UnityEngine.Object.Instantiate(entry.prefab, position, rotation);
                     // Generation-scoped so an orphan from a superseded spawn chain can
                     // never collide with a live racer's ID in RaceModel.
                     string racerId = $"{entry.id}#{generation}.{gridIndex + 1}";
@@ -504,7 +597,26 @@ namespace PoRacer.Systems
                         }
                     }
                     agent.MaxStep = 0;
-                    agent.SetGoal(_track.FinishLine);
+                    CourseGoalView courseGoal = null;
+                    if (coursePath != null)
+                    {
+                        // The carrot: a private goal kept ahead of this racer along
+                        // the centreline, so the brain's goal direction follows the
+                        // road. Despawned with the racers.
+                        var goalObject = new GameObject(racerId + ".goal");
+                        courseGoal = goalObject.AddComponent<CourseGoalView>();
+                        courseGoal.Initialize(coursePath, agent.Body);
+                        _spawned.Add(goalObject);
+                        agent.SetGoal(goalObject.transform);
+                        if (agent is Agent_Creature creatureAgent)
+                        {
+                            creatureAgent.SetCourse(courseGoal);
+                        }
+                    }
+                    else
+                    {
+                        agent.SetGoal(_track.FinishLine);
+                    }
 
                     var decisionRequester = instance.GetComponentInChildren<Unity.MLAgents.DecisionRequester>();
                     if (decisionRequester != null)
@@ -577,6 +689,10 @@ namespace PoRacer.Systems
                     // not this racer's own spawn row — otherwise back-row racers
                     // report inflated progress and corrupt the leader ranking.
                     view.Initialize(racerId, _race, gridOrigin, agent, finishZ, _currentTrack, groundBounds);
+                    if (courseGoal != null)
+                    {
+                        view.SetCourse(courseGoal, coursePath, _course.Bounds);
+                    }
                     creatureRoot.AddComponent<SpeedRibbonView>().Initialize(tint);
                     creatureRoot.AddComponent<DustTrailView>();
                     // Handed the buses at spawn: the view has no scope to inject from.
@@ -640,7 +756,7 @@ namespace PoRacer.Systems
                 }
             }
             _raceModel.CountdownValue = 0;
-            _race.StartRace(racers);
+            _race.StartRace(racers, map.TimeLimitSeconds);
         }
 
         /// <summary>

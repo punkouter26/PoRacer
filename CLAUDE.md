@@ -110,6 +110,38 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   race by design. Tune the subtrees by hand; re-running Bake discards those edits.
   Hazard views that build assets in `Awake` must keep their settings in serialized
   fields (see `GustZoneView`), because `Awake` does not run during a bake.
+- **The Acrobat course (2026-09-04).** `Assets/Art/Models/AcrobatTrack.glb` is an
+  authored mountain road (Blender source in `Assets/Art/Models/Source~/`, hidden from
+  Unity by the tilde): 55 centreline knots, four start markers, checkpoint and finish
+  trigger volumes, three LOD bodies, `COL_*` collision proxies and tunnel lamps.
+  `Editor_BuildCourseTrack.Build()` instantiates it into `SCN_RACE_FLAT` as
+  `AuthoredTrack_Acrobat` at `COURSE_SCALE` (1.0, the authored size: a 5 m road bed that
+  takes three racers abreast; 0.5 was tried and the pack had no room), adds
+  MeshColliders/LODGroup/lights/finish trigger, and writes a
+  `RaceCourseView` (knots, spawns, bounds, road half-width) plus an `AuthoredTrack`
+  entry of kind `TrackKind.Course`. The spline knots are read as MODEL-SPACE positions:
+  Blender exported the `SplinePoints` empty with its own translation while the knots
+  kept world coordinates, so reading them through the parent lands the course 40 m off.
+  Racing a course: `Systems_Spawn` fans the pack across the road at its foot (rows along
+  the centreline, columns across it, each racer set down by `RaceCourseView.TrySurfaceAt`,
+  a downward probe onto the course's own colliders), gives every racer a private
+  `CourseGoalView` carrot 6 m ahead along the centreline as the goal the brain observes,
+  and `RacerView` reads progress, floor and ceiling from the centreline
+  (`Systems_CoursePath`, pure C#). `Agent_Creature.SetCourse` makes the reward read
+  course distance left instead of the gap to the moving carrot. The map carries its own
+  600 s clock (`MapEntry.TimeLimitSeconds`). **Fido and MojucuBoy sit courses out**:
+  MuJoCo cannot see Unity colliders, so they fall through the road to y = 0; the spawner
+  skips them and the roster says so.
+- **Menu is two screens (2026-09-04):** pick the map (full-width cards), NEXT, then pick
+  the racers and START RACING; a `< MAP` button goes back. The menu always returns to
+  the map screen after a race.
+- **Training on the course:** `Editor_BuildCourseTrainingScene.Build()` writes
+  `SCN_TRAIN_ACROBAT` (one scaled course per creature, `Systems_CourseTrainingArea`
+  driving it: probe-placed starts, `course_start_span` / `course_lateral_span`
+  curriculum knobs, off-road ends the episode so nobody learns to cut the switchbacks);
+  `.BuildEnv()` builds `Builds/AcrobatEnv`; `Config/AcrobatLoco01.yaml` names the four
+  behaviours the scene holds; `scripts/train_acrobat.ps1` starts TensorBoard first and
+  runs it. Brains trained on flat builder ground mostly cannot climb it.
 - Play-mode smoke run: `Editor_SmokeRace.Start("0,1,2,3,4", 60f)` races every map with
   the default roster, samples frame time, collects every error and exception, and
   writes `Logs/smoke_<stamp>.json`; `Status()` reports progress, `StartScene(path, s)`

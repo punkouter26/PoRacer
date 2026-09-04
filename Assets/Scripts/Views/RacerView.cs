@@ -50,6 +50,9 @@ namespace PoRacer.Views
         // floor either false-triggers there or has to sit so deep that a sinking
         // racer is metres under the ground before anything catches it.
         private const float ARENA_DEPTH_BELOW_SURFACE = 2f;
+        // A course centreline is one line down a banked, cambered road; the verge
+        // can sit well below it without the racer having fallen through anything.
+        private const float COURSE_DEPTH_BELOW_CENTRELINE = 6f;
         // A diverging rig re-diverges; the cooldown keeps one blow-up from
         // burning the whole recovery budget inside a single settling frame.
         private const int MAX_RECOVERIES = 3;
@@ -77,6 +80,11 @@ namespace PoRacer.Views
         private float _maxX;
         private float _minZ;
         private float _maxZ;
+        // Authored course mode: progress is course distance from the carrot's
+        // projection, and the floor is the centreline height there, not a builder
+        // surface. Both null on builder maps.
+        private CourseGoalView _courseGoal;
+        private Systems_CoursePath _coursePath;
 
         public string RacerId => _racerId;
 
@@ -100,14 +108,42 @@ namespace PoRacer.Views
         }
 
         /// <summary>
+        /// Switches this racer to course mode: progress and the floor come from
+        /// the centreline, the arena is the course's own footprint, and the
+        /// ceiling rides with the road so a 50 m climb is not read as an escape.
+        /// </summary>
+        public void SetCourse(CourseGoalView courseGoal, Systems_CoursePath path, Bounds courseBounds)
+        {
+            _courseGoal = courseGoal;
+            _coursePath = path;
+            _finishDistance = path.Length;
+            _minX = courseBounds.min.x - ARENA_EDGE_MARGIN;
+            _maxX = courseBounds.max.x + ARENA_EDGE_MARGIN;
+            _minZ = courseBounds.min.z - ARENA_EDGE_MARGIN;
+            _maxZ = courseBounds.max.z + ARENA_EDGE_MARGIN;
+            _lastZ = 0f;
+        }
+
+        /// <summary>
         /// World-space height of the track surface under a world-space point.
         /// Systems_TrackBuilder authors terrain in grid-local coordinates, which
-        /// is how spawn places racers, so the same offset applies here.
+        /// is how spawn places racers, so the same offset applies here. On a
+        /// course it is the centreline height at the racer's projection.
         /// </summary>
         private float SurfaceYAt(float worldX, float worldZ)
         {
+            if (_coursePath != null)
+            {
+                return _coursePath.PointAt(_courseGoal.ProgressMeters).y;
+            }
             return _gridOrigin.y + Systems_TrackBuilder.SurfaceHeight(
                 _track, worldX - _gridOrigin.x, worldZ - _gridOrigin.z);
+        }
+
+        /// <summary>Metres from the common start line: +Z on builder maps, along the centreline on a course.</summary>
+        private float ProgressOf(Vector3 position)
+        {
+            return _coursePath != null ? _courseGoal.ProgressMeters : position.z - _startZ;
         }
 
         private void Update()
@@ -131,13 +167,15 @@ namespace PoRacer.Views
                 return;
             }
 
-            float z = position.z;
-            if (!_finished && z - _startZ >= _finishDistance)
+            // "z" is progress from the common start line; on a course that is
+            // centreline distance, which is what the finish and stall checks need.
+            float z = ProgressOf(position);
+            if (!_finished && z >= _finishDistance)
             {
                 // Backstop for racers that tunnel through the finish trigger;
                 // NotifyFinish no-ops if the trigger already fired.
                 _finished = true;
-                _race.NotifyFinish(_racerId, z - _startZ - _finishDistance);
+                _race.NotifyFinish(_racerId, z - _finishDistance);
             }
             if (_finished)
             {
@@ -170,7 +208,7 @@ namespace PoRacer.Views
                 return;
             }
 
-            _race.ReportProgress(_racerId, z - _startZ);
+            _race.ReportProgress(_racerId, z);
         }
 
         private static bool IsFinite(Vector3 position)
@@ -182,10 +220,13 @@ namespace PoRacer.Views
 
         private bool IsInsideArena(Vector3 position)
         {
+            float surfaceY = SurfaceYAt(position.x, position.z);
+            float ceilingY = _coursePath != null ? surfaceY + ARENA_HEADROOM_Y : _ceilingY;
+            float depthAllowance = _coursePath != null ? COURSE_DEPTH_BELOW_CENTRELINE : ARENA_DEPTH_BELOW_SURFACE;
             return position.x >= _minX && position.x <= _maxX
                 && position.z >= _minZ && position.z <= _maxZ
-                && position.y >= SurfaceYAt(position.x, position.z) - ARENA_DEPTH_BELOW_SURFACE
-                && position.y <= _ceilingY;
+                && position.y >= surfaceY - depthAllowance
+                && position.y <= ceilingY;
         }
 
         /// <summary>
@@ -197,6 +238,12 @@ namespace PoRacer.Views
         /// </summary>
         private Vector3 ArenaSafePosition()
         {
+            if (_coursePath != null)
+            {
+                // On a course the last in-bounds spot is usually the verge it went
+                // over; back onto the road, at the centreline, where it had got to.
+                return _coursePath.PointAt(_courseGoal.ProgressMeters);
+            }
             float x = Mathf.Clamp(_lastGoodPosition.x, _minX, _maxX);
             float z = Mathf.Clamp(_lastGoodPosition.z, _minZ, _maxZ);
             return new Vector3(x, Mathf.Min(SurfaceYAt(x, z), _ceilingY), z);
@@ -253,6 +300,15 @@ namespace PoRacer.Views
             if (_agent is MonoBehaviour agentBehaviour)
             {
                 agentBehaviour.enabled = false;
+            }
+            if (!IsFinite(_transform.position))
+            {
+                // Nothing to leave lying on the track: a body whose pose is NaN
+                // only feeds NaN into every renderer, trail and camera that reads
+                // it, once per frame, for the rest of the race.
+                enabled = false;
+                gameObject.SetActive(false);
+                return;
             }
             ArticulationBody[] bodies = GetComponentsInChildren<ArticulationBody>();
             for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)

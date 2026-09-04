@@ -33,7 +33,11 @@ namespace PoRacer.Systems
         Lumpy = 6,
         // Player-selectable map 3: flat ground with mud pits that drag racers
         // down and gate walls that force a path choice.
-        Swamp = 7
+        Swamp = 7,
+        // An authored course (a GLB with its own centreline, start markers and
+        // finish trigger). The builder cannot produce one: it only races when the
+        // scene carries it as an authored track with a RaceCourseView.
+        Course = 8
     }
 
     /// <summary>

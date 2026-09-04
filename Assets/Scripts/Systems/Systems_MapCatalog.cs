@@ -20,9 +20,12 @@ namespace PoRacer.Systems
             public readonly TrackFeatures Features;
             // Roulette: the spawn system rolls a random kind + features per race.
             public readonly bool Randomize;
+            // Full-time clock for this map; the race is decided by distance when it runs out.
+            public readonly float TimeLimitSeconds;
 
             public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "",
-                float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None, bool randomize = false)
+                float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None, bool randomize = false,
+                float timeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS)
             {
                 DisplayName = displayName;
                 Kind = kind;
@@ -31,8 +34,16 @@ namespace PoRacer.Systems
                 LengthMeters = lengthMeters;
                 Features = features;
                 Randomize = randomize;
+                TimeLimitSeconds = timeLimitSeconds;
             }
         }
+
+        public const float DEFAULT_TIME_LIMIT_SECONDS = 120f;
+        // The Acrobat course is ~212 m of climbing switchbacks at
+        // Editor_BuildCourseTrack.COURSE_SCALE 1.0: about ten times a builder map.
+        // Its length is read off the authored centreline at race time; this is
+        // only the catalogue's display figure.
+        public const float ACROBAT_LENGTH_METERS = 212f;
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
@@ -54,7 +65,16 @@ namespace PoRacer.Systems
                 TrackFeatures.Gusts | TrackFeatures.BoostPads),
             new MapEntry("Roulette", TrackKind.Flat, available: true,
                 "The wheel spins: fresh terrain and hazards every race", 18f,
-                randomize: true)
+                randomize: true),
+            // Authored in Blender (Assets/Art/Models/AcrobatTrack.glb): a mountain
+            // road of switchbacks and a tunnel, 50 m of climb. Raced along its
+            // centreline, not down +Z, so it needs the course entry
+            // Editor_BuildCourseTrack writes into SCN_RACE_FLAT. Brains trained on
+            // the flat builder maps mostly cannot finish it - it is the reason the
+            // course training scene exists.
+            new MapEntry("Acrobat", TrackKind.Course, available: true,
+                "Mountain switchbacks and a tunnel; 50 m of climb", ACROBAT_LENGTH_METERS,
+                timeLimitSeconds: 600f)
         };
 
         /// <summary>Clamps out-of-range or placeholder picks back to the first map.</summary>

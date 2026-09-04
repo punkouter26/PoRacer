@@ -69,6 +69,7 @@ namespace PoRacer.Agents
 
         private readonly Reward_WormLoco _reward = new();
         private System.Action _areaReset;
+        private ICourseProgress _course;
         private bool _failed;
         private Sensor_LimbContact[] _limbContacts;
         private float[] _previousActions;
@@ -98,6 +99,13 @@ namespace PoRacer.Agents
         public Transform Body => _root != null ? _root.transform : transform;
 
         public void SetGoal(Transform goal) => _goal = goal;
+
+        /// <summary>
+        /// On an authored course the goal transform is a look-ahead marker that
+        /// moves with the racer, so the reward and the finish check read course
+        /// distance from here instead of the gap to that marker. Null on builder maps.
+        /// </summary>
+        public void SetCourse(ICourseProgress course) => _course = course;
 
         public void SetAreaResetCallback(System.Action areaReset) => _areaReset = areaReset;
 
@@ -306,6 +314,17 @@ namespace PoRacer.Agents
 
         private void UpdateStamina(float normalizedTorque)
         {
+            // A diverged articulation reports NaN torque for a step or two before
+            // the marshal resets it; Clamp01(NaN) is NaN, and a NaN pool would then
+            // write non-finite drives every step for the rest of the race.
+            if (!float.IsFinite(normalizedTorque))
+            {
+                normalizedTorque = 0f;
+            }
+            if (!float.IsFinite(_stamina))
+            {
+                _stamina = 1f;
+            }
             float overload = (Mathf.Clamp01(normalizedTorque) - SUSTAINABLE_TORQUE_FRACTION)
                 / (1f - SUSTAINABLE_TORQUE_FRACTION);
             _stamina += overload > 0f
@@ -317,7 +336,7 @@ namespace PoRacer.Agents
         private void ApplyFatigueToDrives()
         {
             float factor = Mathf.Lerp(MIN_POWER_FACTOR, 1f, _stamina);
-            if (Mathf.Abs(factor - _lastPowerFactor) < POWER_FACTOR_WRITE_EPSILON)
+            if (!float.IsFinite(factor) || Mathf.Abs(factor - _lastPowerFactor) < POWER_FACTOR_WRITE_EPSILON)
             {
                 return;
             }
@@ -328,6 +347,12 @@ namespace PoRacer.Agents
             for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
             {
                 ArticulationDrive drive = _joints[jointIndex].xDrive;
+                if (!float.IsFinite(drive.target) || !float.IsFinite(drive.targetVelocity))
+                {
+                    // The joint itself is mid-divergence; writing it back only logs
+                    // an error per step. The marshal's reset restores it.
+                    continue;
+                }
                 float scaledStiffness = _baseStiffness[jointIndex] * factor;
                 float scaledForceLimit = _baseForceLimit[jointIndex] * factor;
                 if (float.IsFinite(scaledStiffness))
@@ -407,6 +432,10 @@ namespace PoRacer.Agents
 
         private float DistanceToGoal()
         {
+            if (_course != null)
+            {
+                return _course.RemainingMeters;
+            }
             if (_goal == null)
             {
                 return GOAL_DISTANCE_NORM;
