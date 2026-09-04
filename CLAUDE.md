@@ -461,26 +461,36 @@ file before calling.
 **The 5-second trap.** `eval` runs on the main thread with a **5 s budget**, and a
 player build blows straight through it — `eval_file` calling `Editor_BuildAndroid.Build()`
 dies with `Main thread operation timed out after 5000ms` and the artifact is never
-written. A build must therefore go through the CLI's async pair instead: apply the
-settings with a short `eval`, then
+written. **Use `Editor_BuildAsync`**, which queues the real builder and returns:
 
 ```
-unity command build --target Android --outputPath Builds/Android/PoRacer.apk   --scenes Assets/Scenes/SCN_RACE_FLAT.unity --confirm true
-unity command build_status          # poll until "completed"
+unity command eval --code "PoRacer.EditorTools.Editor_BuildAsync.Start(\"apk\")"
+  → queued apk — poll Editor_BuildAsync.Status()
+unity command eval --code "PoRacer.EditorTools.Editor_BuildAsync.Status()"
+  → succeeded | apk 57.6 MB at 21:48:41 (1.3 min)
 ```
 
-That generic `build` command does **no signing and no scene curation**, so anything
-built that way must have the settings applied first or it is not the artifact that
-ships. **Check the artifact's timestamp, not the exit code** — the builders abort
-early (and return success) if the editor is in play mode.
+`Status()` is **not answerable while the build runs** — BuildPipeline owns the main
+thread, so the polling `eval` hits the same 5 s timeout. That error means the build is
+healthy. Poll the artifact's mtime from the shell, then call `Status()` once it settles.
+
+The CLI's generic `unity command build` also works, but it does **no signing and no
+scene curation**, so it only produces the shipping artifact if the builder's settings
+were applied first. Prefer `Editor_BuildAsync`.
+
+**Two rules that cost real time here.** `EditorApplication.delayCall` **never fires**
+through this bridge (probed directly — `EditorApplication.update` does), so schedule
+deferred editor work on a one-shot `update` handler. And **check the artifact's
+timestamp, not the exit code or the return** — both builders abort early and return
+normally when the editor is in play mode or the keystore is missing.
 
 ### The tools
 
 | Tool | What it does |
 |---|---|
 | `Editor_ConfigureAndroidRelease.Apply()` | One-shot: identity, SDK levels, orientation, and the launcher icons (adaptive + round + legacy, 6 densities) from `Assets/Icons/`. Re-run after changing icon art |
-| `Editor_BuildAndroidAAB.Build()` | Signed bundle → `Builds/Android/PoRacer.aab`. Logs `AAB BUILD RESULT:`. Too slow for `eval` — see the note below |
-| `Editor_BuildAndroid.Build()` | Sideloadable APK on the SAME key, so it installs over a Play build → `Builds/Android/PoRacer.apk`. Logs `BUILD RESULT:`. Too slow for `eval` — see the note below |
+| `Editor_BuildAsync.Start("aab")` | Queues `Editor_BuildAndroidAAB.Build()` and returns; poll `Editor_BuildAsync.Status()`. Signed bundle → `Builds/Android/PoRacer.aab` |
+| `Editor_BuildAsync.Start("apk")` | Queues `Editor_BuildAndroid.Build()`; sideloadable APK on the SAME key, so it installs over a Play build → `Builds/Android/PoRacer.apk` |
 | `Tools/play_publish.py` | Uploads a built AAB. Defaults to the `internal` track as a `draft`; `--dry-run` rehearses and discards |
 
 `Tools/play_publish.py` needs its own venv (`Tools/publish-venv`). Do not install it
