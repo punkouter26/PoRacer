@@ -145,6 +145,9 @@ namespace PoRacer.Views
             _fpsLabel.style.fontSize = UiTheme.FONT_SM;
             _fpsLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             _fpsLabel.style.color = FpsGood;
+            // The fps readout shares the furniture band with the title and has no
+            // plate behind it either; on a bright sky it needs the same shadow.
+            UiTheme.AddTextShadow(_fpsLabel);
             stripRow.Add(_fpsLabel);
             // Frame time and draw count ride alongside in one pre-formatted
             // string, so a refresh rewrites at most two labels.

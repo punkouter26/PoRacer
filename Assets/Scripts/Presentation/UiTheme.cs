@@ -591,6 +591,31 @@ namespace PoRacer.Presentation
         }
 
         /// <summary>
+        /// Drop shadow for screen furniture — the corner labels that sit directly on
+        /// the 3D scene with nothing behind them.
+        ///
+        /// Those labels are the one place the palette cannot guarantee contrast: the
+        /// race renders whatever the map and time of day give it, so the title and the
+        /// fps readout can land on a bright green sky (measured on the Flat map) where
+        /// accent orange on light green is close to unreadable. The buttons in the same
+        /// band are fine because they carry their own plate; only the bare labels need
+        /// this.
+        ///
+        /// A soft black shadow rather than an outline: UI Toolkit has no text outline,
+        /// and a blurred shadow darkens whatever is immediately behind the glyph without
+        /// the hard fringe a zero-blur offset leaves on light backgrounds.
+        /// </summary>
+        public static void AddTextShadow(VisualElement element)
+        {
+            element.style.textShadow = new StyleTextShadow(new TextShadow
+            {
+                offset = new Vector2(0f, 1f),
+                blurRadius = 4f,
+                color = new Color(0f, 0f, 0f, 0.85f),
+            });
+        }
+
+        /// <summary>
         /// Applies the project font to an element, if one has been supplied. A
         /// no-op otherwise, which is why callers never have to check first.
         /// </summary>
