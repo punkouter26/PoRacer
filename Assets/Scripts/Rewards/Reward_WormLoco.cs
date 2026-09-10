@@ -29,6 +29,29 @@ namespace PoRacer.Rewards
         public const float STALL_REWARD = -0.5f;
         public const float MAX_STEP_DELTA_METERS = 0.2f; // physics-glitch clamp: real max is ~0.04 m per 0.02 s step
         public const float ENERGY_PENALTY_SCALE = 0.05f;
+        /// <summary>
+        /// Cost of being off-vertical, per step. A PENALTY since 2026-09-10, where it
+        /// used to be a bonus for being upright — and that sign was paying every
+        /// creature to stand still.
+        ///
+        /// Measured on Crab, which had collapsed furthest into it: uprightDot 1.000
+        /// (perfectly level), progress 0.008 m/s, and a net per-step reward of
+        /// +0.00204 for doing nothing at all —
+        ///
+        ///     upright +0.00500   time -0.00050   skate -0.00246   = +0.00204
+        ///
+        /// Worse, moving cost uprightness: a scuttling Crab sat at uprightDot 0.574,
+        /// giving up 0.00213/step of bonus, so progress had to exceed 0.426 m/s just
+        /// to break even on the trade. These rigs manage 0.008-0.02 m/s. Standing
+        /// still was not a failure to learn, it was the optimum, and the policy found
+        /// it. Its reward was pinned at 6.13/6.23/6.15/6.23 across four runs spanning
+        /// 20k-140k steps while entropy rose.
+        ///
+        /// As a penalty, level-and-motionless earns zero from this term and the time
+        /// cost makes standing still strictly negative, so forward progress is the
+        /// only way to earn anything. The "do not flop" pressure it was added for is
+        /// unchanged — falling over still costs the full scale.
+        /// </summary>
         public const float UPRIGHT_BONUS_SCALE = 0.02f;
         // Smoothness shaping: mean |action delta| per joint per step.
         public const float JERK_PENALTY_SCALE = 0.01f;
@@ -159,7 +182,11 @@ namespace PoRacer.Rewards
             LastProgressReward = delta * PROGRESS_SCALE;
             // Torque-squared physiological energy penalty (tau^2)
             LastEfficiencyPenalty = -ENERGY_PENALTY_SCALE * (clampedTorque * clampedTorque) * _stepScale;
-            LastUprightBonus = UPRIGHT_BONUS_SCALE * uprightPositive * _stepScale;
+            // Off-vertical cost, not an upright wage: 0 when perfectly level, the full
+            // scale when on its side or worse. See UPRIGHT_BONUS_SCALE for why the sign
+            // changed — as a bonus this term paid more for standing still than walking
+            // could earn.
+            LastUprightBonus = -UPRIGHT_BONUS_SCALE * (1f - uprightPositive) * _stepScale;
             LastJerkPenalty = -JERK_PENALTY_SCALE * clampedJerk * _stepScale;
             LastSkatePenalty = -SKATE_PENALTY_SCALE * clampedSkate * _stepScale;
 

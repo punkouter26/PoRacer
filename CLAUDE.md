@@ -1023,3 +1023,64 @@ unity command eval --code "return PoRacer.EditorTools.Editor_BuildAsync.Start(\"
 plus `hazard_level` covers every builder map the game ships; **the authored courses are a
 separate env** (`Config/AcrobatLoco01.yaml`, `SCN_TRAIN_ACROBAT`) and are not covered by
 this run.
+
+### The upright bonus was paying every creature to stand still (2026-09-10)
+
+`Reward_WormLoco`'s uprightness term was a **bonus for being level** and is now a
+**penalty for being tilted**. The sign was the bug, and it was a big one.
+
+Measured on Crab, which had collapsed furthest into it — `uprightDot` **1.000**
+(perfectly level), progress **0.008 m/s**, and a net per-step reward of **+0.00204 for
+doing nothing**:
+
+```
+upright +0.00500   time -0.00050   skate -0.00246   =  +0.00204 / step
+```
+
+Worse, moving *cost* uprightness: a scuttling Crab sat at `uprightDot` 0.574, giving up
+0.00213/step, so **progress had to exceed 0.426 m/s just to break even**. These rigs
+manage 0.008–0.02 m/s. Standing still was not a failure to learn — it was the optimum,
+and the policy found it. Crab's reward was pinned at 6.13 / 6.23 / 6.15 / 6.23 across
+four runs spanning 20k–140k steps while entropy *rose*.
+
+It explains the whole cohort, not one creature: Quad and Hexapod sit at `uprightDot`
+0.574 — still tilting, still moving, 8.0 m and 6.8 m — while Crab got all the way into
+the stand-still optimum at 2.4 m. Same reward pulling all three the same way. The three
+racers that *do* finish (MojucuBoy, IsaacBox, Isaac H1) never used this reward.
+
+After the flip, level-and-motionless earns zero from the term and the time cost makes
+standing still strictly negative, so forward progress is the only way to earn. The
+"don't flop" pressure is unchanged — being on its side still costs the full scale.
+Confirmed live: Quadruped's mean reward opens at **−18.1** where Crab's opened at +6.2.
+
+**`uprightDot = 1f` (level) is now the FREE value in tests, not `0f`.** Three existing
+tests passed `0f` meaning "neutral" and broke on the flip
+(`Step_RewardsApproach_PenalizesRetreat`, `EpisodeRewardSum_EqualsNetProgressMinusTimeCost`,
+`RewardClampTests.Step_PhysicsGlitchJump_IsClamped`) — each was off by exactly
+`n × UPRIGHT_BONUS_SCALE`. They now pass `1f`. `Step_LevelAndMotionless_IsNotProfitable`
+is the regression guard; if anyone ever "fixes" `Step_Level_CostsNothing` back to
+expecting a positive bonus, that is this bug returning.
+
+This is the **shared** reward for all nine ML-Agents behaviours. It does not touch the
+MuJoCo or Isaac racers, which have their own.
+
+### Skill gate vs. track coverage — you cannot have both in 90 minutes
+
+`Config/CrabAllTracks01.yaml` gates its curriculum on `measure: reward`;
+`Config/QuadAllTracks01.yaml` deliberately gates on `measure: progress` (the stopwatch).
+Both are right, for different questions:
+
+* **Reward gate** — difficulty only rises with competence. Correct by default, and the
+  fix for the stopwatch problem recorded above. But a creature that cannot yet walk
+  never clears lesson 0, so it stays on flat ground for the whole run.
+* **Time gate** — every lesson gets a share of the budget, so all tracks are actually
+  seen. The right tool when *coverage* is the requirement and the budget is fixed.
+
+`QuadAllTracks01` sets `max_steps: 2000000` so the 1/3 and 2/3 thresholds land on real
+wall-clock at ~380 steps/s on 4 envs: roughly 30 minutes each of flat, lumpy and swamp.
+**The stopwatch is only defensible because the reward was fixed first** — exposure to
+harder ground teaches locomotion now, where before it taught stillness on rocks.
+
+Quirks (`quirk_power_span`, `quirk_mass_span`, `quirk_friction_span`) are held at 0 as
+plain constants, not curricula: they are race-day per-racer jitter, not a track and not
+a skill, and widening them while a policy is still learning to walk only adds noise.
