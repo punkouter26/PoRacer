@@ -51,9 +51,18 @@ public class MjScene : MonoBehaviour {
     get {
       if (_instance == null) {
         var instances = FindObjectsByType<MjScene>(FindObjectsSortMode.None);
-        if (instances.Length >= 1) { // even one is too much - _instance shouldn't have been null.
+        // PoRacer patch: upstream threw whenever an instance existed while
+        // _instance was still null, on the assumption that Awake must already
+        // have run. It has not when an authored MjScene sits in the scene and
+        // some other MjComponent.OnEnable reaches this getter first - Unity
+        // gives no ordering guarantee between them. Adopting the one instance
+        // is exactly what that Awake would have done. Genuine duplicates still
+        // throw, which is the case the message actually describes.
+        if (instances.Length > 1) {
           throw new InvalidOperationException(
               "A MjScene singleton is created automatically, yet multiple instances exist.");
+        } else if (instances.Length == 1) {
+          _instance = instances[0];
         } else {
           GameObject go = new GameObject("MjScene");
           _instance = go.AddComponent<MjScene>();
