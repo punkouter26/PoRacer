@@ -486,6 +486,73 @@ intact — the exact situation that destroyed the shipped brain an hour earlier.
 Experiment curves worth keeping were archived outside `runs/` first, since the
 pruner is now doing its job correctly and *will* delete them.
 
+### Finding M8 — the KPI dashboard is aliased against the episode period
+
+I twice called the dips in the long run "single-rollout noise". That was wrong,
+and measuring it says so.
+
+Every world's `episode_step` starts at 0, so all 8192 reset **in lockstep** every
+`1000 / 24 = 41.67` iterations (E7). `RESET_FALLEN_FRACTION = 0.30` starts 30 %
+of those resets with the racer sprawled on the floor. The per-iteration KPI is a
+mean over one rollout, so a rollout that lands just after a reset is measuring a
+population that is 30 % face-down by construction.
+
+Bucketing every logged uptime past iteration 300 (i.e. past the standing-up
+phase) by its phase within the episode:
+
+| Phase in episode | n | Mean uptime |
+|---|---|---|
+| **0/6 — just after reset** | 16 | **0.416** |
+| 1/6 | 14 | 0.545 |
+| 2/6 | 13 | 0.558 |
+| 3/6 | 13 | 0.558 |
+| 4/6 | 14 | 0.559 |
+| 5/6 | 13 | 0.566 |
+
+Flat at ~0.56 across five sixths of the episode and **26 % lower** in the sixth
+that follows a reset. That is not noise — noise does not sort itself by phase.
+It is a systematic sampling artifact, coherent across worlds precisely because
+the resets are synchronized.
+
+**What it does and does not invalidate.** Comparing two runs at a single
+iteration can be off by ~25 % on uptime if the two land in different episode
+phases, so:
+
+- **E1 stands.** It was behind by roughly **2×** at every matched point, which
+  is far outside a 26 % phase band.
+- **E8 stands.** It was a null result to begin with; a bias of this size cannot
+  turn "indistinguishable" into a win.
+- **Single-point readings from the long run should not be quoted** without
+  their phase. The episode-boundary lines (those carrying `ret`/`len`/`spd`) are
+  the trustworthy ones, since `spd` there is a whole-episode mean.
+
+**This promotes E7 from cosmetic to substantive.** Staggering the initial
+`episode_step` per world would decorrelate the resets, which removes the
+aliasing, smooths the GAE bootstrap, and makes episode statistics arrive
+continuously rather than in a lump every 42 iterations. Not applied mid-run —
+changing reset behaviour would invalidate the run being measured.
+
+### Finding M7 — `rollout/fall_rate` is a snapshot, not a rate
+
+Noticed at iteration 250 of the long run, which reported `fall 1.00` and
+`std 0.49` on the same line: every world down, and yet standing half the time.
+
+Both are correct. The trainer records `done_falls.append(terms["fallen"][idx])`
+at the moment a world reports `done`, and `done` is timeout-only, so this is
+**the fallen flag sampled at exactly t = 1000 steps** — one instant, 20 s in —
+not the fraction of the episode spent fallen. A policy that stands for fifteen
+seconds and is down at the twentieth scores `fall_rate = 1.0`, identically to
+one that never rose.
+
+It is not wrong, but the name invites exactly the wrong reading, and it is the
+same class of mistake as M4: a metric whose definition quietly stopped matching
+its label when termination changed. `kpi/standing` and `kpi/fallen`, both
+per-step means over the whole rollout, are the ones to read; they are why the
+discrepancy was visible at all.
+
+Left as-is rather than renamed mid-run — renaming a scalar tag would split the
+series in TensorBoard and the run in progress is the one being measured.
+
 ### E1 — `--worlds 16384` (vs 8192). Throughput won, learning lost.
 
 **Throughput hypothesis: confirmed exactly.** 56 k steps/s against the
