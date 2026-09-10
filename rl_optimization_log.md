@@ -717,6 +717,58 @@ inverted gait.
 resets, so worlds no longer end in lockstep and the episode-period aliasing
 disappears without touching `episode_step` (E7).
 
+#### E11 evaluated — 100 deterministic episodes
+
+Final training line at iteration 1500: `len 958.1  spd 1.40 m/s  fall 0.07
+hdg 17.7deg  std 0.97`.
+
+`gate4_eval` returned **FAIL on everything**, and the reason is a measurement
+mismatch, not a bad policy. It builds `MojucuBoyEnv(episodes, seed=seed)` with
+**default arguments** — `terminate_on_fall=False`, `reset_fallen_fraction=0.30`
+— so it evaluates the policy under conditions E11 never trained on. Re-run with
+both conditions explicitly:
+
+| Condition | Uptime | Fallen | Speed | Heading | Episodes > 90 % up |
+|---|---|---|---|---|---|
+| **Matched** (starts upright, as trained) | **0.955** | **0.000** | 1.346 m/s (−10.3 %) | 18.1° | **100 / 100** |
+| Default (30 % start sprawled) | 0.679 | 0.288 | 0.945 m/s (−37 %) | 41.5° | 71 % |
+
+The default-condition numbers are not noise, they are arithmetic:
+`episodes > 90 % up = 71.0 %` against the **70 %** of episodes that start
+upright, and `mean fallen = 0.288` against the **0.30** that start down. Every
+episode that begins on its feet is near-perfect; every episode that begins
+sprawled is lost. **The policy can hold its feet and cannot get back on them** —
+exactly what stage one trains and stage two does not.
+
+**KPI status against the matched condition, which is what stage one targets:**
+
+| KPI | Value | Threshold | |
+|---|---|---|---|
+| K1 uptime | 0.955 | > 0.90 | **pass** |
+| K3 fallen | 0.000 | < 0.10 | **pass** |
+| K8 uprightness | 0.98 | > 0.90 | **pass** |
+| K2 speed | −10.3 % | ±10 % | **marginal fail** |
+| K4 heading | 18.1° | < 15° | **fail** |
+
+Note K4 is worse under evaluation (18.1°) than in training (14.9–17.7°): the
+eval runs the **deterministic** policy (tanh of the actor mean) while training
+samples, and the sampling noise was evidently helping heading corrections.
+
+### E12 — curriculum stage two: get-up (running)
+
+`--init-from e11_terminate --reset-fallen 0.30`, termination **off**, 800
+iterations. Resume confirmed at E11's iteration 1500.
+
+The point is the one skill E11 provably lacks. Starting from a competent
+balancer is what makes this tractable where E9 failed: standing is now reachable
+from the policy's current behaviour, so the `standing`-gated terms are live
+rather than paying ~0.
+
+**Risk, recorded before the result:** removing termination is exactly the
+setting in which E9 and E10 collapsed to lying down. Starting from competence
+should prevent that, but catastrophic forgetting is the plausible failure and
+would show up as uptime falling from 0.955 toward 0.1.
+
 ### Finding M7 — WITHDRAWN: `fall_rate` was correct all along
 
 I recorded M7 as "`rollout/fall_rate` is a snapshot, not a rate", reasoning that
