@@ -139,16 +139,39 @@ def start_tensorboard(logdir: Path, port: int):
     return proc
 
 
+# A run holding any of these has graduated: it produced a shipped brain or a
+# recorded grade, and deleting it destroys something no rerun can reproduce.
+# boy_chase01 has no policy.pt at all -- its .onnx IS the artifact.
+PROTECTED_GLOBS = ("*.onnx", "gate*.json", "mujoco_reference.json")
+
+
+def is_protected(run: Path) -> bool:
+    return any(next(run.glob(pattern), None) is not None for pattern in PROTECTED_GLOBS)
+
+
 def prune_runs(keep: int = 3) -> None:
     """CLAUDE.md: prune obsolete runs before starting a new one, so the curve being
-    watched is not buried under dead experiments."""
+    watched is not buried under dead experiments.
+
+    Prunes only disposable runs. This used to delete the oldest directories by
+    mtime with no exemptions, and it silently destroyed runs/boy_chase01 -- the
+    SHIPPED brain's mojucuboy_policy.onnx plus its Gate 4 and Gate 5 records --
+    on the fourth training run of a session. Those files are tracked in git,
+    which is the only reason they came back. A training script must not be able
+    to delete a shipped artifact as a side effect of starting.
+    """
     if not RESULTS.exists():
         return
-    runs = sorted((p for p in RESULTS.iterdir() if p.is_dir()),
-                  key=lambda p: p.stat().st_mtime)
-    for old in runs[:max(0, len(runs) - keep)]:
-        shutil.rmtree(old, ignore_errors=True)
-        print(f"pruned stale run {old.name}")
+    candidates = [p for p in RESULTS.iterdir() if p.is_dir() and not is_protected(p)]
+    candidates.sort(key=lambda p: p.stat().st_mtime)
+    for old in candidates[:max(0, len(candidates) - keep)]:
+        try:
+            shutil.rmtree(old)
+            print(f"pruned stale run {old.name}")
+        except OSError as exc:
+            # Was ignore_errors=True, which hid a failed wipe -- exactly the
+            # Windows file-handle case CLAUDE.md warns about with TensorBoard.
+            print(f"!! could not prune {old.name}: {exc}")
 
 
 def main() -> int:
