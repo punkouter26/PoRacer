@@ -493,6 +493,25 @@ creature's own materials with a legend colour.
 
 ## 5. MLOps
 * **Version Alignment:** Enforce exact version parity between C# and Python `mlagents` packages to prevent comms API handshake rejections.
+* **The `.venv` pins are load-bearing, and none of them look it.** Rebuilt from
+  scratch on 2026-09-10; every deviation failed, most of them silently or late:
+
+  | Pin | What breaks without it |
+  |---|---|
+  | `torch==2.4.1` | 2.14 defaults to the **dynamo** ONNX exporter, which needs `onnxscript`. Installing that drags `protobuf` past 3.20.x (mlagents' `_pb2` files then refuse to load) **and** upgrades `onnx` 1.15 → 1.22, which pulls `ml_dtypes` needing numpy ≥ 1.25. One deviation, four failures. |
+  | `numpy==1.23.5` | `ml_dtypes` and `onnx>=1.22` both need ≥ 1.25 and will pull it in |
+  | `protobuf==3.20.3` | mlagents 1.1.0's generated protos require < 4 |
+  | `onnx==1.15.0` | 1.22 pulls the `ml_dtypes` chain above |
+  | **`setuptools<81`** | 81 removed `pkg_resources`, which `mlagents/torch_utils/torch.py` imports at startup — `mlagents-learn` will not run at all |
+
+  Install order that works: `numpy`/`protobuf`/`torch` first, then `mlagents==1.1.0`,
+  then `setuptools<81` last (mlagents pulls a newer setuptools in).
+* **Set `checkpoint_interval` to something the run can actually reach.** It is not
+  only about keeping checkpoints: the first export is also the first time the ONNX
+  path runs, so a broken exporter is not discovered until then. `AllLoco8h02.yaml`
+  ships 250 000, which in a short run means no `.onnx` at all *and* a failure
+  found only after the budget is spent. `Config/AllLoco_TimeBox.yaml` uses 20 000
+  as a canary; a run that exports at five minutes has proven its export path.
 * **Asset Integrity:** Overwrite `.onnx` files in place to preserve Unity `.meta` GUID references.
 * **Headless Execution:** Pass `--env --no-graphics` and explicit `--base-port` flags (allocate consecutive ports to avoid collision hangs). Run 4–8 envs to leave CPU cores for PyTorch execution. Record `--num-envs` since it alters batching behavior.
 * **Known upstream bug — do not vendor the package to fix it.** `TensorProxy`'s
