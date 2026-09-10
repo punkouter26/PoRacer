@@ -906,3 +906,120 @@ Unity.exe -batchmode -quit -nographics -projectPath <root> -buildTarget Android 
 ```
 
 Grep the log for `AAB BUILD RESULT:` — that line is the outcome.
+
+---
+
+## Crab, and why "just train it longer" was the wrong answer (2026-09-10)
+
+### Picking the racer: ELO cannot see this, distance can
+
+Across 20 races on 2026-09-10, the three ML-Agents racers never finished once:
+
+| creature | races | finishes | avg distance of ~20 m | ELO |
+|---|---|---|---|---|
+| **Crab** | 20 | **0** | **2.4 m** | 1106.9 |
+| Hexapod | 20 | 0 | 6.8 m | 1103.3 |
+| Quadruped | 20 | 0 | 8.0 m | 1098.9 |
+| Isaac H1 | 20 | 12 | 16.4 m | 1377.9 |
+| MojucuBoy | 16 | 16 | 17.7 m | 1525.2 |
+| IsaacBox | 20 | 13 | 18.1 m | 1428.1 |
+
+**The MLOps rule "evaluate on ELO, not mean reward" has a blind spot worth knowing:
+ELO is degenerate for a cohort that all DNFs.** `Systems_Elo.ScoreAgainst` scores
+DNF-vs-DNF as a draw, so these three only ever lose to the three finishers and never
+to each other — they sit within 8 points and the ordering inside that band is noise.
+Crab is worst by distance by nearly 3x. Use distance-to-DNF as the tiebreaker when a
+whole cohort fails to finish.
+
+### The curriculum was a stopwatch, not a skill gate
+
+`measure: progress` in ML-Agents is **elapsed training fraction** (`step / max_steps`),
+so the `behavior:` field beside it is decorative and lessons advance whether or not
+anything has been learned. Verified against run `allloco_tb_1114` — at 140k of 400k
+steps every observed lesson number equals `step/max_steps` exactly:
+
+```
+goal_distance_max 0.35 > 0.30 -> 2     track_kind   0.35 < 0.40 -> 1
+rough_amplitude   0.35 > 0.30 -> 2     hazard_level 0.35 < 0.45 -> 1
+quirk_power_span  0.35 > 0.30 -> 2     goal_angle   0.35 = 0.35 -> 1
+```
+
+That put the fleet on full rough amplitude, 20 m goals and mud+boost hazards at 35% of
+training while Hexapod (−3.1), Quad (−2.5) and Kangaroo (−4.5) still had **negative**
+reward. They were on hard ground before they could walk on flat. CLAUDE.md already
+half-recorded this ("Worm was never special there, it was just the behaviour the shared
+progress measure was read from") — that is exactly why: the behaviour field does nothing.
+
+`Config/CrabAllTracks01.yaml` gates on `measure: reward` instead, with thresholds
+measured off Crab's own curve rather than guessed.
+
+### Crab was not under-trained — it was not training
+
+From `allloco_tb_1114`, Crab's scalars:
+
+| signal | value | what it says |
+|---|---|---|
+| `Reward/Progress` | ~0.0000 | closes no distance on the goal, at all |
+| `Environment/Cumulative Reward` | 6.13 / 6.23 / 6.15 / 6.23 across 20k–140k steps | pinned; no learning |
+| `Environment/Episode Length` | exactly 149.0 at every summary point | every episode ends the same way |
+| `Policy/Entropy` | 1.4189 -> 1.4294 (rising) | policy not converging |
+| `Fatigue/Stamina` | constant 1.0 | never exerts enough torque to tire |
+
+Episodes are not hitting the step cap (`TRAINING_MAX_STEP` is 3000), so with progress at
+zero they are ending on the no-progress stall. **More hours against a zero progress
+signal buys nothing**, which is what five runs on 2026-09-10 (20k, 40k, 60k, 140k steps)
+each demonstrated. If `Reward/Progress` stays at zero under
+`Config/CrabAllTracks01.yaml` too, the fault is upstream of training and no budget fixes
+it.
+
+### Traps found on the way in — all of these cost a round trip
+
+* **`Config/FocusedLoco01.yaml` cannot run.** Generated from `AllLoco8h02.yaml`, it kept
+  the aliases `*id001/*id002/*id003` without the anchors that define them;
+  mlagents-learn dies on `found undefined alias 'id001'` before it opens the env. That
+  is why the Crab-only path had never been used. `CrabAllTracks01.yaml` expands
+  everything inline.
+* **`scripts/train_all_8h.ps1` is currently broken.** `Builds/AllEnv/AllEnv.exe` and
+  `SCN_TRAIN_ALL` still contain Centipede, which today's roster cull removed from both
+  configs — and mlagents aborts on the first behaviour the env reports that the config
+  does not name. Regenerate the scene (`Editor_BuildSharedTrainingScene.BuildScene()`)
+  and rebuild before using it.
+* **The training scenes outlive roster culls.** `SCN_TRAIN_FOCUSED` still held an
+  `Area_Centipede_v`; `BuildFocusedScene("Crab")` clears it. The prefab *lists* in
+  `Editor_BuildSharedTrainingScene` are current — the generated scenes on disk are not.
+* **`Editor_BuildAsync` can report a false "failed" on an env build.** It judges by
+  `<Name>_Data/level0`'s mtime with `<=`, so two builds landing inside the same second
+  read as "wrote no new artifact" while the log says `Succeeded, 0 errors`. Trust the
+  log line and the file, not the verdict.
+* **`Editor_BuildSharedTrainingScene` is in namespace `PoRacer.Editor`**, not
+  `PoRacer.EditorTools`. `Editor_BuildAsync` is in `EditorTools`. Check before calling.
+* **`Editor_BuildAsync` already supports `"allenv"` and `"focusedenv"`** — do not call
+  the builders directly through `eval`, it dies on the 5 s main-thread budget.
+* **`Systems_TrainingArea.TRAINING_MAX_STEP = 3000` carries a stale comment** ("60 s at
+  0.02 s per step"). The project has been locked at 0.005 s since 2026-08-29 and
+  `Agent.MaxStep` counts decisions, which at `DecisionPeriod` 20 are 0.1 s each — so it
+  is 300 s, five times the 60 s intended. Not what blocks Crab, but wrong.
+* **Two leftover ELO-gauntlet entries are still in the shipped catalog**:
+  `Crab_v01@Crab-599966` and `Hexapod_v01@Hexapod-599486`, pointing at
+  `Assets/Agents/_Gauntlet/`. They are the two worst entries on the grid and they pad
+  the roster from 6 to 8. `elo.json` also still rates four creatures that no longer
+  exist (Centipede, Fido, and two `@` variants).
+* **The `.venv` DOES exist and its pins are exact** (mlagents 1.1.0, torch 2.4.1, numpy
+  1.23.5, protobuf 3.20.3, onnx 1.15.0, setuptools 80.10.2). The note above saying it is
+  missing was written 2026-09-09 and is stale.
+
+### Running it
+
+```
+unity command eval --code "return PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildFocusedScene(\"Crab\");"
+unity command eval --code "return PoRacer.EditorTools.Editor_BuildAsync.Start(\"focusedenv\");"
+.venv\Scripts\tensorboard.exe --logdir results --port 6006      # BEFORE the trainer
+.venv\Scripts\mlagents-learn.exe Config\CrabAllTracks01.yaml --run-id=crab_alltracks_<stamp> ^
+  --env=Builds\FocusedEnv\FocusedEnv.exe --no-graphics --num-envs=4 --base-port=5105 ^
+  --time-scale=10 --torch-device=cpu
+```
+
+4 envs gives ~380 steps/s, so 4.5M steps is ~3.3 h. `track_kind` flat -> lumpy -> swamp
+plus `hazard_level` covers every builder map the game ships; **the authored courses are a
+separate env** (`Config/AcrobatLoco01.yaml`, `SCN_TRAIN_ACROBAT`) and are not covered by
+this run.

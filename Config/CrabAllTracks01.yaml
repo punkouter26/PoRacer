@@ -1,0 +1,237 @@
+# Crab, alone, across every track the builder can make.
+#
+# WHY THIS FILE EXISTS, AND WHAT IT REPLACES.
+#
+# Crab is the worst racer on the grid by a wide margin: across 20 races on
+# 2026-09-10 it averaged 2.4 m of a ~20 m track and finished none of them, against
+# 6.8 m for Hexapod and 8.0 m for Quad. ELO cannot see this -- Systems_Elo scores
+# DNF-vs-DNF as a draw, so the three ML-Agents racers sit within 8 points of each
+# other (1098.9 / 1103.3 / 1106.9) and the ordering inside that band is noise.
+# Distance is the metric that separates them.
+#
+# Config/FocusedLoco01.yaml was meant to be this file and cannot run: it was
+# generated from AllLoco8h02.yaml and kept the YAML aliases *id001/*id002/*id003
+# without the anchors that define them, so mlagents-learn dies on
+# "found undefined alias 'id001'" before it opens the env. Everything is expanded
+# inline here; there is nothing to dangle.
+#
+# THE CURRICULUM IS GATED ON REWARD, NOT ON THE CLOCK. This is the substantive
+# change and it is deliberate. `measure: progress` in ML-Agents is elapsed
+# training fraction (step / max_steps), so the `behavior:` field beside it is
+# decorative and the lessons advance on a stopwatch whether or not anything has
+# been learned. Verified against run allloco_tb_1114: at 140k of 400k steps every
+# observed lesson number equals step/max_steps exactly --
+#
+#   goal_distance_max 0.35 > 0.30 -> lesson 2      track_kind   0.35 < 0.40 -> lesson 1
+#   rough_amplitude   0.35 > 0.30 -> lesson 2      hazard_level 0.35 < 0.45 -> lesson 1
+#   quirk_power_span  0.35 > 0.30 -> lesson 2      goal_angle   0.35 = 0.35 -> lesson 1
+#
+# which put the fleet on full rough amplitude, 20 m goals and mud+boost hazards at
+# 35% of training while Hexapod (-3.1), Quad (-2.5) and Kangaroo (-4.5) still had
+# NEGATIVE reward. They were being thrown onto hard ground before they could walk
+# on flat. `measure: reward` makes the gate mean what the lesson names imply.
+#
+# THRESHOLDS ARE MEASURED, NOT GUESSED, and they are deliberately close together
+# because Crab's reward has been pinned flat: 6.13 / 6.23 / 6.15 / 6.23 across
+# four runs spanning 20k-140k steps, with Reward/Progress at ~0.0000 throughout.
+# 6.2 is therefore the "standing still" baseline, not a floor to beat by a little.
+# Each lesson asks for a real move above it before the ground gets harder. If Crab
+# never clears lesson 0, that is the answer the run exists to produce -- it means
+# the problem is upstream of training (see the note in the session log about
+# Reward/Progress being zero) and no number of hours fixes it.
+#
+# Re-measure these against Environment/Cumulative Reward after any change to
+# Reward_WormLoco or to the physics timestep.
+behaviors:
+  Crab:
+    trainer_type: ppo
+    threaded: true
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+      gail:
+        gamma: 0.99
+        strength: 0.05
+        demo_path: training/demos/Crab.demo
+    behavioral_cloning:
+      demo_path: training/demos/Crab.demo
+      strength: 0.3
+      steps: 400000
+    max_steps: 4500000
+    time_horizon: 1000
+    summary_freq: 20000
+    keep_checkpoints: 10
+    # 50k, not the 200k FocusedLoco01 carried. The first export is also the first
+    # time the ONNX path runs, so a broken exporter is not discovered until then;
+    # at 200k a short run produces no .onnx at all AND finds the failure only
+    # after the budget is spent. 50k is the canary (see Config/AllLoco_TimeBox).
+    checkpoint_interval: 50000
+environment_parameters:
+  # Goal distance. Lesson 0 is 8 m, which is already further than Crab has ever
+  # travelled, so the first gate is the only one that matters for now.
+  goal_distance_max:
+    curriculum:
+    - name: near
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 7.0
+        min_lesson_length: 100
+      value: 8.0
+    - name: mid
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 9.0
+        min_lesson_length: 100
+      value: 14.0
+    - name: far
+      value: 20.0
+  goal_angle_span:
+    curriculum:
+    - name: straight
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 8.0
+        min_lesson_length: 100
+      value: 0.0
+    - name: gentle_turns
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 11.0
+        min_lesson_length: 100
+      value: 20.0
+    - name: sharp_turns
+      value: 40.0
+  # Terrain roughness. This is the one that was hurting most: it reached maximum
+  # at 35% of training on a creature with zero forward progress.
+  rough_amplitude:
+    curriculum:
+    - name: gentle
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 8.0
+        min_lesson_length: 200
+      value: 0.35
+    - name: medium
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 11.0
+        min_lesson_length: 200
+      value: 0.7
+    - name: full
+      value: 1.0
+  # "All the tracks": flat -> lumpy -> swamp, which with hazard_level below covers
+  # every builder map the game ships (Flat, Lumpy, Swamp, Gale's hazards, and
+  # Roulette's mix of them). The authored courses are a separate env entirely --
+  # Config/AcrobatLoco01.yaml and SCN_TRAIN_ACROBAT.
+  track_kind:
+    curriculum:
+    - name: flat
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 9.0
+        min_lesson_length: 200
+      value: 0.0
+    - name: lumpy
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 12.0
+        min_lesson_length: 200
+      value: 6.0
+    - name: swamp
+      value: 7.0
+  hazard_level:
+    curriculum:
+    - name: clean
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 10.0
+        min_lesson_length: 200
+      value: 0.0
+    - name: mud_and_boost
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 13.0
+        min_lesson_length: 200
+      value: 1.0
+    - name: full_hazards
+      value: 2.0
+  # Quirk spans last: they are race-day variation, not a skill to learn, and
+  # widening them early only adds noise to a policy that has not settled.
+  quirk_power_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 11.0
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 14.0
+        min_lesson_length: 100
+      value: 0.05
+    - name: race
+      value: 0.08
+  quirk_mass_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 11.0
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 14.0
+        min_lesson_length: 100
+      value: 0.06
+    - name: race
+      value: 0.12
+  quirk_friction_span:
+    curriculum:
+    - name: none
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 11.0
+        min_lesson_length: 100
+      value: 0.0
+    - name: mild
+      completion_criteria:
+        measure: reward
+        behavior: Crab
+        threshold: 14.0
+        min_lesson_length: 100
+      value: 0.1
+    - name: race
+      value: 0.2
