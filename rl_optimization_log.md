@@ -808,6 +808,24 @@ Note K4 is worse under evaluation (18.1°) than in training (14.9–17.7°): the
 eval runs the **deterministic** policy (tanh of the actor mean) while training
 samples, and the sampling noise was evidently helping heading corrections.
 
+#### E11 exported and parity-checked
+
+```
+MojucuBoy_v01.onnx      opset 15, 13 nodes, normaliser baked into the graph
+mujoco_reference.json   128-step deterministic trajectory
+torch vs onnxruntime    max |delta| = 7.153e-07
+```
+
+Both land in `runs/e11_terminate/`, which also makes the run pruner-protected
+under the M6 fix. `onnxruntime` had to be installed — it was missing from the
+venv, so the export script's own parity check had been silently unrunnable.
+
+**The shipped brain in `Assets/Agents/MojucuBoy_v01/` was NOT replaced.** The new
+policy is upright where the old one is inverted, but it misses K2 and K4 and
+cannot get up from a sprawl. Swapping the racer that currently wins races is a
+judgement about the game, not about the training metrics, so it is left to the
+user with the numbers above to decide on.
+
 ### E12 — curriculum stage two: get-up (running)
 
 `--init-from e11_terminate --reset-fallen 0.30`, termination **off**, 800
