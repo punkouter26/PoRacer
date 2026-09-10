@@ -532,7 +532,96 @@ aliasing, smooths the GAE bootstrap, and makes episode statistics arrive
 continuously rather than in a lump every 42 iterations. Not applied mid-run —
 changing reset behaviour would invalidate the run being measured.
 
-### Finding M7 — `rollout/fall_rate` is a snapshot, not a rate
+### Finding M9 — the reward paid the racer to travel upside down
+
+**The headline finding of this session, and the only one that affected training
+rather than measurement.**
+
+`_reward` computed:
+
+```python
+obs_gravity_z = -rot[:, 2, 2]
+```
+
+`reset()` builds the standing orientation as a **pure yaw quaternion**
+(`qpos[4] = qpos[5] = 0`), so `rot[2,2] = 1 - 2(x² + y²) = +1` for an upright
+racer. The negation therefore made `obs_gravity_z = -1` while standing, and
+`.clamp(min=0)` floored that to **zero**.
+
+Everything downstream is gated on it:
+
+```python
+standing = obs_gravity_z.clamp(min=0.0) * (height / STANDING_HEIGHT).clamp(0, 1)
+reward = ( W_TRACK   * track * standing
+         + W_HEADING * facing.clamp(min=0) * standing
+         + W_UPRIGHT * obs_gravity_z.clamp(min=0)
+         + W_GETUP   * standing + ... )
+```
+
+So `W_UPRIGHT` paid nothing for standing and its maximum for being inverted;
+`standing` was 0 upright and 1 inverted; and because `W_TRACK` (2.0),
+`W_HEADING` (0.4) and `W_GETUP` (0.60) are *all* multiplied by `standing`,
+**no tracking, heading or get-up reward was earnable the right way up at all.**
+
+The policy optimized this correctly. Measured on the completed 1500-iteration
+run, over 500 steps × 128 worlds with the deterministic policy:
+
+| Quantity | Value |
+|---|---|
+| torso height | 0.585 m (`STANDING_HEIGHT` 0.77) |
+| uprightness (`−obs[:,2]`) | **−0.873** — inverted |
+| `_reward` `standing` | **0.682** — reporting healthy |
+| speed along command | 1.245 m/s |
+
+It learned to flip over and travel upside-down at 1.25 m/s, and the reward
+called that a good racer.
+
+**Fixed** to `obs_gravity_z = rot[:, 2, 2]`. Verified on a fresh reset:
+
+| | Before | After |
+|---|---|---|
+| `standing`, upright worlds | ~0.00 | **0.998** |
+| `standing`, sprawled worlds | — | 0.208 |
+| `fallen`, upright worlds | ~1.00 | **0.000** |
+| `fallen`, sprawled worlds | — | 0.660 |
+| fraction upright | — | 0.689 (design: 0.70) |
+
+For the first time the metrics agree with each other *and* with the reset
+design.
+
+**This applies to the shipped brain.** `boy_chase01` trained under the identical
+reward, so `Assets/Agents/MojucuBoy_v01/MojucuBoy_v01.onnx` is very likely an
+inverted gait too. That is a checkable prediction: watch MojucuBoy in
+`SCN_RACE_FLAT` — he wins races, but the claim here is that he does it upside
+down. **Not verified in-game; flagged rather than asserted.**
+
+**How it hid for so long.** Every downstream number was self-consistently wrong.
+`standing` reported 0.68 and rose during training; return rose; speed rose. Only
+`fall_rate` disagreed — and it was pinned at exactly 1.00, which reads like a
+broken metric rather than a true one.
+
+### Finding M7 — WITHDRAWN: `fall_rate` was correct all along
+
+I recorded M7 as "`rollout/fall_rate` is a snapshot, not a rate", reasoning that
+`fall 1.00` beside `std 0.49` had to mean the flag was sampled at the episode
+boundary and mis-scoped.
+
+**That was wrong.** `fall_rate` was reporting the literal truth: the racer was
+*never* upright, in any rollout, because M9 had trained it to travel inverted.
+It read a constant 1.00 from the untrained baseline through to a policy walking
+at 1.2 m/s because the racer really was down the whole time by any honest
+definition.
+
+It was the one honest number on the line, and I explained it away as an
+instrumentation artifact because three other metrics agreed with each other.
+The lesson is the ordinary one: when a single metric dissents from a consistent
+majority, the majority can be consistently wrong, and the cheap check — *what
+does this number look like at a known-good state?* — is the one I skipped.
+
+(The narrow observation in M7 does still hold on its own terms: `fall_rate` *is*
+sampled at `done`, and with timeout-only termination that is one instant per
+episode. But that is a footnote, not the explanation, and it is not why the
+number was 1.00.)
 
 Noticed at iteration 250 of the long run, which reported `fall 1.00` and
 `std 0.49` on the same line: every world down, and yet standing half the time.
