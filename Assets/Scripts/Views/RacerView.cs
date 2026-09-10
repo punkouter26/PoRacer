@@ -175,6 +175,25 @@ namespace PoRacer.Views
                 return;
             }
 
+            // No race on the clock: either the grid is still held for the countdown,
+            // or the race is over and the results are up. Everything below counts for
+            // something, so none of it may run outside that window.
+            //
+            // The knockdown referee is the one that mattered. It kept counting through
+            // the results screen, so a racer that crossed the line and flopped over was
+            // puffed out of existence and deactivated twelve seconds later — while the
+            // camera was holding the shot on it for the podium. (It went unseen because
+            // the smoke harness holds results for eight seconds, four short of the
+            // knockdown window.) The finish backstop mattered too: before the start gate
+            // existed a racer could trip it during the countdown, latch _finished
+            // against a referee with no roster yet, and then never be scored at all.
+            if (!_race.RaceActive)
+            {
+                _flippedSeconds = 0f;
+                _lastZ = ProgressOf(position);
+                return;
+            }
+
             // "z" is progress from the common start line; on a course that is
             // centreline distance, which is what the finish and stall checks need.
             float z = ProgressOf(position);

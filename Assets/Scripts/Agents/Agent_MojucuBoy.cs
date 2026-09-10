@@ -59,8 +59,27 @@ namespace PoRacer.Agents
         private Transform _hips;
         private Transform _goal;
         private bool _failed;
+        private bool _startHeld;
 
         public bool Failed => _failed;
+
+        /// <summary>
+        /// Held by freezing the MuJoCo step, not by touching him: see
+        /// <see cref="Systems.Systems_MujocoWorld.HoldStepping"/>. Nothing Unity-side
+        /// can pin him — he has no ArticulationBody and MuJoCo owns his transforms —
+        /// and parking the policy alone would drop a humanoid on the line. With the
+        /// world not stepping he is frozen in his trained stance, exactly as spawned,
+        /// which is a cleaner hold than any of the PhysX racers get.
+        ///
+        /// The spawner holds the world once for the whole grid, so this only records
+        /// the flag and keeps the heading command from going stale against a position
+        /// that is not changing.
+        /// </summary>
+        public bool StartHeld
+        {
+            get => _startHeld;
+            set => _startHeld = value;
+        }
 
         /// <summary>Always null: MuJoCo simulates him, so no ArticulationBody exists.</summary>
         public ArticulationBody Root => null;
@@ -120,7 +139,7 @@ namespace PoRacer.Agents
 
         private void FixedUpdate()
         {
-            if (_failed || _hips == null)
+            if (_failed || _hips == null || _startHeld)
             {
                 return;
             }

@@ -1,4 +1,5 @@
 using PoRacer.Systems;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace PoRacer.Views
@@ -21,6 +22,21 @@ namespace PoRacer.Views
         // sports coverage cuts — a blend would read as drifting, not as a new
         // camera. Long enough to register the shot, short enough to stay lively.
         private const float SHOT_SECONDS = 5f;
+
+        // The frame every Shots radius below was authored against: 9:16 at 40 deg
+        // vertical, where the horizontal half-tangent is tan(20) * 0.5625 = 0.2047.
+        // ApplyLensAndGetFrameScale measures the live frame against this one.
+        private const float AUTHORED_FOV = 40f;
+        private const float AUTHORED_HORIZONTAL_TAN = 0.20473f;
+        // Adaptive portrait FOV, the same curve PackCameraView uses so a cut between
+        // the two rigs does not change the apparent lens.
+        private const float WIDE_PORTRAIT_FOV = 54f;
+        private const float NARROW_PORTRAIT_FOV = 42f;
+        // Bounds on the correction. A game view or device reporting a freak aspect
+        // must not be able to fling the shot into the next valley or bury it inside
+        // the racer; past these the composition is already beyond saving.
+        private const float MIN_FRAME_SCALE = 0.6f;
+        private const float MAX_FRAME_SCALE = 2f;
 
         /// <summary>
         /// One camera angle. Azimuth is degrees around the target measured from
@@ -47,10 +63,15 @@ namespace PoRacer.Views
             }
         }
 
-        // Radii are set for a 9:16 frame, where the horizontal half-angle is only
-        // ~13.8 deg: visible width is roughly radius * 0.25, so a 3.4 m radius
+        // Radii are authored for a 9:16 frame, where the horizontal half-angle is
+        // only ~13.8 deg: visible width is roughly radius * 0.25, so a 3.4 m radius
         // frames 1.7 m and a hexapod does not fit inside it. These keep the
         // subject at roughly half the frame width.
+        //
+        // 9:16 is the authoring reference, not an assumption about the device: every
+        // radius and height here is multiplied by ApplyLensAndGetFrameScale() so the
+        // same composition survives a taller phone or a stretched game view. Tune
+        // these against 9:16 and the rest follows.
         private static readonly ShotDef[] Shots =
         {
             // Chase: behind and above, the readable "who is winning" shot.
@@ -119,6 +140,66 @@ namespace PoRacer.Views
         private Bounds _keepOut;
         private bool _hasKeepOut;
         private Systems_CoursePath _course;
+        private Camera _mainCamera;
+        // The vcam this view drives. Same reason PackCameraView holds one: the
+        // adaptive FOV must be written to the vcam's lens, never to Camera.main,
+        // because CinemachineBrain copies the active vcam's lens onto the Camera in
+        // its own LateUpdate and would overwrite it.
+        private CinemachineCamera _lensOwner;
+
+        private void Awake()
+        {
+            _mainCamera = Camera.main;
+        }
+
+        /// <summary>The vcam whose lens carries this shot's adaptive portrait FOV.</summary>
+        public void BindLens(CinemachineCamera lensOwner)
+        {
+            _lensOwner = lensOwner;
+        }
+
+        /// <summary>
+        /// Writes the adaptive portrait FOV and returns the factor the authored shot
+        /// distances must be multiplied by to keep the subject the same fraction of
+        /// frame WIDTH at the aspect actually being rendered.
+        ///
+        /// Both halves are why this exists. The FOV curve is copied from
+        /// PackCameraView on purpose — the two rigs cut between each other, and two
+        /// different focal lengths across a hard cut reads as a lens change nobody
+        /// asked for. Until 2026-09-10 this rig had neither: it ran on Cinemachine's
+        /// default 40 deg while the pack shot adapted, and since the orbit rig owns
+        /// the shot for essentially the whole race, the adapting one was the one
+        /// nobody was watching.
+        ///
+        /// The scale is the other half. <see cref="Shots"/> radii were authored
+        /// against a 9:16 frame at 40 deg, where the horizontal half-tangent is
+        /// 0.205; at the 0.361 aspect a tall phone or a stretched game view gives,
+        /// it is 0.167, so the same radius frames 18% less width and the subject
+        /// crops. Scaling the whole shot — radius and height together, so the
+        /// elevation angle is preserved and it reads as a dolly, not a crane —
+        /// restores the authored composition at any aspect.
+        /// </summary>
+        private float ApplyLensAndGetFrameScale()
+        {
+            if (_mainCamera == null)
+            {
+                return 1f;
+            }
+            float aspect = _mainCamera.aspect;
+            float targetFov = aspect < 1f ? Mathf.Lerp(WIDE_PORTRAIT_FOV, NARROW_PORTRAIT_FOV, aspect) : AUTHORED_FOV;
+            if (_lensOwner != null)
+            {
+                LensSettings lens = _lensOwner.Lens;
+                lens.FieldOfView = targetFov;
+                _lensOwner.Lens = lens;
+            }
+            float horizontalTan = Mathf.Tan(targetFov * 0.5f * Mathf.Deg2Rad) * aspect;
+            if (horizontalTan <= 0.001f)
+            {
+                return 1f;
+            }
+            return Mathf.Clamp(AUTHORED_HORIZONTAL_TAN / horizontalTan, MIN_FRAME_SCALE, MAX_FRAME_SCALE);
+        }
 
         public void SetTarget(Transform target)
         {
@@ -152,11 +233,11 @@ namespace PoRacer.Views
         /// the start or the finish is pulled back onto the road and then pushed
         /// clear of the racer along the local tangent.
         /// </summary>
-        private void ApplyCourseShot()
+        private void ApplyCourseShot(float frameScale)
         {
             CourseShotDef shot = CourseShots[_shotIndex % CourseShots.Length];
             float along = _course.Project(_focusPoint);
-            float cameraAlong = Mathf.Clamp(along + shot.AlongMeters, 0f, _course.Length);
+            float cameraAlong = Mathf.Clamp(along + shot.AlongMeters * frameScale, 0f, _course.Length);
             Vector3 onRoad = _course.PointAt(cameraAlong);
 
             // Clamping at either end can leave the lens on top of the racer; back
@@ -170,7 +251,7 @@ namespace PoRacer.Views
             }
 
             // Slow motion pushes the shot in, matching the world-space shots.
-            float zoom = Mathf.Lerp(0.7f, 1f, Time.timeScale);
+            float zoom = Mathf.Lerp(0.7f, 1f, Time.timeScale) * frameScale;
             transform.position = PushOutOfKeepOut(onRoad + Vector3.up * (shot.Height * zoom));
             transform.LookAt(_focusPoint + Vector3.up * shot.LookHeight);
         }
@@ -210,9 +291,13 @@ namespace PoRacer.Views
             {
                 AdvanceShot();
             }
+            // Written once per frame, before either shot path places the lens: the
+            // FOV goes onto the vcam and the returned factor rescales the authored
+            // distances for the aspect actually on screen.
+            float frameScale = ApplyLensAndGetFrameScale();
             if (_course != null)
             {
-                ApplyCourseShot();
+                ApplyCourseShot(frameScale);
                 return;
             }
             ShotDef shot = Shots[_shotIndex];
@@ -223,7 +308,7 @@ namespace PoRacer.Views
             float radians = (180f + shot.AzimuthDegrees + _driftDegrees) * Mathf.Deg2Rad;
             // Slow motion pushes the shot in: at timescale 0.35 the framing tightens
             // ~20%, selling the drama without touching the lens.
-            float zoom = Mathf.Lerp(0.7f, 1f, Time.timeScale);
+            float zoom = Mathf.Lerp(0.7f, 1f, Time.timeScale) * frameScale;
             Vector3 offset = new Vector3(Mathf.Sin(radians), 0f, Mathf.Cos(radians)) * (shot.Radius * zoom)
                 + Vector3.up * (shot.Height * zoom);
             transform.position = PushOutOfKeepOut(_focusPoint + offset);

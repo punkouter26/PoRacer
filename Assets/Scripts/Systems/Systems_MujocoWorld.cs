@@ -38,6 +38,7 @@ namespace PoRacer.Systems
 
         private static GameObject _world;
         private static bool _suspended;
+        private static bool _startHeld;
 
         /// <summary>True while a MuJoCo world is standing and still stepping.</summary>
         internal static bool Exists => _world != null && !_suspended;
@@ -79,6 +80,7 @@ namespace PoRacer.Systems
             // teardown instead.
             _world = new GameObject("MuJoCoWorld");
             _suspended = false;
+            _startHeld = false;
 
             // MjScene first, and this order is not cosmetic. Every MjComponent's OnEnable
             // reads MjScene.Instance, and that getter *creates* an MjScene when none
@@ -95,6 +97,38 @@ namespace PoRacer.Systems
             // options, the ground and the racers are all in place. Racers added later still
             // arrive safely: MjComponent.OnEnable flags SceneRecreationAtLateUpdateRequested
             // whenever a model already exists, so the plug-in rebuilds around them.
+        }
+
+        /// <summary>
+        /// Freezes or resumes the MuJoCo step for the pre-race countdown.
+        ///
+        /// This is the start gate for every MuJoCo racer, because nothing else can hold
+        /// one: they have no ArticulationBody to pin and MuJoCo, not Unity, writes their
+        /// transforms. Not stepping leaves them exactly as the spawner placed them —
+        /// the trained stance, frozen — which is a better hold than pinning gives the
+        /// PhysX racers.
+        ///
+        /// Call it only after the model has compiled. MjScene compiles in Start, and a
+        /// disabled component's Start never runs, so holding in the same frame as
+        /// <see cref="Build"/> would defer compilation to the release instead of
+        /// freezing anything. The spawner holds at the top of the countdown, several
+        /// frames later, which is safely past that.
+        ///
+        /// <see cref="Suspend"/> outranks this: once the world is being torn down it
+        /// must stay stopped, so a release cannot restart it.
+        /// </summary>
+        internal static void HoldStepping(bool held)
+        {
+            if (_world == null || _suspended || _startHeld == held)
+            {
+                return;
+            }
+            _startHeld = held;
+            var scene = _world.GetComponent<MjScene>();
+            if (scene != null)
+            {
+                scene.enabled = !held;
+            }
         }
 
         /// <summary>
@@ -144,6 +178,7 @@ namespace PoRacer.Systems
             Object.Destroy(_world);
             _world = null;
             _suspended = false;
+            _startHeld = false;
         }
 
         /// <summary>

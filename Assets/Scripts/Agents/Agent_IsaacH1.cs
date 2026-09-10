@@ -40,9 +40,32 @@ namespace PoRacer.Agents
         private Action _areaReset;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
         private bool _held;
+        private bool _startHeld;
         private float _fallenFor;
 
         public bool Failed => _fallenFor >= _fallenGraceSeconds;
+
+        /// <summary>
+        /// Held by parking the policy and pinning the base, the same pair
+        /// <see cref="Start"/> uses for the grounding hold. He is a humanoid whose
+        /// policy is his balance controller, so switching it off for the countdown
+        /// without pinning him would simply lay him down before GO.
+        ///
+        /// Independent of the grounding hold: both must clear before he runs.
+        /// </summary>
+        public bool StartHeld
+        {
+            get => _startHeld;
+            set
+            {
+                if (_startHeld == value)
+                {
+                    return;
+                }
+                _startHeld = value;
+                ApplyStartGate();
+            }
+        }
 
         public ArticulationBody Root => _agent != null ? _agent.Root : GetComponentInChildren<ArticulationBody>();
 
@@ -95,6 +118,12 @@ namespace PoRacer.Agents
                 }
                 return;
             }
+            if (_startHeld)
+            {
+                // Pinned on the line: nothing to judge him down for yet.
+                _fallenFor = 0f;
+                return;
+            }
             ArticulationBody root = Root;
             if (root == null)
             {
@@ -102,6 +131,28 @@ namespace PoRacer.Agents
             }
             bool down = Vector3.Dot(root.transform.up, Vector3.up) < _fallenUprightDot;
             _fallenFor = down ? _fallenFor + Time.fixedDeltaTime : 0f;
+        }
+
+        /// <summary>
+        /// Puts the start gate into effect, unless the grounding hold still owns him —
+        /// that one releases through <see cref="Release"/>, which consults the gate.
+        /// </summary>
+        private void ApplyStartGate()
+        {
+            if (_held)
+            {
+                return;
+            }
+            _agent.enabled = !_startHeld;
+            ArticulationBody root = Root;
+            if (root != null)
+            {
+                root.immovable = _startHeld;
+            }
+            if (!_startHeld)
+            {
+                _fallenFor = 0f;
+            }
         }
 
         public void SetGoal(Transform goal)
@@ -134,12 +185,9 @@ namespace PoRacer.Agents
         {
             _held = false;
             _fallenFor = 0f;
-            ArticulationBody root = Root;
-            if (root != null)
-            {
-                root.immovable = false;
-            }
-            _agent.enabled = true;
+            // Ground under his feet is permission to stand, not permission to race;
+            // the start gate decides the second part.
+            ApplyStartGate();
         }
 
         private bool ProbeGround()

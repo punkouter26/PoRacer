@@ -110,10 +110,14 @@ namespace PoRacer.Systems
         private readonly RaceModel _raceModel;
         private readonly Systems_TrackBuilder _trackBuilder;
         private readonly Systems_AudioMix _audioMix;
+        private readonly Systems_Warmup _warmup;
         private readonly System.Random _rng = new();
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
         private readonly List<Transform> _racerRoots = new();
+        // Every agent on the current grid, so the start gate can be lifted for the
+        // whole field in one place at GO.
+        private readonly List<ICreatureAgent> _spawnedAgents = new();
         private readonly MaterialPropertyBlock _tintBlock = new();
         private bool _racingLoopActive;
         // Incremented on every BeginRacing/RequestMenu; async chains capture it and
@@ -131,7 +135,8 @@ namespace PoRacer.Systems
             Systems_CameraDirector cameraDirector,
             RaceModel raceModel,
             Systems_TrackBuilder trackBuilder,
-            Systems_AudioMix audioMix)
+            Systems_AudioMix audioMix,
+            Systems_Warmup warmup)
         {
             _catalog = catalog;
             _config = config;
@@ -141,6 +146,7 @@ namespace PoRacer.Systems
             _raceModel = raceModel;
             _trackBuilder = trackBuilder;
             _audioMix = audioMix;
+            _warmup = warmup;
         }
 
         /// <summary>The authored course being raced, or null on builder maps.</summary>
@@ -182,6 +188,14 @@ namespace PoRacer.Systems
             {
                 return;
             }
+            // Cancelled, not merely superseded. Bumping the generation stops a stale
+            // chain doing anything that counts — verified: two RaceAgain calls in the
+            // same breath still produced exactly one new race and one grid of racers —
+            // but the chain itself keeps running to its next await. A countdown
+            // interrupted here would wake up 0.8 s later, inside the NEW race's
+            // countdown, and run its own cleanup over it. Cancelling collapses the old
+            // chain into an OperationCanceledException the guard already swallows.
+            CancelPendingWork();
             _racingLoopActive = true;
             RunRestartGuarded(++_generation, _cts.Token).Forget();
         }
@@ -190,9 +204,7 @@ namespace PoRacer.Systems
         {
             _racingLoopActive = false;
             _generation++;
-            _cts.Cancel();
-            _cts.Dispose();
-            _cts = new CancellationTokenSource();
+            CancelPendingWork();
             Despawn();
             _raceModel.CountdownValue = 0;
             _cameraDirector.SetTargets(System.Array.Empty<Transform>());
@@ -205,6 +217,41 @@ namespace PoRacer.Systems
         {
             _cts.Cancel();
             _cts.Dispose();
+        }
+
+        /// <summary>
+        /// Wall-clock stopwatch over the stages of a spawn, logged in the editor only.
+        ///
+        /// It exists because the first race of a session stalls for ~4.4 s and two
+        /// plausible explanations were measured and found innocent: building every
+        /// brain's Inference Engine worker costs 0.32 s, and running one inference
+        /// through each (to force the backend's Burst jobs to compile) costs the same.
+        /// Guessing a third time is worse than instrumenting, so the stage that actually
+        /// owns the frame gets named in the log.
+        /// </summary>
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private static void MarkStage(string stage, ref float since)
+        {
+            float now = Time.realtimeSinceStartup;
+            float elapsed = now - since;
+            since = now;
+            // Only the stages that cost something, or the log is a wall of zeroes.
+            if (elapsed >= 0.05f)
+            {
+                Debug.Log($"[SpawnStage] {stage}: {elapsed:0.000} s");
+            }
+        }
+
+        /// <summary>
+        /// Tears down the token every in-flight spawn chain is awaiting on and hands
+        /// out a fresh one. Both entry points that start a new session go through here,
+        /// so no chain can outlive the session that started it.
+        /// </summary>
+        private void CancelPendingWork()
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _cts = new CancellationTokenSource();
         }
 
         private bool IsCurrent(int generation) => _racingLoopActive && generation == _generation;
@@ -323,6 +370,22 @@ namespace PoRacer.Systems
 
         private async UniTask SpawnAndStartRace(int generation, CancellationToken token)
         {
+            // Warm-up first. Systems_Warmup is doing precisely the work this method
+            // would otherwise do on the frame START was pressed, so letting the two
+            // overlap does not avoid the stall — it just shares the frames. Measured
+            // both ways on map 0: warm-up racing the spawn gave a worst frame of 6.1 s,
+            // worse than the 4.6 s with no warm-up at all. Held here, the cost lands in
+            // the menu, where nothing is moving.
+            while (!_warmup.IsComplete)
+            {
+                await UniTask.NextFrame(token);
+                if (!IsCurrent(generation))
+                {
+                    return;
+                }
+            }
+
+            float stageClock = Time.realtimeSinceStartup;
             Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Get(_config.SelectedMapIndex);
             TrackKind rolledKind = map.Kind;
             TrackFeatures rolledFeatures = map.Features;
@@ -427,17 +490,20 @@ namespace PoRacer.Systems
                 {
                     _cameraDirector.ClearKeepOut();
                 }
+                MarkStage("track build", ref stageClock);
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
                 if (!IsCurrent(generation))
                 {
                     return;
                 }
+                MarkStage("collider settle frame", ref stageClock);
             }
 
             var racers = new List<RacerState>();
             var pendingQuirks = new List<(GameObject instance, float power, float massScale)>();
             _racerRoots.Clear();
+            _spawnedAgents.Clear();
             Vector3 gridOrigin = _track.SpawnPoints.Count > 0
                 ? _track.SpawnPoints[0].parent.position
                 : Vector3.zero;
@@ -447,10 +513,16 @@ namespace PoRacer.Systems
             {
                 gridOrigin = coursePath.Start;
                 _raceModel.TrackLengthMeters = Mathf.Max(1f, coursePath.Length);
+                // The end of the centreline, which is where a course is actually won.
+                // The builder finish line is disabled for a course but keeps the
+                // position set above, so anything reading that transform instead
+                // celebrates out on the flat plane (see RaceModel.FinishPoint).
+                _raceModel.FinishPoint = coursePath.PointAt(coursePath.Length);
             }
             else if (_track.FinishLine != null)
             {
                 _raceModel.TrackLengthMeters = Mathf.Max(1f, _track.FinishLine.position.z - gridOrigin.z);
+                _raceModel.FinishPoint = _track.FinishLine.position;
             }
             // Bounds every racer's runaway guard. Falling back to a wide box
             // matters: a zero-size Bounds would put every racer out of bounds on
@@ -470,6 +542,7 @@ namespace PoRacer.Systems
             if (RosterNeedsMujoco())
             {
                 Systems_MujocoWorld.Build();
+                MarkStage("mujoco world build", ref stageClock);
             }
 
             int gridIndex = 0;
@@ -600,6 +673,10 @@ namespace PoRacer.Systems
                         }
                     }
                     agent.MaxStep = 0;
+                    // Held from the moment it exists, so nothing is racing before the
+                    // countdown says GO. Released together at the end of the countdown.
+                    agent.StartHeld = true;
+                    _spawnedAgents.Add(agent);
                     CourseGoalView courseGoal = null;
                     if (coursePath != null)
                     {
@@ -720,6 +797,7 @@ namespace PoRacer.Systems
                 }
             }
 
+            MarkStage("instantiate grid", ref stageClock);
             _cameraDirector.SetTargets(_racerRoots);
             // Registered after SetTargets, which clears the id registry.
             for (int racerIndex = 0; racerIndex < racers.Count; racerIndex++)
@@ -733,6 +811,7 @@ namespace PoRacer.Systems
                 return;
             }
 
+            MarkStage("camera + roster", ref stageClock);
             // One frame so physics initializes every articulation, then the power
             // quirks apply cleanly.
             await UniTask.NextFrame(token);
@@ -741,26 +820,69 @@ namespace PoRacer.Systems
                 Despawn();
                 return;
             }
+            MarkStage("first physics frame", ref stageClock);
             for (int quirkIndex = 0; quirkIndex < pendingQuirks.Count; quirkIndex++)
             {
                 ApplyQuirk(pendingQuirks[quirkIndex].instance, pendingQuirks[quirkIndex].power,
                     pendingQuirks[quirkIndex].massScale);
             }
+            MarkStage("apply quirks", ref stageClock);
 
-            // 3-2-1 countdown: the grid settles physically while the HUD counts
-            // and the audio director beeps along (it watches CountdownValue).
+            // 3-2-1 countdown: the grid is held on the line while the HUD counts it
+            // down. Silent, and that is the project's standing decision, not an
+            // omission — the non-creature mix (fanfare, placing tick) was deliberately
+            // removed and the only sounds the game makes come from the creatures
+            // themselves (see WinFxView). This comment used to claim an audio director
+            // "beeps along (it watches CountdownValue)"; Systems_AudioMix has never
+            // referenced CountdownValue and no start tone was ever wired. The claim is
+            // gone rather than the rule.
+            //
+            // The hold is the point. Until 2026-09-10 CountdownValue was written here
+            // and read only by the HUD, so every policy drove through the whole 2.4 s
+            // while the clock stayed at zero and progress kept being measured from the
+            // grid origin — free distance, and most of it to whichever creature was
+            // fastest. Now every racer is gated from spawn (ICreatureAgent.StartHeld)
+            // and the MuJoCo world stops stepping, so what the countdown shows is what
+            // is happening.
+            Systems_MujocoWorld.HoldStepping(true);
             for (int countdown = 3; countdown >= 1; countdown--)
             {
                 _raceModel.CountdownValue = countdown;
                 await UniTask.Delay(TimeSpan.FromSeconds(0.8), cancellationToken: token);
                 if (!IsCurrent(generation))
                 {
-                    _raceModel.CountdownValue = 0;
+                    // Superseded mid-countdown. Only the live session may write the
+                    // countdown or restart the world: a stale chain that cleared them
+                    // here would blank the new race's count and step its held grid.
                     return;
                 }
             }
             _raceModel.CountdownValue = 0;
+            MarkStage("countdown (expect ~2.4 s)", ref stageClock);
+            ReleaseStartGate();
             _race.StartRace(racers, map.TimeLimitSeconds);
+            MarkStage("release + start", ref stageClock);
+        }
+
+        /// <summary>
+        /// GO. Lifts the hold on every racer on the grid, and restarts the MuJoCo step
+        /// for the ones Unity cannot pin. Called immediately before StartRace so the
+        /// first frame anyone can move is the first frame on the clock.
+        /// </summary>
+        private void ReleaseStartGate()
+        {
+            for (int agentIndex = 0; agentIndex < _spawnedAgents.Count; agentIndex++)
+            {
+                ICreatureAgent agent = _spawnedAgents[agentIndex];
+                // Through UnityEngine.Object, not the interface reference: every agent
+                // is a MonoBehaviour, and only Unity's == reports a destroyed one as
+                // null. A plain interface null check would call into a dead component.
+                if (agent is UnityEngine.Object agentObject && agentObject != null)
+                {
+                    agent.StartHeld = false;
+                }
+            }
+            Systems_MujocoWorld.HoldStepping(false);
         }
 
         /// <summary>
@@ -905,6 +1027,7 @@ namespace PoRacer.Systems
             }
             _spawned.Clear();
             _racerRoots.Clear();
+            _spawnedAgents.Clear();
             // After the racers, not before: MjScene.OnDestroy frees the native model that
             // any surviving CreatureAgent would still be stepping.
             Systems_MujocoWorld.Teardown();

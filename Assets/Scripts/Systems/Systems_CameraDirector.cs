@@ -330,6 +330,12 @@ namespace PoRacer.Systems
             _orbitCamera.Priority = INACTIVE_PRIORITY;
             go.AddComponent<CinemachineImpulseListener>();
             _orbit = go.AddComponent<OrbitCameraView>();
+            // The lens the orbit shot adapts for portrait is this one, not Camera.main:
+            // CinemachineBrain overwrites the Camera's field of view every frame. Same
+            // binding the pack rig gets above, and for the same reason — without it the
+            // shot that owns almost the whole race runs at an unadapted 40 deg while the
+            // pack shot widens, and the subject crops on anything but 9:16.
+            _orbit.BindLens(_orbitCamera);
             if (_hasKeepOut)
             {
                 _orbit.SetKeepOut(_keepOut);

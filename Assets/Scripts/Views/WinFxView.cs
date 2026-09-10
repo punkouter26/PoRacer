@@ -24,10 +24,12 @@ namespace PoRacer.Views
         private ParticleSystem _confetti;
         private ParticleSystem _fireworks;
         private System.IDisposable _subscription;
+        private RaceModel _raceModel;
 
         [Inject]
-        public void Construct(ISubscriber<RacerFinishedMessage> racerFinished)
+        public void Construct(ISubscriber<RacerFinishedMessage> racerFinished, RaceModel raceModel)
         {
+            _raceModel = raceModel;
             _subscription = racerFinished.Subscribe(OnRacerFinished);
         }
 
@@ -58,14 +60,25 @@ namespace PoRacer.Views
 
         private void OnRacerFinished(RacerFinishedMessage message)
         {
-            if (_finishLine != null)
+            // RaceModel.FinishPoint, not the serialized finish-line transform: the
+            // spawner moves that transform per map AND disables it for a course, so
+            // reading it put the whole celebration on the flat plane at z = 210
+            // whenever Acrobat was raced. The model carries wherever this race's
+            // finish really is. The serialized transform stays as the edit-time
+            // fallback for a scene opened without a race having started.
+            //
+            // A racer ranked first on distance when the clock ran out never reached
+            // this point, so the party still lands at a line nobody crossed. That is
+            // left as it was on purpose: whether a timed-out race should get a
+            // finish-line celebration at all is a design call, not a bug in where
+            // the celebration is.
+            Vector3 point = _raceModel != null ? _raceModel.FinishPoint
+                : (_finishLine != null ? _finishLine.position : Vector3.zero);
+            _confetti.transform.position = point + Vector3.up * 2f;
+            _fireworks.transform.position = point + Vector3.up * 5f;
+            if (_winnerSpotlight != null)
             {
-                _confetti.transform.position = _finishLine.position + Vector3.up * 2f;
-                _fireworks.transform.position = _finishLine.position + Vector3.up * 5f;
-                if (_winnerSpotlight != null)
-                {
-                    _winnerSpotlight.transform.position = _finishLine.position + Vector3.up * 8f - Vector3.forward * 2f;
-                }
+                _winnerSpotlight.transform.position = point + Vector3.up * 8f - Vector3.forward * 2f;
             }
             if (message.Place == 1)
             {

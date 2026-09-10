@@ -9,7 +9,22 @@ namespace PoRacer.Models
     /// </summary>
     public sealed class RaceConfigModel
     {
-        public static readonly int[] COUNT_OPTIONS = { 0, 1, 10, 50, 100 };
+        /// <summary>
+        /// Per-creature counts offered on the roster row. FOUR, not the five this
+        /// carried until 2026-09-10, and the count is a layout constraint rather
+        /// than a taste: each one is a finger target on a single row of a 420 dp
+        /// panel, and Android's minimum is 48 dp. Five cells measured 42 x 60 dp
+        /// on the racer screen — 36 dp on a 360 dp handset — because the segment
+        /// track takes a fixed 56% of the row and five shares of that is all there
+        /// is. Four shares is 48 dp and clears the minimum with the name and ELO
+        /// columns intact.
+        ///
+        /// 50 is the one dropped because it is the one nothing needs: 10 and 100
+        /// bracket it, and the presets row above the roster ("All x1", "All x10")
+        /// already covers bulk selection. Adding a fifth option back means finding
+        /// it 48 dp somewhere else on the row first.
+        /// </summary>
+        public static readonly int[] COUNT_OPTIONS = { 0, 1, 10, 100 };
 
         private readonly Dictionary<string, int> _counts = new();
 

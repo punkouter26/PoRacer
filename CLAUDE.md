@@ -168,11 +168,190 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   `.BuildEnv()` builds `Builds/AcrobatEnv`; `Config/AcrobatLoco01.yaml` names the four
   behaviours the scene holds; `scripts/train_acrobat.ps1` starts TensorBoard first and
   runs it. Brains trained on flat builder ground mostly cannot climb it.
-- Play-mode smoke run: `Editor_SmokeRace.Start("0,1,2,3,4", 60f)` races every map with
-  the default roster, samples frame time, collects every error and exception, and
+- Play-mode smoke run: `Editor_SmokeRace.Start("0,1,2,3,4,5,6", 60f)` races every map
+  with the default roster, samples frame time, collects every error and exception, and
   writes `Logs/smoke_<stamp>.json`; `Status()` reports progress, `StartScene(path, s)`
   just plays one scene. It survives the play-mode domain reload via `SessionState`.
+  There are **seven** maps (0-6), not five — the default argument predates Acrobat and
+  Apartment, and a run that omits them is not a run of the game.
 - Project rules live in `.claude/rules/*.md` (MVS pattern, VContainer, MessagePipe, UniTask, performance, serialization) — follow them for all C# work
+
+### The start gate, and why the countdown used to be a lie (2026-09-10)
+
+`RaceModel.CountdownValue` was written by `Systems_Spawn` and read by `RaceHudView`,
+and by **nothing else**. No agent, no physics, no audio. So for the whole 2.4 s of
+"3-2-1" every policy was driving at full power while the clock sat at zero, and
+because progress is measured from the grid origin rather than from where a racer
+stands at GO, whatever it covered in that window was distance it never spent time on.
+On a 22 m track that is ~14% of the race handed out before the start, most of it to
+whichever creature was fastest.
+
+`ICreatureAgent.StartHeld` is the fix, and **how** a racer holds is per-agent on
+purpose — these policies are balance controllers as much as locomotion controllers,
+so simply switching one off drops a humanoid on its face before GO:
+
+| Racer | Hold |
+|---|---|
+| `Agent_Creature` (quadruped, hexapod, crab, variants) | base pinned `immovable`, `OnActionReceived` returns early so the drive targets stay at the authored rest pose |
+| `Agent_IsaacBox`, `Agent_IsaacH1` | `_agent.enabled = false` **and** base pinned — the same pair their existing grounding hold uses. The two holds are independent and both must clear; `Release()` now hands off to `ApplyStartGate()` rather than straight to the policy |
+| `Agent_MojucuBoy` (and any MuJoCo racer) | `Systems_MujocoWorld.HoldStepping(true)` — nothing Unity-side can pin one, so the world stops stepping and it freezes in its trained stance |
+
+Two ordering constraints. `HoldStepping` must be called **after** `MjScene` has
+compiled (a disabled component's `Start` never runs, so holding in the same frame as
+`Build()` defers compilation instead of freezing anything) — the spawner holds at the
+top of the countdown, several frames later, which is safely past it. And `Suspend()`
+outranks `HoldStepping`: once teardown has begun a release must not restart the world.
+
+**Training never sets it.** The training areas leave `StartHeld` false and the policy
+drives from frame one, exactly as before.
+
+The countdown is **silent, by standing decision** — the non-creature mix was
+deliberately removed and only the creatures make sound (see `WinFxView`). A comment in
+`Systems_Spawn` claimed an audio director "beeps along (it watches CountdownValue)";
+`Systems_AudioMix` has never referenced `CountdownValue` and no start tone was ever
+wired. The claim is gone, not the rule. If a start tone is ever wanted it is a design
+change, not a bug fix.
+
+### Nothing that counts may run outside the race window (2026-09-10)
+
+`RacerView.Update` ran its finish backstop, progress report and knockdown referee
+regardless of whether a race was on the clock. It now returns early on
+`Systems_Race.RaceActive` (new read-only property), keeping only the arena guard.
+
+The knockdown referee was the live bug: it kept counting through the results screen, so
+a racer that crossed the line and flopped over got a `KnockoutPuff` and
+`SetActive(false)` twelve seconds later — while the podium camera was holding the shot
+on it. It went unseen because `Editor_SmokeRace.RESULTS_HOLD_SECONDS` was 8, four short
+of `RacerView.KNOCKDOWN_SECONDS` (12). **The hold is now 14 s and must stay above that
+constant**; the report's `racersAliveAtResults` field is the assertion.
+
+### Course clocks are 240/180 s, not 600 (2026-09-10)
+
+600 s was never a race length — it was a number chosen so a course "had time", and
+measurement says time was never the constraint. Three smoke runs on Acrobat: nobody
+finishes. Leaders reach ~48 m of 212 m by 92 s and then leave the road, which ends the
+episode; at 92 s the field was 4 DNF and 3 crawling at ~25 m. The race resolves by
+attrition long before the clock, so all 600 s decided was how long the last straggler
+kept a player waiting — up to ten minutes for a podium ranked on distance with nobody
+across the line. `ACROBAT_TIME_LIMIT_SECONDS` = 240 bounds that without touching the
+outcome. `APARTMENT_TIME_LIMIT_SECONDS` = 180 is the opposite case: 73 m at the ~0.5 m/s
+these brains manage on a road is genuinely finishable in ~150 s, so 180 makes it a race
+that can be won. **Re-measure both after any retrain.**
+
+### `RaceModel.FinishPoint` — where a race is actually won
+
+`WinFxView` read the serialized finish-line `Transform` directly. The spawner both
+**moves** that transform (to `map.LengthMeters - 2`) and **disables** it for a course,
+so on Acrobat the confetti, fireworks and winner spotlight all fired at z = 210 on the
+flat plane — a couple of hundred metres from the mountain road being raced and from the
+racer being celebrated. The finish point is now on the model, set per race (course
+centreline end, or the builder arch). Read it from there, never from the transform.
+
+### Both camera rigs adapt to aspect, not just the pack shot (2026-09-10)
+
+`PackCameraView` adapted its FOV for portrait; `OrbitCameraView` did not — and the
+orbit rig owns the shot for essentially the whole race, so the adapting one was the one
+nobody was watching. Measured at a 0.361 aspect: `CM_Pack` at fov 49.7, `CM_Orbit` stuck
+at Cinemachine's default 40, where the horizontal half-angle is 7.5° and a radius-8
+chase shot frames 2.1 m instead of the authored 3.3 m.
+
+`OrbitCameraView.ApplyLensAndGetFrameScale()` now writes the **same FOV curve** as the
+pack rig (so a cut between them does not read as a lens change) and returns a factor
+every shot radius and height is multiplied by, holding the subject at a constant
+fraction of frame *width*. `Systems_CameraDirector.EnsureOrbitCamera` must call
+`_orbit.BindLens(_orbitCamera)` — writing `Camera.fieldOfView` instead loses the race
+with `CinemachineBrain`'s own LateUpdate. The `Shots` table stays authored against 9:16;
+tune it there and every other aspect follows.
+
+### Count options are FOUR, and that is a layout constraint (2026-09-10)
+
+`RaceConfigModel.COUNT_OPTIONS` was `{0, 1, 10, 50, 100}`. Each cell is a finger target
+on a single row of a 420 dp panel, the segment track takes a fixed 56% of that row, and
+five shares of it measured **42 x 60 dp** — 36 dp on a 360 dp handset, against Android's
+48 dp minimum. Four shares is 48 dp. 50 is the one dropped because 10 and 100 bracket it
+and the presets row already does bulk selection. Adding a fifth back means finding it
+48 dp somewhere else on the row first. `UiTheme.StyleSegment` now also sets
+`minWidth = CONTROL_SM`.
+
+It survived for months because `Editor_SmokeRace` checked button **height** and not
+width — on a horizontal segmented control, width is the axis a finger misses on. It now
+checks both.
+
+### What the smoke harness was not testing (2026-09-10)
+
+Three gaps, all fixed, all worth knowing because each one hid a real defect:
+
+- **It audited the wrong menu screen.** `AuditUi` fired the instant the scope resolved,
+  while `MenuView._mapStep` was still true — so the map cards got checked and the
+  8-row roster never did. There is now a `Phase.MenuRacers` that drives the NEXT button
+  through a real `NavigationSubmitEvent` and audits `menu-racers` (38 buttons, against
+  the map screen's 9).
+- **It never audited the results screen at all.** `AuditUi("results")` now runs 2 s into
+  the hold.
+- **It validated the vertical budget against the wrong screen.** The editor's game view
+  resolved to a 420 x 1163 panel; a 1080x2400 handset at ~400 dpi is 432 x 960 dp and,
+  matched on width to the 420 reference, 420 x **933**. So the menu was being checked
+  with 230 units more height than it will ever have, on the one screen whose whole
+  design constraint is fitting without scrolling. `ExpectHandsetFit` subtracts the
+  surplus: bottom-anchored controls ride with the panel, flow content does not, so the
+  gap between them closes by exactly the difference. The roster screen passes with
+  **44 dp spare** — that is the real margin, and a ninth creature (+63 dp) overflows it.
+
+### `Systems_Warmup` — the cold start was prefab instantiation, not inference
+
+The first race of a session froze ~4.4 s, reproducibly: `fpsMin` of 0.218, 0.215 and
+0.223 across three independent smoke runs on step 0, against nothing worse than 11 fps
+from step 2 on. **Two plausible causes were measured and cleared before the right one
+was found** — record them so nobody pays for the same guesses again:
+
+| Suspect | Measured | Verdict |
+|---|---|---|
+| Building an Inference Engine `Worker` per brain | 0.32 s for all 8 | not it |
+| Also *running* one inference each, to force the backend's Burst jobs to JIT | 0.33 s for all 8 | not it |
+| **Instantiating the prefabs** | **4.362 s** | this is it |
+
+`Systems_Spawn.MarkStage` is the stage stopwatch that named it (editor-only,
+`[Conditional]`, logs only stages ≥ 0.05 s) and is worth keeping for the next time:
+
+```
+[SpawnStage] instantiate grid: 4.362 s      <- before
+[SpawnStage] instantiate grid: 0.088 s      <- after
+```
+
+The cost is **one-off per prefab TYPE, not per racer** — the same eight prefabs
+instantiate with no stall at all on the second race of a session, which is why only step
+0 ever showed it. So `Systems_Warmup` instantiates one of each distinct prefab at
+y = -500, holds it with `StartHeld`, gives it two frames to stand its policy up, and
+destroys it; the brains get warmed too, because 0.32 s off the first race is still
+0.32 s. Result: worst frame 4.4 s → **0.17 s**, `fpsAvg` 51.2 → 57.4.
+
+**MuJoCo prefabs are skipped deliberately** — `MjScene` is a singleton
+`Systems_MujocoWorld` owns per race, and an `MjComponent` waking up outside that would
+claim it.
+
+**`Systems_Spawn` waits on `IsComplete` before it builds a grid, and that wait is not
+optional**: with the warm-up running and nothing waiting for it the worst frame went from
+4.6 s to **6.1 s** — the work had not moved anywhere, it was just racing the spawn for
+the same frames. `Editor_SmokeRace.TryResolve` gates on `IsComplete` too, so step 0
+measures the race and not the menu. `IsComplete` is set in a `finally`, cancellation
+included, so a spawner can never be left waiting on a warm-up that gave up.
+
+`GetInstanceID()` is **CS0619 in 6000.6** ("Use GetEntityId instead") — the de-duplicating
+sets are keyed on the asset references themselves.
+
+### Removing the head start made the races genuinely longer
+
+Worth knowing before re-tuning map lengths. The map lengths in `Systems_MapCatalog` were
+"sized off measured pace" *while every racer was getting 2.4 s of free distance before
+the clock started*. With the start gate in place they have to cover the same ground on
+the clock, so:
+
+- **Flat, Swamp, Gale, Roulette** still resolve with a full three-racer podium.
+- **Lumpy (18 m)** now runs its whole 120 s clock and finishes 1 across the line, 1 on
+  distance, 6 DNF. It still produces a winner, but only just.
+
+That is the honest outcome of a fair start, not a regression. If Lumpy is to be tuned,
+shorten the map — do not give the head start back.
 
 ---
 

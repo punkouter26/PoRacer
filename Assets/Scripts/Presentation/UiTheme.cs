@@ -414,6 +414,12 @@ namespace PoRacer.Presentation
             button.style.unityFontStyleAndWeight = selected ? FontStyle.Bold : FontStyle.Normal;
             button.style.fontSize = FONT_SM;
             button.style.height = CONTROL_SM;
+            // Square to the touch minimum on BOTH axes. The height has always been
+            // CONTROL_SM; the width was left to whatever share of the track the cell
+            // count happened to give it, which on the roster row was 42 dp. A
+            // segmented control is exactly where width matters — the cells are
+            // side by side, so width is the axis a finger misses on.
+            button.style.minWidth = CONTROL_SM;
             button.style.flexGrow = 1f;
             button.style.flexBasis = 0f;
             SetRadius(button, RADIUS_SM);

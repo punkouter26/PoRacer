@@ -24,6 +24,11 @@ namespace PoRacer
             builder.Register<AudioMixModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
+            // Entry point so it starts warming the moment the menu appears, which is the
+            // whole point: the first race used to stall ~4.4 s instantiating the grid
+            // when START was pressed. AsSelf as well, because Systems_Spawn waits on
+            // its IsComplete before it builds one.
+            builder.RegisterEntryPoint<Systems_Warmup>().AsSelf();
             builder.RegisterEntryPoint<Systems_Race>().AsSelf();
             builder.RegisterEntryPoint<Systems_LeadWatcher>();
             // Entry point: its Tick runs the duck release and the menu mix slide.

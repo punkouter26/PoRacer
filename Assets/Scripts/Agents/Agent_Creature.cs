@@ -82,8 +82,33 @@ namespace PoRacer.Agents
         private float[] _baseForceLimit;
         private bool _driveBaselineCaptured;
         private Quaternion _restRotation = Quaternion.identity;
+        private bool _startHeld;
 
         public bool Failed => _failed;
+
+        /// <summary>
+        /// Held by pinning the articulation base and leaving the drive targets
+        /// alone. These creatures are multi-legged and statically stable in their
+        /// authored stance, so an unactuated hold settles rather than collapses —
+        /// but the base is pinned as well, because a hold that merely stops
+        /// steering still lets a lopsided rig topple off the line over 2.4 s.
+        /// </summary>
+        public bool StartHeld
+        {
+            get => _startHeld;
+            set
+            {
+                if (_startHeld == value)
+                {
+                    return;
+                }
+                _startHeld = value;
+                if (_root != null)
+                {
+                    _root.immovable = value;
+                }
+            }
+        }
 
         public Quaternion RestRotation => _restRotation;
 
@@ -205,6 +230,17 @@ namespace PoRacer.Agents
 
         public override void OnActionReceived(ActionBuffers actions)
         {
+            // Start gate: before GO the drive targets are left exactly as the
+            // prefab authored them, so the rig holds its stance instead of walking
+            // off the line. Returning here and not merely skipping the drive write
+            // is the point — the reward's stall timer and the divergence checks must
+            // not run either, or a held racer accrues 2.4 s of "no progress" before
+            // the race it is waiting for has even started.
+            if (_startHeld)
+            {
+                return;
+            }
+
             // Runs every FixedUpdate (TakeActionsBetweenDecisions holds targets between decisions).
             float jerkSum = 0f;
             for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)

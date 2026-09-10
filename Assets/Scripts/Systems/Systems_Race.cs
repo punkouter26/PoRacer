@@ -57,6 +57,13 @@ namespace PoRacer.Systems
             _photoFinishPublisher = photoFinishPublisher;
         }
 
+        /// <summary>
+        /// True only between GO and the last racer being scored. Racer-side logic asks
+        /// this before it does anything that counts: outside the window there is no
+        /// clock, no standings and nothing to judge.
+        /// </summary>
+        public bool RaceActive => _model.RaceActive;
+
         // Unscaled: the winner slow-mo (CameraFxView) must not stretch the race
         // clock or the DNF timers.
         public void Tick() => Advance(UnityEngine.Time.unscaledDeltaTime);

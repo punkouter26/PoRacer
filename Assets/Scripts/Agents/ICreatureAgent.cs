@@ -27,6 +27,27 @@ namespace PoRacer.Agents
         Transform Body { get; }
 
         int MaxStep { get; set; }
+
+        /// <summary>
+        /// The start gate. True from spawn until the 3-2-1 countdown ends, so the
+        /// grid settles in place instead of racing away before the clock starts.
+        ///
+        /// It had to exist because the countdown was display-only: CountdownValue
+        /// was written by the spawner and read by the HUD and nothing else, so for
+        /// the whole 2.4 s every policy was driving. Progress is measured from the
+        /// grid origin and the clock is zeroed at GO, so whatever a racer covered
+        /// in that window was distance it never had to spend time on — and the
+        /// faster the creature, the more of the race it was given for free.
+        ///
+        /// How a racer holds is its own business, because the policies are balance
+        /// controllers as much as locomotion controllers and simply switching one
+        /// off drops a humanoid on its face. See each implementation.
+        ///
+        /// Never set during training: the training areas leave it false and the
+        /// policy drives from the first frame, exactly as it always has.
+        /// </summary>
+        bool StartHeld { get; set; }
+
         /// <summary>
         /// The prefab's authored root orientation — the pose whose joint chain
         /// lies the way the rig was designed. The Centipede is authored

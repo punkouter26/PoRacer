@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using PoRacer.Models;
 using PoRacer.Systems;
+using PoRacer.Views;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -24,8 +25,15 @@ namespace PoRacer.EditorTools
     /// Entering play mode reloads the domain, so the job lives in SessionState and
     /// <see cref="Resume"/> re-arms the driver on the other side of the reload.
     ///
-    /// Invoke: unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Start(\"0,1,2,3,4\", 60f);"
+    /// Invoke: unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Start(\"0,1,2,3,4,5,6\", 140f);"
     ///         unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Status();"
+    ///
+    /// The defaults cover all SEVEN maps, and 140 s per step is not generous — it is
+    /// the minimum that lets a builder map reach its own 120 s clock. They used to be
+    /// five maps at 60 s, which silently meant Acrobat and Apartment were never raced
+    /// at all and Lumpy was cut off before it could resolve. A step the harness
+    /// abandons reports raceEnded false and proves nothing about race end, the produce
+    /// shower or the podium.
     /// </summary>
     public static class Editor_SmokeRace
     {
@@ -40,7 +48,21 @@ namespace PoRacer.EditorTools
         private const float COOLDOWN_SECONDS = 2f;
         // Results stay up this long before the menu is requested, so what happens
         // at race end (the produce shower) is exercised and counted.
-        private const float RESULTS_HOLD_SECONDS = 8f;
+        //
+        // Longer than RacerView.KNOCKDOWN_SECONDS (12), and that is the whole reason
+        // for the number. At 8 s this window stopped four seconds short of the
+        // knockdown referee's timer, which used to keep counting after the flag — so
+        // a finisher that flopped over the line was puffed out of existence and
+        // deactivated while the podium camera held on it, and the harness went home
+        // before it could see. Keep this above that constant.
+        private const float RESULTS_HOLD_SECONDS = 14f;
+        // How far into the results hold the podium UI is audited: late enough for the
+        // panel's entrance animation to have landed, early enough to be well inside
+        // the hold.
+        private const float RESULTS_AUDIT_DELAY_SECONDS = 2f;
+        // Settling time after the menu's NEXT button is driven, so UI Toolkit has run
+        // a layout pass before the racer screen is measured.
+        private const float MENU_SETTLE_SECONDS = 0.5f;
         private const string FRUIT_ROOT = "FruitPour";
         // Portrait readability gate, in panel units (dp at the 420 dp reference):
         // Android's body-text and touch-target minimums, and how far into a corner
@@ -49,6 +71,20 @@ namespace PoRacer.EditorTools
         private const float MIN_TOUCH_DP = 48f;
         private const float CORNER_FRACTION = 0.34f;
         private const float RACE_AUDIT_DELAY_SECONDS = 4f;
+
+        /// <summary>
+        /// Panel height, in panel units, of the phone this layout actually has to fit.
+        ///
+        /// Every other assertion here is a fraction of the panel and so is aspect-proof.
+        /// The vertical budget is not, and the editor hides the problem rather than
+        /// showing it: a game view measured at 960 x 2658 resolves to a 420 x 1163
+        /// panel, while a 1080 x 2400 handset at ~400 dpi is 432 x 960 dp and, matched
+        /// on width to the 420 reference, resolves to 420 x 933. So the editor validates
+        /// the menu against a screen 230 units TALLER than the target — which is 25%
+        /// more room than the roster will ever have, on the one screen whose whole
+        /// design constraint is fitting without scrolling.
+        /// </summary>
+        private const float HANDSET_PANEL_DP = 933f;
 
         [Serializable]
         private sealed class Job
@@ -75,6 +111,13 @@ namespace PoRacer.EditorTools
             public int timedOut;
             public int dnf;
             public int fruitPieces;
+            // Racers still active at the end of the results hold. Should equal
+            // `racers` minus whoever was knocked out DURING the race; anything the
+            // results screen itself removes is a bug (see RESULTS_HOLD_SECONDS).
+            public int racersAliveAtResults;
+            // Panel height the layout was measured at, and the handset height it is
+            // judged against, so a clean run still records which screen it proved.
+            public float panelHeightDp;
             public string[] placings;
         }
 
@@ -103,6 +146,12 @@ namespace PoRacer.EditorTools
         private enum Phase
         {
             WaitScope,
+            // The menu's second screen, reached by driving NEXT. It has to be audited
+            // separately because it is the one with the roster on it: the map screen
+            // is what WaitScope catches, and for months it was all that ever got
+            // checked — which is how eight rows of 42 dp count buttons stayed
+            // invisible to a touch-target audit.
+            MenuRacers,
             WaitRaceStart,
             Racing,
             Results,
@@ -118,12 +167,14 @@ namespace PoRacer.EditorTools
         private static double _stepStart;
         private static int _lastFrame;
         private static bool _raceAudited;
+        private static bool _resultsAudited;
         private static Systems_Spawn _spawn;
         private static RaceConfigModel _config;
         private static RaceModel _raceModel;
+        private static Systems_Warmup _warmup;
         private static readonly Dictionary<string, LogEntry> LogIndex = new();
 
-        public static string Start(string mapsCsv = "0,1,2,3,4", float secondsPerRace = 60f)
+        public static string Start(string mapsCsv = "0,1,2,3,4,5,6", float secondsPerRace = 140f)
         {
             string[] parts = mapsCsv.Split(',');
             var maps = new List<int>();
@@ -241,13 +292,28 @@ namespace PoRacer.EditorTools
                 case Phase.WaitScope:
                     if (TryResolve())
                     {
-                        AuditUi("menu");
-                        StartRaceStep();
+                        AuditUi("menu-map");
+                        // Onto the roster screen, through the button a player would
+                        // press rather than by poking MenuView's private _mapStep.
+                        if (!DriveButton("NEXT"))
+                        {
+                            Record("error", "ui-audit[menu-map]: no NEXT button to reach the roster screen",
+                                string.Empty);
+                        }
+                        _phase = Phase.MenuRacers;
+                        _phaseStart = EditorApplication.timeSinceStartup;
                     }
                     else if (elapsed > SCOPE_TIMEOUT_SECONDS)
                     {
                         Record("error", "smoke: no built LifetimeScope after " + SCOPE_TIMEOUT_SECONDS + " s", "");
                         Finish("no LifetimeScope");
+                    }
+                    break;
+                case Phase.MenuRacers:
+                    if (elapsed > MENU_SETTLE_SECONDS)
+                    {
+                        AuditUi("menu-racers");
+                        StartRaceStep();
                     }
                     break;
                 case Phase.WaitRaceStart:
@@ -281,10 +347,23 @@ namespace PoRacer.EditorTools
                     }
                     break;
                 case Phase.Results:
+                    // The podium is a screen like any other and was the one never
+                    // audited: its RESULTS panel, its three rows and its RACE AGAIN /
+                    // MENU buttons had no layout assertion at all.
+                    if (!_resultsAudited && elapsed > RESULTS_AUDIT_DELAY_SECONDS)
+                    {
+                        _resultsAudited = true;
+                        AuditUi("results");
+                    }
                     if (elapsed > RESULTS_HOLD_SECONDS)
                     {
                         GameObject fruitRoot = GameObject.Find(FRUIT_ROOT);
                         _step.fruitPieces = fruitRoot != null ? fruitRoot.transform.childCount : 0;
+                        // Anything the referee scored must still be on the grid. The
+                        // knockdown referee used to keep running through this hold and
+                        // deactivate a finisher that was lying down, so count what
+                        // survived the results screen rather than trusting it did.
+                        _step.racersAliveAtResults = CountActiveRacers();
                         EndRaceStep();
                     }
                     break;
@@ -323,7 +402,15 @@ namespace PoRacer.EditorTools
             _spawn = scope.Container.Resolve<Systems_Spawn>();
             _config = scope.Container.Resolve<RaceConfigModel>();
             _raceModel = scope.Container.Resolve<RaceModel>();
-            return _spawn != null && _config != null && _raceModel != null;
+            _warmup = scope.Container.Resolve<Systems_Warmup>();
+            if (_spawn == null || _config == null || _raceModel == null || _warmup == null)
+            {
+                return false;
+            }
+            // Not resolved until the brains are warm. The warm-up is menu-time work by
+            // design (the spawner waits on it too), so measuring it as part of step 0
+            // would report the cold start this is here to remove.
+            return _warmup.IsComplete;
         }
 
         /// <summary>
@@ -335,12 +422,17 @@ namespace PoRacer.EditorTools
         /// </summary>
         private static void AuditUi(string when)
         {
-            _raceAudited = when == "race";
             UIDocument[] documents = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
             int labels = 0;
             int buttons = 0;
             var found = new Dictionary<string, Rect>();
             Rect panel = default;
+            // Split at the same fraction the corner checks use: anything whose centre
+            // sits below it is bottom-anchored furniture that moves with the panel,
+            // anything above is flow content that does not. The vertical-budget check
+            // below needs to tell the two apart.
+            float contentBottom = 0f;
+            float anchoredTop = float.PositiveInfinity;
             for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
             {
                 VisualElement root = documents[documentIndex].rootVisualElement;
@@ -368,6 +460,11 @@ namespace PoRacer.EditorTools
                     {
                         found[label.name] = label.worldBound;
                     }
+                    Rect labelBound = label.worldBound;
+                    if (IsFlowContent(labelBound, panel) && labelBound.yMax > contentBottom)
+                    {
+                        contentBottom = labelBound.yMax;
+                    }
                 });
                 root.Query<Button>().ForEach(button =>
                 {
@@ -381,9 +478,28 @@ namespace PoRacer.EditorTools
                     {
                         Record("error", $"ui-audit[{when}]: button '{Trim(button.text)}' is {bound.height:0} dp tall, under {MIN_TOUCH_DP}", string.Empty);
                     }
+                    // Width as well as height, because height alone let the real defect
+                    // through: the roster's count cells were 42 x 60 dp and passed this
+                    // audit for months. In a horizontal segmented control width is the
+                    // axis a finger misses on, and it is the axis nothing was checking.
+                    if (bound.width < MIN_TOUCH_DP - 0.5f)
+                    {
+                        Record("error", $"ui-audit[{when}]: button '{Trim(button.text)}' is {bound.width:0} dp wide, under {MIN_TOUCH_DP}", string.Empty);
+                    }
                     if (!string.IsNullOrEmpty(button.name) && button.name.StartsWith("Furniture."))
                     {
                         found[button.name] = bound;
+                    }
+                    if (IsFlowContent(bound, panel))
+                    {
+                        if (bound.yMax > contentBottom)
+                        {
+                            contentBottom = bound.yMax;
+                        }
+                    }
+                    else if (bound.y < anchoredTop)
+                    {
+                        anchoredTop = bound.y;
                     }
                 });
             }
@@ -392,17 +508,127 @@ namespace PoRacer.EditorTools
                 Record("error", "ui-audit[" + when + "]: no UI document on screen", string.Empty);
                 return;
             }
-            // The five anchors. The menu screen has no MENU button or FPS readout of
-            // its own by design (DebugOverlay owns FPS on every screen).
+            if (_step != null)
+            {
+                _step.panelHeightDp = panel.height;
+            }
+            // The five anchors. The menu screens have no MENU button of their own by
+            // design; DebugOverlay owns the FPS readout on every screen.
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_TITLE, left: true, top: true);
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_VERSION, left: false, top: false);
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_DBG, left: true, top: false);
             ExpectCentreTop(when, found, panel, UiTheme.FURNITURE_FPS);
-            if (when == "race")
+            if (when == "race" || when == "results")
             {
                 ExpectCorner(when, found, panel, UiTheme.FURNITURE_MENU, left: false, top: true);
             }
-            Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, {found.Count} furniture anchors checked");
+            ExpectHandsetFit(when, panel, contentBottom, anchoredTop);
+            Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, "
+                + $"{found.Count} furniture anchors, panel {panel.height:0} dp");
+        }
+
+        /// <summary>
+        /// True for an element that scrolls or flows with the layout, false for the
+        /// bottom-anchored furniture. Split on the same fraction the corner checks use.
+        /// </summary>
+        private static bool IsFlowContent(Rect bound, Rect panel)
+        {
+            if (panel.height <= 0f || bound.height <= 0f || float.IsNaN(bound.y))
+            {
+                return false;
+            }
+            float centreFraction = (bound.center.y - panel.y) / panel.height;
+            return centreFraction <= 1f - CORNER_FRACTION;
+        }
+
+        /// <summary>
+        /// The vertical-budget check the editor cannot make on its own.
+        ///
+        /// Bottom-anchored controls ride with the panel, so they are always clear here;
+        /// flow content does not move, so on a shorter screen the gap between the two
+        /// closes by exactly the difference in panel height. A game view 230 units
+        /// taller than a handset therefore shows 230 units of clearance that will not
+        /// exist on the device — which is how the menu's "whole roster visible without
+        /// scrolling" budget could be 44 units from overflowing into the START button
+        /// and look comfortable in the editor.
+        ///
+        /// So the assertion is made against <see cref="HANDSET_PANEL_DP"/>, not against
+        /// the panel being rendered: content must clear the furniture with the screen's
+        /// surplus height subtracted. A game view already at or below handset height
+        /// needs no correction and is checked as it stands.
+        /// </summary>
+        private static void ExpectHandsetFit(string when, Rect panel, float contentBottom, float anchoredTop)
+        {
+            if (contentBottom <= 0f || float.IsPositiveInfinity(anchoredTop))
+            {
+                return;
+            }
+            float surplus = Mathf.Max(0f, panel.height - HANDSET_PANEL_DP);
+            float budget = anchoredTop - surplus;
+            if (contentBottom > budget)
+            {
+                Record("error",
+                    $"ui-audit[{when}]: content reaches {contentBottom:0} dp but on a {HANDSET_PANEL_DP:0} dp "
+                    + $"handset the bottom controls start at {budget:0} dp "
+                    + $"(panel is {panel.height:0} dp, {surplus:0} dp taller than the target)",
+                    string.Empty);
+                return;
+            }
+            Debug.Log($"[SmokeRace] ui-audit[{when}]: vertical budget OK — {budget - contentBottom:0} dp "
+                + $"spare against a {HANDSET_PANEL_DP:0} dp handset");
+        }
+
+        /// <summary>
+        /// Presses the first visible button whose text starts with
+        /// <paramref name="textPrefix"/>, through the same submit event a real press
+        /// raises — so the audit drives the menu the way a player does rather than
+        /// reaching into MenuView's private screen state.
+        /// </summary>
+        private static bool DriveButton(string textPrefix)
+        {
+            UIDocument[] documents = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
+            for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
+            {
+                VisualElement root = documents[documentIndex].rootVisualElement;
+                if (root == null || root.resolvedStyle.display == DisplayStyle.None)
+                {
+                    continue;
+                }
+                Button match = null;
+                root.Query<Button>().ForEach(button =>
+                {
+                    if (match == null && IsShown(button) && !string.IsNullOrEmpty(button.text)
+                        && button.text.StartsWith(textPrefix, StringComparison.Ordinal))
+                    {
+                        match = button;
+                    }
+                });
+                if (match != null)
+                {
+                    using (NavigationSubmitEvent submit = NavigationSubmitEvent.GetPooled())
+                    {
+                        submit.target = match;
+                        match.SendEvent(submit);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Racers still on the grid, by active RacerView count.</summary>
+        private static int CountActiveRacers()
+        {
+            RacerView[] views = UnityEngine.Object.FindObjectsByType<RacerView>(FindObjectsSortMode.None);
+            int active = 0;
+            for (int viewIndex = 0; viewIndex < views.Length; viewIndex++)
+            {
+                if (views[viewIndex].gameObject.activeInHierarchy)
+                {
+                    active++;
+                }
+            }
+            return active;
         }
 
         private static bool IsShown(VisualElement element)
@@ -502,6 +728,10 @@ namespace PoRacer.EditorTools
         {
             _step = new StepReport { name = name, fpsMin = float.MaxValue };
             _stepStart = EditorApplication.timeSinceStartup;
+            // Per step, so every map audits its own race and results screens rather
+            // than the first map's audit standing in for all of them.
+            _raceAudited = false;
+            _resultsAudited = false;
             _report.steps.Add(_step);
         }
 

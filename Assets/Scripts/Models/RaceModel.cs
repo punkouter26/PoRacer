@@ -45,6 +45,20 @@ namespace PoRacer.Models
         // Pre-start countdown: 3, 2, 1 while the grid settles; 0 = none.
         public int CountdownValue;
         public string TrackName = "Flat";
+
+        /// <summary>
+        /// Where this race's finish actually is, in world space. Set per race by the
+        /// spawner: the builder track's arch on builder maps, the authored course's
+        /// own finish on a course.
+        ///
+        /// It lives on the model so presentation does not have to guess it from a
+        /// scene object. WinFxView used to read the serialized finish-line transform
+        /// directly, and the spawner both MOVES that transform (to
+        /// map.LengthMeters - 2) and DISABLES it for a course — so on Acrobat the
+        /// confetti, fireworks and winner spotlight all fired at z = 210 on the flat
+        /// plane, a couple of hundred metres from the mountain road being raced.
+        /// </summary>
+        public UnityEngine.Vector3 FinishPoint;
         // Start line to finish line, for progress-strip percentages. Overwritten
         // per race from the map catalog; this is only a fallback.
         public float TrackLengthMeters = 30f;

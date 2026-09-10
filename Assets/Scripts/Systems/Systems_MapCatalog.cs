@@ -50,6 +50,31 @@ namespace PoRacer.Systems
         // RaceCourseView measures 72.8 m, not the 80 this used to claim.
         public const float APARTMENT_LENGTH_METERS = 73f;
 
+        /// <summary>
+        /// Course clocks, cut from 600 s on 2026-09-10 because 600 was never a race
+        /// length — it was a number chosen so a course "had time", and measurement
+        /// says the time was never the constraint.
+        ///
+        /// What three smoke runs actually show on Acrobat: nobody finishes. The
+        /// leaders reach ~48 m of 212 m by 92 s and then go off the road, which ends
+        /// their episode; at 92 s the field was 4 DNF and 3 still crawling at ~25 m.
+        /// The race therefore resolves by attrition long before the clock, and all
+        /// the clock decided was how long the last straggler kept a player waiting —
+        /// up to ten minutes for a podium ranked on distance with nobody across the
+        /// line. 240 s bounds that wait at four minutes without touching the outcome.
+        ///
+        /// Apartment is the opposite case and gets a different number for a reason:
+        /// at 73 m and the ~0.5 m/s the same brains manage on a road, it is genuinely
+        /// finishable in ~150 s. 180 s makes it a race that can be won rather than one
+        /// that always times out, which 600 s hid rather than helped.
+        ///
+        /// Re-measure both whenever the brains are retrained — a policy that can climb
+        /// (see SCN_TRAIN_ACROBAT) changes the Acrobat figure completely.
+        /// </summary>
+        public const float ACROBAT_TIME_LIMIT_SECONDS = 240f;
+
+        public const float APARTMENT_TIME_LIMIT_SECONDS = 180f;
+
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
             // These are finish-line placements; the raced distance is ~2 m less,
@@ -79,7 +104,7 @@ namespace PoRacer.Systems
             // course training scene exists.
             new MapEntry("Acrobat", TrackKind.Course, available: true,
                 "Mountain switchbacks and a tunnel; 50 m of climb", ACROBAT_LENGTH_METERS,
-                timeLimitSeconds: 600f),
+                timeLimitSeconds: ACROBAT_TIME_LIMIT_SECONDS),
             // A photo reconstruction of a flat with a toy track built through it
             // (Assets/Art/Models/ApartmentTrack.glb), raced along its twelve
             // Checkpoint_ knots. Placed at Editor_BuildApartmentTrack.APARTMENT_SCALE
@@ -92,7 +117,7 @@ namespace PoRacer.Systems
             // Acrobat's 600 s clock because 73 m is still three builder maps long.
             new MapEntry("Apartment", TrackKind.Apartment, available: true,
                 "A toy circuit through a real flat; downhill first, climb at the end",
-                APARTMENT_LENGTH_METERS, timeLimitSeconds: 600f)
+                APARTMENT_LENGTH_METERS, timeLimitSeconds: APARTMENT_TIME_LIMIT_SECONDS)
         };
 
         /// <summary>Clamps out-of-range or placeholder picks back to the first map.</summary>
