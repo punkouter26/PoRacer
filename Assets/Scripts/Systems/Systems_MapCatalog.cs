@@ -44,6 +44,11 @@ namespace PoRacer.Systems
         // Its length is read off the authored centreline at race time; this is
         // only the catalogue's display figure.
         public const float ACROBAT_LENGTH_METERS = 212f;
+        // The Apartment lap: 16.08 m of authored checkpoints at APARTMENT_SCALE 5.0.
+        // Display figure only, same as ACROBAT_LENGTH_METERS above - the real length
+        // is read off the checkpoints at race time, and the scene's baked
+        // RaceCourseView measures 72.8 m, not the 80 this used to claim.
+        public const float APARTMENT_LENGTH_METERS = 73f;
 
         public static readonly IReadOnlyList<MapEntry> Entries = new[]
         {
@@ -74,7 +79,20 @@ namespace PoRacer.Systems
             // course training scene exists.
             new MapEntry("Acrobat", TrackKind.Course, available: true,
                 "Mountain switchbacks and a tunnel; 50 m of climb", ACROBAT_LENGTH_METERS,
-                timeLimitSeconds: 600f)
+                timeLimitSeconds: 600f),
+            // A photo reconstruction of a flat with a toy track built through it
+            // (Assets/Art/Models/ApartmentTrack.glb), raced along its twelve
+            // Checkpoint_ knots. Placed at Editor_BuildApartmentTrack.APARTMENT_SCALE
+            // 5.0, which turns a 16.1 m toy lap into a 73 m one on a 3.2 m road -
+            // the scale is set by road width, since the racers on it cannot be
+            // resized without breaking their brains. Like Acrobat this is a display
+            // figure; the real length is read off the checkpoints at race time.
+            // The lap starts at the summit rather than at the painted line, so the
+            // descent comes first and the climb is the last stretch; it keeps
+            // Acrobat's 600 s clock because 73 m is still three builder maps long.
+            new MapEntry("Apartment", TrackKind.Apartment, available: true,
+                "A toy circuit through a real flat; downhill first, climb at the end",
+                APARTMENT_LENGTH_METERS, timeLimitSeconds: 600f)
         };
 
         /// <summary>Clamps out-of-range or placeholder picks back to the first map.</summary>

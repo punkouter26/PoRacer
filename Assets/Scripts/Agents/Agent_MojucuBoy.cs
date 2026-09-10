@@ -11,8 +11,8 @@ namespace PoRacer.Agents
     /// spawner, RacerView and camera treat him like any other catalog racer. Lives on
     /// the imported MJCF root.
     ///
-    /// He is the second racer PhysX does not simulate, and he inherits every
-    /// consequence documented on <see cref="Agent_Fido"/>:
+    /// He is the racer PhysX does not simulate, and carries every consequence
+    /// of that (these were first documented on Fido, removed 2026-09-10):
     ///
     ///   * No ArticulationBody, so <see cref="Root"/> is null. Systems_Spawn and
     ///     RacerView read a null Root as "track the prefab root instead", and

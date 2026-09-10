@@ -379,7 +379,7 @@ namespace PoRacer.Systems
                 // maps share TrackKind.Flat and differ only in those two.
                 RaceTrackView.AuthoredTrack authoredTrack = FindAuthoredTrack(map, rolledFeatures);
                 _course = authoredTrack != null ? authoredTrack.course : null;
-                if (_currentTrack == TrackKind.Course && _course == null)
+                if (_currentTrack.IsCourse() && _course == null)
                 {
                     // The builder cannot make a course; without the scene entry the
                     // race would run on nothing. Fall back to the first map, loudly.
@@ -890,6 +890,12 @@ namespace PoRacer.Systems
 
         private void Despawn()
         {
+            // First, before a single Destroy() is queued: the racers' MjComponents live on
+            // until end of frame and each one asks MjScene to rebuild as it goes away.
+            // Let that rebuild run against a half-freed model and mujoco.dll crashes the
+            // process. Suspend() disables the scene so neither the step nor the rebuild
+            // can fire; Teardown() below still frees it.
+            Systems_MujocoWorld.Suspend();
             for (int spawnedIndex = 0; spawnedIndex < _spawned.Count; spawnedIndex++)
             {
                 if (_spawned[spawnedIndex] != null)

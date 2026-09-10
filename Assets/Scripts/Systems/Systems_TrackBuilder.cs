@@ -37,7 +37,28 @@ namespace PoRacer.Systems
         // An authored course (a GLB with its own centreline, start markers and
         // finish trigger). The builder cannot produce one: it only races when the
         // scene carries it as an authored track with a RaceCourseView.
-        Course = 8
+        Course = 8,
+        // The Apartment track: also an authored course, but a second kind rather
+        // than a second Course entry, because Systems_Spawn.FindAuthoredTrack
+        // matches a course on its kind alone (a course has no builder features and
+        // its catalogue length is only a display figure, so neither disambiguates).
+        // One course per kind is the invariant; a new course needs a new kind.
+        Apartment = 9
+    }
+
+    /// <summary>Helpers over <see cref="TrackKind"/>.</summary>
+    public static class TrackKindExtensions
+    {
+        /// <summary>
+        /// True for the kinds that race along an authored GLB centreline rather
+        /// than anything Systems_TrackBuilder can produce. Test this instead of
+        /// comparing against a single kind, or a new course silently races as a
+        /// builder map.
+        /// </summary>
+        public static bool IsCourse(this TrackKind kind)
+        {
+            return kind == TrackKind.Course || kind == TrackKind.Apartment;
+        }
     }
 
     /// <summary>

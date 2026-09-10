@@ -192,7 +192,22 @@ encodes the controller, never the creature.
   re-rolled per run. Everything else is authored once and committed, so that
   what is tuned in the editor is what ships.
 
-## H. Physical plausibility is not optional
+## H. A fallen racer gets up on its own, or not at all
+
+* **Never stand a knocked-down racer back up.** No marshal, no rescue flip, no
+  righting torque, no snap to an upright pose mid-race. Enforced by
+  `RacerView.MAX_RESCUES = 0`.
+* The knockdown referee stays: on its back and going nowhere for
+  `KNOCKDOWN_SECONDS` (12 s) is a DNF. That window is the racer's chance to
+  recover under its own policy, **not** a countdown to being rescued.
+* Snapping a rig to its trained stance is standing it up. That belongs at spawn
+  only (`Agent_MojucuBoy.SnapToTrainedStance`), never during a race.
+* **Why:** a policy that falls over and waits for help scores identically to one
+  that genuinely recovers, and only one of them is racing. Recovery has to be
+  trained — see the get-up curriculum notes in `rl_optimization_log.md`, where
+  two full runs failed to learn it and that failure was worth knowing about.
+
+## I. Physical plausibility is not optional
 
 * Earth gravity (−9.81 m/s²), SI units, anatomically plausible joint ranges and
   motion, and **mass scaled to the creature's size**. A creature that moves in a

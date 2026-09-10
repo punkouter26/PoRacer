@@ -32,7 +32,6 @@ namespace PoRacer.EditorTools
 
         private static readonly string[] CreaturePrefabs =
         {
-            "Assets/Prefabs/Centipede_v01.prefab",
             "Assets/Prefabs/Crab_v01.prefab",
             "Assets/Prefabs/Hexapod_v01.prefab",
             "Assets/Prefabs/Quad_v01.prefab",

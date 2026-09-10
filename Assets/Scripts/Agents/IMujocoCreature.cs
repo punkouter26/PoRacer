@@ -3,9 +3,10 @@ namespace PoRacer.Agents
     /// <summary>
     /// Marks a racer that MuJoCo simulates rather than PhysX.
     ///
-    /// Systems_Spawn needs this in two places, and both used to test for
-    /// <see cref="Agent_Fido"/> by name — which silently did the wrong thing the
-    /// moment a second MuJoCo racer existed:
+    /// Systems_Spawn needs this in two places, and both used to test for the
+    /// Fido adapter by name — which silently did the wrong thing the moment a
+    /// second MuJoCo racer existed. Fido was removed on 2026-09-10; the
+    /// interface stays, because naming a concrete type here was the bug:
     ///
     ///   * the MuJoCo world must be built BEFORE the first such racer is
     ///     instantiated. Every MjComponent's OnEnable reads MjScene.Instance, and

@@ -159,7 +159,7 @@ namespace PoRacer.EditorTools
         /// both windings, so PhysX contacts and raycasts work from either side. Lives
         /// in the scene file with the collider that references it.
         /// </summary>
-        private static Mesh DoubleSided(Mesh source)
+        internal static Mesh DoubleSided(Mesh source)
         {
             int[] triangles = source.triangles;
             var both = new int[triangles.Length * 2];

@@ -507,7 +507,16 @@ namespace PoRacer.Views
             {
                 // Brief celebration only: after a few seconds the banner clears so
                 // the rest of the field stays watchable.
-                _bannerLabel.text = $"WINNER  {winner.DisplayName}  {winner.FinishTime:0.0}s";
+                //
+                // Only a racer that crossed owns a finish time. A winner on the
+                // clock is ranked on distance and its FinishTime was never set, so
+                // printing it read "WINNER Crab #1 0.0s" on every timed race - which
+                // is the normal outcome on the 600 s courses. Same split as
+                // RefreshPodium below; keep the two in step.
+                string winnerMetric = winner.Status == RacerStatus.Finished
+                    ? $"{winner.FinishTime:0.0}s"
+                    : $"{winner.Progress:0.0}m";
+                _bannerLabel.text = $"WINNER  {winner.DisplayName}  {winnerMetric}";
                 _bannerLabel.style.fontSize = UiTheme.FONT_TITLE;
                 _bannerLabel.style.display = DisplayStyle.Flex;
                 PopBanner();

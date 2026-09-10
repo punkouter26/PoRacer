@@ -123,6 +123,26 @@ namespace PoRacer
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Point"",
+                    ""type"": ""Value"",
+                    ""id"": ""b1b2c3d4-1111-4222-8333-944455566604"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Press"",
+                    ""type"": ""Button"",
+                    ""id"": ""b1b2c3d4-1111-4222-8333-944455566605"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -180,6 +200,28 @@ namespace PoRacer
                     ""action"": ""Overview"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c1b2c3d4-1111-4222-8333-944455566616"",
+                    ""path"": ""<Pointer>/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Point"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c1b2c3d4-1111-4222-8333-944455566617"",
+                    ""path"": ""<Pointer>/press"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Press"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -191,6 +233,8 @@ namespace PoRacer
             m_Camera_Next = m_Camera.FindAction("Next", throwIfNotFound: true);
             m_Camera_Prev = m_Camera.FindAction("Prev", throwIfNotFound: true);
             m_Camera_Overview = m_Camera.FindAction("Overview", throwIfNotFound: true);
+            m_Camera_Point = m_Camera.FindAction("Point", throwIfNotFound: true);
+            m_Camera_Press = m_Camera.FindAction("Press", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -274,6 +318,8 @@ namespace PoRacer
         private readonly InputAction m_Camera_Next;
         private readonly InputAction m_Camera_Prev;
         private readonly InputAction m_Camera_Overview;
+        private readonly InputAction m_Camera_Point;
+        private readonly InputAction m_Camera_Press;
         /// <summary>
         /// Provides access to input actions defined in input action map "Camera".
         /// </summary>
@@ -297,6 +343,14 @@ namespace PoRacer
             /// Provides access to the underlying input action "Camera/Overview".
             /// </summary>
             public InputAction @Overview => m_Wrapper.m_Camera_Overview;
+            /// <summary>
+            /// Provides access to the underlying input action "Camera/Point".
+            /// </summary>
+            public InputAction @Point => m_Wrapper.m_Camera_Point;
+            /// <summary>
+            /// Provides access to the underlying input action "Camera/Press".
+            /// </summary>
+            public InputAction @Press => m_Wrapper.m_Camera_Press;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -332,6 +386,12 @@ namespace PoRacer
                 @Overview.started += instance.OnOverview;
                 @Overview.performed += instance.OnOverview;
                 @Overview.canceled += instance.OnOverview;
+                @Point.started += instance.OnPoint;
+                @Point.performed += instance.OnPoint;
+                @Point.canceled += instance.OnPoint;
+                @Press.started += instance.OnPress;
+                @Press.performed += instance.OnPress;
+                @Press.canceled += instance.OnPress;
             }
 
             /// <summary>
@@ -352,6 +412,12 @@ namespace PoRacer
                 @Overview.started -= instance.OnOverview;
                 @Overview.performed -= instance.OnOverview;
                 @Overview.canceled -= instance.OnOverview;
+                @Point.started -= instance.OnPoint;
+                @Point.performed -= instance.OnPoint;
+                @Point.canceled -= instance.OnPoint;
+                @Press.started -= instance.OnPress;
+                @Press.performed -= instance.OnPress;
+                @Press.canceled -= instance.OnPress;
             }
 
             /// <summary>
@@ -413,6 +479,20 @@ namespace PoRacer
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnOverview(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Point" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPoint(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Press" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPress(InputAction.CallbackContext context);
         }
     }
 }

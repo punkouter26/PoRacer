@@ -211,6 +211,14 @@ spec behind each one lives in `UNITY_RULES` below; this block is the short form.
 * **Creatures move realistically:** earth gravity, anatomically plausible joint
   ranges and motion, and mass scaled to the creature's size. See
   *Physics & Biomechanics* below for the enforced specifics.
+* **A fallen racer is NEVER stood back up.** No marshal, no rescue flip, no
+  righting torque, no teleport to an upright pose. Getting off the floor is a
+  skill the policy has to learn, and standing them up for free makes a policy
+  that lies down indistinguishable from one that recovers. Already enforced:
+  `RacerView.MAX_RESCUES = 0`, and the knockdown referee gives
+  `KNOCKDOWN_SECONDS = 12` as a window to self-recover before a DNF — that timer
+  is a chance to get up, not a countdown to being rescued. Re-pointing a rig at
+  its stance mid-race counts as standing it up; only spawn may do that.
 * **Build scene objects as prefabs/GameObjects via MCP, not from code.**
   Anything static — props, markers, spawn points, track furniture — should exist
   in the scene as a real object that can be dragged in the editor, rather than

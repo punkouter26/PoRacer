@@ -37,9 +37,10 @@ namespace PoRacer.Systems
         private const int GROUND_CONDIM = 3;
 
         private static GameObject _world;
+        private static bool _suspended;
 
-        /// <summary>True while a MuJoCo world is standing.</summary>
-        internal static bool Exists => _world != null;
+        /// <summary>True while a MuJoCo world is standing and still stepping.</summary>
+        internal static bool Exists => _world != null && !_suspended;
 
         /// <summary>
         /// The plug-in ships mujoco.dll and nothing else, so MuJoCo creatures can only
@@ -77,6 +78,7 @@ namespace PoRacer.Systems
             // the native model out from under the creatures stepping it. Despawn owns the
             // teardown instead.
             _world = new GameObject("MuJoCoWorld");
+            _suspended = false;
 
             // MjScene first, and this order is not cosmetic. Every MjComponent's OnEnable
             // reads MjScene.Instance, and that getter *creates* an MjScene when none
@@ -96,6 +98,35 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
+        /// Stops the world stepping, immediately, without destroying anything. Call this
+        /// BEFORE the racers are destroyed.
+        ///
+        /// This exists because of a native crash, not for tidiness. Destroy() is deferred
+        /// to end of frame, so the racers' MjComponents are still alive for the rest of
+        /// the frame, and every one of their OnDisable/OnDestroy calls sets
+        /// SceneRecreationAtLateUpdateRequested on MjScene. If MjScene's LateUpdate then
+        /// runs before its own OnDestroy — and the order between two objects destroyed in
+        /// the same frame is not defined — it calls RecreateScene() -> mj_resetData() on a
+        /// model whose bodies are going away, and mujoco.dll takes the whole process down.
+        /// The 2026-09-09 Editor crash was exactly that stack. Disabling the component
+        /// first means no FixedUpdate and no LateUpdate, so neither the step nor the
+        /// recreate can fire; OnDestroy still runs and still frees the native model.
+        /// </summary>
+        internal static void Suspend()
+        {
+            if (_world == null || _suspended)
+            {
+                return;
+            }
+            _suspended = true;
+            var scene = _world.GetComponent<MjScene>();
+            if (scene != null)
+            {
+                scene.enabled = false;
+            }
+        }
+
+        /// <summary>
         /// Destroys the world. MjScene.OnDestroy frees the native model and data, and
         /// although the plug-in never nulls its own static instance, Unity's overloaded
         /// == reports the destroyed component as null, so the next race's MjScene claims
@@ -107,8 +138,12 @@ namespace PoRacer.Systems
             {
                 return;
             }
+            // Belt and braces: a caller that tore down without suspending first still gets
+            // the stepping stopped before anything is queued for destruction.
+            Suspend();
             Object.Destroy(_world);
             _world = null;
+            _suspended = false;
         }
 
         /// <summary>

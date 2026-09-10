@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace PoRacer.Views
@@ -32,6 +33,12 @@ namespace PoRacer.Views
         // front runner, and the lead window is measured along the course, not +Z.
         private Systems.Systems_CoursePath _course;
         private Camera _mainCamera;
+        // The vcam this view drives. The adaptive portrait FOV is written to ITS lens,
+        // never to Camera.main: CinemachineBrain copies the active vcam's lens onto the
+        // Camera in its own LateUpdate, so a field of view written straight to the Camera
+        // is overwritten by whichever LateUpdate happens to run last — and then the
+        // framing solve below is sizing the shot against a FOV the camera does not have.
+        private CinemachineCamera _lensOwner;
         private Vector3 _center;
         private float _distance = MIN_DISTANCE;
         private bool _hasFrame;
@@ -50,6 +57,12 @@ namespace PoRacer.Views
         {
             _course = course;
             _hasFrame = false;
+        }
+
+        /// <summary>The vcam whose lens carries this shot's adaptive portrait FOV.</summary>
+        public void BindLens(CinemachineCamera lensOwner)
+        {
+            _lensOwner = lensOwner;
         }
 
         private static bool IsFinite(Vector3 position)
@@ -116,7 +129,15 @@ namespace PoRacer.Views
                 aspect = _mainCamera.aspect;
                 // Adaptive vertical FOV: wider in portrait so the shot stays tight without excessive camera back-off
                 float targetFov = aspect < 1.0f ? Mathf.Lerp(54f, 42f, aspect) : 40f;
-                _mainCamera.fieldOfView = targetFov;
+                // Onto the vcam's lens, which the brain then copies to the Camera. Writing
+                // Camera.fieldOfView here instead is a race with CinemachineBrain's own
+                // LateUpdate that the brain usually wins.
+                if (_lensOwner != null)
+                {
+                    LensSettings lens = _lensOwner.Lens;
+                    lens.FieldOfView = targetFov;
+                    _lensOwner.Lens = lens;
+                }
                 verticalTan = Mathf.Tan(targetFov * 0.5f * Mathf.Deg2Rad);
             }
             float horizontalTan = verticalTan * aspect;

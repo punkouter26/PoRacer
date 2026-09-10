@@ -654,13 +654,33 @@ namespace IsaacBox
         void RunPolicy()
         {
 #if ISAACPORTS_HAS_INFERENCE
+            if (_worker == null || _input == null) { FaultPolicy("the inference worker is gone"); return; }
             _input.Upload(_obs);
             _worker.Schedule(_input);
             var output = _worker.PeekOutput() as Tensor<float>;
+            if (output == null) { FaultPolicy("the worker produced no float output tensor"); return; }
             output.CompleteAllPendingOperations();
             for (int i = 0; i < rig.actDim; i++) _action[i] = output[0, i];
 #endif
             ApplyActionOverride();
+        }
+
+        /// <summary>
+        /// Retires the policy after an inference failure, once and loudly.
+        ///
+        /// This method exists because the alternative was measured: with no guard here a
+        /// null worker or a null output threw a NullReferenceException every FixedUpdate,
+        /// which at 200 Hz per racer buried the Editor console under thousands of
+        /// identical stack traces and hid whatever had actually gone wrong. A policy that
+        /// cannot run will not start running again on its own, so clear _ready: the racer
+        /// holds its pose, the diagnostics still drive the joints, and the log carries one
+        /// line saying why.
+        /// </summary>
+        void FaultPolicy(string reason)
+        {
+            _ready = false;
+            Debug.LogError($"[{name}] policy stopped after {_policySteps} steps: {reason}. " +
+                           "Holding the default pose for the rest of the race.", this);
         }
 
         void ApplyActionOverride()

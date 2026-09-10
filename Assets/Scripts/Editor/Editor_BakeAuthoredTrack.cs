@@ -107,7 +107,7 @@ namespace PoRacer.EditorTools
             for (int mapIndex = 0; mapIndex < maps.Count; mapIndex++)
             {
                 Systems_MapCatalog.MapEntry map = maps[mapIndex];
-                if (map.Randomize || !map.Available || map.Kind == TrackKind.Course)
+                if (map.Randomize || !map.Available || map.Kind.IsCourse())
                 {
                     continue;
                 }

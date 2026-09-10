@@ -29,7 +29,6 @@ namespace PoRacer.Editor
         {
             "Assets/Prefabs/Hexapod_v01.prefab",
             "Assets/Prefabs/Quad_v01.prefab",
-            "Assets/Prefabs/Centipede_v01.prefab",
             "Assets/Prefabs/Crab_v01.prefab",
             "Assets/Prefabs/Kangaroo_v01.prefab",
             "Assets/Prefabs/Blob_v01.prefab"
@@ -107,7 +106,7 @@ namespace PoRacer.Editor
         /// the first behaviour the env reports that the config does not name.
         ///
         /// <paramref name="names"/> is comma-separated and matches the prefab stem, e.g.
-        /// "Worm,Spider,Centipede,Crab".
+        /// "Hexapod,Crab".
         /// </summary>
         public static string BuildFocusedScene(string names)
         {

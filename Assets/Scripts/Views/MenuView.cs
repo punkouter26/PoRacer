@@ -394,12 +394,12 @@ namespace PoRacer.Views
             row.Add(rosterLabel);
 
             Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
-            if (selected.Kind == TrackKind.Course)
+            if (selected.Kind.IsCourse())
             {
                 // MuJoCo steps its own world and cannot see Unity colliders, so
                 // Fido and MojucuBoy fall through an authored course; Systems_Spawn
                 // leaves them on the grid, and the roster should say so up front.
-                var note = new Label("Fido and MojucuBoy sit this course out") { pickingMode = PickingMode.Ignore };
+                var note = new Label("MojucuBoy sits this course out") { pickingMode = PickingMode.Ignore };
                 note.style.fontSize = UiTheme.FONT_XS;
                 note.style.color = UiTheme.TextDim;
                 note.style.flexShrink = 0f;

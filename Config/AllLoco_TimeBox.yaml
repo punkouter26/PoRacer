@@ -56,26 +56,6 @@ behaviors:
     summary_freq: 20000
     keep_checkpoints: 5
     checkpoint_interval: 20000
-  Centipede:
-    trainer_type: ppo
-    threaded: true
-    hyperparameters: *id001
-    network_settings: *id002
-    reward_signals:
-      extrinsic: *id003
-      gail:
-        gamma: 0.99
-        strength: 0.05
-        demo_path: training/demos/Centipede.demo
-    behavioral_cloning:
-      demo_path: training/demos/Centipede.demo
-      strength: 0.3
-      steps: 400000
-    max_steps: 400000
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 5
-    checkpoint_interval: 20000
   Crab:
     trainer_type: ppo
     threaded: true

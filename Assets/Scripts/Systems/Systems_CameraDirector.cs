@@ -38,6 +38,7 @@ namespace PoRacer.Systems
         private Transform _orbitTarget;
         private Bounds _keepOut;
         private bool _hasKeepOut;
+        private Systems_CoursePath _course;
 
         public Systems_CameraDirector(RaceModel model, CameraRigView rig,
             ISubscriber<LeadChangedMessage> leadChanged, ISubscriber<RaceFinishedMessage> raceFinished)
@@ -114,13 +115,21 @@ namespace PoRacer.Systems
         /// arch is collider-free decoration, so nothing else stops the orbit shot
         /// from sweeping straight into it as the leader crosses the line.
         /// </summary>
-        /// <summary>The course being raced, or null on builder maps; the pack camera frames along it.</summary>
+        /// <summary>
+        /// The course being raced, or null on builder maps. The pack camera frames
+        /// along it; the orbit camera places its shots on it, so that coverage of a
+        /// course runs down the road instead of through whatever the map is built
+        /// inside. Held, because both rigs are created lazily and a course set
+        /// before the orbit exists must still reach it.
+        /// </summary>
         public void SetCourse(Systems_CoursePath course)
         {
+            _course = course;
             if (_pack != null)
             {
                 _pack.SetCourse(course);
             }
+            _orbit?.SetCourse(course);
         }
 
         public void SetKeepOut(Bounds keepOut)
@@ -290,6 +299,14 @@ namespace PoRacer.Systems
             _packCamera.Priority = INACTIVE_PRIORITY;
             go.AddComponent<CinemachineImpulseListener>();
             _pack = go.AddComponent<PackCameraView>();
+            // Same replay as the orbit rig below, and for the same reason: SetCourse runs
+            // once per race from the spawner, and on the first race of a session it lands
+            // before this rig exists. Without this the pack shot frames the first course
+            // race along world +Z instead of down the road.
+            _pack.SetCourse(_course);
+            // The lens the pack camera adapts for portrait is this one, not Camera.main:
+            // CinemachineBrain overwrites the Camera's own field of view every frame.
+            _pack.BindLens(_packCamera);
         }
 
         /// <summary>
@@ -317,6 +334,9 @@ namespace PoRacer.Systems
             {
                 _orbit.SetKeepOut(_keepOut);
             }
+            // Spawn sets the course once per race, which can land before this rig
+            // exists; replay it so course coverage is not lost to creation order.
+            _orbit.SetCourse(_course);
         }
     }
 }

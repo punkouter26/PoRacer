@@ -28,16 +28,20 @@ namespace PoRacer.Views
 
         private CinemachineImpulseSource _impulse;
         private System.IDisposable _subscriptions;
+        private RaceConfigModel _config;
         private float _slowMoUntil;
 
         [Inject]
         public void Construct(
+            RaceConfigModel config,
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<LeadChangedMessage> leadChanged,
             ISubscriber<RacerFinishedMessage> racerFinished,
             ISubscriber<RacerWipeoutMessage> racerWipeout = null,
             ISubscriber<PhotoFinishMessage> photoFinish = null)
         {
+            _config = config;
+            _config.Changed += OnConfigChanged;
             var bag = DisposableBag.CreateBuilder();
             raceStarted.Subscribe(OnRaceStarted).AddTo(bag);
             leadChanged.Subscribe(OnLeadChanged).AddTo(bag);
@@ -91,7 +95,27 @@ namespace PoRacer.Views
 
         private void OnDestroy()
         {
+            if (_config != null)
+            {
+                _config.Changed -= OnConfigChanged;
+            }
             _subscriptions?.Dispose();
+            Time.timeScale = 1f;
+        }
+
+        /// <summary>
+        /// The menu is not a slow-motion replay. MENU can be tapped during the
+        /// winner beat, and the recovery ramp in Update takes most of a second to
+        /// climb back to 1 — long enough that the menu visibly animates at 0.35x
+        /// under the user's finger. Returning to the menu ends the beat outright.
+        /// </summary>
+        private void OnConfigChanged()
+        {
+            if (!_config.MenuVisible)
+            {
+                return;
+            }
+            _slowMoUntil = 0f;
             Time.timeScale = 1f;
         }
 
