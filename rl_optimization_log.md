@@ -650,6 +650,73 @@ fixed.
 Verified both flags take effect before launching (90.6 % of worlds upright at
 `reset_fallen=0.10`, against the 90 % implied).
 
+### E10 — `--upright-weight 0.5`. Rejected: it bought a different exploit.
+
+Aborted at iteration 300. Uprightness rose exactly as intended and the racer got
+*worse*:
+
+| Run | `W_UPRIGHT` | Torso height | Uprightness | Uptime |
+|---|---|---|---|---|
+| E9 | 0.05 | 0.144 m | 0.41 | 0.08 |
+| E10 | 0.5 | **0.104 m** | **0.56** | 0.07 |
+
+Higher orientation score, *lower* height. `W_UPRIGHT` scores orientation with no
+reference to height, so the cheapest way to earn a big ungated term is to lie on
+your back with your chest up. I closed M9's inversion exploit and immediately
+opened a lie-flat one. Reverted to the shipped 0.05.
+
+**A run I did not waste.** The obvious companion move was to cut `W_ALIVE`, since
+0.10 unconditional was out-paying everything a fallen racer could earn. It would
+have done nothing: under timeout-only termination every episode is exactly 1000
+steps, so a constant per-step reward is a pure offset. It shifts the value
+function and leaves the optimal policy and the policy gradient untouched.
+
+### E11 — terminate on fall. The one that worked.
+
+`--terminate-on-fall --reset-fallen 0.0 --two-sided-speed`, `W_UPRIGHT` back to
+the shipped 0.05.
+
+**Reasoning.** E9 and E10 both converged on lying still, and neither reward
+tweak moved them. What was missing was not a weight but a *terminal condition*:
+nothing ended an episode, so 1000 steps of lying down was a comfortable local
+optimum. The env omits termination deliberately, to teach get-up — sound, but it
+only bites once the racer can stand, and it could not. Every standard humanoid
+locomotion benchmark terminates on fall. This makes it stage one of a
+curriculum.
+
+| Iter | Steps | Episode len | Survival | Speed | Heading | Uprightness | Fall |
+|---|---|---|---|---|---|---|---|
+| 50 | 9.8 M | 96.0 | 0.096 | 0.10 | 86.6° | 0.94 | 1.00 |
+| 100 | 19.7 M | 233.5 | 0.234 | 0.31 | 59.3° | 0.97 | 1.00 |
+| 200 | 39.3 M | 900.4 | 0.900 | 1.20 | 16.7° | 0.99 | 0.22 |
+| 300 | 59.0 M | 941.8 | 0.942 | 1.35 | 13.9° | 1.00 | 0.11 |
+| 400 | 78.6 M | 935.1 | 0.935 | 1.36 | 14.6° | 0.99 | 0.12 |
+| 520 | 102.2 M | 940.5 | 0.941 | 1.38 | 14.8° | 0.99 | 0.10 |
+
+Against thresholds at iteration 520: K1 survival **0.94** (> 0.90 ✓), K2 speed
+**−8.0 %** (within ±10 % ✓), K4 heading **14.8°** (< 15° ✓), K8 uprightness
+**0.99** (> 0.90 ✓), K3 fall **0.10** (≤ 0.10, at the line).
+
+It cleared 0.90 survival at **39 M steps**. E9 and E10 never left 0.08 uptime in
+100 M and 59 M respectively, and the shipped regime took 295 M to produce an
+inverted gait.
+
+**Two caveats stated rather than glossed:**
+
+1. **Return is not comparable across these runs.** 2451 here against the shipped
+   brain's 2336 is meaningless as a comparison — the reward function itself
+   changed (sign fix, two-sided kernel). Only the physical KPIs (survival, speed,
+   heading, uprightness) are measured identically in both.
+2. **Uptime is now near-1 by construction.** With early termination the episode
+   ends when the racer falls, so "upright while alive" is trivially high — the
+   mirror image of M4. Under this curriculum the load-bearing stability metric is
+   **episode length**, which is a real measurement again for the first time this
+   session.
+
+**Unplanned bonus: E11 fixes M8 for free.** Early termination staggers the
+resets, so worlds no longer end in lockstep and the episode-period aliasing
+disappears without touching `episode_step` (E7).
+
 ### Finding M7 — WITHDRAWN: `fall_rate` was correct all along
 
 I recorded M7 as "`rollout/fall_rate` is a snapshot, not a rate", reasoning that
