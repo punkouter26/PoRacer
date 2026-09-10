@@ -699,6 +699,19 @@ degenerate posture the bug predicts, where the shipped brain sits at 0.789 m.
 So: the defect is real and currently active; the shipped artifact is not a
 victim of it.
 
+**Where the regression came from — as far as the repo can say.** The whole
+MojucuBoy stack landed in **one commit** (`f751fea`): env, rig, and
+`runs/boy_chase01/` together. The stance quaternion has been identity since that
+commit and the sign has been `-rot[2, 2]` since that commit, so there is no
+in-repo history of the change. But the brain cannot have been produced by the
+code it was committed alongside — that code scores it 0.000. The sign therefore
+regressed during whatever refactor preceded the commit, after the model was
+trained, and the run artifacts came along as a record of a training run the
+committed code can no longer reproduce.
+
+Which is the practical warning: `boy_chase01/config.json` faithfully records
+hyperparameters for a run that today's `mojucuboy_env.py` would not repeat.
+
 **How it hid for so long.** Every downstream number was self-consistently wrong.
 `standing` reported 0.68 and rose during training; return rose; speed rose. Only
 `fall_rate` disagreed — and it was pinned at exactly 1.00, which reads like a
