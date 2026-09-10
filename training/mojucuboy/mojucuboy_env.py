@@ -102,7 +102,8 @@ class MojucuBoyEnv:
     def __init__(self, num_worlds: int, device: str = "cuda:0", seed: int = 0,
                  two_sided_speed: bool = False,
                  upright_weight: float = W_UPRIGHT,
-                 reset_fallen_fraction: float = RESET_FALLEN_FRACTION):
+                 reset_fallen_fraction: float = RESET_FALLEN_FRACTION,
+                 terminate_on_fall: bool = False):
         self.num_worlds = num_worlds
         self.device = torch.device(device)
         # W_UPRIGHT is the only positive term NOT gated on `standing`, so while
@@ -114,6 +115,7 @@ class MojucuBoyEnv:
         # a 1500-iteration run sat flat at uptime 0.08 for 49 M steps.
         self.upright_weight = upright_weight
         self.reset_fallen_fraction = reset_fallen_fraction
+        self.terminate_on_fall = terminate_on_fall
         # See _reward. The shipped brain runs at 2.04 m/s against a 1.5 m/s
         # command because the tracking kernel clamps positive error away, so
         # overshoot is free. Setting this makes the kernel symmetric, which is
@@ -374,7 +376,19 @@ class MojucuBoyEnv:
         # going down. Terminating on a fall teaches the opposite: that the floor is
         # an absorbing state, which is exactly the policy that then lies there.
         timeout = self.episode_step >= EPISODE_STEPS
-        done = timeout
+        # Optional early termination. The comment above is right that terminating
+        # on a fall teaches the floor is absorbing and prevents get-up ever being
+        # learned -- but that only bites once the racer can stand at all. With the
+        # M9 inversion exploit closed, two full-length runs converged instead to
+        # lying down (torso 0.10-0.14 m against a 0.77 m stance), because nothing
+        # ends an episode and 1000 steps of lying still is a comfortable local
+        # optimum. Terminating on a fall is what every standard humanoid
+        # locomotion benchmark does, and it is stage one of a curriculum: learn
+        # balance with it on, then relearn get-up with it off.
+        #
+        # It also un-degenerates the metrics of M4: with a real terminal
+        # condition, episode length and survival rate measure something again.
+        done = (timeout | fallen) if self.terminate_on_fall else timeout
 
         # Scheduled external pushes, per the brief's domain randomisation.
         pushing = (self.episode_step % PUSH_INTERVAL == 0) & ~done

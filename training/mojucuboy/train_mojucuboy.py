@@ -189,6 +189,11 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=6006)
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--terminate-on-fall", action="store_true",
+                        help="end the episode on a fall. Stage one of a curriculum: "
+                             "learn balance with it on, then relearn get-up with it off. "
+                             "Without it, and with the M9 inversion exploit closed, two "
+                             "full runs settled on lying still for 1000 steps.")
     parser.add_argument("--upright-weight", type=float, default=mojucuboy_env.W_UPRIGHT,
                         help="weight on the ungated uprightness term. This is the only "
                              "positive reward a fallen racer can earn, so it is the whole "
@@ -220,7 +225,8 @@ def main() -> int:
     env = MojucuBoyEnv(args.worlds, seed=args.seed,
                        two_sided_speed=args.two_sided_speed,
                        upright_weight=args.upright_weight,
-                       reset_fallen_fraction=args.reset_fallen)
+                       reset_fallen_fraction=args.reset_fallen,
+                       terminate_on_fall=args.terminate_on_fall)
     policy = ActorCritic().to(device)
     optimiser = torch.optim.Adam(policy.parameters(), lr=args.lr)
 
