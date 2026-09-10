@@ -24,19 +24,25 @@ learn real balance, which the original regime never required — and the fix for
 
 **What was delivered**
 
-| | Shipped brain | Final (E12) |
+| | Shipped brain (measured) | Final (E12) |
 |---|---|---|
-| Posture | **inverted gait** (uprightness −0.873) | **upright**, 0.976 uptime |
+| Posture | upright, 0.789 m | upright, 0.976 uptime |
 | Speed vs 1.5 m/s command | 2.043 m/s (**+36 %**) | 1.446 m/s (**−3.6 %**) |
 | Heading error | not measured | **10.4°** |
-| Episodes > 90 % upright | metric did not exist | **98 %** |
-| Steps to competence | 295 M (to an inverted gait) | **39 M** to 0.90 survival |
+| Get-up from a sprawl | **yes** (races unaided) | **no** |
 | Reward terms observable | 1 of 10 | **all 10** + 3 derived |
 | Convergence gates that can fail | 1 of 3 | 3 of 3 |
 
-**All four physical KPIs pass** on the matched condition: uptime 0.976 (> 0.90),
-speed −3.6 % (± 10 %), heading 10.4° (< 15°), uprightness ~0.98 (> 0.90).
-Delivered as `runs/e12_getup/MojucuBoy_v01.onnx`, parity-checked at 8.0e-07.
+**Recommendation: keep the shipped brain.** E12 tracks the commanded speed far
+better and its heading is measured and good, but the shipped racer is upright,
+**41 % faster in absolute terms**, and can recover from falls — and this is a
+racing game, where absolute speed is the thing that wins. E12's ±10 % tracking is
+the *brief's* KPI, not the game's objective. Nothing in `Assets/` was changed.
+
+**The delivered value is the pipeline, not a faster racer:** six live defects
+found and fixed, the reward's uprightness sign among them, plus instrumentation
+that turned one observable scalar into thirteen and a convergence gate that can
+now actually fail.
 
 **Nine findings**, six of them defects that were live in the shipped pipeline:
 
@@ -660,11 +666,38 @@ called that a good racer.
 For the first time the metrics agree with each other *and* with the reset
 design.
 
-**This applies to the shipped brain.** `boy_chase01` trained under the identical
-reward, so `Assets/Agents/MojucuBoy_v01/MojucuBoy_v01.onnx` is very likely an
-inverted gait too. That is a checkable prediction: watch MojucuBoy in
-`SCN_RACE_FLAT` — he wins races, but the claim here is that he does it upside
-down. **Not verified in-game; flagged rather than asserted.**
+**PREDICTION MADE HERE WAS WRONG — RETRACTED.** I predicted that the shipped
+`MojucuBoy_v01.onnx` would also be an inverted gait, since `boy_chase01` was
+trained under the identical reward. It is not. Checked two ways:
+
+- **In Unity**, racing `SCN_RACE_FLAT`: hips `up.y` 0.98–1.00 at height
+  0.76–0.79 m, sustained over 14 samples through a race. Upright, at stance
+  height.
+- **In the training env**, running the shipped ONNX itself for 400 steps:
+  height **0.789 m**, `rot[2,2]` **+0.993**. Upright.
+
+**What this does to M9: it confirms it, harder.** The shipped brain is an
+independent, known-good upright reference, and scoring it with each formula
+settles the sign without any argument from me:
+
+| `standing` for the shipped, verifiably upright brain | |
+|---|---|
+| Original `clamp(-rot[2,2], 0) · h/H` | **0.000** |
+| Fixed `clamp(+rot[2,2], 0) · h/H` | **0.993** |
+
+The original reward scores a racer standing at full stance height as **not
+standing at all**. That is the bug, now demonstrated against ground truth rather
+than derived from the reset quaternion.
+
+**The reconciliation.** The shipped brain must predate the defect in the current
+code — `git log -S` puts the line in the file's first commit, so the model was
+trained before some other change made the frame convention disagree with it. The
+live evidence that the bug bites *today* is E6a, trained on the code as it now
+stands: it converged to height 0.585 m with uprightness −0.873, exactly the
+degenerate posture the bug predicts, where the shipped brain sits at 0.789 m.
+
+So: the defect is real and currently active; the shipped artifact is not a
+victim of it.
 
 **How it hid for so long.** Every downstream number was self-consistently wrong.
 `standing` reported 0.68 and rose during training; return rose; speed rose. Only
