@@ -189,6 +189,16 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=6006)
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--upright-weight", type=float, default=mojucuboy_env.W_UPRIGHT,
+                        help="weight on the ungated uprightness term. This is the only "
+                             "positive reward a fallen racer can earn, so it is the whole "
+                             "gradient back to its feet; the shipped 0.05 is half of the "
+                             "unconditional W_ALIVE and measurably too weak once the M9 "
+                             "inversion exploit is closed.")
+    parser.add_argument("--reset-fallen", type=float,
+                        default=mojucuboy_env.RESET_FALLEN_FRACTION,
+                        help="fraction of resets that start the racer sprawled. Lower it "
+                             "to let the policy learn balance before recovery.")
     parser.add_argument("--two-sided-speed", action="store_true",
                         help="penalise overshooting the commanded speed as well as "
                              "undershooting it. The shipped one-sided kernel clamps "
@@ -208,7 +218,9 @@ def main() -> int:
     writer = SummaryWriter(str(logdir))
 
     env = MojucuBoyEnv(args.worlds, seed=args.seed,
-                       two_sided_speed=args.two_sided_speed)
+                       two_sided_speed=args.two_sided_speed,
+                       upright_weight=args.upright_weight,
+                       reset_fallen_fraction=args.reset_fallen)
     policy = ActorCritic().to(device)
     optimiser = torch.optim.Adam(policy.parameters(), lr=args.lr)
 

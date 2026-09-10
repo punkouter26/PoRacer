@@ -100,9 +100,20 @@ PUSH_VELOCITY = 1.1       # m/s impulse applied to the root
 
 class MojucuBoyEnv:
     def __init__(self, num_worlds: int, device: str = "cuda:0", seed: int = 0,
-                 two_sided_speed: bool = False):
+                 two_sided_speed: bool = False,
+                 upright_weight: float = W_UPRIGHT,
+                 reset_fallen_fraction: float = RESET_FALLEN_FRACTION):
         self.num_worlds = num_worlds
         self.device = torch.device(device)
+        # W_UPRIGHT is the only positive term NOT gated on `standing`, so while
+        # the racer is down it is the entire gradient back towards getting up.
+        # At the shipped 0.05 it is half of the unconditional W_ALIVE (0.10),
+        # which was survivable only because the old sign let `standing` be
+        # maximised by lying inverted (M9). With that exploit closed the racer
+        # has to learn real balance, and 0.05 measurably is not enough to climb:
+        # a 1500-iteration run sat flat at uptime 0.08 for 49 M steps.
+        self.upright_weight = upright_weight
+        self.reset_fallen_fraction = reset_fallen_fraction
         # See _reward. The shipped brain runs at 2.04 m/s against a 1.5 m/s
         # command because the tracking kernel clamps positive error away, so
         # overshoot is free. Setting this makes the kernel symmetric, which is
@@ -261,7 +272,7 @@ class MojucuBoyEnv:
         # this it would almost never encounter a fallen state it could still act
         # from, and "get back up" would stay unlearned however long it trained.
         fallen = (torch.rand(n, generator=self.generator, device=self.device)
-                  < RESET_FALLEN_FRACTION)
+                  < self.reset_fallen_fraction)
         if fallen.any():
             picked = index[fallen]
             m = picked.numel()
@@ -439,7 +450,7 @@ class MojucuBoyEnv:
         reward = (
             W_TRACK * track * standing
             + W_HEADING * facing.clamp(min=0.0) * standing
-            + W_UPRIGHT * obs_gravity_z.clamp(min=0.0)
+            + self.upright_weight * obs_gravity_z.clamp(min=0.0)
             + W_GETUP * standing
             + W_ALIVE
             - W_DRIFT * torch.tanh(drift / SCALE_DRIFT)
