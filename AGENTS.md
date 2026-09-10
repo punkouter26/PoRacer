@@ -147,8 +147,8 @@ encodes the controller, never the creature.
 | Racer kind | Colour |
 |---|---|
 | Heuristic / hand-coded bots | **RED**, always |
-| The standard RL policy (the baseline, before per-creature variations) | **GREEN**, always |
-| RL variations derived from that baseline | custom textures, supplied by the user |
+| The standard RL policy (the baseline, before per-creature variations) | **GREEN**, always, **untextured** |
+| RL variations derived from that baseline | custom textures and meshes, supplied by the user |
 
 * Red and green are reserved: do not spend them on a variation, a highlight or
   a team tint, and do not recolour a heuristic bot or the baseline RL racer to
@@ -158,6 +158,46 @@ encodes the controller, never the creature.
 * **"Standard RL" means the baseline policy only, not every RL racer.** A
   creature that came in with its own authored look is a variation and keeps
   that look.
+* Every RL app carries a **heuristic coded bot, a reference bot, and zero to
+  many custom bots**, the custom ones often with their own textures and skinned
+  meshes.
+
+---
+
+## E. Simulators are for watching, not just for curves
+
+* **Show the MuJoCo / Isaac Lab UI while training and after it**, so the
+  creature's motion can be observed directly instead of inferred from reward
+  curves. Use **Newton** to visualise training where it is the better viewer.
+  Existing viewers: `training/mojucuboy/view_mojucuboy.py`,
+  `training/fido/view_creature.py`.
+* This deliberately trades throughput for observability. Headless is faster;
+  faster is not the point when the question is *how does it move*. Reserve
+  `--no-graphics` for runs whose only purpose is throughput, and say so.
+
+## F. MuJoCo on Android
+
+* Build the native library from <https://github.com/joanllobera/mujoco-bin/>.
+  `Packages/org.mujoco` ships `mujoco.dll` only, so every MuJoCo call throws
+  `DllNotFoundException` on a phone and the MuJoCo racers are simply absent from
+  the roster there. An arm64 `libmujoco.so` from that repo, added to the
+  plug-in, is what lifts that restriction.
+
+## G. Scene objects belong in the scene
+
+* **Create props, markers, spawn points and track furniture as real
+  GameObjects/prefabs via MCP**, not by instantiating them from code at runtime.
+  Anything a human might want to nudge should be draggable in the Scene view.
+* Code-generated scenery is acceptable only where it is genuinely procedural and
+  re-rolled per run. Everything else is authored once and committed, so that
+  what is tuned in the editor is what ships.
+
+## H. Physical plausibility is not optional
+
+* Earth gravity (−9.81 m/s²), SI units, anatomically plausible joint ranges and
+  motion, and **mass scaled to the creature's size**. A creature that moves in a
+  way a real animal of that size and weight could not is a bug, however good its
+  reward curve looks.
 
 ---
 

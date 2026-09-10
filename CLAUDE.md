@@ -9,12 +9,30 @@
 
 | Property         | Value |
 |------------------|-------|
-| **Unity Version** | 6000.5.8f1 |
+| **Unity Version** | 6000.6.0f1 (upgraded from 6000.5.8f1 on 2026-09-09) |
 | **Render Pipeline** | Universal Render Pipeline (URP) |
 | **Project Root**  | `c:\Users\punko\Downloads\PoRacer` |
-| **MCP Bridge** | Unity Pipeline (`com.unity.pipeline` 0.5.0-exp.1) via `unity` CLI, server `unity-editor-mcp` |
+| **MCP Bridge** | Unity Pipeline (`com.unity.pipeline` 0.6.0-exp.1) via `unity` CLI, server `unity-editor-mcp` |
 | **ML-Agents (C#)** | `com.unity.ml-agents` 4.1.0 |
-| **ML-Agents (Python)** | `.venv\Scripts\mlagents-learn.exe` — `mlagents` 1.1.0, torch 2.4.1, numpy 1.23.5, protobuf 3.20.3 |
+| **ML-Agents (Python)** | `.venv\Scripts\mlagents-learn.exe` — `mlagents` 1.1.0, torch 2.4.1, numpy 1.23.5, protobuf 3.20.3. **The `.venv` does not currently exist on this machine** (checked 2026-09-09): every training instruction below needs it rebuilt first. |
+
+### The 6000.6.0f1 upgrade (2026-09-09) — what it moved and what it broke
+
+The bump is not just an Editor version. `com.unity.pipeline` 0.5.0-exp.1 could not
+parse command lines at all under it — every `unity command eval` returned "too old
+to parse command lines", which takes the whole MCP/CLI route down, `Editor_SmokeRace`
+included. `unity pipeline upgrade` to 0.6.0-exp.1 fixes it, but **the running Editor
+keeps the old package until it is restarted**.
+
+Alongside it: Cinemachine 3.1.7 -> **6.6.0** (now a builtin, not a registry package),
+URP 17.5.0 -> 17.6.0, Test Framework 1.7.0 -> 1.8.0, Burst 1.8.30 -> 2.0.0, Collections
+6.5.0 -> 6.6.0.
+
+**`com.unity.modules.terrain` had to go back into the manifest.** The pruning pass
+removed it as unused, but `org.mujoco`'s `MjHeightFieldShape.cs` references
+`UnityEngine.Terrain`, so `Mujoco.Runtime` failed to compile with CS1069 and the
+Editor dropped into safe mode. `com.unity.modules.tetgen` came back with it. Neither
+is dead weight; do not prune them again.
 
 ### Read `DOCS/` first
 
@@ -56,8 +74,8 @@ Direct dependencies only — `Packages/manifest.json` was pruned on 2026-08-27 t
 stop listing indirect and unused packages.
 
 - ML-Agents 4.1.0, Inference Engine
-- Unity Pipeline (MCP bridge) 0.5.0-exp.1
-- URP 17.5.0, Cinemachine 3.1.7, glTFast 6.19.0
+- Unity Pipeline (MCP bridge) 0.6.0-exp.1
+- URP 17.6.0, Cinemachine 6.6.0, glTFast 6.19.0
 - VContainer, MessagePipe (+ VContainer bridge), UniTask — all git
 - Input System 1.20.0, Test Framework 1.7.0
 - `com.unity.ide.rider` was removed 2026-09-04 (no JetBrains install on this machine).
@@ -171,11 +189,35 @@ spec behind each one lives in `UNITY_RULES` below; this block is the short form.
 * When starting training, check that no obsolete behaviours are on TensorBoard taking up
   room. If there are, remove them.
 * The heuristic coded bots are always RED.
-* The standard RL policy (before variations for other creatures) is always GREEN.
-* The other RL variations get custom textures supplied by the user.
+* The standard RL policy (before variations for other creatures) is always GREEN,
+  **with no texture** — flat colour, so it reads as the reference at a glance.
+* The other RL variations get custom textures and meshes supplied by the user.
 * RL learning apps always have a heuristic coded bot, a reference bot, and zero to many
   custom bots, often with custom textures and custom skinned meshes.
 * At the end of any answer longer than 100 words, add a 20-word TL;DR.
+* **MuJoCo on Android:** build the native library from
+  <https://github.com/joanllobera/mujoco-bin/>. This is the answer to the
+  "MuJoCo has no Android binary" limitation recorded under *Android release*
+  below — `Packages/org.mujoco` ships `mujoco.dll` only, so Fido and MojucuBoy
+  are absent from the roster on phones until an arm64 `libmujoco.so` from that
+  repo is added to the plug-in.
+* **Show the simulator UI when training in MuJoCo or Isaac Lab**, during and
+  after the run, so the creature's motion can actually be watched rather than
+  inferred from curves. Use Newton to visualise training where that is the
+  better viewer. (`training/mojucuboy/view_mojucuboy.py` and
+  `training/fido/view_creature.py` are the existing viewers.) This trades
+  throughput for observability on purpose — headless is faster, and faster is
+  not the point when the question is *how does it move*.
+* **Creatures move realistically:** earth gravity, anatomically plausible joint
+  ranges and motion, and mass scaled to the creature's size. See
+  *Physics & Biomechanics* below for the enforced specifics.
+* **Build scene objects as prefabs/GameObjects via MCP, not from code.**
+  Anything static — props, markers, spawn points, track furniture — should exist
+  in the scene as a real object that can be dragged in the editor, rather than
+  being instantiated at runtime by a script. Editor-composed beats
+  code-generated whenever the thing is something to be positioned by hand. This
+  is the same principle as the authored-track work recorded below: what is tuned
+  in the Scene view is what ships.
 
 ## A. Source control
 * **`master` only, no other branches.** Commit directly to `master` — no feature
