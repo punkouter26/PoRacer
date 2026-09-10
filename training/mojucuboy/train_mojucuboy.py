@@ -189,6 +189,10 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=6006)
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--init-from", type=str, default=None,
+                        help="run-id to load policy.pt from, for curriculum stage two: "
+                             "learn balance with --terminate-on-fall, then relearn get-up "
+                             "with it off, starting from those weights.")
     parser.add_argument("--terminate-on-fall", action="store_true",
                         help="end the episode on a fall. Stage one of a curriculum: "
                              "learn balance with it on, then relearn get-up with it off. "
@@ -228,6 +232,18 @@ def main() -> int:
                        reset_fallen_fraction=args.reset_fallen,
                        terminate_on_fall=args.terminate_on_fall)
     policy = ActorCritic().to(device)
+    if args.init_from:
+        # Curriculum stage two: carry stage one's weights over rather than
+        # restarting. The observation normaliser statistics travel with the
+        # state_dict (RunningNorm keeps them as buffers, deliberately), so the
+        # resumed policy sees inputs scaled the way it was trained on.
+        src = RESULTS / args.init_from / "policy.pt"
+        if not src.exists():
+            print(f"!! --init-from {args.init_from}: no policy.pt at {src}")
+            return 1
+        ck = torch.load(src, map_location=device, weights_only=False)
+        policy.load_state_dict(ck["model"])
+        print(f"resumed from {args.init_from} at iteration {ck.get('iteration', '?')}")
     optimiser = torch.optim.Adam(policy.parameters(), lr=args.lr)
 
     (logdir / "config.json").write_text(json.dumps({
