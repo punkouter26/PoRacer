@@ -15,7 +15,7 @@ namespace PoRacer.Agents
     /// Attached at Awake by the adapter that owns the policy, because the adapter
     /// is the only thing that knows where the weights came from.
     /// </summary>
-    public sealed class NativeBrainProbe : MonoBehaviour
+    public sealed class Agent_NativeBrainProbe : MonoBehaviour
     {
         [SerializeField] private string _creatureName;
         [SerializeField] private string _policySource;
@@ -47,9 +47,9 @@ namespace PoRacer.Agents
             {
                 return;
             }
-            if (!host.TryGetComponent(out NativeBrainProbe probe))
+            if (!host.TryGetComponent(out Agent_NativeBrainProbe probe))
             {
-                probe = host.AddComponent<NativeBrainProbe>();
+                probe = host.AddComponent<Agent_NativeBrainProbe>();
             }
             probe._creatureName = creatureName;
             probe._policySource = policySource;

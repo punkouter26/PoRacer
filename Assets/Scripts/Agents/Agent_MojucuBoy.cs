@@ -89,7 +89,7 @@ namespace PoRacer.Agents
             // inside the graph, so he runs through the Inference Engine like the
             // Isaac ports rather than off a JSON MLP like Fido. 75 in, 21 out,
             // per MojucuBoyObservation and the rig actuator order.
-            NativeBrainProbe.Attach(gameObject, "MojucuBoy", "ONNX/IE", 75, 21, _controller != null);
+            Agent_NativeBrainProbe.Attach(gameObject, "MojucuBoy", "ONNX/IE", 75, 21, _controller != null);
             SnapToTrainedStance();
         }
 

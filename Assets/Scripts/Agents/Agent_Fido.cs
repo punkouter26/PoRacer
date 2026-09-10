@@ -81,7 +81,7 @@ namespace PoRacer.Agents
             _creature.logBindings = false;
             // MuJoCo, not ML-Agents and not ONNX: the weights come from
             // Assets/Creature/policy.json, 33 observations in, 16 actuators out.
-            NativeBrainProbe.Attach(gameObject, "Fido", "MuJoCo/json", 33, 16, _creature != null);
+            Agent_NativeBrainProbe.Attach(gameObject, "Fido", "MuJoCo/json", 33, 16, _creature != null);
             SnapToTrainedStance();
         }
 

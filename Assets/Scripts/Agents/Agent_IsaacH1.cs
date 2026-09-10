@@ -62,8 +62,8 @@ namespace PoRacer.Agents
             // teleport a racer the marshal is already handling.
             _agent.autoRecoverFromFalls = false;
             _agent.showOnGuiReadout = false;
-            // Not an ML-Agents agent; see NativeBrainProbe.
-            NativeBrainProbe.Attach(gameObject, "Isaac H1", "IE/Burst",
+            // Not an ML-Agents agent; see Agent_NativeBrainProbe.
+            Agent_NativeBrainProbe.Attach(gameObject, "Isaac H1", "IE/Burst",
                 _agent.rig != null ? _agent.rig.obsDim : 0,
                 _agent.rig != null ? _agent.rig.actDim : 0,
                 _agent.rig != null);

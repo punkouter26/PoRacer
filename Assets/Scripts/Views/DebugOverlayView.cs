@@ -620,7 +620,7 @@ namespace PoRacer.Views
             // The Isaac and MuJoCo racers are not ML-Agents agents: they run their
             // own inference and carry no BehaviorParameters, so they have to be
             // counted separately or they read as missing.
-            var natives = FindObjectsByType<PoRacer.Agents.NativeBrainProbe>(FindObjectsInactive.Exclude);
+            var natives = FindObjectsByType<PoRacer.Agents.Agent_NativeBrainProbe>(FindObjectsInactive.Exclude);
             for (int index = 0; index < natives.Length; index++)
             {
                 var probe = natives[index];
