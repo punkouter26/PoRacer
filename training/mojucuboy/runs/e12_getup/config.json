@@ -1,0 +1,31 @@
+{
+  "iterations": 800,
+  "worlds": 8192,
+  "rollout": 24,
+  "epochs": 4,
+  "minibatches": 8,
+  "lr": 0.0003,
+  "gamma": 0.99,
+  "lam": 0.95,
+  "clip": 0.2,
+  "entropy": 0.002,
+  "port": 6006,
+  "run_id": "e12_getup",
+  "seed": 1,
+  "init_from": "e11_terminate",
+  "terminate_on_fall": false,
+  "upright_weight": 0.05,
+  "reset_fallen": 0.3,
+  "two_sided_speed": true,
+  "obs": 75,
+  "act": 21,
+  "hidden": [
+    128,
+    128,
+    128
+  ],
+  "policy_dt": 0.019999972,
+  "decimation": 4,
+  "episode_steps": 1000,
+  "target_speed": 1.5
+}
