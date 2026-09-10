@@ -600,6 +600,56 @@ down. **Not verified in-game; flagged rather than asserted.**
 `fall_rate` disagreed — and it was pinned at exactly 1.00, which reads like a
 broken metric rather than a true one.
 
+### E9 — retrain with the sign fixed. Plateaued, and that is informative.
+
+Same config as E6a, uprightness corrected. **Aborted at iteration 500 of 1500.**
+
+Sampling only unaliased iterations (M8 — and note that 250 = 6 × 41.67 exactly,
+so *every* multiple of 250 lands on a reset boundary; my original milestone
+choice was maximally biased):
+
+| Iter | track | speed | heading | uprightness | uptime |
+|---|---|---|---|---|---|
+| 435 | 0.35 | 0.41 | 83.3° | 0.40 | 0.08 |
+| 450 | 0.36 | 0.43 | 82.6° | 0.41 | 0.08 |
+| 475 | 0.36 | 0.44 | 86.3° | 0.40 | 0.08 |
+| 495 | 0.36 | 0.43 | 85.9° | 0.40 | 0.08 |
+
+Flat to within 0.01 for 250 iterations (49 M steps), heading back at chance.
+That is a local optimum, not slow progress, so continuing would have burned an
+hour to confirm it.
+
+**Why.** With the exploit closed the racer must learn genuine 21-DOF balance —
+something the shipped regime never had to do, because inversion satisfied
+`standing` for free. And while it is down, *every* positive term except
+`W_UPRIGHT` is gated on `standing` and pays nothing:
+
+| Term | Gated on `standing`? | Value at uptime 0.08 |
+|---|---|---|
+| `W_TRACK` 2.0 | yes | 2.0 × 0.35 × 0.08 = 0.056 |
+| `W_GETUP` 0.60 | yes | 0.048 |
+| `W_HEADING` 0.4 | yes | ~0.01 |
+| `W_UPRIGHT` 0.05 | **no** | 0.05 × 0.40 = 0.020 |
+| `W_ALIVE` 0.10 | **no** | **0.100** |
+
+The largest reward available to a fallen racer is the one it gets for doing
+nothing. That is precisely the failure this file's own header warns about — *"the
+survival terms must stay SMALL relative to the tracking term"* — reappearing
+because the term they were balanced against changed meaning when the sign was
+fixed.
+
+### E10 — rebalanced (running)
+
+`--upright-weight 0.5 --reset-fallen 0.10`, otherwise identical.
+
+- **Uprightness 0.05 → 0.5:** the only ungated positive term, hence the entire
+  gradient back to the feet. Now 5× `W_ALIVE` instead of half of it.
+- **Fallen resets 0.30 → 0.10:** learn balance first; recovery is a harder
+  problem to solve simultaneously from scratch.
+
+Verified both flags take effect before launching (90.6 % of worlds upright at
+`reset_fallen=0.10`, against the 90 % implied).
+
 ### Finding M7 — WITHDRAWN: `fall_rate` was correct all along
 
 I recorded M7 as "`rollout/fall_rate` is a snapshot, not a rate", reasoning that
