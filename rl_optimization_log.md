@@ -4,6 +4,60 @@ Autonomous 2-phase optimization loop. Started **2026-09-09 ~22:35 local**, budge
 
 ---
 
+## Summary
+
+**Target: MojucuBoy** (21-DOF humanoid, MuJoCo Warp + torch). Fido was audited
+but is untrainable on this machine — it needs `jax[cuda]`, which has no Windows
+wheels, and WSL is broken here.
+
+**The headline result is a bug, not a tuning win.** The reward's uprightness
+term had its sign inverted (**M9**), so `standing` scored 0 for an upright racer
+and 1 for an upside-down one — and `W_TRACK`, `W_HEADING` and `W_GETUP` are all
+gated on `standing`. The shipped training regime therefore paid the racer to
+travel inverted, and it did: measured at 1.245 m/s with uprightness **−0.873**
+and torso at 0.585 m against a 0.77 m stance, while the metric reported a
+healthy 0.682.
+
+Fixing that exposed a second problem — with the exploit closed the racer had to
+learn real balance, which the original regime never required — and the fix for
+*that* was a terminal condition, not a weight.
+
+**What was delivered**
+
+| | Before | After |
+|---|---|---|
+| Uprightness | inverted gait (−0.873) | **0.955 uptime, 0.000 falls** |
+| Episodes > 90 % upright | — (metric didn't exist) | **100 / 100** |
+| Speed vs 1.5 m/s command | 2.043 m/s (**+36 %**) | 1.346 m/s (**−10.3 %**) |
+| Steps to competence | 295 M (to an inverted gait) | **39 M** to 0.90 survival |
+| Reward terms observable | 1 of 10 | **all 10** + 3 derived |
+| Convergence gates that can fail | 1 of 3 | 3 of 3 |
+
+**Nine findings**, six of them defects that were live in the shipped pipeline:
+
+| | Finding | Severity |
+|---|---|---|
+| M9 | Reward paid the racer to travel upside down | **affects training** |
+| M6 | Trainer deletes shipped brains on startup | **destroyed a release artifact** |
+| M4 | Two of three convergence gates cannot fail | **vacuous QA** |
+| M3 | Trainer logged nothing for its first 45 iterations | blinded every short run |
+| M5 | Speed kernel one-sided → ±10 % tracking unreachable | KPI unmeetable |
+| M8 | KPI dashboard aliased against the episode period | misleading comparisons |
+| M1 | Ten reward weights logged as one scalar | tuning unguided |
+| M2, M7 | Contact budget sound; `fall_rate` correct (M7 **withdrawn**) | no action |
+
+**Two experiments rejected on evidence** (E1 larger batch, E8 more epochs) —
+together showing the optimizer was never the binding constraint, which is why
+the remaining budget went to reward structure rather than to the
+hyperparameter sweep the brief suggested.
+
+**Not achieved:** K4 heading (18.1° against a < 15° target) and K2 speed
+(−10.3 % against ±10 %) both just miss. Get-up from a sprawl is unlearned — E11
+trains balance only, and stage two (E12) did not produce recovery in the time
+available. The full detail, including what I got wrong along the way, is below.
+
+---
+
 ## Phase 1 — Metric discovery & baseline
 
 ### 1.0 Machine & toolchain constraints (established first, because they decided the target)
