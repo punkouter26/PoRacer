@@ -24,14 +24,19 @@ learn real balance, which the original regime never required — and the fix for
 
 **What was delivered**
 
-| | Before | After |
+| | Shipped brain | Final (E12) |
 |---|---|---|
-| Uprightness | inverted gait (−0.873) | **0.955 uptime, 0.000 falls** |
-| Episodes > 90 % upright | — (metric didn't exist) | **100 / 100** |
-| Speed vs 1.5 m/s command | 2.043 m/s (**+36 %**) | 1.346 m/s (**−10.3 %**) |
+| Posture | **inverted gait** (uprightness −0.873) | **upright**, 0.976 uptime |
+| Speed vs 1.5 m/s command | 2.043 m/s (**+36 %**) | 1.446 m/s (**−3.6 %**) |
+| Heading error | not measured | **10.4°** |
+| Episodes > 90 % upright | metric did not exist | **98 %** |
 | Steps to competence | 295 M (to an inverted gait) | **39 M** to 0.90 survival |
 | Reward terms observable | 1 of 10 | **all 10** + 3 derived |
 | Convergence gates that can fail | 1 of 3 | 3 of 3 |
+
+**All four physical KPIs pass** on the matched condition: uptime 0.976 (> 0.90),
+speed −3.6 % (± 10 %), heading 10.4° (< 15°), uprightness ~0.98 (> 0.90).
+Delivered as `runs/e12_getup/MojucuBoy_v01.onnx`, parity-checked at 8.0e-07.
 
 **Nine findings**, six of them defects that were live in the shipped pipeline:
 
@@ -51,10 +56,22 @@ together showing the optimizer was never the binding constraint, which is why
 the remaining budget went to reward structure rather than to the
 hyperparameter sweep the brief suggested.
 
-**Not achieved:** K4 heading (18.1° against a < 15° target) and K2 speed
-(−10.3 % against ±10 %) both just miss. Get-up from a sprawl is unlearned — E11
-trains balance only, and stage two (E12) did not produce recovery in the time
-available. The full detail, including what I got wrong along the way, is below.
+**Not achieved: get-up from a sprawl.** Both final policies hold 71 % of
+episodes above 90 % uptime under a 30 % sprawl start — exactly the fraction that
+begins upright. Every episode starting on its feet is near-perfect; every
+episode starting down is lost. Stage two improved balance, speed and heading but
+never produced recovery.
+
+**The shipped brain was NOT replaced.** The new policy is upright where the old
+one is inverted and tracks the commanded speed properly, but it cannot get up,
+and the old one currently wins races. That trade is a judgement about the game,
+not about training metrics, so it is left to the user.
+
+**Three things I got wrong in-flight and corrected** — recorded because the
+corrections are part of the result: I called M8's aliasing "noise" twice before
+measuring it; I diagnosed M7 as a broken metric when it was the only honest one;
+and I wrote off E12 as a rejection while it ran, having judged it by a number
+measured under the wrong condition. Full detail below.
 
 ---
 
@@ -840,6 +857,47 @@ rather than paying ~0.
 setting in which E9 and E10 collapsed to lying down. Starting from competence
 should prevent that, but catastrophic forgetting is the plausible failure and
 would show up as uptime falling from 0.955 toward 0.1.
+
+#### Result — and I called it wrong while it ran
+
+Catastrophic forgetting did **not** happen: uptime dipped 0.68 → 0.60 by
+iteration 400 and came back to 0.66. I watched that flat line from iteration 100
+to 700 and wrote the run off as "a rejection in all but the final number".
+
+That was wrong, and the reason is instructive. The training-line `std` is
+measured **under the 30 % sprawl condition**, where recovery is unlearned, so it
+is pinned near `0.70 × 0.955 ≈ 0.67` no matter how much the *balance* policy
+improves. It was the wrong number to judge the run by, and it hid real gains in
+every other KPI:
+
+| Policy | Condition | Uptime | Speed | Heading | Eps > 90 % up |
+|---|---|---|---|---|---|
+| E11 | upright | 0.955 | 1.347 (−10.2 %) | 18.0° | 100 % |
+| **E12** | **upright** | **0.976** | **1.446 (−3.6 %)** | **10.4°** | 98 % |
+| E11 | sprawl 30 % | 0.679 | 0.941 (−37.3 %) | 40.5° | 71 % |
+| E12 | sprawl 30 % | 0.717 | 1.037 (−30.9 %) | 32.3° | 71 % |
+
+E12 is better on **every** metric in both conditions, and it clears the two KPIs
+E11 missed: speed tracking **−3.6 %** against a ±10 % gate, and heading
+**10.4°** against a < 15° gate.
+
+Training on the harder distribution improved the easier one — the sprawl starts
+act as a regulariser on the balance policy even though get-up itself never
+emerged. `eps > 90 % up` stays at exactly 71 % in the sprawl condition for both
+policies, which is the 70 % that start upright: **recovery is still unlearned**.
+
+**Exported:** `MojucuBoy_v01.onnx` + `mujoco_reference.json`, parity
+`8.047e-07`.
+
+**KPI verdict — E12, matched condition:**
+
+| KPI | Value | Threshold | |
+|---|---|---|---|
+| K1 uptime | 0.976 | > 0.90 | **pass** |
+| K2 speed | −3.6 % | ±10 % | **pass** |
+| K4 heading | 10.4° | < 15° | **pass** |
+| K8 uprightness | ~0.98 | > 0.90 | **pass** |
+| Get-up from sprawl | unlearned | — | **not achieved** |
 
 ### Finding M7 — WITHDRAWN: `fall_rate` was correct all along
 
