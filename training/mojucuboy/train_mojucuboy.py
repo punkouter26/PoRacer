@@ -35,6 +35,16 @@ from mojucuboy_env import ACTION_SIZE, OBS_SIZE, MojucuBoyEnv  # noqa: E402
 RESULTS = HERE / "runs"
 HIDDEN = (128, 128, 128)
 
+# Reward terms and stability measures logged per iteration. Every quantity the
+# reward charges for appears here, plus the derived heading angle, so the ten
+# weights in mojucuboy_env.py can be tuned against evidence rather than against
+# the single scalar return. "heading_err_deg" is derived in the rollout loop.
+KPI_TERMS = (
+    "track", "facing", "speed_along", "drift", "lateral",
+    "accel", "impact", "ctrl", "action_rate", "upright", "standing", "height",
+)
+KPI_LOGGED = KPI_TERMS + ("heading_err_deg",)
+
 
 class RunningNorm(nn.Module):
     """Observation normaliser with the statistics kept as buffers, so they are
@@ -198,6 +208,14 @@ def main() -> int:
         buf_val = torch.zeros(args.rollout, args.worlds, device=device)
         buf_done = torch.zeros(args.rollout, args.worlds, device=device)
 
+        # Per-term KPI accumulators. Ten reward weights were being tuned against
+        # one scalar return; these make each charge visible. Sums stay ON THE GPU
+        # and are read once at logging time -- a .item() per step would cost more
+        # than the physics, which is the same reason the env keeps its rollout
+        # host-free.
+        kpi_sum = {k: torch.zeros((), device=device) for k in KPI_LOGGED}
+        kpi_steps = 0
+
         with torch.no_grad():
             for t in range(args.rollout):
                 dist, _ = policy.distribution(obs)
@@ -210,6 +228,14 @@ def main() -> int:
                 obs, reward, done, terms = env.step(torch.tanh(raw))
                 buf_rew[t] = torch.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)
                 buf_done[t] = done.float()
+
+                for key in KPI_TERMS:
+                    kpi_sum[key] += terms[key].float().mean()
+                # Accumulated as an angle per world, not as arccos of the mean
+                # cosine -- those differ, and the angle is the one with units.
+                kpi_sum["heading_err_deg"] += torch.rad2deg(
+                    terms["facing"].float().clamp(-1.0, 1.0).arccos()).mean()
+                kpi_steps += 1
 
                 ep_return += reward
                 ep_length += 1
@@ -277,26 +303,52 @@ def main() -> int:
                 losses.append((pg.item(), value_loss.item(), entropy.item()))
 
         total_steps += total
-        if done_returns and iteration % 5 == 0:
-            rets = torch.cat(done_returns)
-            lens = torch.cat(done_lengths)
-            spds = torch.cat(done_speeds)
-            falls = torch.cat(done_falls)
+        # Per-step KPIs and losses are logged UNCONDITIONALLY. Episode statistics
+        # cannot be: `done` is timeout-only (a fall deliberately does not end the
+        # episode), so with EPISODE_STEPS=1000 and rollout=24 the first `done`
+        # lands at iteration 42 and the first episode log at iteration 45. Gating
+        # the whole logging block on `done_returns`, as this did, left every run
+        # shorter than ~45 iterations with no telemetry whatsoever -- which is
+        # every validation run worth doing.
+        if iteration % 5 == 0:
             pg, vl, ent = np.mean(losses, axis=0)
             elapsed = time.perf_counter() - started
-            writer.add_scalar("rollout/mean_return", rets.mean().item(), total_steps)
-            writer.add_scalar("rollout/mean_episode_length", lens.mean().item(), total_steps)
-            writer.add_scalar("rollout/mean_forward_speed", spds.mean().item(), total_steps)
-            writer.add_scalar("rollout/fall_rate", falls.mean().item(), total_steps)
             writer.add_scalar("loss/policy", pg, total_steps)
             writer.add_scalar("loss/value", vl, total_steps)
             writer.add_scalar("loss/entropy", ent, total_steps)
             writer.add_scalar("perf/steps_per_second", total_steps / elapsed, total_steps)
-            print(f"iter {iteration:4d}  steps {total_steps/1e6:7.2f}M  "
-                  f"ret {rets.mean():7.2f}  len {lens.mean():6.1f}  "
-                  f"spd {spds.mean():5.2f} m/s  fall {falls.mean():4.2f}  "
+            for key in KPI_LOGGED:
+                writer.add_scalar(f"kpi/{key}", (kpi_sum[key] / kpi_steps).item(), total_steps)
+
+            ep = ""
+            if done_returns:
+                rets = torch.cat(done_returns)
+                lens = torch.cat(done_lengths)
+                spds = torch.cat(done_speeds)
+                falls = torch.cat(done_falls)
+                writer.add_scalar("rollout/mean_return", rets.mean().item(), total_steps)
+                writer.add_scalar("rollout/mean_episode_length", lens.mean().item(), total_steps)
+                writer.add_scalar("rollout/mean_forward_speed", spds.mean().item(), total_steps)
+                writer.add_scalar("rollout/fall_rate", falls.mean().item(), total_steps)
+                # K1: survival as a ratio of the 1000-step episode, so the
+                # threshold reads directly rather than needing division by eye.
+                writer.add_scalar("kpi/survival_ratio",
+                                  lens.mean().item() / mojucuboy_env.EPISODE_STEPS, total_steps)
+                # K2: signed tracking error against the commanded speed.
+                writer.add_scalar("kpi/speed_error_frac",
+                                  (spds.mean().item() - mojucuboy_env.TARGET_SPEED)
+                                  / mojucuboy_env.TARGET_SPEED, total_steps)
+                ep = (f"ret {rets.mean():7.2f}  len {lens.mean():6.1f}  "
+                      f"spd {spds.mean():5.2f} m/s  fall {falls.mean():4.2f}  ")
+                done_returns, done_lengths, done_speeds, done_falls = [], [], [], []
+            print(f"iter {iteration:4d}  steps {total_steps/1e6:7.2f}M  " + ep +
+                  f"trk {(kpi_sum['track']/kpi_steps).item():4.2f}  "
+                  f"vel {(kpi_sum['speed_along']/kpi_steps).item():5.2f} m/s  "
+                  f"hdg {(kpi_sum['heading_err_deg']/kpi_steps).item():5.1f}deg  "
+                  f"lat {(kpi_sum['lateral']/kpi_steps).item():4.2f}  "
+                  f"upr {(kpi_sum['upright']/kpi_steps).item():4.2f}  "
+                  f"std {(kpi_sum['standing']/kpi_steps).item():4.2f}  "
                   f"{total_steps/elapsed/1e3:5.0f}k steps/s", flush=True)
-            done_returns, done_lengths, done_speeds, done_falls = [], [], [], []
 
         if iteration % 50 == 0 or iteration == args.iterations:
             torch.save({"model": policy.state_dict(), "iteration": iteration},

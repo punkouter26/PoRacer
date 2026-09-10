@@ -38,6 +38,12 @@ from train_mojucuboy import RESULTS, ActorCritic  # noqa: E402
 TARGET_EP_LEN = 900
 TARGET_SPEED = 1.2
 TARGET_SURVIVAL = 0.90
+# Uptime replaces episode length and survival as the stability gate. Both of
+# those are degenerate while `done` is timeout-only: no world ever terminates
+# early, so length is always EPISODE_STEPS and survival always 1.0, for any
+# policy including an untrained one.
+TARGET_UPTIME = 0.90
+TARGET_FALLEN = 0.10
 
 
 def evaluate(policy, episodes: int, seed: int, randomise: bool = True):
@@ -57,6 +63,13 @@ def evaluate(policy, episodes: int, seed: int, randomise: bool = True):
     length = torch.zeros(episodes, device=device)
     speed_sum = torch.zeros(episodes, device=device)
     ret = torch.zeros(episodes, device=device)
+    # Uptime, not episode length, is what survival means in this env. `done` is
+    # timeout-only -- a fall no longer ends the episode -- so `length` is always
+    # EPISODE_STEPS and `survival_rate` below is always exactly 1.0, for any
+    # policy including an untrained one. These two accumulate the per-step
+    # standing/fallen fractions, which a policy lying on the floor genuinely fails.
+    standing_sum = torch.zeros(episodes, device=device)
+    fallen_sum = torch.zeros(episodes, device=device)
     obs = env.observation()
 
     with torch.no_grad():
@@ -65,6 +78,8 @@ def evaluate(policy, episodes: int, seed: int, randomise: bool = True):
             obs, reward, done, terms = env.step(action)
             length += alive.float()
             speed_sum += terms["speed_along"] * alive.float()
+            standing_sum += terms["standing"] * alive.float()
+            fallen_sum += terms["fallen"] * alive.float()
             ret += reward * alive.float()
             # Freeze on first termination; env.step keeps integrating those worlds
             # but their statistics stop accumulating.
@@ -74,14 +89,21 @@ def evaluate(policy, episodes: int, seed: int, randomise: bool = True):
 
     survived = length >= mojucuboy_env.EPISODE_STEPS
     mean_speed = speed_sum / length.clamp(min=1)
+    uptime = standing_sum / length.clamp(min=1)
+    fallen = fallen_sum / length.clamp(min=1)
     return {
         "episodes": episodes,
+        # Kept for continuity, but see the note above: both are degenerate while
+        # `done` is timeout-only. Read mean_uptime / mean_fallen instead.
         "mean_episode_length": float(length.mean()),
         "median_episode_length": float(length.median()),
-        "mean_forward_speed": float(mean_speed.mean()),
-        "mean_return": float(ret.mean()),
         "survival_rate": float(survived.float().mean()),
         "survivors": int(survived.sum()),
+        "mean_forward_speed": float(mean_speed.mean()),
+        "mean_return": float(ret.mean()),
+        "mean_uptime": float(uptime.mean()),
+        "mean_fallen": float(fallen.mean()),
+        "uptime_over_90pct": float((uptime > 0.90).float().mean()),
     }
 
 
@@ -113,23 +135,32 @@ def main() -> int:
         print(f"  mean forward speed  : {stats['mean_forward_speed']:7.3f} m/s"
               f"        (target >= {TARGET_SPEED})")
         print(f"  survival            : {stats['survivors']:4d} / {stats['episodes']}"
-              f"          (target >= {TARGET_SURVIVAL:.0%})")
+              f"          (degenerate: always 100%, see mean uptime)")
+        print(f"  mean uptime         : {stats['mean_uptime']:7.3f}"
+              f"            (target >= {TARGET_UPTIME})")
+        print(f"  mean fallen         : {stats['mean_fallen']:7.3f}"
+              f"            (target <= {TARGET_FALLEN})")
+        print(f"  episodes >90% up    : {stats['uptime_over_90pct']:7.1%}")
         print(f"  mean return         : {stats['mean_return']:7.2f}\n")
 
     (run_dir / "gate4_eval.json").write_text(json.dumps(results, indent=2))
 
     primary = results["randomised"]
+    # "mean episode length" and "survival rate" are deliberately NOT gated on:
+    # both are constant by construction while `done` is timeout-only, so a gate
+    # on them passes an untrained policy. Uptime and fallen replace them.
     checks = [
-        ("mean episode length", primary["mean_episode_length"], TARGET_EP_LEN),
-        ("mean forward speed", primary["mean_forward_speed"], TARGET_SPEED),
-        ("survival rate", primary["survival_rate"], TARGET_SURVIVAL),
+        ("mean forward speed", primary["mean_forward_speed"], TARGET_SPEED, "ge"),
+        ("mean uptime", primary["mean_uptime"], TARGET_UPTIME, "ge"),
+        ("mean fallen", primary["mean_fallen"], TARGET_FALLEN, "le"),
     ]
     print("=== GATE 4 VERDICT (randomised model) ===")
     passed = True
-    for name, value, target in checks:
-        ok = value >= target
+    for name, value, target, direction in checks:
+        ok = value >= target if direction == "ge" else value <= target
         passed &= ok
-        print(f"  {'PASS' if ok else 'FAIL'}  {name:<22} {value:8.3f}  vs target {target}")
+        arrow = ">=" if direction == "ge" else "<="
+        print(f"  {'PASS' if ok else 'FAIL'}  {name:<22} {value:8.3f}  vs target {arrow} {target}")
     print(f"  {'PASS' if passed else 'FAIL'}: overall")
     return 0 if passed else 1
 

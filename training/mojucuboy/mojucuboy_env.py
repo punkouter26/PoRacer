@@ -422,10 +422,17 @@ class MojucuBoyEnv:
             - W_IMPACT * torch.tanh(impact)
             - W_ACTION_RATE * action_rate
         )
+        # Everything the reward actually charges for is reported, so the ten
+        # weights above can be tuned against evidence instead of against the
+        # single scalar return. ctrl/action_rate/lateral/upright/height were
+        # charged but not reported until now.
         terms = {
             "track": track, "facing": facing, "speed_along": along,
             "drift": drift, "accel": accel, "impact": impact,
             "standing": standing, "fallen": fallen_now,
+            "ctrl": ctrl_cost, "action_rate": action_rate,
+            "lateral": lateral.abs(), "upright": obs_gravity_z.clamp(min=0.0),
+            "height": height,
         }
         return reward, terms
 
