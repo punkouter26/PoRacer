@@ -166,6 +166,11 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=6006)
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--two-sided-speed", action="store_true",
+                        help="penalise overshooting the commanded speed as well as "
+                             "undershooting it. The shipped one-sided kernel clamps "
+                             "positive error away, which is why the shipped brain "
+                             "settles at 2.04 m/s against a 1.5 m/s command.")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -179,7 +184,8 @@ def main() -> int:
     from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter(str(logdir))
 
-    env = MojucuBoyEnv(args.worlds, seed=args.seed)
+    env = MojucuBoyEnv(args.worlds, seed=args.seed,
+                       two_sided_speed=args.two_sided_speed)
     policy = ActorCritic().to(device)
     optimiser = torch.optim.Adam(policy.parameters(), lr=args.lr)
 

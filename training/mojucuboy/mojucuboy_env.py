@@ -99,9 +99,15 @@ PUSH_VELOCITY = 1.1       # m/s impulse applied to the root
 
 
 class MojucuBoyEnv:
-    def __init__(self, num_worlds: int, device: str = "cuda:0", seed: int = 0):
+    def __init__(self, num_worlds: int, device: str = "cuda:0", seed: int = 0,
+                 two_sided_speed: bool = False):
         self.num_worlds = num_worlds
         self.device = torch.device(device)
+        # See _reward. The shipped brain runs at 2.04 m/s against a 1.5 m/s
+        # command because the tracking kernel clamps positive error away, so
+        # overshoot is free. Setting this makes the kernel symmetric, which is
+        # what "track the commanded speed to +/-10%" actually requires.
+        self.two_sided_speed = two_sided_speed
         self.rig = json.loads(RIG_PATH.read_text())
 
         self.mjm = mujoco.MjModel.from_xml_path(str(MODEL_PATH))
@@ -382,7 +388,12 @@ class MojucuBoyEnv:
 
         # Saturating tracking term: exceeding the target speed earns nothing extra,
         # which stops the policy trading stability for a sprint it cannot hold.
-        shortfall = (along - self.command_speed).clamp(max=0.0)
+        error = along - self.command_speed
+        # One-sided by default, which is what shipped: clamping the positive
+        # side away means running fast earns nothing extra but also costs
+        # nothing, so nothing pulls an overshooting policy back to the command.
+        # Two-sided makes the kernel symmetric about the commanded speed.
+        shortfall = error if self.two_sided_speed else error.clamp(max=0.0)
         track = torch.exp(-(shortfall / SPEED_SIGMA) ** 2)
 
         forward = rot[:, :, FORWARD_AXIS]
