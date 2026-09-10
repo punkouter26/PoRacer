@@ -350,7 +350,11 @@ class MojucuBoyEnv:
 
         self.episode_step += 1
         height = self.qpos[:, 2]
-        upright = -self.observation()[:, 2]   # gravity_local z, 1 when upright
+        # Measured: as a racer collapses under zero action (height 0.754 ->
+        # 0.153) obs[:, 2] runs -0.684 -> -0.057, so uprightness is -obs[:, 2],
+        # positive when upright. Reuse the obs computed above rather than
+        # calling observation() a second time.
+        upright = -obs[:, 2]
         fallen = (height < MIN_HEIGHT) | (upright < MIN_UPRIGHT)
 
         # A fall does NOT end the episode. The racer is never picked up, in
@@ -377,7 +381,18 @@ class MojucuBoyEnv:
     def _reward(self, prev_joint_qvel: torch.Tensor, fallen_now: torch.Tensor):
         rot = self.root_rotation()
         qvel = self.qvel
-        obs_gravity_z = -rot[:, 2, 2]
+        # Uprightness is +rot[2,2], NOT -rot[2,2].
+        #
+        # reset() builds the standing orientation as a pure yaw quaternion
+        # (qpos[4] = qpos[5] = 0), so rot[2,2] = 1 - 2(x^2 + y^2) = +1 for an
+        # upright racer. The old sign made obs_gravity_z = -1 while standing,
+        # which clamp(min=0) then floored to zero: W_UPRIGHT paid nothing for
+        # standing, `standing` was 0 upright and 1 inverted, and since W_TRACK,
+        # W_HEADING and W_GETUP are all gated on `standing`, the only way to earn
+        # any of them was to turn upside down. The policy obliged -- measured on
+        # the 1500-iteration run: uprightness -0.873, torso 0.585 m, travelling
+        # 1.245 m/s inverted, with `standing` reporting a healthy 0.682.
+        obs_gravity_z = rot[:, 2, 2]
 
         # Velocity along the COMMANDED heading, not along +y: the racer is steered.
         heading = self.command_heading
