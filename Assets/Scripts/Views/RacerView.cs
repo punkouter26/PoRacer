@@ -55,7 +55,25 @@ namespace PoRacer.Views
         private const float COURSE_DEPTH_BELOW_CENTRELINE = 6f;
         // A diverging rig re-diverges; the cooldown keeps one blow-up from
         // burning the whole recovery budget inside a single settling frame.
-        private const int MAX_RECOVERIES = 3;
+        /// <summary>
+        /// Zero, for the same reason MAX_RESCUES is zero: a fallen racer is NEVER
+        /// stood back up.
+        ///
+        /// This was 3, and that was a hole in the rule. The knockdown path was
+        /// correctly gated at MAX_RESCUES = 0, but the ARENA guard was not: a racer
+        /// that fell off the road went out of bounds, and Recover() teleported it
+        /// back onto the centreline in its upright rest pose — three times each,
+        /// resetting the knockdown countdown every time. Falling off is the most
+        /// common way to end up out of bounds, so the most-used path into the
+        /// recovery code was exactly the one the rule forbids.
+        ///
+        /// At 0 the first divergence or departure retires the racer instead. The
+        /// containment that made this code necessary is kept (see LayDownAt): a
+        /// body at NaN or at 1e30 still has to be brought back to finite
+        /// coordinates or it poisons the physics, camera framing and bounds. It is
+        /// brought back LYING DOWN and retired, not stood up and returned to the race.
+        /// </summary>
+        private const int MAX_RECOVERIES = 0;
         private const float RECOVERY_COOLDOWN_SECONDS = 1f;
         // Clearance above the surface on top of the racer's own rest height, the
         // same +0.05 m the spawner uses so nobody is born intersecting the ground.
@@ -369,19 +387,41 @@ namespace PoRacer.Views
             {
                 return;
             }
-            // Heading only on the yaw; the creature's authored rest pose is kept
-            // underneath it, or standing a centipede "upright" means standing its
-            // capsule chain on end. A diverged rig can report a NaN rotation, and
-            // a NaN yaw would teleport it straight back out of the world, so fall
-            // back to facing down the track.
-            float yaw = root.transform.rotation.eulerAngles.y;
-            if (!float.IsFinite(yaw))
+            // KEEP THE POSE IT FELL IN. This used to compose the creature's authored
+            // rest rotation and lift the body by _restHeight — i.e. it stood the racer
+            // up on its feet. That is the one thing this project forbids: getting off
+            // the floor is a skill the policy has to learn, and a rig that is stood up
+            // for free makes a policy that lies down indistinguishable from one that
+            // recovers.
+            //
+            // So containment now only does the part that is actually necessary —
+            // putting a non-finite or runaway body back at finite coordinates — and
+            // leaves it lying however it landed, clear of the surface by RECOVERY_LIFT
+            // rather than by a standing height.
+            Quaternion landed = root.transform.rotation;
+            bool finiteRotation = float.IsFinite(landed.x) && float.IsFinite(landed.y)
+                && float.IsFinite(landed.z) && float.IsFinite(landed.w)
+                && landed.x * landed.x + landed.y * landed.y
+                   + landed.z * landed.z + landed.w * landed.w > 1e-6f;
+            if (!finiteRotation)
             {
-                yaw = 0f;
+                // A diverged rig has no meaningful pose to preserve, and a NaN
+                // rotation would teleport it straight back out of the world. Lay it
+                // on its back: the authored rest pose rolled over, which reads as
+                // fallen for every body plan here rather than standing a capsule
+                // chain on end.
+                landed = Quaternion.Euler(0f, 0f, 180f)
+                    * (_agent != null ? _agent.RestRotation : Quaternion.identity);
             }
-            Quaternion upright = Quaternion.Euler(0f, yaw, 0f)
-                * (_agent != null ? _agent.RestRotation : Quaternion.identity);
-            root.TeleportRoot(position + Vector3.up * (_restHeight + RECOVERY_LIFT), upright);
+            // The _restHeight clearance is NOT about standing the racer up — the pose
+            // above is whatever it landed in, and that is the part the rule cares
+            // about. It is about not burying the articulation root in the surface:
+            // `position` is a point ON the ground, and a root placed there sits half
+            // inside it. Dropping this lift (tried 2026-09-11) put the body in deep
+            // interpenetration and the solver spent 1.27 s untangling it in a single
+            // frame — worst in-race frame went 31.7 fps to 0.79 fps, reproducibly,
+            // on a map where nothing else had changed.
+            root.TeleportRoot(position + Vector3.up * (_restHeight + RECOVERY_LIFT), landed);
             for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
             {
                 ArticulationBody body = bodies[bodyIndex];

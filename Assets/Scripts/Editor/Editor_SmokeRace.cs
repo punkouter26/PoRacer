@@ -25,15 +25,19 @@ namespace PoRacer.EditorTools
     /// Entering play mode reloads the domain, so the job lives in SessionState and
     /// <see cref="Resume"/> re-arms the driver on the other side of the reload.
     ///
-    /// Invoke: unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Start(\"0,1,2,3,4,5,6\", 140f);"
+    /// Invoke: unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Start(\"0,1,2\", 140f);"
     ///         unity command eval --code "return PoRacer.EditorTools.Editor_SmokeRace.Status();"
     ///
-    /// The defaults cover all SEVEN maps, and 140 s per step is not generous — it is
-    /// the minimum that lets a builder map reach its own 120 s clock. They used to be
-    /// five maps at 60 s, which silently meant Acrobat and Apartment were never raced
-    /// at all and Lumpy was cut off before it could resolve. A step the harness
-    /// abandons reports raceEnded false and proves nothing about race end, the produce
-    /// shower or the podium.
+    /// The defaults cover all THREE maps — Flat, Acrobat, Apartment — since Lumpy,
+    /// Swamp, Gale and Roulette were removed on 2026-09-11. The CSV is map INDICES, so
+    /// it must be re-checked whenever Systems_MapCatalog.Entries changes: an index past
+    /// the end does not fail, it clamps back to Flat, so a stale CSV silently races the
+    /// first map several extra times instead of erroring.
+    ///
+    /// `secondsPerRace` is a FLOOR, not the budget — see RaceBudgetSeconds(). A step
+    /// always gets at least its own map's clock, because a harness that stops a race
+    /// before its map can resolve proves nothing about race end, the produce shower or
+    /// the podium. At 140 s flat that is exactly what happened to both courses.
     /// </summary>
     public static class Editor_SmokeRace
     {
@@ -46,6 +50,8 @@ namespace PoRacer.EditorTools
         private const float SCOPE_TIMEOUT_SECONDS = 20f;
         private const float START_TIMEOUT_SECONDS = 30f;
         private const float COOLDOWN_SECONDS = 2f;
+        // Headroom past a map's own clock for the referee to classify the finish.
+        private const float RACE_OVERRUN_MARGIN_SECONDS = 20f;
         // Results stay up this long before the menu is requested, so what happens
         // at race end (the produce shower) is exercised and counted.
         //
@@ -104,6 +110,15 @@ namespace PoRacer.EditorTools
             public int frames;
             public float fpsAvg;
             public float fpsMin;
+            // Worst frame while actually RACING, as opposed to fpsMin which covers
+            // the whole step including the menu. They differ a lot and the difference
+            // was misread: on 2026-09-11 step 0 reported fpsMin 0.83 (a 1.2 s frame)
+            // and it was taken for a race stall, when the spawn stages showed
+            // `instantiate grid: 0.062 s`. That long frame belongs to Systems_Warmup
+            // instantiating a heavy prefab on the MENU -- which is the warm-up's whole
+            // purpose, since it is a hitch paid before START instead of mid-race.
+            // Attribute it, so a menu cost cannot read as a gameplay regression.
+            public float fpsMinRace;
             public bool raceStarted;
             public bool raceEnded;
             public int racers;
@@ -115,6 +130,13 @@ namespace PoRacer.EditorTools
             // `racers` minus whoever was knocked out DURING the race; anything the
             // results screen itself removes is a bug (see RESULTS_HOLD_SECONDS).
             public int racersAliveAtResults;
+            // Race clock when the referee stopped, and the map's own limit, so a run
+            // says WHY each race ended rather than only that it did. A race that stops
+            // far short of its limit with exactly PODIUM_FINISHERS finishers ended on
+            // the podium cutoff, which DNFs everyone still upright and running.
+            public float raceEndedAtSeconds;
+            public float timeLimitSeconds;
+            public string endReason;
             // Panel height the layout was measured at, and the handset height it is
             // judged against, so a clean run still records which screen it proved.
             public float panelHeightDp;
@@ -174,7 +196,7 @@ namespace PoRacer.EditorTools
         private static Systems_Warmup _warmup;
         private static readonly Dictionary<string, LogEntry> LogIndex = new();
 
-        public static string Start(string mapsCsv = "0,1,2,3,4,5,6", float secondsPerRace = 140f)
+        public static string Start(string mapsCsv = "0,1,2", float secondsPerRace = 140f)
         {
             string[] parts = mapsCsv.Split(',');
             var maps = new List<int>();
@@ -338,10 +360,13 @@ namespace PoRacer.EditorTools
                     if (!_raceModel.RaceActive)
                     {
                         _step.raceEnded = true;
+                        // Captured at the transition: Advance() stops once RaceActive
+                        // clears, so this is the clock reading the referee stopped on.
+                        _step.raceEndedAtSeconds = _raceModel.ElapsedSeconds;
                         _phase = Phase.Results;
                         _phaseStart = EditorApplication.timeSinceStartup;
                     }
-                    else if (elapsed > _job.secondsPerStep)
+                    else if (elapsed > RaceBudgetSeconds())
                     {
                         EndRaceStep();
                     }
@@ -690,11 +715,36 @@ namespace PoRacer.EditorTools
             }
         }
 
+        /// <summary>
+        /// Seconds this step may spend RACING before the harness gives up on it.
+        ///
+        /// It is the LARGER of the caller's per-step budget and the map's own clock,
+        /// because a harness that stops a race before its map can resolve tests nothing.
+        /// At the shipped default of 140 s that is exactly what happened to both
+        /// courses on 2026-09-11: Acrobat (240 s) and Apartment (180 s) were cut off
+        /// mid-race and reported `racersAliveAtResults: 0`, `raceEndedAtSeconds: 0`,
+        /// zero produce and racers still in `Racing` — two of seven steps silently
+        /// measuring only their first 140 s. A caller can therefore lengthen a step but
+        /// never shorten it below the thing under test.
+        ///
+        /// The margin is for the referee: the race ends ON the map clock, and the
+        /// podium/DNF classification lands a frame or two later.
+        /// </summary>
+        private static float RaceBudgetSeconds()
+        {
+            float mapLimit = _step != null ? _step.timeLimitSeconds : 0f;
+            return Mathf.Max(_job.secondsPerStep, mapLimit + RACE_OVERRUN_MARGIN_SECONDS);
+        }
+
         private static void StartRaceStep()
         {
             int mapIndex = _job.maps[_job.step];
             Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Get(mapIndex);
             BeginStep($"{mapIndex}:{map.DisplayName}");
+            // Read BEFORE the race rather than in EndRaceStep, because the Racing
+            // cutoff below needs it. Without it the harness cannot know that this
+            // map wants longer than the caller's per-step budget.
+            _step.timeLimitSeconds = map.TimeLimitSeconds;
             _config.SetMap(mapIndex);
             _spawn.BeginRacing();
             _phase = Phase.WaitRaceStart;
@@ -718,15 +768,48 @@ namespace PoRacer.EditorTools
                     (racer.Place > 0 ? $" P{racer.Place}" : string.Empty));
             }
             _step.placings = placings.ToArray();
+            _step.timeLimitSeconds = Systems_MapCatalog.Get(_job.maps[_job.step]).TimeLimitSeconds;
+            _step.endReason = ClassifyEnd(_step);
             CloseStep();
             _spawn.RequestMenu();
             _phase = Phase.Cooldown;
             _phaseStart = EditorApplication.timeSinceStartup;
         }
 
+        /// <summary>
+        /// Why this race stopped. The distinction that matters is the podium cutoff:
+        /// <see cref="Systems_Race.NotifyFinish"/> ends the race the instant
+        /// PODIUM_FINISHERS racers cross and marks everyone still going as Dnf, however
+        /// well they were running. On Flat that fires around 21 s of a 120 s limit and
+        /// takes out racers at 14-17 m of 20, upright and mid-stride -- which reads in
+        /// the results as a roster that cannot finish, and feeds ELO a loss for each of
+        /// them, when nothing about them failed.
+        /// </summary>
+        private static string ClassifyEnd(StepReport step)
+        {
+            if (!step.raceEnded)
+            {
+                return "harness cut the step short before the race resolved";
+            }
+            bool atFullTime = step.timeLimitSeconds > 0f
+                && step.raceEndedAtSeconds >= step.timeLimitSeconds - 1f;
+            if (atFullTime)
+            {
+                return $"full time ({step.raceEndedAtSeconds:0}s); ranked on distance";
+            }
+            if (step.finished >= Systems_Race.PODIUM_FINISHERS)
+            {
+                int cutOff = step.racers - step.finished;
+                return $"PODIUM CUTOFF at {step.raceEndedAtSeconds:0}s of {step.timeLimitSeconds:0}s"
+                     + $" - {cutOff} racer(s) DNF'd by rule, not by failing";
+            }
+            return $"every racer out by attrition at {step.raceEndedAtSeconds:0}s"
+                 + $" of {step.timeLimitSeconds:0}s";
+        }
+
         private static void BeginStep(string name)
         {
-            _step = new StepReport { name = name, fpsMin = float.MaxValue };
+            _step = new StepReport { name = name, fpsMin = float.MaxValue, fpsMinRace = float.MaxValue };
             _stepStart = EditorApplication.timeSinceStartup;
             // Per step, so every map audits its own race and results screens rather
             // than the first map's audit standing in for all of them.
@@ -745,6 +828,11 @@ namespace PoRacer.EditorTools
             if (_step.frames > 0)
             {
                 _step.fpsAvg = _step.frames / Mathf.Max(_step.seconds, 0.001f);
+            }
+            if (_step.fpsMinRace == float.MaxValue)
+            {
+                // No frame sampled while racing (a step cut off before START).
+                _step.fpsMinRace = 0f;
             }
             if (_step.fpsMin == float.MaxValue)
             {
@@ -768,6 +856,10 @@ namespace PoRacer.EditorTools
                 if (fps < _step.fpsMin)
                 {
                     _step.fpsMin = fps;
+                }
+                if (_phase == Phase.Racing && fps < _step.fpsMinRace)
+                {
+                    _step.fpsMinRace = fps;
                 }
             }
         }

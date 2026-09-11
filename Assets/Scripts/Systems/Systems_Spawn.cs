@@ -77,8 +77,18 @@ namespace PoRacer.Systems
         private const float SURFACE_PLATES = 2f;
         private const float SURFACE_WEAVE = 3f;
         private const int GRID_COLUMNS = 10;
-        private const float GRID_X_SPACING = 2f;
+        // Lateral spacing is per-map now: see Systems_MapCatalog.MapEntry.GridColumnSpacing.
+        // It was a flat 2 m here, which is what tangled the wide rigs on the start line.
         private const float GRID_ROW_SPACING = 1.6f;
+        /// <summary>Width every builder map is generated at; the grid has to fit inside it.</summary>
+        private const float TRACK_WIDTH = 24f;
+        /// <summary>
+        /// Clear ground kept outside the widest grid slot, so an outside racer is not born
+        /// on the lip of the track. The map's requested spacing is narrowed to respect it
+        /// whenever the row is too full to honour both — ten racers at Flat's 3 m would
+        /// span 27 m on a 24 m track, which is how a widened grid puts racers off the edge.
+        /// </summary>
+        private const float GRID_EDGE_MARGIN = 1.5f;
         // Big fields start as a tower: keep a small footprint and stack layers
         // upward, so the start is a glorious collapsing pile.
         private const int STACK_THRESHOLD = 30;
@@ -476,7 +486,7 @@ namespace PoRacer.Systems
                 }
                 else
                 {
-                    _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: 24f, length: map.LengthMeters, _rng,
+                    _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: TRACK_WIDTH, length: map.LengthMeters, _rng,
                         decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
                 }
 
@@ -541,8 +551,27 @@ namespace PoRacer.Systems
             // their stragglers through the plug-in's own scene-recreation request.
             if (RosterNeedsMujoco())
             {
-                Systems_MujocoWorld.Build();
+                // The course goes in with the world, not after it: every geom has to exist
+                // before MjScene compiles its model at the end of this frame.
+                Systems_MujocoWorld.Build(_course);
                 MarkStage("mujoco world build", ref stageClock);
+            }
+
+            // Grid geometry for this race, settled once before anything is placed. The
+            // lateral gap is the map's (see MapEntry.GridColumnSpacing — Flat is widened
+            // to 3 m because the default 2 m was costing the sprawling rigs their races
+            // on the start line), and the row is centred on the slots actually occupied.
+            int totalRacers = _config.TotalCount();
+            bool stackedStart = totalRacers > STACK_THRESHOLD;
+            int gridColumnsUsed = stackedStart ? GRID_COLUMNS : Mathf.Clamp(totalRacers, 1, GRID_COLUMNS);
+            // Narrowed to what the track can actually hold. A small field gets the map's
+            // full spacing; a full row of ten gets whatever fits, because driving racers
+            // off the edge of the ground is a worse start than a crowded one.
+            float gridColumnSpacing = map.GridColumnSpacing;
+            if (gridColumnsUsed > 1)
+            {
+                float widestSpacing = (TRACK_WIDTH - 2f * GRID_EDGE_MARGIN) / (gridColumnsUsed - 1);
+                gridColumnSpacing = Mathf.Min(gridColumnSpacing, widestSpacing);
             }
 
             int gridIndex = 0;
@@ -559,13 +588,10 @@ namespace PoRacer.Systems
                     Debug.LogWarning($"Creature '{entry.id}' has no brain that runs on this platform; skipping its {requested} racers.");
                     continue;
                 }
-                if (coursePath != null && entry.prefab.GetComponentInChildren<IMujocoCreature>(true) != null)
-                {
-                    // MuJoCo steps its own world and cannot see Unity colliders: on
-                    // a course it would fall straight through the road to y = 0.
-                    Debug.LogWarning($"Creature '{entry.id}' is simulated by MuJoCo and cannot run an authored course; skipping.");
-                    continue;
-                }
+                // The course exclusion that used to live here is gone. MuJoCo still cannot
+                // see a Unity collider, but Systems_MujocoWorld.BuildCourseRoad now mirrors
+                // the centreline into its world as a chain of box geoms, so a MuJoCo racer
+                // has a road of its own to stand on instead of falling through to y = 0.
                 for (int racerIndex = 0; racerIndex < requested; racerIndex++)
                 {
                     // Spread large spawns over frames: 800 articulated bodies in one
@@ -581,14 +607,19 @@ namespace PoRacer.Systems
                     }
                     // Tower start for big fields: the same footprint repeats in
                     // layers going up, with jitter so the pile topples, not balances.
-                    bool stacked = _config.TotalCount() > STACK_THRESHOLD;
+                    bool stacked = stackedStart;
                     int layerSize = GRID_COLUMNS * STACK_FOOTPRINT_ROWS;
                     int layer = stacked ? gridIndex / layerSize : 0;
                     int flatIndex = stacked ? gridIndex % layerSize : gridIndex;
                     int column = flatIndex % GRID_COLUMNS;
                     int row = flatIndex / GRID_COLUMNS;
                     float localZ = -row * GRID_ROW_SPACING;
-                    float localX = (column - (GRID_COLUMNS - 1) * 0.5f) * GRID_X_SPACING;
+                    // Centred on the columns actually OCCUPIED, not on GRID_COLUMNS. The
+                    // old form centred every field on ten slots whether or not ten racers
+                    // existed, so the default eight sat a metre left of the centreline and
+                    // a three-racer field sat seven metres off it — close enough to the
+                    // edge to matter on Swamp, whose gate walls funnel the middle.
+                    float localX = (column - (gridColumnsUsed - 1) * 0.5f) * gridColumnSpacing;
                     if (layer > 0)
                     {
                         localX += ((float)_rng.NextDouble() - 0.5f) * 2f * STACK_JITTER;
@@ -695,7 +726,34 @@ namespace PoRacer.Systems
                     }
                     else
                     {
-                        agent.SetGoal(_track.FinishLine);
+                        // A PRIVATE goal straight down this racer's own lane, not the one
+                        // shared finish-line transform every racer used to be handed.
+                        //
+                        // That shared goal sits at x = 0, so on a 21 m grid the outside
+                        // racers were aiming 27 degrees off their own axis and the whole
+                        // field converged on a single point and piled into it. It is also
+                        // a straight train/race mismatch: Systems_TrainingArea puts the
+                        // goal at (0, 0.5, 6) relative to a creature spawned at (0, y, 0),
+                        // so every policy learned to approach a goal DIRECTLY AHEAD and
+                        // has never been asked to cross the track to reach one.
+                        //
+                        // The evidence that this is what matters: a lone Quadruped spawns
+                        // at localX 0 — on-axis, exactly like training — and finishes Flat
+                        // in 57.9 s dead upright. The same brain in a field never finished
+                        // in 20 races. Widening the grid made it worse, because it widened
+                        // the angle.
+                        //
+                        // Same shape as the course carrot below; despawned with the racers.
+                        var laneGoal = new GameObject(racerId + ".lane");
+                        Vector3 laneTarget = position;
+                        if (_track.FinishLine != null)
+                        {
+                            laneTarget.y = _track.FinishLine.position.y;
+                            laneTarget.z = _track.FinishLine.position.z;
+                        }
+                        laneGoal.transform.position = laneTarget;
+                        _spawned.Add(laneGoal);
+                        agent.SetGoal(laneGoal.transform);
                     }
 
                     var decisionRequester = instance.GetComponentInChildren<Unity.MLAgents.DecisionRequester>();

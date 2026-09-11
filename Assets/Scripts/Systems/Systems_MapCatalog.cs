@@ -23,10 +23,30 @@ namespace PoRacer.Systems
             // Full-time clock for this map; the race is decided by distance when it runs out.
             public readonly float TimeLimitSeconds;
 
+            /// <summary>
+            /// Lateral gap between starting grid slots, metres. Per-map because the start
+            /// is where the sprawling rigs lose their races.
+            ///
+            /// Measured 2026-09-10: a Quadruped alone on Flat finishes in 57.9 s dead
+            /// upright, and the SAME brain in the default 8-racer field averages 8.0 m
+            /// and did not finish once in 20 races. At the old flat 2 m the wide,
+            /// low-slung creatures tangle with their neighbours on the line and never
+            /// get up. Note which racers were unaffected: MojucuBoy cannot collide with
+            /// a PhysX racer at all (different solver), and IsaacBox and Isaac H1 are
+            /// narrow upright bipeds. The three that "failed" are exactly the three
+            /// sprawling rigs.
+            ///
+            /// Bounded by the track: Systems_TrackBuilder builds builder maps 24 m wide,
+            /// so the whole row has to fit inside +/-12 m of the centreline.
+            /// </summary>
+            public readonly float GridColumnSpacing;
+
             public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "",
                 float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None, bool randomize = false,
-                float timeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS)
+                float timeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS,
+                float gridColumnSpacing = DEFAULT_GRID_COLUMN_SPACING)
             {
+                GridColumnSpacing = gridColumnSpacing;
                 DisplayName = displayName;
                 Kind = kind;
                 Available = available;
@@ -39,6 +59,20 @@ namespace PoRacer.Systems
         }
 
         public const float DEFAULT_TIME_LIMIT_SECONDS = 120f;
+
+        /// <summary>
+        /// The grid spacing every map used before it became per-map. Left as the default
+        /// so the maps that have not been measured keep exactly the behaviour they had.
+        /// </summary>
+        public const float DEFAULT_GRID_COLUMN_SPACING = 2f;
+
+        /// <summary>
+        /// Flat's widened grid. 3 m, not more, because the row must fit the 24 m track:
+        /// eight racers centred on their own count span 7 x 3 = 21 m, i.e. +/-10.5 m,
+        /// which clears the +/-12 m edge with 1.5 m to spare. 3.5 m would span 24.5 m and
+        /// put the outside racers off the ground.
+        /// </summary>
+        public const float FLAT_GRID_COLUMN_SPACING = 3f;
         // The Acrobat course is ~212 m of climbing switchbacks at
         // Editor_BuildCourseTrack.COURSE_SCALE 1.0: about ten times a builder map.
         // Its length is read off the authored centreline at race time; this is
@@ -87,15 +121,28 @@ namespace PoRacer.Systems
             // a second and third to land inside the window. Slower terrain gets a
             // shorter trek. Width stays 24 m so the 10-wide grid still fills the
             // lane visually. Re-measure these whenever the brains are retrained.
-            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 22f),
-            new MapEntry("Lumpy", TrackKind.Lumpy, available: true, "Rough hills with chunky rocks to dodge", 18f),
-            new MapEntry("Swamp", TrackKind.Swamp, available: true, "Mud pits that slow racers, gate walls to funnel them", 18f),
-            new MapEntry("Gale", TrackKind.Flat, available: true,
-                "Cross-winds shove the pack; boost pads reward a brave line", 20f,
-                TrackFeatures.Gusts | TrackFeatures.BoostPads),
-            new MapEntry("Roulette", TrackKind.Flat, available: true,
-                "The wheel spins: fresh terrain and hazards every race", 18f,
-                randomize: true),
+            new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 22f,
+                gridColumnSpacing: FLAT_GRID_COLUMN_SPACING),
+            // REMOVED 2026-09-11: Lumpy, Swamp, Gale and Roulette. The roster is Flat
+            // plus the two authored courses. Three things did NOT go with them, and
+            // each would break something if it were tidied away later:
+            //
+            //  * `TrackKind.Lumpy` (6) and `TrackKind.Swamp` (7) stay in the enum.
+            //    They are TRAINING track kinds: SCN_TRAIN_ALL / _HUMANOIDS / _FOCUSED
+            //    serialize `_trackKind: 6`, and five Config/*.yaml curricula drive
+            //    `track_kind` to 6 and 7. Deleting or renumbering them re-resolves
+            //    those scenes to whatever value lands at 6 -- silently, because
+            //    Systems_TrainingArea's Enum.IsDefined guard would still pass.
+            //  * All four `TrackFeatures` flags stay, for the same reason:
+            //    Systems_TrainingArea maps hazard_level 1 -> MudPits|BoostPads and
+            //    2 -> Gusts|Gates.
+            //  * `Systems_TrackBuilder`, `GustZoneView`, `BoostPadView` and
+            //    `MudZoneView` stay. The builder still bakes Flat and still builds
+            //    every training area; the hazard views are added at runtime by the
+            //    training curriculum even though no scene instance survives.
+            //
+            // What genuinely died with them: the Roulette randomise roll in
+            // Systems_Spawn, and PostFxView's Lumpy/Swamp mood branches.
             // Authored in Blender (Assets/Art/Models/AcrobatTrack.glb): a mountain
             // road of switchbacks and a tunnel, 50 m of climb. Raced along its
             // centreline, not down +Z, so it needs the course entry

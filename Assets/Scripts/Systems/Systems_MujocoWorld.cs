@@ -39,6 +39,31 @@ namespace PoRacer.Systems
         private static GameObject _world;
         private static bool _suspended;
         private static bool _startHeld;
+        private static Views.RaceCourseView _pendingCourse;
+
+        /// <summary>
+        /// How thick each road slab is. Only the top face is stood on; the depth exists so
+        /// a foot landing slightly inside a slab is pushed out rather than passing through.
+        /// </summary>
+        private const float ROAD_SLAB_THICKNESS = 0.6f;
+
+        /// <summary>
+        /// Each slab is stretched this much past its centreline segment.
+        ///
+        /// Butted end to end, slabs leave a wedge of gap on the OUTSIDE of every bend -
+        /// at Acrobat's 26 deg per segment and a 3 m half-width that is about
+        /// 3 * tan(13 deg) = 0.7 m of hole, which is plenty for a foot to drop through.
+        /// Overlapping costs nothing: MuJoCo static geoms do not collide with each other.
+        /// </summary>
+        private const float ROAD_SLAB_OVERLAP = 1.25f;
+
+        /// <summary>
+        /// The catch-plane under a course. Far below the road, NOT at y = 0: at y = 0 a
+        /// racer that fell off would land on an invisible floor and keep running there,
+        /// which is exactly the bug that made MuJoCo racers unraceable on courses in the
+        /// first place. Down here a fall reads as a fall.
+        /// </summary>
+        private const float COURSE_CATCH_PLANE_Y = -50f;
 
         /// <summary>True while a MuJoCo world is standing and still stepping.</summary>
         internal static bool Exists => _world != null && !_suspended;
@@ -67,6 +92,18 @@ namespace PoRacer.Systems
         /// the scene. Safe to call when no Fido is racing — the caller decides that; this
         /// only guards against building twice.
         /// </summary>
+        /// <summary>
+        /// Stands up the world with an authored course mirrored into it, so a MuJoCo racer
+        /// can run a course at all. Pass null for a builder map and it behaves exactly as
+        /// the parameterless <see cref="Build()"/> always did.
+        /// </summary>
+        internal static void Build(Views.RaceCourseView course)
+        {
+            _pendingCourse = course;
+            Build();
+            _pendingCourse = null;
+        }
+
         internal static void Build()
         {
             if (_world != null || !IsSupported)
@@ -91,7 +128,17 @@ namespace PoRacer.Systems
             _world.AddComponent<MjScene>();
 
             ConfigureOptions(_world.AddComponent<MjGlobalSettings>());
-            BuildGround(_world.transform);
+            if (_pendingCourse != null)
+            {
+                // A course gets a road built out of box geoms plus a catch-plane far
+                // below, instead of a plane at y = 0 he would simply stand on.
+                BuildCourseRoad(_world.transform, _pendingCourse);
+                BuildGround(_world.transform, COURSE_CATCH_PLANE_Y);
+            }
+            else
+            {
+                BuildGround(_world.transform, 0f);
+            }
 
             // MjScene.Start compiles the model at the end of this frame, by which time the
             // options, the ground and the racers are all in place. Racers added later still
@@ -200,27 +247,110 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
-        /// The MuJoCo ground, at y = 0 — exactly where Systems_TrackBuilder puts the top
-        /// of the flat track's collider slab, so Fido and the PhysX racers stand on the
-        /// same surface without either engine knowing about the other.
+        /// The contact properties every walkable MuJoCo surface shares, straight from
+        /// creature.xml's &lt;geom&gt; default — which is what the policies trained against.
+        /// The road must match the ground here or a racer's gait changes underfoot.
         /// </summary>
-        private static void BuildGround(Transform parent)
+        private static void ApplyGroundFriction(MjGeom geom)
         {
-            var ground = new GameObject("MuJoCoGround");
-            ground.transform.SetParent(parent, false);
-            ground.transform.localPosition = Vector3.zero;
-            ground.transform.localRotation = Quaternion.identity;
-
-            var geom = ground.AddComponent<MjGeom>();
-            geom.ShapeType = MjShapeComponent.ShapeTypes.Plane;
-            geom.Plane.Extents = GroundExtents;
-
             MjGeomSettings settings = geom.Settings;
             settings.Friction.Sliding = GROUND_FRICTION_SLIDING;
             settings.Friction.Torsional = GROUND_FRICTION_TORSIONAL;
             settings.Friction.Rolling = GROUND_FRICTION_ROLLING;
             settings.Solver.ConDim = GROUND_CONDIM;
             geom.Settings = settings;
+        }
+
+        /// <summary>
+        /// Mirrors an authored course's centreline into MuJoCo as a chain of box geoms,
+        /// one per centreline segment, so a MuJoCo racer has a road to stand on.
+        ///
+        /// WHY BOXES AND NOT THE COURSE'S OWN COLLIDERS. MuJoCo cannot see a Unity
+        /// Collider at all, so the geometry has to be rebuilt on its side. Mirroring the
+        /// GLB's COL_* proxies as MjMeshShape does not work: MuJoCo convex-hulls mesh
+        /// geoms, and the course ships THREE proxies for the whole road, so the hulls
+        /// would fill the valley solid and bury the track. MjHeightFieldShape is no good
+        /// either - it needs a Unity Terrain, which this project does not use, and a
+        /// heightfield cannot express a tunnel or stacked switchbacks anyway, because
+        /// those are not a height function of (x, z).
+        ///
+        /// Boxes are exact primitives, cheap, native to MuJoCo, and the centreline the
+        /// course already carries (55 knots on Acrobat, with a half-width) is all the
+        /// data needed to lay them out. Only the floor is built - a racer has no use for
+        /// a tunnel ceiling.
+        ///
+        /// Must run BEFORE MjScene compiles its model at the end of the frame, which is
+        /// why it is called from <see cref="Build"/> rather than after the racers exist.
+        /// </summary>
+        private static void BuildCourseRoad(Transform parent, Views.RaceCourseView course)
+        {
+            Systems_CoursePath path = course.Path;
+            if (path == null || path.Length <= 0f)
+            {
+                Debug.LogWarning("MuJoCo course road: the course has no usable centreline; "
+                               + "MuJoCo racers will have no road.");
+                return;
+            }
+
+            var road = new GameObject("MuJoCoCourseRoad");
+            road.transform.SetParent(parent, false);
+
+            // Sampled along the centreline rather than read off the knot array, so the
+            // slab length is uniform and independent of how densely the course was
+            // authored. One slab per ~2 m keeps a 26 deg bend inside half a slab.
+            const float slabStep = 2f;
+            int slabCount = Mathf.Max(1, Mathf.CeilToInt(path.Length / slabStep));
+            float step = path.Length / slabCount;
+            int built = 0;
+            for (int slabIndex = 0; slabIndex < slabCount; slabIndex++)
+            {
+                float from = slabIndex * step;
+                Vector3 a = path.PointAt(from);
+                Vector3 b = path.PointAt(from + step);
+                Vector3 along = b - a;
+                if (along.sqrMagnitude < 0.0001f)
+                {
+                    continue;
+                }
+
+                var slab = new GameObject($"RoadSlab_{slabIndex:000}");
+                slab.transform.SetParent(road.transform, false);
+                // Centred on the segment and sunk by half its thickness, so the TOP face
+                // sits on the centreline the racers' progress is measured along.
+                slab.transform.position = (a + b) * 0.5f - Vector3.up * (ROAD_SLAB_THICKNESS * 0.5f);
+                slab.transform.rotation = Quaternion.LookRotation(along.normalized, Vector3.up);
+
+                var geom = slab.AddComponent<MjGeom>();
+                geom.ShapeType = MjShapeComponent.ShapeTypes.Box;
+                geom.Box.Extents = new Vector3(
+                    course.HalfWidth,
+                    ROAD_SLAB_THICKNESS * 0.5f,
+                    along.magnitude * 0.5f * ROAD_SLAB_OVERLAP);
+                ApplyGroundFriction(geom);
+                built++;
+            }
+            Debug.Log($"MuJoCo course road: {built} slab(s) over {path.Length:0.0} m "
+                    + $"at half-width {course.HalfWidth:0.0} m.");
+        }
+
+        /// <summary>
+        /// The MuJoCo ground. At y = 0 for a builder map — exactly where
+        /// Systems_TrackBuilder puts the top of the flat track's collider slab, so a
+        /// MuJoCo racer and the PhysX racers stand on the same surface without either
+        /// engine knowing about the other. Pushed far down on a course, where the road
+        /// above is the real surface and this is only a fall-catcher.
+        /// </summary>
+        private static void BuildGround(Transform parent, float height)
+        {
+            var ground = new GameObject("MuJoCoGround");
+            ground.transform.SetParent(parent, false);
+            ground.transform.localPosition = new Vector3(0f, height, 0f);
+            ground.transform.localRotation = Quaternion.identity;
+
+            var geom = ground.AddComponent<MjGeom>();
+            geom.ShapeType = MjShapeComponent.ShapeTypes.Plane;
+            geom.Plane.Extents = GroundExtents;
+            ApplyGroundFriction(geom);
 
             // The track already draws a ground; this one only needs to exist for MuJoCo.
             // MjGeom's own mesh preview is added by the importer, not by AddComponent, so

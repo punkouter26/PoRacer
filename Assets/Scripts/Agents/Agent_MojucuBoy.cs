@@ -54,6 +54,12 @@ namespace PoRacer.Agents
         /// </summary>
         private const float TRAINED_HIPS_HEIGHT = 0.7722f;
 
+        // Surface probe for the stance snap: start a little above him and look a short way
+        // down, so the hit is the ground he was placed on rather than a lower switchback.
+        private const float SURFACE_PROBE_UP = 1f;
+        private const float SURFACE_PROBE_DISTANCE = 6f;
+        private readonly RaycastHit[] _probeHits = new RaycastHit[8];
+
 
         private MojucuBoyController _controller;
         private Transform _hips;
@@ -133,8 +139,50 @@ namespace PoRacer.Agents
             }
             float hipsOffset = _hips.position.y - transform.position.y;
             Vector3 position = transform.position;
-            position.y = TRAINED_HIPS_HEIGHT - hipsOffset;
+            // Relative to the surface UNDER him, not to absolute zero.
+            //
+            // This used to be `position.y = TRAINED_HIPS_HEIGHT - hipsOffset`, which is
+            // only correct where the ground is at y = 0 — true of every builder map, and
+            // wrong by 14.3 m on the Acrobat course, whose first centreline knot is that
+            // far up. It teleported him off the road before he took a step: measured at
+            // y = 0.8 while slab 0 of his own MuJoCo road sat at y = 13.9.
+            //
+            // A downward probe finds whichever surface the spawner placed him on, so the
+            // trained stance height is preserved on flat ground and on a mountain road
+            // alike. No hit (spawned over a void) keeps the old absolute behaviour, which
+            // is the best guess available.
+            position.y = TryFindSurfaceY(position, out float surfaceY)
+                ? surfaceY + TRAINED_HIPS_HEIGHT - hipsOffset
+                : TRAINED_HIPS_HEIGHT - hipsOffset;
             transform.position = position;
+        }
+
+        /// <summary>
+        /// Height of the nearest surface below <paramref name="from"/>, ignoring his own
+        /// colliders. Unity-side geometry, deliberately: the spawner placed him against a
+        /// Unity collider (RaceCourseView.TrySurfaceAt probes the course's own road), so
+        /// that is the surface his stance has to match even though MuJoCo will be the thing
+        /// simulating him against its mirrored copy of it.
+        /// </summary>
+        private bool TryFindSurfaceY(Vector3 from, out float surfaceY)
+        {
+            surfaceY = 0f;
+            int count = Physics.RaycastNonAlloc(from + Vector3.up * SURFACE_PROBE_UP, Vector3.down,
+                _probeHits, SURFACE_PROBE_DISTANCE, ~0, QueryTriggerInteraction.Ignore);
+            bool found = false;
+            for (int hitIndex = 0; hitIndex < count; hitIndex++)
+            {
+                if (_probeHits[hitIndex].collider.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+                if (!found || _probeHits[hitIndex].point.y > surfaceY)
+                {
+                    surfaceY = _probeHits[hitIndex].point.y;
+                    found = true;
+                }
+            }
+            return found;
         }
 
         private void FixedUpdate()

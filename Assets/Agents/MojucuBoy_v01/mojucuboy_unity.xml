@@ -10,7 +10,25 @@
   </default>
 
   <worldbody>
-    <geom name="floor" size="0 0 1" type="plane" rgba="0.3 0.32 0.35 1" />
+    <!-- NO FLOOR HERE, DELIBERATELY. This is the UNITY import model; the training
+         model (mojucuboy.xml, and training/mojucuboy/mojucuboy_roundtrip.xml) keeps
+         its floor, because training genuinely needs ground.
+
+         A MuJoCo plane geom with size "0 0" is an INFINITE half-space, and this file
+         is imported into a prefab that is instantiated once per racer. So every
+         MojucuBoy on the grid used to bring his own infinite floor, pinned at
+         whatever height he spawned at, and he could not fall anywhere on any map:
+         measured 2026-09-11 on Acrobat, his torso sat at y = 14.89 while he walked
+         48 m off the side of a 2.5 m-wide road and kept going, height unchanged,
+         with nothing beneath him for 800 m of raycast.
+
+         That also means the course road was being credited for something this plane
+         was doing: "he stands on the road at y~15 instead of falling to 0.8" was
+         this geom, not the road.
+
+         The world's ground belongs to Systems_MujocoWorld: the road slabs it builds
+         along the course centreline, plus the catch plane far below at
+         COURSE_CATCH_PLANE_Y. A racer must never carry ground of its own. -->
     <body name="hips" pos="0 0 0.78565">
       <joint name="root" type="free" armature="0" damping="0" />
       <geom name="pelvis" size="0.115 0.07 0.09" pos="0 0 0.07" type="box" mass="8" />
