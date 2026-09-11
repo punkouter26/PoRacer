@@ -111,3 +111,16 @@ Assets/Art/Models/Source~/
 # no unsaved work the .unity file lacks; delete them once the scene is verified.
 Assets/_Recovery/
 Assets/_Recovery.meta
+
+# MuJoCo import staging. Assets/Local/ is where MojucuBoySetup and
+# Editor_RegisterMojucuBoyRacer unpack a drop before its useful parts are moved
+# into the project proper; 71182d0 removed the checked-in copy on purpose. Unity
+# regenerates Assets/Local.meta whenever the (empty) folder exists on disk, and
+# git cannot track an empty folder, so the meta shows up untracked forever with
+# nothing to attach to - an orphaned .meta, which the project rules forbid.
+Assets/Local/
+Assets/Local.meta
+
+# Transient per-session harness state. Its siblings in .claude/state/ are
+# tracked on purpose; this one is rewritten on every context compaction.
+.claude/state/precompact-state.md
