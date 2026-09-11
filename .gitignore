@@ -104,3 +104,10 @@ Assets/Temp/
 Assets/InitTestScene*
 Assets/ML-Agents.meta
 Assets/Art/Models/Source~/
+
+# Unity's crash-recovery copies. The Editor writes these into Assets/ after a
+# hard crash (2026-09-09: mujoco.dll took the process down), where they are then
+# imported on every domain reload - a 6 MB scene re-parsed for nothing. They hold
+# no unsaved work the .unity file lacks; delete them once the scene is verified.
+Assets/_Recovery/
+Assets/_Recovery.meta

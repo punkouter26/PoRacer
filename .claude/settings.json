@@ -3,8 +3,9 @@
     "defaultMode": "acceptEdits"
   },
   "mcpServers": {
-    "unityMCP": {
-      "url": "http://localhost:8080/mcp"
+    "unity-editor-mcp": {
+      "command": "C:\\Users\\punko\\AppData\\Local\\Unity\\bin\\unity.exe",
+      "args": ["mcp", "--project-path", "C:\\Users\\punko\\Downloads\\PoRacer"]
     }
   },
   "hooks": {
