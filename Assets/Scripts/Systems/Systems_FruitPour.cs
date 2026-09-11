@@ -87,6 +87,7 @@ namespace PoRacer.Systems
         private int _sweepCountdown;
         private float _bestProgress;
         private float _lastProgressTime;
+        private bool _warnedUnreadable;
 
         public Systems_FruitPour(
             FruitCatalog catalog,
@@ -382,17 +383,39 @@ namespace PoRacer.Systems
                     bounceCombine = PhysicsMaterialCombine.Maximum,
                 };
             }
+            // One convex hull per mesh, so a pumpkin tumbles and a carrot skids.
+            //
+            // A MeshCollider cooked at RUNTIME needs the mesh's vertex data on the CPU,
+            // and a player build discards that after the GPU upload unless the model is
+            // imported read/write. Assigning a non-readable mesh here does not throw -
+            // it yields a collider with no cooked geometry, so the piece has NO
+            // COLLISION and falls through the road. Editor_BuildFruitCatalog sets the
+            // flag on the whole pack; this is the guard for anything that slipped
+            // through, because a silent hole in the floor is the worst way to find out.
             MeshFilter[] filters = piece.GetComponentsInChildren<MeshFilter>();
+            int hulls = 0;
             for (int filterIndex = 0; filterIndex < filters.Length; filterIndex++)
             {
-                if (filters[filterIndex].sharedMesh == null)
+                Mesh mesh = filters[filterIndex].sharedMesh;
+                if (mesh == null || !mesh.isReadable)
                 {
                     continue;
                 }
                 var hull = filters[filterIndex].gameObject.AddComponent<MeshCollider>();
-                hull.sharedMesh = filters[filterIndex].sharedMesh;
+                hull.sharedMesh = mesh;
                 hull.convex = true;
                 hull.sharedMaterial = _rollingMaterial;
+                hulls++;
+            }
+            if (hulls == 0)
+            {
+                // Last resort: a sphere on the root, sized to the piece. It loses the
+                // scanned shape, but produce that bounces roughly is far better than
+                // produce that pours through the world.
+                var fallback = piece.AddComponent<SphereCollider>();
+                fallback.radius = 0.5f * targetSize / Mathf.Max(0.001f, piece.transform.lossyScale.x);
+                fallback.sharedMaterial = _rollingMaterial;
+                WarnOnce();
             }
             var body = piece.AddComponent<Rigidbody>();
             body.mass = PIECE_MASS;
@@ -434,5 +457,23 @@ namespace PoRacer.Systems
         }
 
         private float Jitter(float amplitude) => ((float)_rng.NextDouble() * 2f - 1f) * amplitude;
+
+        /// <summary>
+        /// Says the fruit pack lost its read/write flag, once per session. Once,
+        /// because the alternative is 150 identical lines per race end, which on device
+        /// costs more than the thing it is reporting.
+        /// </summary>
+        private void WarnOnce()
+        {
+            if (_warnedUnreadable)
+            {
+                return;
+            }
+            _warnedUnreadable = true;
+            Debug.LogWarning(
+                "FruitPour: a produce mesh is not read/write, so no convex hull could be " +
+                "cooked for it and it fell back to a sphere. Re-run " +
+                "Editor_BuildFruitCatalog.Build() to restore the flag on the pack.");
+        }
     }
 }

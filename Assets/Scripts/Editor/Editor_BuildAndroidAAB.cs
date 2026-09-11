@@ -132,6 +132,11 @@ namespace PoRacer.EditorTools
                 options = BuildOptions.None,
             };
 
+            // Play rejects a reused version code outright, and the rejection arrives
+            // after the upload rather than at build time. Bump before the build so the
+            // artifact on disk already carries a code that can be uploaded.
+            BumpVersionCode();
+
             Debug.Log($"AAB BUILD START: {APP_ID} v{PlayerSettings.bundleVersion} " +
                       $"(code {PlayerSettings.Android.bundleVersionCode}) " +
                       $"target={TARGET_SDK} min={MIN_SDK} scenes={scenes.Count} " +
@@ -175,6 +180,26 @@ namespace PoRacer.EditorTools
         }
 
         /// Environment variable wins; otherwise read &lt;keystore&gt;.pass beside the keystore.
+        /// <summary>
+        /// Raises <c>bundleVersionCode</c> by one and persists it, returning the new
+        /// value. Called by both Android builders, so the code tracks artifacts
+        /// produced rather than configure-step runs.
+        ///
+        /// Android will not install a package whose version code is lower than or
+        /// equal to the installed one, and Play rejects a reused code outright. A
+        /// hardcoded constant therefore fails in two different ways depending on where
+        /// it lands, and both look like "the build worked but the device did not
+        /// update". The counter lives in ProjectSettings.asset, which is committed, so
+        /// it survives a domain reload and is visible in the diff.
+        /// </summary>
+        internal static int BumpVersionCode()
+        {
+            int next = PlayerSettings.Android.bundleVersionCode + 1;
+            PlayerSettings.Android.bundleVersionCode = next;
+            AssetDatabase.SaveAssets();
+            return next;
+        }
+
         internal static string ResolveKeystorePassword()
         {
             string fromEnv = Environment.GetEnvironmentVariable(PASS_ENV_VAR);

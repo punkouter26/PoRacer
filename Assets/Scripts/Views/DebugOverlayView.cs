@@ -16,14 +16,18 @@ namespace PoRacer.Views
     /// Text refresh runs on a 250 ms schedule, not per frame; Update only counts
     /// frames. Rich-text colors flag values that blow their budget.
     ///
+    /// The sheet opens with WHAT'S WRONG: the findings in plain English, worst
+    /// cause first, each with the action it implies. The coloured sections under it
+    /// are the evidence for that verdict.
+    ///
     /// A compact always-on strip (fps / frame ms / draws) sits top-center in every
-    /// build. The panel below it, the frame graph and the CSV recorder are
-    /// development-build only.
+    /// build, and so does the DBG button — the panel ships in release too, and pays
+    /// for its recorders only once someone opens it (see ActivateDiagnostics).
     ///
     /// The frame graph plots two series: total frame time against the 60 FPS
-    /// budget, and the fixed loop's own cost against the 20 ms step budget. For a
-    /// field of articulation bodies the second line is usually the one that
-    /// explains the first.
+    /// budget, and the fixed loop's own cost against one fixed step of wall clock
+    /// (0.005 s at the project's locked 200 Hz). For a field of articulation bodies
+    /// the second line is usually the one that explains the first.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class DebugOverlayView : MonoBehaviour
@@ -35,9 +39,15 @@ namespace PoRacer.Views
         private const int SCENE_SAMPLE_EVERY_N_REFRESHES = 8;
         private const float PANEL_WIDTH = 310f;
         private const float GRAPH_HEIGHT = 48f;
-        // The fixed loop gets one Time.fixedDeltaTime of wall clock before it
-        // starts stealing from the frame; 0.02 s is locked by the project rules.
-        private const float FIXED_BUDGET_MS = 20f;
+        // The fixed loop gets one Time.fixedDeltaTime of wall clock before it starts
+        // stealing from the frame. READ THE LIVE VALUE — this was a hardcoded 20f
+        // carrying a comment that said "0.02 s is locked by the project rules", but
+        // the project moved to 0.005 s (200 Hz) on 2026-08-29 for the Isaac Lab ports
+        // and the constant never followed. A 4x-too-generous budget colours the
+        // PHYSICS line GOOD right up to 10 ms, so the sheet reported a healthy fixed
+        // loop while it was overrunning its real budget by 2x — the exact failure the
+        // readout exists to catch.
+        private static float FixedBudgetMs => Time.fixedDeltaTime * 1000f;
         // Rows are buffered and flushed together so a recording session does not
         // put a file write in the middle of every refresh.
 
@@ -61,6 +71,8 @@ namespace PoRacer.Views
         private Label _stripLabel;
         private string _lastStripText = string.Empty;
         private Label _text;
+        /// <summary>Prose half of the panel: the WHAT'S WRONG verdict, wrapped.</summary>
+        private Label _verdictText;
         private VisualElement _graph;
         private readonly StringBuilder _builder = new();
         private readonly float[] _frameMs = new float[FRAME_SAMPLES];
@@ -159,7 +171,17 @@ namespace PoRacer.Views
             // probe pair, so this half stays dark until the panel is first opened.
             // The fps label beside it does not - it reads a plain frame counter.
             _stripLabel.style.display = DisplayStyle.None;
-            stripRow.Add(_stripLabel);
+
+            // HANG IT OFF THE FPS LABEL, don't sit beside it in the centred row.
+            // As a second flex child it was part of what got centred, so the moment
+            // it appeared the pair re-centred as a unit and pushed "60 FPS" left --
+            // straight under the game name in the top-left anchor, which on a 426 dp
+            // handset overlaps it outright. The FPS readout is a FIXED anchor (top
+            // centre) and must not move because a diagnostic appeared next to it, so
+            // it stays the only centred child and this rides out to its right.
+            _stripLabel.style.position = Position.Absolute;
+            _stripLabel.style.left = new Length(100f, LengthUnit.Percent);
+            _fpsLabel.Add(_stripLabel);
             safeRoot.Add(stripRow);
             root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
 
@@ -190,10 +212,30 @@ namespace PoRacer.Views
             UiTheme.StylePanel(_panel);
             safeRoot.Add(_panel);
 
+            // TWO labels, because the two halves of this panel want opposite wrapping.
+            //
+            // The instrumentation below is column-aligned with padded spaces, so it
+            // needs WhiteSpace.Pre - Normal would collapse the runs of spaces and the
+            // columns would stagger. But Pre also disables WRAPPING, and the verdict
+            // above it is prose: full sentences that are wider than the panel. Sharing
+            // one Pre label ran those sentences straight off the right edge, where the
+            // action half of each finding ("Cut the field size") was cut to "Cu".
+            // A diagnostic that cannot be read is not a diagnostic.
+            _verdictText = new Label { pickingMode = PickingMode.Ignore };
+            _verdictText.style.color = UiTheme.Text;
+            _verdictText.style.fontSize = UiTheme.FONT_SM;
+            _verdictText.style.whiteSpace = WhiteSpace.Normal;
+            _panel.Add(_verdictText);
+
             _text = new Label { pickingMode = PickingMode.Ignore };
             _text.style.color = UiTheme.Text;
             _text.style.fontSize = UiTheme.FONT_SM;
             _text.style.whiteSpace = WhiteSpace.Pre;
+            // The blank line that used to separate the verdict from PERF came from
+            // AppendHeader seeing a non-empty builder. Now that the two live in
+            // separate labels the builder is empty at PERF, so the gap has to be real
+            // spacing instead.
+            _text.style.marginTop = UiTheme.SPACE_SM;
             _panel.Add(_text);
 
             // Frame-time history strip: one polyline, redrawn on the refresh
@@ -334,6 +376,12 @@ namespace PoRacer.Views
                 return;
             }
 
+            // The verdict is built first and handed to its own wrapping label, then the
+            // builder is cleared and reused for the column-aligned instrumentation.
+            _builder.Clear();
+            AppendVerdict();
+            _verdictText.text = _builder.ToString();
+
             _builder.Clear();
             AppendPerf();
             AppendRender();
@@ -355,6 +403,187 @@ namespace PoRacer.Views
             }
             _builder.Append("<color=").Append(HEADER_COLOR).Append("><b>")
                 .Append(title).Append("</b></color>\n");
+        }
+
+        /// <summary>
+        /// One finding. <see cref="Severity"/> is what orders the sheet, so it has to
+        /// be comparable ACROSS kinds — it is expressed as "how many times over its
+        /// own budget is this", which puts a 3x frame overrun above a 1.2x GC overrun
+        /// without either needing to know the other exists.
+        /// </summary>
+        private readonly struct Finding
+        {
+            public readonly float Severity;
+            public readonly string Cause;
+            public readonly string Action;
+
+            public Finding(float severity, string cause, string action)
+            {
+                Severity = severity;
+                Cause = cause;
+                Action = action;
+            }
+        }
+
+        // Three is the useful number: enough to show a primary cause with its likely
+        // contributors, few enough that the verdict never pushes the numbers it is
+        // summarising off a 420 dp screen.
+        private const int MAX_FINDINGS = 3;
+        private readonly Finding[] _findings = new Finding[8];
+
+        /// <summary>
+        /// The plain-English answer to "what is wrong", worst cause first.
+        ///
+        /// Everything below this section is raw instrumentation: correct, dense, and
+        /// only readable by someone who already knows the budgets. That is the wrong
+        /// thing to hand someone holding a phone that feels bad — they have to know
+        /// that 47 ms is bad, that the fixed budget is 5 ms and not 20, and which of
+        /// the two explains the other. This section does that reading for them and
+        /// names the action, so the sheet answers a question instead of posing one.
+        ///
+        /// Findings are ranked by how far past budget each one is, not by section
+        /// order, because the biggest overrun is almost always the cause and the rest
+        /// are symptoms of it.
+        /// </summary>
+        private void AppendVerdict()
+        {
+            int count = 0;
+
+            float frameMs = 1000f / Mathf.Max(_fps, 0.01f);
+            float worstMs = 0f;
+            for (int sampleIndex = 0; sampleIndex < FRAME_SAMPLES; sampleIndex++)
+            {
+                if (_frameMs[sampleIndex] > worstMs)
+                {
+                    worstMs = _frameMs[sampleIndex];
+                }
+            }
+
+            // --- Frame rate ---
+            if (_fps > 0.01f && frameMs > FRAME_BUDGET_MS)
+            {
+                count = Add(count, new Finding(
+                    frameMs / FRAME_BUDGET_MS,
+                    $"Running at {_fps:0} FPS, under the 60 target.",
+                    "Check which line below is over budget — physics or draws."));
+            }
+
+            // A stutter is a separate complaint from a low average: the average can sit
+            // at target while a single 400 ms frame is the thing anyone actually feels.
+            if (worstMs > FRAME_BUDGET_MS * 3f)
+            {
+                count = Add(count, new Finding(
+                    worstMs / FRAME_BUDGET_MS,
+                    $"Worst frame in the last 2 s took {worstMs:0} ms — a visible stutter.",
+                    "If it was the first race, the warm-up missed a prefab."));
+            }
+
+            // --- Fixed loop ---
+            float fixedMs = PhysicsProbeView.ScriptMsPerFrame
+                + Mathf.Max(0f, PhysicsProbeView.PhysxMsPerFrame);
+            if (fixedMs > FixedBudgetMs)
+            {
+                count = Add(count, new Finding(
+                    fixedMs / Mathf.Max(FixedBudgetMs, 0.01f),
+                    $"Physics is taking {fixedMs:0.0} ms a frame against a {FixedBudgetMs:0.0} ms budget.",
+                    "Too many racers, or a rig with too many bodies. Cut the field size."));
+            }
+
+            // --- Allocation ---
+            float gcKb = _gcPerFrame.Valid ? _gcPerFrame.LastValue / 1024f : 0f;
+            if (gcKb >= 1f)
+            {
+                count = Add(count, new Finding(
+                    gcKb / 1f,
+                    $"Allocating {gcKb:0.0} KB every frame — this causes GC hitches.",
+                    "Something in an Update loop is allocating; the rule is zero."));
+            }
+
+            // --- Draws ---
+            if (_drawCalls.Valid && _drawCalls.LastValue > 300L)
+            {
+                count = Add(count, new Finding(
+                    _drawCalls.LastValue / 300f,
+                    $"{_drawCalls.LastValue} draw calls — over the 300 mobile budget.",
+                    "Materials are not batching. Check for per-instance material clones."));
+            }
+
+            // --- Brains ---
+            // Not a performance finding, but the one that silently ruins a race: a
+            // racer with no policy stands on the line and the field looks broken.
+            if (_brainsWithoutModel > 0)
+            {
+                count = Add(count, new Finding(
+                    2f,
+                    $"{_brainsWithoutModel} racer(s) have NO brain loaded and will not move.",
+                    "The .onnx is missing from the catalog entry, or inference was compiled out."));
+            }
+
+            // --- Audio ---
+            float reductionDb = MasterLimiterView.GainReductionDb;
+            if (reductionDb <= -12f)
+            {
+                count = Add(count, new Finding(
+                    Mathf.Abs(reductionDb) / 12f,
+                    $"Audio limiter is pulling {reductionDb:0.0} dB — the mix is clipping.",
+                    "Design volumes are summing too hot; trim the layers, not the limiter."));
+            }
+
+            // --- Time scale ---
+            if (!Mathf.Approximately(Time.timeScale, 1f))
+            {
+                count = Add(count, new Finding(
+                    3f,
+                    $"Time scale is {Time.timeScale:0.00}, not 1 — the race is not running at real speed.",
+                    "Something left a training or slow-motion scale set."));
+            }
+
+            AppendHeader("WHAT'S WRONG");
+            if (count == 0)
+            {
+                _builder.Append("<color=").Append(GOOD_COLOR)
+                    .Append(">All clear — nothing is over budget.</color>\n");
+                return;
+            }
+
+            int shown = count < MAX_FINDINGS ? count : MAX_FINDINGS;
+            for (int findingIndex = 0; findingIndex < shown; findingIndex++)
+            {
+                Finding finding = _findings[findingIndex];
+                // The worst one is the cause; the rest are usually its symptoms, so
+                // only the top line gets the alarm colour.
+                string color = findingIndex == 0 ? BAD_COLOR : WARN_COLOR;
+                _builder.Append("<color=").Append(color).Append('>')
+                    .Append(findingIndex + 1).Append(". ").Append(finding.Cause).Append("</color>\n");
+                _builder.Append("   <color=").Append(DIM_COLOR).Append('>')
+                    .Append(finding.Action).Append("</color>\n");
+            }
+            if (count > shown)
+            {
+                _builder.Append("<color=").Append(DIM_COLOR).Append(">+")
+                    .Append(count - shown).Append(" more below</color>\n");
+            }
+        }
+
+        /// <summary>
+        /// Insertion sort into <see cref="_findings"/>, worst first. Insertion rather
+        /// than append-then-sort because the list is capped at eight and allocating a
+        /// comparer on a 250 ms schedule would itself show up as the GC finding above.
+        /// </summary>
+        private int Add(int count, Finding finding)
+        {
+            if (count >= _findings.Length)
+            {
+                return count;
+            }
+            int slot = count;
+            while (slot > 0 && _findings[slot - 1].Severity < finding.Severity)
+            {
+                _findings[slot] = _findings[slot - 1];
+                slot--;
+            }
+            _findings[slot] = finding;
+            return count + 1;
         }
 
         private void AppendPerf()
@@ -419,13 +648,13 @@ namespace PoRacer.Views
             float scriptMs = PhysicsProbeView.ScriptMsPerFrame;
             float physxMs = PhysicsProbeView.PhysxMsPerFrame;
             float totalMs = scriptMs + Mathf.Max(0f, physxMs);
-            string totalColor = totalMs <= FIXED_BUDGET_MS * 0.5f ? GOOD_COLOR
-                : totalMs <= FIXED_BUDGET_MS ? WARN_COLOR : BAD_COLOR;
+            string totalColor = totalMs <= FixedBudgetMs * 0.5f ? GOOD_COLOR
+                : totalMs <= FixedBudgetMs ? WARN_COLOR : BAD_COLOR;
 
             AppendHeader("PHYSICS");
             _builder.Append("Fixed   <color=").Append(totalColor).Append('>')
                 .Append(totalMs.ToString("0.00")).Append(" ms</color>/frame  budget ")
-                .Append(FIXED_BUDGET_MS.ToString("0")).Append(" ms\n");
+                .Append(FixedBudgetMs.ToString("0")).Append(" ms\n");
             _builder.Append("        scripts ").Append(scriptMs.ToString("0.00")).Append(" ms  physx ");
             if (physxMs >= 0f)
             {
@@ -721,7 +950,7 @@ namespace PoRacer.Views
 
             Painter2D painter = context.painter2D;
             DrawBudgetRule(painter, width, height, worst, FRAME_BUDGET_MS, 0.25f);
-            DrawBudgetRule(painter, width, height, worst, FIXED_BUDGET_MS, 0.14f);
+            DrawBudgetRule(painter, width, height, worst, FixedBudgetMs, 0.14f);
 
             DrawSeries(painter, _fixedMs, width, height, worst, UiTheme.NeonCyan, 1.2f);
             DrawSeries(painter, _frameMs, width, height, worst, UiTheme.AccentSoft, 1.5f);

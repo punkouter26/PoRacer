@@ -29,8 +29,17 @@ namespace PoRacer.EditorTools
         private const string ADAPTIVE_FOREGROUND = ICON_DIR + "AppIcon_Adaptive_Foreground.png";
         private const string LEGACY = ICON_DIR + "AppIcon_Legacy.png";
 
-        private const string VERSION = "1.1.0";
-        private const int VERSION_CODE = 2;
+        private const string VERSION = "1.2.0";
+
+        /// <summary>
+        /// Floor for the version code, not the value. The builders own the counter
+        /// (<see cref="Editor_BuildAndroidAAB.BumpVersionCode"/> raises it per
+        /// artifact), so this step must never write a code LOWER than the one already
+        /// in ProjectSettings — doing that hands the next build a code a device or
+        /// Play has already seen, and the install is refused with no build-time error.
+        /// Raise this only to jump the counter forward deliberately.
+        /// </summary>
+        private const int VERSION_CODE_FLOOR = 2;
 
         public static void Apply()
         {
@@ -38,7 +47,8 @@ namespace PoRacer.EditorTools
             PlayerSettings.productName = "PoRacer";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, Editor_BuildAndroidAAB.APP_ID);
             PlayerSettings.bundleVersion = VERSION;
-            PlayerSettings.Android.bundleVersionCode = VERSION_CODE;
+            PlayerSettings.Android.bundleVersionCode =
+                Mathf.Max(VERSION_CODE_FLOOR, PlayerSettings.Android.bundleVersionCode);
 
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)36;
@@ -86,7 +96,8 @@ namespace PoRacer.EditorTools
             AssetDatabase.SaveAssets();
 
             Debug.Log($"ANDROID CONFIG RESULT: id={Editor_BuildAndroidAAB.APP_ID} v{VERSION} " +
-                      $"(code {VERSION_CODE}) min=26 target=36 arch=ARM64 IL2CPP " +
+                      $"(code {PlayerSettings.Android.bundleVersionCode}, floor {VERSION_CODE_FLOOR}) " +
+                      $"min=26 target=36 arch=ARM64 IL2CPP " +
                       $"tex=ASTC strip=Low codegen=OptimizeSize | {iconReport}");
         }
 

@@ -48,6 +48,8 @@ namespace PoRacer.EditorTools
             }
             models.Sort((first, second) => string.CompareOrdinal(first.name, second.name));
 
+            int madeReadable = EnsureReadable(models);
+
             var catalog = AssetDatabase.LoadAssetAtPath<FruitCatalog>(CATALOG_PATH);
             if (catalog == null)
             {
@@ -78,7 +80,51 @@ namespace PoRacer.EditorTools
             {
                 return "SaveScene failed for " + SCENE_PATH;
             }
-            return $"{CATALOG_PATH}: {models.Count} models, wired into {SCENE_PATH}";
+            return $"{CATALOG_PATH}: {models.Count} models, wired into {SCENE_PATH}" +
+                   (madeReadable > 0 ? $", {madeReadable} made read/write" : ", all already read/write");
+        }
+
+        /// <summary>
+        /// Turns Read/Write on for every model in the catalog, and returns how many
+        /// needed it.
+        ///
+        /// WHY THIS IS NOT OPTIONAL. Systems_FruitPour builds each piece's collider at
+        /// RUNTIME - it adds a MeshCollider and assigns filter.sharedMesh. Cooking that
+        /// collider needs the mesh's vertex data on the CPU, and a player build throws
+        /// that copy away after uploading to the GPU unless the mesh is marked
+        /// readable. So on device the assignment silently produced a MeshCollider with
+        /// no cooked geometry: the fruit had NO COLLISION AT ALL and fell straight
+        /// through the road and the scene.
+        ///
+        /// It does not reproduce in the Editor, which keeps mesh data loaded for every
+        /// asset regardless of the flag - so the shower looks correct right up until it
+        /// is on a phone. That is the whole signature of this bug.
+        ///
+        /// The memory it costs is negligible here: the pack's meshes run 264 to 1804
+        /// triangles (the "_low" scans), so the CPU copies are a rounding error against
+        /// the textures. Anything authored to be collided with at runtime has to carry
+        /// this flag; prefer this over rebuilding colliders as primitives, which would
+        /// throw away the per-scan shape that makes a carrot skid and a pumpkin roll.
+        /// </summary>
+        private static int EnsureReadable(List<GameObject> models)
+        {
+            int changed = 0;
+            for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
+            {
+                string path = AssetDatabase.GetAssetPath(models[modelIndex]);
+                if (string.IsNullOrEmpty(path))
+                {
+                    continue;
+                }
+                if (AssetImporter.GetAtPath(path) is not ModelImporter importer || importer.isReadable)
+                {
+                    continue;
+                }
+                importer.isReadable = true;
+                importer.SaveAndReimport();
+                changed++;
+            }
+            return changed;
         }
     }
 }

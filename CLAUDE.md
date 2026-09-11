@@ -139,6 +139,21 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   scale is multiplied, never replaced). They pile up until the next race starts or the
   menu returns. `Editor_BuildFruitCatalog.Build()` lists every model in
   `Assets/Settings/FruitCatalog.asset` and wires it into `GameLifetimeScope`. No sound.
+- **A RUNTIME MeshCollider NEEDS A READ/WRITE MESH, and the failure is silent
+  (2026-09-11).** The produce fell straight through the road and the scene on device.
+  `Systems_FruitPour` cooks each piece's convex hull at runtime — it adds a
+  `MeshCollider` and assigns `filter.sharedMesh` — and cooking needs the mesh's vertex
+  data on the CPU. **A player build throws that copy away after the GPU upload unless
+  the model is imported Read/Write Enabled**, and all 141 KIRI models shipped with it
+  off. Assigning a non-readable mesh does not throw: it yields a `MeshCollider` with no
+  cooked geometry, so the fruit had *no collision at all*.
+  **It cannot reproduce in the Editor**, which keeps mesh data loaded for every asset
+  regardless of the flag — so the shower looks perfect until it is on a phone. That
+  asymmetry is the whole signature; suspect it for anything collided with at runtime.
+  `Editor_BuildFruitCatalog` now asserts `isReadable` on the whole pack every time it
+  runs, and `Systems_FruitPour` skips a non-readable mesh, falls back to a sphere so
+  the produce still bounces, and warns once. The memory is a rounding error here — the
+  `_low` scans are 264-1804 triangles. CCD was already on and was never the problem.
 - **The Acrobat course (2026-09-04).** `Assets/Art/Models/AcrobatTrack.glb` is an
   authored mountain road (Blender source in `Assets/Art/Models/Source~/`, hidden from
   Unity by the tilde): 55 centreline knots, four start markers, checkpoint and finish
@@ -745,7 +760,7 @@ shipping on the punkouter27 Play account.
 | Property | Value |
 |---|---|
 | Application id | `com.punkoutersoftware.poracer` |
-| Version / code | `1.0.0` / `1` — bump `VERSION_CODE` in `Editor_ConfigureAndroidRelease` for every upload; Play rejects a reused code |
+| Version / code | `1.2.0` / auto — **the version code is no longer a constant.** Both builders call `Editor_BuildAndroidAAB.BumpVersionCode()`, so every artifact gets a fresh code without anyone remembering to edit one. `VERSION_CODE_FLOOR` in `Editor_ConfigureAndroidRelease` is a floor, not a value: `Apply()` takes `Max(floor, current)` so re-running configure can never hand the next build a code a device or Play has already seen. A reused code fails in two different silent ways — Play rejects the upload after the fact, and Android just declines to install — and both read as "the build worked but the device didn't update" |
 | min / target SDK | 26 / 36 (Play requires target 36 for new uploads from 2026-08-31) |
 | Architecture | ARM64, IL2CPP, Release |
 | Orientation | Portrait is locked in `Editor_ConfigureAndroidRelease`. |
@@ -763,7 +778,42 @@ shipping on the punkouter27 Play account.
 
 Unity does not serialize keystore passwords into `ProjectSettings`, so both Android
 builders read `PORACER_KEYSTORE_PASS` first and fall back to the `.pass` file.
-Without either, the build **aborts** rather than producing an unsigned artifact.
+
+### THE UPLOAD KEY IS GONE (found 2026-09-11)
+
+`C:/Users/punko/Downloads/PoRacer-Release/` **does not exist on this machine**, and
+nothing in it was ever copied anywhere else. Searched and confirmed empty-handed:
+the whole `Downloads` tree, all of OneDrive, and every `*.jks` / `*.pass` under the
+user profile.
+
+The sibling projects' keys survived because they were consolidated on 2026-09-02 into
+`C:\Users\punko\OneDrive\VAULT\_CODE\` (see `KEYSTORES-README.txt` there, which
+records the rules and the two keys it holds). **PoRacer was never added to that
+consolidation** — the README lists `poflag-*` and `posumo-*` and nothing else — and
+the `PoRacer-Release` folder was deleted afterwards along with the other staging
+folders. That is the whole story: the key was left out of the move and then the
+original was cleaned up.
+
+**This is recoverable, for now.** PoRacer has never been uploaded to Play (the
+"needs a human in a browser" list below is still entirely unticked), so no listing
+is bound to the lost key and a freshly generated one is still enrollable. The moment
+a first bundle is uploaded under a new key, that new key becomes as irreplaceable as
+PoSumo's. So: **generate the replacement into the VAULT, not into a `-Release`
+folder**, name it `poracer-upload.{jks,pass,pem}`, pin it (`attrib +P -U`), add it to
+`KEYSTORES-README.txt`, and point `KEYSTORE_PATH` at the vault — then the next
+cleanup cannot repeat this.
+
+Until that happens the two builders diverge deliberately:
+
+| Builder | No key present |
+|---|---|
+| `Editor_BuildAndroidAAB` (.aab, for Play) | **aborts** — a debug-signed bundle is worthless to Play and shipping one silently is the real failure |
+| `Editor_BuildAndroid` (.apk, for adb) | **falls back to Gradle's debug key** and logs a `BUILD SIGNING:` warning — the sideload artifact only has to run on a device |
+
+The cost of that fallback is that a debug-signed APK **cannot install over a
+release-signed one**; Android rejects the signature change, so the device install
+needs an uninstall first and the app's telemetry is lost with it. `Tools/deploy_device.ps1`
+pulls telemetry *before* it uninstalls for exactly this reason.
 
 ### Two device-only traps found on the 1.1.0 build (2026-09-04)
 
@@ -811,6 +861,29 @@ verify afterwards that every accessor payload is byte-identical — geometry mus
 And glTFast materials use `Shader Graphs/glTF-pbrMetallicRoughness` with `baseColorTexture`
 and `normalTexture`, **not** URP Lit's `_BaseMap`: checking the wrong property makes a
 perfectly good rig look untextured.
+
+**THIS REGRESSES EVERY TIME A NEW .glb ARRIVES — it is a standing chore, not a
+one-off fix (2026-09-11).** `ApartmentTrack.glb` landed on 2026-09-07, three days
+after the downscale pass, carrying **three 4080x3072 phone photographs**
+(`PXL_20260907_*`) as apartment surfaces. Nothing catches this: the importer has no
+say over a .glb's textures, the file is only 25 MB on disk, and the build does not
+warn. It cost **+152 MB of Texture2D** and took the APK from the recorded 57.6 MB to
+**167.6 MB**. Running the tool on that one file took it back to **102.6 MB**
+(textures 244.1 -> ~92 MB), and `AcrobatTrack.glb` and `Boy_Character_mujoco.glb`
+both reported 0.0 MB saved because the earlier pass had already capped them.
+
+So: **run `Tools/downscale_glb_textures.py --dry-run` on every new .glb before it is
+committed.** To find where a payload actually went, read the build report rather than
+guessing — `Library/LastBuild.buildreport` copied into `Assets/` and loaded as a
+`BuildReport` gives `packedAssets`, which names the source asset of every entry:
+
+```
+Texture2D = 244.1 MB   <- grouped by e.type.Name
+47.8 MB  Assets/Art/Models/ApartmentTrack.glb   <- x3, grouped by e.sourceAssetPath
+```
+
+Verify geometry survived the rewrite by comparing accessor payloads between the old
+and new file (5242 accessors, 2139 meshes, 2152 nodes here, 0 mismatches).
 
 ### There are no editor menu items — invoke by method
 
@@ -860,9 +933,38 @@ normally when the editor is in play mode or the keystore is missing.
 | Tool | What it does |
 |---|---|
 | `Editor_ConfigureAndroidRelease.Apply()` | One-shot: identity, SDK levels, orientation, and the launcher icons (adaptive + round + legacy, 6 densities) from `Assets/Icons/`. Re-run after changing icon art |
+| `Editor_BuildAndroidAAB.BumpVersionCode()` | Raises `bundleVersionCode` by one and saves. Called by BOTH builders, so the code tracks artifacts produced |
 | `Editor_BuildAsync.Start("aab")` | Queues `Editor_BuildAndroidAAB.Build()` and returns; poll `Editor_BuildAsync.Status()`. Signed bundle → `Builds/Android/PoRacer.aab` |
 | `Editor_BuildAsync.Start("apk")` | Queues `Editor_BuildAndroid.Build()`; sideloadable APK on the SAME key, so it installs over a Play build → `Builds/Android/PoRacer.apk` |
 | `Tools/play_publish.py` | Uploads a built AAB. Defaults to the `internal` track as a `draft`; `--dry-run` rehearses and discards |
+| `Tools/deploy_device.ps1` | Installs the APK on the connected device, drives menu -> roster -> race -> debug sheet, and collects screenshots, logcat and telemetry into `Logs/device/`. `-Reinstall` uninstalls first (needed while the APK is debug-signed) |
+
+### Driving the device: three traps, all silent (2026-09-11)
+
+Every one of these produces evidence that looks real and is wrong, which is worse
+than an error:
+
+- **A LOCKED PHONE DOES NOT FAIL, IT LIES.** The install succeeds, the app launches,
+  and `dumpsys window` even reports `mFocusedApp=...UnityPlayerGameActivity` — but
+  the keyguard is drawn over it, so every `screencap` is a photo of the lock screen
+  and every `input tap` goes to the keyguard. A whole verification run completed and
+  produced four screenshots of a weather widget. `wm dismiss-keyguard` only works on
+  an INSECURE lock; against a fingerprint it does nothing. `deploy_device.ps1` now
+  checks `dumpsys trust` for `deviceLocked=1` and refuses up front.
+  `adb shell settings put global stay_on_while_plugged_in 3` keeps it from re-locking
+  mid-run (it was `2` here; restore it if that matters).
+- **Tap fractions must be the CENTRE of a control, not its edge.** 0.93 of screen
+  height looked like "the bottom button" and is actually its bottom border, so the
+  tap was swallowed and the next screenshot showed the screen we were already on —
+  which reads as a hung app. Measured on a 960x2142 panel the bottom primary action
+  centres at **0.896**, and DBG at **0.085, 0.954**.
+- **`-match "Error"` over a whole logcat is not an error count.** It reported 294
+  lines, essentially all of them Finsky and CrashRecovery noise. Attribute by TAG
+  (`E Unity`, `E AndroidRuntime`, `libc`, `DEBUG`) and then subtract the two
+  known-harmless entries — the `TensorProxy` finalizer NRE and the
+  `AssetPackManager` ClassNotFoundException (Unity probing for Play Asset Delivery,
+  which a sideloaded APK does not use). Done properly the same run reports **0 real
+  errors**.
 
 `Tools/play_publish.py` needs its own venv (`Tools/publish-venv`). Do not install it
 into `.venv` — that one carries load-bearing ml-agents/torch pins, and the C#/Python
