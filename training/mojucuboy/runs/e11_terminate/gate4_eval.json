@@ -1,0 +1,26 @@
+{
+  "randomised": {
+    "episodes": 100,
+    "mean_episode_length": 1000.0,
+    "median_episode_length": 1000.0,
+    "survival_rate": 1.0,
+    "survivors": 100,
+    "mean_forward_speed": 0.948368489742279,
+    "mean_return": 1972.193115234375,
+    "mean_uptime": 0.6791406869888306,
+    "mean_fallen": 0.2884799838066101,
+    "uptime_over_90pct": 0.7099999785423279
+  },
+  "nominal": {
+    "episodes": 100,
+    "mean_episode_length": 1000.0,
+    "median_episode_length": 1000.0,
+    "survival_rate": 1.0,
+    "survivors": 100,
+    "mean_forward_speed": 0.934932291507721,
+    "mean_return": 1978.589599609375,
+    "mean_uptime": 0.6795519590377808,
+    "mean_fallen": 0.28843000531196594,
+    "uptime_over_90pct": 0.7099999785423279
+  }
+}

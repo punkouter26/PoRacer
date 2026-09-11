@@ -18,6 +18,7 @@ and in the game.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import mujoco
@@ -103,7 +104,14 @@ class MojucuBoyEnv:
                  two_sided_speed: bool = False,
                  upright_weight: float = W_UPRIGHT,
                  reset_fallen_fraction: float = RESET_FALLEN_FRACTION,
-                 terminate_on_fall: bool = False):
+                 terminate_on_fall: bool = False,
+                 sprawl_max_tilt: float = math.pi,
+                 command_speed_range: tuple = None,
+                 scale_drift: float = SCALE_DRIFT,
+                 ctrl_weight: float = W_CTRL,
+                 drift_yaw_weight: float = 1.0,
+                 heading_weight: float = W_HEADING,
+                 drift_weight: float = W_DRIFT):
         self.num_worlds = num_worlds
         self.device = torch.device(device)
         # W_UPRIGHT is the only positive term NOT gated on `standing`, so while
@@ -116,6 +124,62 @@ class MojucuBoyEnv:
         self.upright_weight = upright_weight
         self.reset_fallen_fraction = reset_fallen_fraction
         self.terminate_on_fall = terminate_on_fall
+        # Largest tilt off vertical a sprawl start may use, radians. pi = the shipped
+        # fully-random orientation; smaller values are the difficulty curriculum the
+        # trainer ramps. Settable per-iteration, so one run can walk it up.
+        self.sprawl_max_tilt = float(sprawl_max_tilt)
+        # (low, high) m/s to sample the commanded speed from per episode, or None
+        # for the shipped fixed TARGET_SPEED. See the note in reset() -- a constant
+        # command is an observation with zero variance, which is an observation the
+        # policy cannot learn to use (M11).
+        self.command_speed_range = command_speed_range
+        # SCALE_DRIFT and W_CTRL, overridable. Both were measured in M14 to sit far
+        # below the range where they influence anything for a TRAINED policy: the
+        # drift tanh operates at 2-5 %% of its range (contributing 0.004-0.008 against
+        # W_TRACK 1.8), and the un-saturated ctrl cost contributes 0.0004-0.004. The
+        # scales were calibrated against random-action rollouts, which drift ~30x more
+        # than a competent policy does.
+        self.scale_drift = float(scale_drift)
+        self.ctrl_weight = float(ctrl_weight)
+        # How much of the drift penalty is YAW RATE, as opposed to lateral velocity.
+        # 1.0 reproduces the shipped `drift = lateral^2 + yaw_rate^2`.
+        #
+        # These two quantities were conflated into one penalty, and they are not the
+        # same thing: lateral velocity is pure waste, but YAW RATE IS HOW A RACER
+        # CORRECTS ITS HEADING. Measured, going from scale_drift 8.0 to 0.5 (which is
+        # the M16 fix for K5):
+        #
+        #     K5 lateral   0.365 -> 0.225  (gate < 0.25)   PASSES
+        #     K4 heading   13.5  -> 16.7 deg (gate < 15)   now FAILS
+        #                          22.3 deg at command 2.0
+        #
+        # So strengthening the penalty bought K5 by suppressing the yaw corrections
+        # K4 depends on. Splitting the term lets lateral drift be priced without
+        # taxing heading control.
+        self.drift_yaw = float(drift_yaw_weight)
+        # W_HEADING, overridable. Never varied in this project's history, and it is the
+        # only term that pays for heading accuracy DIRECTLY. It matters because K4 and
+        # K5 were measured to trade along a frontier that misses the gate corner:
+        #
+        #   scale_drift 8.0 -> K4 13.5 pass / K5 0.391 fail
+        #   scale_drift 1.5 -> K4 14.2 pass / K5 0.311 fail
+        #   scale_drift 1.0 -> K4 15.4 fail / K5 0.260 fail   <- closest approach
+        #
+        # so no setting of scale_drift satisfies K4 < 15 AND K5 < 0.25. Raising the
+        # heading term buys K4 without relaxing the drift pressure K5 needs.
+        self.heading_weight = float(heading_weight)
+        # W_DRIFT, overridable. Never varied in this project's history -- only the
+        # NORMALISER inside the tanh (`scale_drift`) was ever swept, which changes where
+        # the penalty saturates, not what it is worth. At the shipped 0.15 the drift
+        # penalty is at most 0.15 per step against a ~2.2 positive budget: under 7% even
+        # fully saturated, so K5 was being chased with a term that cannot pay for itself.
+        #
+        # This is the same oversight as W_HEADING, which sat at 0.4 untouched while K4
+        # was chased through the drift term -- and raising W_HEADING to 1.6 solved K4
+        # immediately. Raising the weight also avoids the failure mode of lowering
+        # scale_drift: that saturates the tanh early and flattens the gradient, which is
+        # how f21a/m25a collapsed. Scaling the weight keeps the gradient's shape.
+        self.drift_weight = float(drift_weight)
         # See _reward. The shipped brain runs at 2.04 m/s against a 1.5 m/s
         # command because the tracking kernel clamps positive error away, so
         # overshoot is free. Setting this makes the kernel symmetric, which is
@@ -278,10 +342,42 @@ class MojucuBoyEnv:
         if fallen.any():
             picked = index[fallen]
             m = picked.numel()
-            # A random orientation, dropped just clear of the floor: face down, on
-            # its back and everything between.
-            quat = torch.randn(m, 4, generator=self.generator, device=self.device)
-            quat = quat / quat.norm(dim=1, keepdim=True).clamp_min(1e-6)
+            if self.sprawl_max_tilt >= math.pi - 1e-6:
+                # A random orientation, dropped just clear of the floor: face down, on
+                # its back and everything between. This is the shipped behaviour and
+                # what E11-E13 all trained against.
+                quat = torch.randn(m, 4, generator=self.generator, device=self.device)
+                quat = quat / quat.norm(dim=1, keepdim=True).clamp_min(1e-6)
+            else:
+                # DIFFICULTY-LIMITED sprawl: tilt off vertical by at most
+                # `sprawl_max_tilt`, about a random horizontal axis.
+                #
+                # E11, E12 and E13 escalated the FREQUENCY of sprawl starts
+                # (0.0 -> 0.3 -> 0.6) and never once varied their DIFFICULTY: every
+                # one was a fully random quaternion. Measured by K10, all three
+                # learned nothing -- 0 % recovery, and `ever_stood_again` also 0 %,
+                # so the policy never even transiently reached standing from the
+                # floor in 35 episodes x ~950 steps.
+                #
+                # That is an exploration failure, not a reward failure: the payoff
+                # for standing is large and dense (W_GETUP 0.6 + W_TRACK 2.0 both
+                # scale with `standing`), but from supine the motor sequence that
+                # reaches it is long and specific, and random exploration never
+                # finds it. A tilt bound makes the first rung of the ladder short
+                # enough to stumble onto, and the ramp keeps it that way.
+                axis_angle = (torch.rand(m, generator=self.generator, device=self.device)
+                              * 2 * math.pi)
+                tilt = (torch.rand(m, generator=self.generator, device=self.device)
+                        * self.sprawl_max_tilt)
+                half = tilt * 0.5
+                sin_half = torch.sin(half)
+                quat = torch.stack([
+                    torch.cos(half),
+                    sin_half * torch.cos(axis_angle),
+                    sin_half * torch.sin(axis_angle),
+                    torch.zeros_like(half),
+                ], dim=1)
+                quat = quat / quat.norm(dim=1, keepdim=True).clamp_min(1e-6)
             qpos[picked[:, None], torch.arange(3, 7, device=self.device)[None, :]] = quat.to(qpos.dtype)
             # Drop from clear air, do NOT teleport to floor height. At an arbitrary
             # orientation the body reaches ~0.5 m from the hips, so placing the root
@@ -303,7 +399,26 @@ class MojucuBoyEnv:
         # scene, a 90 degree correction put him on the floor in under 5 seconds.
         self.command_heading[index] = yaw + (
             torch.rand(n, generator=self.generator, device=self.device) * 2 - 1) * torch.pi
-        self.command_speed[index] = TARGET_SPEED
+        # Commanded speed, sampled per episode when a band is configured.
+        #
+        # It was a hardcoded TARGET_SPEED on every reset, which made observation
+        # index 11 CONSTANT across all training -- zero variance, so RunningNorm
+        # held var ~ 0 for it and any other value normalised to a saturated +/-10.
+        # The policy therefore never learned what the input means: E12 tracks 1.5
+        # m/s beautifully (-1.1 %) and collapses to 0.325 m/s when commanded 2.0
+        # (M11). The observation was decoration, and one Unity setter away from
+        # crippling every MuJoCo racer.
+        #
+        # Sampling it gives the input real variance, which is what makes it
+        # learnable -- and a policy that genuinely tracks a command is worth more
+        # than either current brain, because the game can then choose the pace.
+        if self.command_speed_range is None:
+            self.command_speed[index] = TARGET_SPEED
+        else:
+            low, high = self.command_speed_range
+            self.command_speed[index] = (
+                low + torch.rand(n, generator=self.generator, device=self.device) * (high - low)
+            ).to(self.command_speed.dtype)
 
         self._randomise(index)
 
@@ -443,7 +558,29 @@ class MojucuBoyEnv:
         accel = ((joint_qvel - prev_joint_qvel.float()) / self.dt).pow(2).sum(dim=1)
         action_rate = (self.last_action - self.prev_action).pow(2).mean(dim=1)
         ctrl_cost = self.last_action.pow(2).mean(dim=1)
-        drift = lateral.pow(2) + qvel[:, 5].float().pow(2)
+
+        # APPLIED TORQUE, which is what "control effort" is supposed to mean.
+        #
+        # `ctrl_cost` above is the mean squared ACTION, and the actuators are position
+        # servos -- `<general biastype="affine" gainprm="1200 0 0"
+        # biasprm="0 -1200 -78.43" ctrlrange="+-45deg" forcerange="+-200">`, so
+        # force = 1200*(ctrl - qpos) - 78.43*qvel clamped to +-200 N.m. `ctrl` is a
+        # commanded JOINT ANGLE, not a torque, and the servo saturates at a position
+        # error of only 200/1200 = 0.167 rad = 9.5 deg. So `ctrl_cost` measures how
+        # extreme a POSE the policy asks for, which is not the same quantity as how
+        # hard the actuators work, and beyond 9.5 deg of error it is not even
+        # monotonically related to it.
+        #
+        # CLAUDE.md states this exact principle as a project rule: "Read load directly
+        # from applied torque, not the action vector (isometric bracing produces
+        # near-zero action at near-maximum torque)." K6 has been measured against the
+        # action vector for this project's whole history, in violation of it.
+        #
+        # Reported, never charged: adding it to `reward` would change what every
+        # policy optimises and break comparability with every run already recorded.
+        torque = wp.to_torch(self.wd.qfrc_actuator).float()[:, self.dof_addr]
+        torque_cost = torque.pow(2).mean(dim=1)
+        drift = lateral.pow(2) + self.drift_yaw * qvel[:, 5].float().pow(2)
 
         # Impact, expressed as constraint force in units of body weight. The raw
         # qfrc_constraint includes the ground reaction that simply holds the racer
@@ -463,12 +600,12 @@ class MojucuBoyEnv:
 
         reward = (
             W_TRACK * track * standing
-            + W_HEADING * facing.clamp(min=0.0) * standing
+            + self.heading_weight * facing.clamp(min=0.0) * standing
             + self.upright_weight * obs_gravity_z.clamp(min=0.0)
             + W_GETUP * standing
             + W_ALIVE
-            - W_DRIFT * torch.tanh(drift / SCALE_DRIFT)
-            - W_CTRL * ctrl_cost
+            - self.drift_weight * torch.tanh(drift / self.scale_drift)
+            - self.ctrl_weight * ctrl_cost
             - W_ACCEL * torch.tanh(accel / SCALE_ACCEL)
             - W_IMPACT * torch.tanh(impact)
             - W_ACTION_RATE * action_rate
@@ -482,6 +619,8 @@ class MojucuBoyEnv:
             "drift": drift, "accel": accel, "impact": impact,
             "standing": standing, "fallen": fallen_now,
             "ctrl": ctrl_cost, "action_rate": action_rate,
+            # The honest control-effort measure; see the note beside torque_cost.
+            "torque": torque_cost, "torque_abs": torque.abs().mean(dim=1),
             "lateral": lateral.abs(), "upright": obs_gravity_z.clamp(min=0.0),
             "height": height,
         }

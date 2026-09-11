@@ -1,0 +1,66 @@
+TensorBoard: http://localhost:6006/  (logdir C:\Users\punko\Downloads\PoRacer\training\mojucuboy\runs)
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 2060" (6 GiB, sm_75, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\punko\AppData\Local\NVIDIA\warp\Cache\1.17.0
+resumed from e15_best at iteration 700
+run e18a_allon: 4096 worlds x 24 steps = 98304 samples/iter
+Module mujoco_warp._src.smooth 8c63ed1 load on device 'cuda:0' took 4.40 ms  (cached)
+Module _nxn_broadphase__locals__kernel_04e59282 04e5928 load on device 'cuda:0' took 1.04 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_e2b04b3d e2b04b3 load on device 'cuda:0' took 3.73 ms  (cached)
+Module ccd_kernel_builder__locals__ccd_kernel_e2b04b3d 97ccd4b load on device 'cuda:0' took 3.01 ms  (cached)
+Module _primitive_narrowphase__locals__primitive_narrowphase_fd668c2e fd668c2 load on device 'cuda:0' took 2.11 ms  (cached)
+Module mujoco_warp._src.constraint 8d4d513 load on device 'cuda:0' took 1.28 ms  (cached)
+Module _friction_dof__locals__kernel_f5f6cb7e f5f6cb7 load on device 'cuda:0' took 1.35 ms  (cached)
+Module _limit_slide_hinge__locals__kernel_3fb01e2e 3fb01e2 load on device 'cuda:0' took 1.09 ms  (cached)
+Module _efc_contact_init__locals__kernel_473c42e6 473c42e load on device 'cuda:0' took 0.99 ms  (cached)
+Module _efc_contact_jac_dense__locals__kernel_b0c1fdf8 5fcbd59 load on device 'cuda:0' took 1.45 ms  (cached)
+Module _efc_contact_update__locals__kernel_73455435 7345543 load on device 'cuda:0' took 1.10 ms  (cached)
+Module mujoco_warp._src.forward e25d035 load on device 'cuda:0' took 2.62 ms  (cached)
+Module mujoco_warp._src.passive c0239e8 load on device 'cuda:0' took 2.22 ms  (cached)
+Module _qfrc_passive_kernel__locals__kernel_976399dd 976399d load on device 'cuda:0' took 1.00 ms  (cached)
+Module mujoco_warp._src.forward 0538b10 load on device 'cuda:0' took 2.61 ms  (cached)
+Module _qfrc_smooth__locals__kernel_8b823980 8b82398 load on device 'cuda:0' took 0.91 ms  (cached)
+Module mujoco_warp._src.support 770ef7d load on device 'cuda:0' took 1.11 ms  (cached)
+Module _tile_cholesky_factorize_solve_block__locals__kernel_72509aa7 96b6cf8 load on device 'cuda:0' took 74.40 ms  (cached)
+Module _solve_init_dof__locals__kernel_021c7a0e 021c7a0 load on device 'cuda:0' took 1.35 ms  (cached)
+Module mujoco_warp._src.solver 6f966b9 load on device 'cuda:0' took 2.11 ms  (cached)
+Module _solve_init_jaref_kernel__locals__kernel_e2cea4fa e2cea4f load on device 'cuda:0' took 1.02 ms  (cached)
+Module mul_m_kernel__locals___mul_m_f3de1cc7 f3de1cc load on device 'cuda:0' took 1.38 ms  (cached)
+Module _update_constraint_efc__locals__kernel_0539aa50 0539aa5 load on device 'cuda:0' took 1.21 ms  (cached)
+Module _update_constraint_init_qfrc_constraint_dense__locals__kernel_bd7ca2ec bd7ca2e load on device 'cuda:0' took 1.29 ms  (cached)
+Module _update_gradient_zero_grad_dot__locals__kernel_b20934d7 b20934d load on device 'cuda:0' took 0.98 ms  (cached)
+Module _update_gradient_grad__locals__kernel_c876081d c876081 load on device 'cuda:0' took 0.94 ms  (cached)
+Module _update_gradient_JTDAJ_dense_tiled__locals__kernel_f8d61a86 e5b8745 load on device 'cuda:0' took 2.29 ms  (cached)
+Module _update_gradient_cholesky__locals__kernel_f20122f4 3777448 load on device 'cuda:0' took 76.29 ms  (cached)
+Module _linesearch_iterative_kernel__locals__kernel_f405cf4e bd6a3fb load on device 'cuda:0' took 1.64 ms  (cached)
+Module _update_constraint_efc__locals__kernel_e953547e e953547 load on device 'cuda:0' took 1.13 ms  (cached)
+Module _update_constraint_init_qfrc_constraint_dense__locals__kernel_d92a3413 d92a341 load on device 'cuda:0' took 0.99 ms  (cached)
+Module _update_gradient_zero_grad_dot__locals__kernel_e9f8c963 e9f8c96 load on device 'cuda:0' took 0.93 ms  (cached)
+Module _update_gradient_grad__locals__kernel_87959044 8795904 load on device 'cuda:0' took 0.96 ms  (cached)
+Module _update_gradient_cholesky__locals__kernel_c1329b5b 11a8741 load on device 'cuda:0' took 74.25 ms  (cached)
+Module _solve_done__locals__kernel_ee21dcc3 ee21dcc load on device 'cuda:0' took 1.44 ms  (cached)
+Module mujoco_warp._src.derivative 339dfbe load on device 'cuda:0' took 2.03 ms  (cached)
+Module _next_time_builder__locals___next_time_6a85bd47 6a85bd4 load on device 'cuda:0' took 1.25 ms  (cached)
+iter    5  steps    0.49M  trk 0.78  vel  1.03 m/s  hdg  25.3deg  lat 0.32  upr 0.86  std 0.78     34k steps/s
+iter   10  steps    0.98M  trk 0.79  vel  1.05 m/s  hdg  23.6deg  lat 0.40  upr 0.86  std 0.78     34k steps/s
+iter   15  steps    1.47M  trk 0.79  vel  1.07 m/s  hdg  24.6deg  lat 0.41  upr 0.86  std 0.77     32k steps/s
+iter   20  steps    1.97M  trk 0.69  vel  1.07 m/s  hdg  25.2deg  lat 0.44  upr 0.85  std 0.77     29k steps/s
+iter   25  steps    2.46M  trk 0.79  vel  1.04 m/s  hdg  24.4deg  lat 0.24  upr 0.85  std 0.77     26k steps/s
+iter   30  steps    2.95M  trk 0.79  vel  1.04 m/s  hdg  24.4deg  lat 0.19  upr 0.85  std 0.77     23k steps/s
+iter   35  steps    3.44M  trk 0.79  vel  1.03 m/s  hdg  24.6deg  lat 0.17  upr 0.86  std 0.77     21k steps/s
+iter   40  steps    3.93M  trk 0.79  vel  1.04 m/s  hdg  25.8deg  lat 0.24  upr 0.85  std 0.77     19k steps/s
+iter   45  steps    4.42M  ret 1769.98  len 1000.0  spd  1.01 m/s  fall 0.24  trk 0.63  vel  0.65 m/s  hdg  41.8deg  lat 0.37  upr 0.74  std 0.69     19k steps/s
+iter   50  steps    4.92M  trk 0.67  vel  0.81 m/s  hdg  37.0deg  lat 0.30  upr 0.76  std 0.66     18k steps/s
+iter   55  steps    5.41M  trk 0.58  vel  0.80 m/s  hdg  36.4deg  lat 0.37  upr 0.77  std 0.66     17k steps/s
+iter   60  steps    5.90M  trk 0.68  vel  0.81 m/s  hdg  36.1deg  lat 0.17  upr 0.77  std 0.66     17k steps/s
+iter   65  steps    6.39M  trk 0.69  vel  0.83 m/s  hdg  36.6deg  lat 0.16  upr 0.78  std 0.66     17k steps/s
+iter   70  steps    6.88M  trk 0.69  vel  0.85 m/s  hdg  37.2deg  lat 0.20  upr 0.77  std 0.66     16k steps/s
+iter   75  steps    7.37M  trk 0.67  vel  0.86 m/s  hdg  37.6deg  lat 0.25  upr 0.77  std 0.66     16k steps/s
+iter   80  steps    7.86M  trk 0.59  vel  0.84 m/s  hdg  36.4deg  lat 0.33  upr 0.77  std 0.66     16k steps/s
+iter   85  steps    8.36M  ret 1446.16  len 1000.0  spd  0.79 m/s  fall 0.36  trk 0.43  vel  0.35 m/s  hdg  64.4deg  lat 0.37  upr 0.86  std 0.81     16k steps/s
+iter   90  steps    8.85M  trk 0.68  vel  0.89 m/s  hdg  32.7deg  lat 0.27  upr 0.81  std 0.72     15k steps/s
+iter   95  steps    9.34M  trk 0.73  vel  0.90 m/s  hdg  32.1deg  lat 0.15  upr 0.82  std 0.71     15k steps/s

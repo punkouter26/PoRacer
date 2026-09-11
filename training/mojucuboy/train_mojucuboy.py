@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import socket
@@ -42,6 +43,9 @@ HIDDEN = (128, 128, 128)
 KPI_TERMS = (
     "track", "facing", "speed_along", "drift", "lateral",
     "accel", "impact", "ctrl", "action_rate", "upright", "standing", "height",
+    # `torque`/`torque_abs` are the APPLIED-TORQUE measures. `ctrl` is the commanded
+    # joint angle and is not the same quantity -- see mojucuboy_env.py.
+    "torque", "torque_abs",
 )
 KPI_LOGGED = KPI_TERMS + ("heading_err_deg",)
 
@@ -142,11 +146,42 @@ def start_tensorboard(logdir: Path, port: int):
 # A run holding any of these has graduated: it produced a shipped brain or a
 # recorded grade, and deleting it destroys something no rerun can reproduce.
 # boy_chase01 has no policy.pt at all -- its .onnx IS the artifact.
-PROTECTED_GLOBS = ("*.onnx", "gate*.json", "mujoco_reference.json")
+# `speed_sweep*.json` is here for the same reason as `gate*.json`: it is a recorded
+# grade. It is also the only artifact that distinguishes a policy which TRACKS a
+# commanded speed from one that merely runs at 1.5 m/s (M11), so losing it loses the
+# measurement that the single-point KPI cannot reproduce.
+PROTECTED_GLOBS = ("*.onnx", "gate*.json", "speed_sweep*.json", "mujoco_reference.json")
 
 
 def is_protected(run: Path) -> bool:
     return any(next(run.glob(pattern), None) is not None for pattern in PROTECTED_GLOBS)
+
+
+ACTIVE_WINDOW_S = 1800.0
+
+
+def is_active(run: Path) -> bool:
+    """True if anything inside this run was written recently — i.e. it is very
+    probably still training.
+
+    This exists because `prune_runs` could delete a RUNNING experiment, and with
+    concurrent launches it reliably would. Worked example, launching four cells
+    30 s apart with five disposable runs already on disk: cell A starts (6
+    candidates, 3 deleted), B starts (4 candidates, 1 deleted), C starts (4, 1),
+    then D starts and the three oldest candidates are A, B, C — so D's own prune
+    deletes cell A out from under a live process. The tfevents file vanishes and
+    the run keeps writing into a deleted directory.
+
+    Directory mtime is not enough: on Windows it does not change when a file
+    inside it is appended to, which is exactly what a training run does to its
+    tfevents. So the newest mtime among the CONTENTS is what gets checked.
+    """
+    try:
+        newest = max((child.stat().st_mtime for child in run.iterdir()),
+                     default=run.stat().st_mtime)
+    except OSError:
+        return True          # Unreadable: refuse to delete it.
+    return (time.time() - newest) < ACTIVE_WINDOW_S
 
 
 def prune_runs(keep: int = 3) -> None:
@@ -162,7 +197,8 @@ def prune_runs(keep: int = 3) -> None:
     """
     if not RESULTS.exists():
         return
-    candidates = [p for p in RESULTS.iterdir() if p.is_dir() and not is_protected(p)]
+    candidates = [p for p in RESULTS.iterdir()
+                  if p.is_dir() and not is_protected(p) and not is_active(p)]
     candidates.sort(key=lambda p: p.stat().st_mtime)
     for old in candidates[:max(0, len(candidates) - keep)]:
         try:
@@ -208,6 +244,45 @@ def main() -> int:
                         default=mojucuboy_env.RESET_FALLEN_FRACTION,
                         help="fraction of resets that start the racer sprawled. Lower it "
                              "to let the policy learn balance before recovery.")
+    parser.add_argument("--sprawl-tilt-start", type=float, default=180.0,
+                        help="Sprawl difficulty at iteration 1, DEGREES off vertical. "
+                             "180 = the shipped fully-random orientation. Lower values "
+                             "start the get-up curriculum from a recoverable tip.")
+    parser.add_argument("--sprawl-tilt-end", type=float, default=180.0,
+                        help="Sprawl difficulty the ramp finishes at, degrees.")
+    parser.add_argument("--sprawl-tilt-full", type=float, default=0.6,
+                        help="Fraction of the run over which the tilt ramps from start "
+                             "to end; it holds at --sprawl-tilt-end afterwards.")
+    parser.add_argument("--scale-drift", type=float, default=mojucuboy_env.SCALE_DRIFT,
+                        help="Normalising scale for the drift penalty tanh. The shipped 8.0 "
+                             "was calibrated on random-action rollouts and leaves a trained "
+                             "policy at 2-5 %% of the tanh range, i.e. no penalty at all (M14).")
+    parser.add_argument("--ctrl-weight", type=float, default=mojucuboy_env.W_CTRL,
+                        help="Weight on mean(action^2). The shipped 0.005 prices E12's 8.6x "
+                             "actuator effort at 0.004 per step against W_TRACK 1.8 (M14).")
+    parser.add_argument("--command-speed-range", type=float, nargs=2, default=None,
+                        metavar=("LOW", "HIGH"),
+                        help="Sample the commanded speed per episode from [LOW, HIGH] m/s. "
+                             "Without it the command is a constant and observation 11 has "
+                             "zero variance, which is why E12 collapses when commanded "
+                             "anything other than 1.5 (M11).")
+    parser.add_argument("--drift-yaw-weight", type=float, default=1.0,
+                        help="Share of the drift penalty that is YAW RATE (1.0 = "
+                             "shipped). Yaw rate is how heading gets corrected, so "
+                             "taxing it trades K4 away for K5 -- measured at "
+                             "scale_drift 0.5: K5 0.365->0.225 (passes) while K4 "
+                             "13.5->16.7 deg (fails).")
+    parser.add_argument("--heading-weight", type=float,
+                        default=mojucuboy_env.W_HEADING,
+                        help="W_HEADING (default 0.4). The only term paying for heading "
+                             "accuracy directly; K4/K5 trade along a scale_drift frontier "
+                             "that misses the gate corner, so this is the independent "
+                             "lever for K4.")
+    parser.add_argument("--drift-weight", type=float, default=mojucuboy_env.W_DRIFT,
+                        help="W_DRIFT (default 0.15). The WEIGHT on the drift penalty, as "
+                             "opposed to --scale-drift which is the normaliser inside its "
+                             "tanh. At 0.15 the term is under 7%% of the reward even "
+                             "saturated; this is the direct lever for K5.")
     parser.add_argument("--two-sided-speed", action="store_true",
                         help="penalise overshooting the commanded speed as well as "
                              "undershooting it. The shipped one-sided kernel clamps "
@@ -230,7 +305,15 @@ def main() -> int:
                        two_sided_speed=args.two_sided_speed,
                        upright_weight=args.upright_weight,
                        reset_fallen_fraction=args.reset_fallen,
-                       terminate_on_fall=args.terminate_on_fall)
+                       terminate_on_fall=args.terminate_on_fall,
+                       sprawl_max_tilt=math.radians(args.sprawl_tilt_start),
+                       command_speed_range=(tuple(args.command_speed_range)
+                                            if args.command_speed_range else None),
+                       scale_drift=args.scale_drift,
+                       ctrl_weight=args.ctrl_weight,
+                       drift_yaw_weight=args.drift_yaw_weight,
+                       heading_weight=args.heading_weight,
+                       drift_weight=args.drift_weight)
     policy = ActorCritic().to(device)
     if args.init_from:
         # Curriculum stage two: carry stage one's weights over rather than
@@ -263,7 +346,20 @@ def main() -> int:
     print(f"run {run_id}: {args.worlds} worlds x {args.rollout} steps "
           f"= {args.worlds * args.rollout} samples/iter")
 
+    best_score = float("-inf")
     for iteration in range(1, args.iterations + 1):
+        # Sprawl DIFFICULTY ramp. E11/E12/E13 escalated how OFTEN the racer starts
+        # fallen (0.0 -> 0.3 -> 0.6) and never how HARD the fall was: all three used
+        # a fully random orientation, and K10 measured 0 % recovery from all three,
+        # with `ever_stood_again` also 0 % -- the policy never once reached standing
+        # from the floor. That is exploration, not reward: the payoff for standing is
+        # large and dense, but the motor sequence from supine is too long to stumble
+        # onto. Ramping the tilt makes the first rung reachable and then raises it.
+        if args.sprawl_tilt_end > args.sprawl_tilt_start and args.iterations > 1:
+            ramp_frac = min(1.0, (iteration - 1) / max(1, args.sprawl_tilt_full * args.iterations))
+            env.sprawl_max_tilt = math.radians(
+                args.sprawl_tilt_start
+                + (args.sprawl_tilt_end - args.sprawl_tilt_start) * ramp_frac)
         buf_obs = torch.zeros(args.rollout, args.worlds, OBS_SIZE, device=device)
         buf_act = torch.zeros(args.rollout, args.worlds, ACTION_SIZE, device=device)
         buf_logp = torch.zeros(args.rollout, args.worlds, device=device)
@@ -363,7 +459,15 @@ def main() -> int:
                 loss.backward()
                 nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
                 optimiser.step()
-                losses.append((pg.item(), value_loss.item(), entropy.item()))
+                # Kept ON THE GPU and reduced once per iteration, for exactly the
+                # reason the KPI accumulators above give: a `.item()` here is a
+                # blocking host sync, and there are epochs x minibatches of them
+                # (96 at the shipped 4 x 8). Each one drains the queue, so the
+                # update phase ran serialised against the host rather than
+                # pipelined. `torch.stack(...).mean(0)` at logging time is the
+                # same arithmetic as the `np.mean(losses, axis=0)` it replaces.
+                losses.append(torch.stack(
+                    (pg.detach(), value_loss.detach(), entropy.detach())))
 
         total_steps += total
         # Per-step KPIs and losses are logged UNCONDITIONALLY. Episode statistics
@@ -374,7 +478,7 @@ def main() -> int:
         # shorter than ~45 iterations with no telemetry whatsoever -- which is
         # every validation run worth doing.
         if iteration % 5 == 0:
-            pg, vl, ent = np.mean(losses, axis=0)
+            pg, vl, ent = torch.stack(losses).mean(0).tolist()
             elapsed = time.perf_counter() - started
             writer.add_scalar("loss/policy", pg, total_steps)
             writer.add_scalar("loss/value", vl, total_steps)
@@ -416,9 +520,31 @@ def main() -> int:
         if iteration % 50 == 0 or iteration == args.iterations:
             torch.save({"model": policy.state_dict(), "iteration": iteration},
                        logdir / "policy.pt")
+            # BEST checkpoint, alongside the last one.
+            #
+            # This harness saved last-only for its whole history, which silently
+            # assumes training improves monotonically. It does not: E15 peaked at
+            # iteration ~500 (standing 0.80, heading 23.6 deg) and had decayed by
+            # 700 (standing 0.73, heading 30.3 deg) -- so evaluating its final
+            # checkpoint would have scored a policy materially worse than the one
+            # the run actually produced, and the peak would be unrecoverable.
+            # Every result in this log before tonight is a LAST-iteration number
+            # for the same reason.
+            #
+            # Scored on mean standing, which is K1 and the stability gate the
+            # convergence criteria are built on. Deliberately not on return:
+            # return mixes ten weighted terms and a reward change makes runs
+            # incomparable, whereas `standing` means the same thing across every
+            # experiment in this project.
+            score = (kpi_sum["standing"] / kpi_steps).item()
+            if score > best_score:
+                best_score = score
+                torch.save({"model": policy.state_dict(), "iteration": iteration,
+                            "standing": score}, logdir / "policy_best.pt")
 
     torch.save({"model": policy.state_dict(), "iteration": args.iterations},
                logdir / "policy.pt")
+    print(f"best checkpoint: standing {best_score:.4f} -> {logdir/'policy_best.pt'}")
     writer.close()
     print(f"done: {logdir/'policy.pt'}")
     if tb is not None:

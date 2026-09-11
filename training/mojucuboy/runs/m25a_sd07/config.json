@@ -1,0 +1,42 @@
+{
+  "iterations": 300,
+  "worlds": 4096,
+  "rollout": 24,
+  "epochs": 4,
+  "minibatches": 8,
+  "lr": 0.0003,
+  "gamma": 0.99,
+  "lam": 0.95,
+  "clip": 0.2,
+  "entropy": 0.002,
+  "port": 6006,
+  "run_id": "m25a_sd07",
+  "seed": 25,
+  "init_from": "e15_best",
+  "terminate_on_fall": false,
+  "upright_weight": 0.05,
+  "reset_fallen": 0.15,
+  "sprawl_tilt_start": 180.0,
+  "sprawl_tilt_end": 180.0,
+  "sprawl_tilt_full": 0.6,
+  "scale_drift": 0.7,
+  "ctrl_weight": 0.05,
+  "command_speed_range": [
+    0.8,
+    2.0
+  ],
+  "drift_yaw_weight": 1.0,
+  "heading_weight": 1.6,
+  "two_sided_speed": true,
+  "obs": 75,
+  "act": 21,
+  "hidden": [
+    128,
+    128,
+    128
+  ],
+  "policy_dt": 0.019999972,
+  "decimation": 4,
+  "episode_steps": 1000,
+  "target_speed": 1.5
+}
