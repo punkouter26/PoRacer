@@ -3,7 +3,7 @@ using PoRacer.Models;
 using UnityEditor;
 using UnityEngine;
 
-namespace PoRacer.Editor
+namespace PoRacer.EditorTools
 {
     /// <summary>
     /// Lists Assets/Agents/&lt;Name&gt;_vNN

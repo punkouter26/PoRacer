@@ -4,7 +4,7 @@ using Unity.MLAgents.Policies;
 using UnityEditor;
 using UnityEngine;
 
-namespace PoRacer.Editor
+namespace PoRacer.EditorTools
 {
     /// <summary>
     /// Rewrites every creature prefab's VectorObservationSize to match

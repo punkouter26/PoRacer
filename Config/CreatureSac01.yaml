@@ -1,78 +1,12 @@
 # ==============================================================================
-# Humanoids02_Biomechanical.yaml
-# Advanced Biomechanical Locomotion Training Configuration for PoRacer
-# Supports: Bipeds (Grandma, Grandpa, Matt, Nick) & Multi-limbed Creatures
+# CreatureSac01.yaml
+# SAC locomotion configuration for the multi-limbed creatures.
+# The four .glb bipeds (Grandma, Grandpa, Matt, Nick) were retired 2026-09-11:
+# no brain on disk, absent from CreatureCatalog, and their training scene and
+# prefabs are gone. Crab defines the &creature_sac anchor Hexapod reuses.
 # ==============================================================================
 
 behaviors:
-  Grandma: &biped_biomech
-    trainer_type: ppo
-    threaded: true
-    hyperparameters:
-      batch_size: 2048
-      buffer_size: 20480
-      learning_rate: 0.0003
-      learning_rate_schedule: linear
-      beta: 0.005
-      epsilon: 0.2
-      lambd: 0.95
-      num_epoch: 3
-    network_settings:
-      normalize: true
-      hidden_units: 512
-      num_layers: 3
-    reward_signals:
-      extrinsic:
-        gamma: 0.995
-        strength: 1.0
-      gail:
-        gamma: 0.99
-        strength: 0.1
-        demo_path: training/demos/Grandma.demo
-    behavioral_cloning:
-      demo_path: training/demos/Grandma.demo
-      strength: 0.2
-      steps: 500000
-    max_steps: 30000000
-    time_horizon: 1000
-    summary_freq: 20000
-    keep_checkpoints: 5
-    checkpoint_interval: 100000
-
-  # These three shared the anchor wholesale, which pointed all four bipeds at a
-  # single training/demos/BipedWalk.demo that has never existed - the trainer
-  # aborts on the missing file before step 0. Each biped has its own capture, so
-  # they merge the shared hyperparameters and override only the demo paths.
-  Grandpa:
-    <<: *biped_biomech
-    reward_signals:
-      extrinsic: { gamma: 0.995, strength: 1.0 }
-      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Grandpa.demo }
-    behavioral_cloning:
-      demo_path: training/demos/Grandpa.demo
-      strength: 0.2
-      steps: 500000
-
-  Matt:
-    <<: *biped_biomech
-    reward_signals:
-      extrinsic: { gamma: 0.995, strength: 1.0 }
-      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Matt.demo }
-    behavioral_cloning:
-      demo_path: training/demos/Matt.demo
-      strength: 0.2
-      steps: 500000
-
-  Nick:
-    <<: *biped_biomech
-    reward_signals:
-      extrinsic: { gamma: 0.995, strength: 1.0 }
-      gail: { gamma: 0.99, strength: 0.1, demo_path: training/demos/Nick.demo }
-    behavioral_cloning:
-      demo_path: training/demos/Nick.demo
-      strength: 0.2
-      steps: 500000
-
   Crab: &creature_sac
     trainer_type: sac
     hyperparameters:

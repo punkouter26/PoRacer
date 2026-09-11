@@ -128,10 +128,10 @@ namespace PoRacer.EditorTools
                         Editor_BuildAndroidAAB.Build();
                         break;
                     case "allenv":
-                        PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildEnv();
+                        PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildEnv();
                         break;
                     default:
-                        PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildFocusedEnv();
+                        PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildFocusedEnv();
                         break;
                 }
             }

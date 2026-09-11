@@ -5,7 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace PoRacer.Editor
+namespace PoRacer.EditorTools
 {
     /// <summary>
     /// Builds SCN_TRAIN_ALL: one shared training scene where every creature learns
@@ -29,23 +29,7 @@ namespace PoRacer.Editor
         {
             "Assets/Prefabs/Hexapod_v01.prefab",
             "Assets/Prefabs/Quad_v01.prefab",
-            "Assets/Prefabs/Crab_v01.prefab",
-            "Assets/Prefabs/Kangaroo_v01.prefab",
-            "Assets/Prefabs/Blob_v01.prefab"
-        };
-
-        /// <summary>
-        /// The .glb bipeds train in their own scene and their own run. They share
-        /// nothing with the coded-gait fleet — different behaviors, different
-        /// areas — and mixing them only splits one time box across a much harder
-        /// problem, starving both halves.
-        /// </summary>
-        private static readonly string[] HumanoidPrefabs =
-        {
-            "Assets/Prefabs/Grandma_v01.prefab",
-            "Assets/Prefabs/Grandpa_v01.prefab",
-            "Assets/Prefabs/Matt_v01.prefab",
-            "Assets/Prefabs/Nick_v01.prefab"
+            "Assets/Prefabs/Crab_v01.prefab"
         };
 
         private static readonly TrackKind[] Variants = { TrackKind.Walls, TrackKind.Lumpy };
@@ -53,11 +37,6 @@ namespace PoRacer.Editor
         public static void BuildScene()
         {
             BuildSceneFrom(CreaturePrefabs, "Assets/Scenes/SCN_TRAIN_ALL.unity");
-        }
-
-        public static void BuildHumanoidScene()
-        {
-            BuildSceneFrom(HumanoidPrefabs, "Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity");
         }
 
         private static void BuildSceneFrom(string[] prefabPaths, string scenePath)
@@ -144,11 +123,6 @@ namespace PoRacer.Editor
         }
 
         private const string FocusedScenePath = "Assets/Scenes/SCN_TRAIN_FOCUSED.unity";
-
-        public static void BuildHumanoidEnv()
-        {
-            BuildEnvFrom("Assets/Scenes/SCN_TRAIN_HUMANOIDS.unity", "Builds/HumanoidEnv/HumanoidEnv.exe");
-        }
 
         private static void BuildEnvFrom(string scenePath, string outputPath)
         {

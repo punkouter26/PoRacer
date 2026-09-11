@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace PoRacer.Editor
+namespace PoRacer.EditorTools
 {
     /// <summary>
     /// Drops the stack trace from Warning-level logs in the Editor.

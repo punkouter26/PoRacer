@@ -32,7 +32,7 @@ if (-not (Test-Path $config)) { throw "Config missing: $config" }
 if (-not (Test-Path $mlagents)) { throw "mlagents-learn missing: $mlagents" }
 $settings = Get-Content (Join-Path $root "ProjectSettings\ProjectSettings.asset") -Raw
 if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
-$demoBehaviors = @("Centipede", "Crab", "Hexapod", "Quad")
+$demoBehaviors = @("Crab", "Hexapod", "Quad")
 $missingDemos = $demoBehaviors | Where-Object { -not (Test-Path (Join-Path $root "training\demos\$_.demo")) }
 if ($missingDemos) { throw "Missing demos: $($missingDemos -join ', ') under training\demos." }
 

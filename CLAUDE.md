@@ -113,8 +113,11 @@ test suite wrote `InitTestScene*` litter into `Assets/` on every unfiltered run)
   beside `Config/` and `scripts/`. Only exported `.onnx` and rig data belong under
   `Assets/unity_export/`.
 - Scenes in build: `Assets/Scenes/SCN_RACE_FLAT.unity` (the only shipped scene)
-- Training scenes, not in the build list: `SCN_TRAIN_ALL`, `SCN_TRAIN_HUMANOIDS`,
-  `SCN_TRAIN_FOCUSED`
+- Training scenes, not in the build list: `SCN_TRAIN_ALL`, `SCN_TRAIN_FOCUSED`,
+  `SCN_TRAIN_ACROBAT`. **`SCN_TRAIN_HUMANOIDS` was deleted 2026-09-11** along with the
+  four .glb bipeds it trained (Grandma, Grandpa, Matt, Nick) - no brain on disk, absent
+  from `CreatureCatalog`, so they could never race. `BuildHumanoidScene()` and
+  `BuildHumanoidEnv()` went with it.
 - Verification scenes, not in the build list: `SCN_TEST_MOJUCUBOY` and
   `SCN_TEST_MOJUCUBOY_RIG` (driven by `MojucuBoyParityHarness`), and
   `Assets/Creature/CreatureVerification.unity` (Fido, built by `CreatureSceneBuilder`).
@@ -482,7 +485,7 @@ encodes the controller, never the creature.
   importer meta (`Assets/KIRI_Asset_Pack_Fruit_and_Veg/`, 423 files, 165 MB on disk).
   Also gone: the `_Gauntlet` brains left over from the lost Worm/Spider
   ELO gauntlet, `training/export_tools/spider/`, the dead Worm/Spider body-plan cases
-  in `Systems_Spawn`, and the `Worm`/`Spider` behaviours in `Humanoids02_Biomechanical.yaml`
+  in `Systems_Spawn`, and the `Worm`/`Spider` behaviours in `Humanoids02_Biomechanical.yaml (renamed CreatureSac01.yaml 2026-09-11)`
   (the `&creature_sac` anchor now hangs off `Crab`). MojucuBoy's brain was renamed from
   `mojucuboy_policy.onnx` to `MojucuBoy_v01.onnx` to match every other brain, with
   `training/mojucuboy/export_onnx.py` writing the new name. `Assets/ML-Agents/` (timer
@@ -872,7 +875,7 @@ ml-agents versions must stay in exact parity.
   0. `Assets/Scenes/SCN_RACE_FLAT.unity`
 
 It is a hardcoded list, not whatever is ticked in Build Settings, because Build
-Settings also carries SCN_TRAIN_ALL, SCN_TRAIN_HUMANOIDS and SCN_TRAIN_FOCUSED — training scenes that would bloat the bundle
+Settings also carries SCN_TRAIN_ALL, SCN_TRAIN_FOCUSED and SCN_TRAIN_ACROBAT — training scenes that would bloat the bundle
 and, depending on order, boot a tester straight into a training rig. A scene named
 here that is missing on disk **aborts** the build.
 
@@ -974,16 +977,19 @@ it.
 
 ### Traps found on the way in — all of these cost a round trip
 
-* **`Config/FocusedLoco01.yaml` cannot run.** Generated from `AllLoco8h02.yaml`, it kept
-  the aliases `*id001/*id002/*id003` without the anchors that define them;
-  mlagents-learn dies on `found undefined alias 'id001'` before it opens the env. That
-  is why the Crab-only path had never been used. `CrabAllTracks01.yaml` expands
-  everything inline.
-* **`scripts/train_all_8h.ps1` is currently broken.** `Builds/AllEnv/AllEnv.exe` and
-  `SCN_TRAIN_ALL` still contain Centipede, which today's roster cull removed from both
-  configs — and mlagents aborts on the first behaviour the env reports that the config
-  does not name. Regenerate the scene (`Editor_BuildSharedTrainingScene.BuildScene()`)
-  and rebuild before using it.
+* **DELETED 2026-09-11: `Config/FocusedLoco01.yaml`.** It used `*id001/*id002/*id003`
+  with zero anchors defining them (verified: 3 aliases, 0 anchors), so mlagents-learn
+  died on `found undefined alias` before opening the env. It was unrunnable and
+  unreferenced; `CrabAllTracks01.yaml` is the Crab-only path and expands everything
+  inline. **The lesson generalises**: the anchors in `AllLoco8h02.yaml` are defined in
+  `Hexapod`, so never cut Hexapod from that file without inlining them first.
+* **`scripts/train_all_8h.ps1` needs an env rebuild before use (2026-09-11).**
+  `SCN_TRAIN_ALL` was regenerated and now holds exactly three areas — Crab, Hexapod,
+  Quad — matching the behaviours left in `AllLoco8h02.yaml`. But `Builds/AllEnv/` was
+  deleted in the same pass, so the script has no env to launch: queue
+  `Editor_BuildAsync.Start("allenv")` first. mlagents still aborts on the first
+  behaviour an env reports that the config does not name, so scene and config must
+  agree — they do now, and regenerating one without the other breaks that.
 * **The training scenes outlive roster culls.** `SCN_TRAIN_FOCUSED` still held an
   `Area_Centipede_v`; `BuildFocusedScene("Crab")` clears it. The prefab *lists* in
   `Editor_BuildSharedTrainingScene` are current — the generated scenes on disk are not.
@@ -991,19 +997,21 @@ it.
   `<Name>_Data/level0`'s mtime with `<=`, so two builds landing inside the same second
   read as "wrote no new artifact" while the log says `Succeeded, 0 errors`. Trust the
   log line and the file, not the verdict.
-* **`Editor_BuildSharedTrainingScene` is in namespace `PoRacer.Editor`**, not
-  `PoRacer.EditorTools`. `Editor_BuildAsync` is in `EditorTools`. Check before calling.
+* **RESOLVED 2026-09-11: there is now ONE editor namespace.** Every class under
+  `Assets/Scripts/Editor/` is in `PoRacer.EditorTools` (20 files). The old
+  `PoRacer.Editor` split is gone, so no call needs a namespace guess any more.
 * **`Editor_BuildAsync` already supports `"allenv"` and `"focusedenv"`** — do not call
   the builders directly through `eval`, it dies on the 5 s main-thread budget.
 * **`Systems_TrainingArea.TRAINING_MAX_STEP = 3000` carries a stale comment** ("60 s at
   0.02 s per step"). The project has been locked at 0.005 s since 2026-08-29 and
   `Agent.MaxStep` counts decisions, which at `DecisionPeriod` 20 are 0.1 s each — so it
   is 300 s, five times the 60 s intended. Not what blocks Crab, but wrong.
-* **Two leftover ELO-gauntlet entries are still in the shipped catalog**:
-  `Crab_v01@Crab-599966` and `Hexapod_v01@Hexapod-599486`, pointing at
-  `Assets/Agents/_Gauntlet/`. They are the two worst entries on the grid and they pad
-  the roster from 6 to 8. `elo.json` also still rates four creatures that no longer
-  exist (Centipede, Fido, and two `@` variants).
+* **RESOLVED 2026-09-11: the ELO-gauntlet entries are gone.** `Assets/Agents/_Gauntlet/`
+  and its two `.onnx` were deleted, and `Editor_ReportOrphanedBrains.Report()` now says
+  "No orphaned brain folders found. Every Assets/Agents/* folder has a catalog entry."
+  The shipped roster is **6** (Crab, Hexapod, Quad, IsaacBox, IsaacH1, MojucuBoy),
+  confirmed by smoke telemetry (`"racers": 6`). `elo.json` may still rate creatures that
+  no longer exist; that is cosmetic and unread by the catalog.
 * **The `.venv` DOES exist and its pins are exact** (mlagents 1.1.0, torch 2.4.1, numpy
   1.23.5, protobuf 3.20.3, onnx 1.15.0, setuptools 80.10.2). The note above saying it is
   missing was written 2026-09-09 and is stale.
@@ -1011,7 +1019,7 @@ it.
 ### Running it
 
 ```
-unity command eval --code "return PoRacer.Editor.Editor_BuildSharedTrainingScene.BuildFocusedScene(\"Crab\");"
+unity command eval --code "return PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildFocusedScene(\"Crab\");"
 unity command eval --code "return PoRacer.EditorTools.Editor_BuildAsync.Start(\"focusedenv\");"
 .venv\Scripts\tensorboard.exe --logdir results --port 6006      # BEFORE the trainer
 .venv\Scripts\mlagents-learn.exe Config\CrabAllTracks01.yaml --run-id=crab_alltracks_<stamp> ^

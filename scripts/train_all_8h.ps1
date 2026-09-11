@@ -39,7 +39,7 @@ if ($settings -match "runInBackground: 0") { throw "runInBackground is OFF." }
 # "Crab.demo" is missing, which mlagents only complains about minutes in. The
 # four humanoids are deliberately absent: a biped's coded gait is a fall, so they
 # train on extrinsic reward alone.
-$demoBehaviors = @("Hexapod", "Quad", "Centipede", "Crab", "Kangaroo", "Blob")
+$demoBehaviors = @("Hexapod", "Quad", "Crab")
 # training\demos, NOT Assets\Demonstrations: that is where the demos actually live
 # and, more to the point, it is the path the config's demo_path entries resolve to.
 # Checking the other folder made this preflight throw on a tree where every demo was

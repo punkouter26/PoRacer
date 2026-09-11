@@ -15,7 +15,6 @@ prefab, asset, package, build, test, profiling and play-mode control).
 
 **1. Run a menu action by path.** Every `[MenuItem]` below is invocable directly:
 
-    unity cmd menu --path "PoRacer/Creatures/Rebuild Fido Prefab"
 
 **2. Call the method.** Every menu action is now `public static`, so it also works
 through `-executeMethod` (batch mode) and through `eval` / `eval_file` on the live
@@ -40,12 +39,10 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | PoRacer/Configure Rendering | `PoRacer.EditorTools.Editor_ConfigureRendering.Configure` |
 | PoRacer/Sync Agent Observation Sizes | `PoRacer.EditorTools.Editor_SyncObservationSizes.Sync` |
 | PoRacer/Report Orphaned Creature Brains | `PoRacer.EditorTools.Editor_ReportOrphanedBrains.Report` |
-| PoRacer/Creatures/Rebuild Fido Prefab | `PoRacer.EditorTools.Editor_BuildFidoPrefab.Build` |
 | PoRacer/Creatures/Register IsaacBox Racer | `PoRacer.EditorTools.Editor_RegisterIsaacBoxRacer.Register` |
 | PoRacer/Creatures/Register MojucuBoy Racer | `PoRacer.EditorTools.Editor_RegisterMojucuBoyRacer.Register` |
 | PoRacer/Creatures/Build Boy Race Scene | `CreatureEditor.MojucuBoySetup.Build` |
 | PoRacer/Build Shared Training Scene (SCN_TRAIN_ALL) | `PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildScene` |
-| PoRacer/Build Humanoid Training Scene | `…Editor_BuildSharedTrainingScene.BuildHumanoidScene` |
 | PoRacer/Build Focused Training Scene (SCN_TRAIN_FOCUSED) | `…Editor_BuildSharedTrainingScene.BuildFocusedScene` |
 | PoRacer/Bake Authored Tracks into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake` |
 | PoRacer/Smoke-race every map in play mode | `PoRacer.EditorTools.Editor_SmokeRace.Start` / `.Status` |
@@ -55,12 +52,8 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | PoRacer/Build Acrobat Training Env | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.BuildEnv` (player build: queue it, do not eval it) |
 | PoRacer/Build Fruit Catalog (produce shower) | `PoRacer.EditorTools.Editor_BuildFruitCatalog.Build` |
 | PoRacer/Build All-Creatures Training Env | `…Editor_BuildSharedTrainingScene.BuildEnv` |
-| PoRacer/Build Humanoid Training Env | `…Editor_BuildSharedTrainingScene.BuildHumanoidEnv` |
 | PoRacer/Training/Enable Demo Recorders In Open Scene | `…Editor_RecordDemos.EnableRecorders` |
 | PoRacer/Training/Disable Demo Recorders In Open Scene | `…Editor_RecordDemos.DisableRecorders` |
-| PoRacer/Training/Gauntlet - Add Selected Brains | `…Editor_EloGauntlet.AddSelectedBrains` ¹ |
-| PoRacer/Training/Gauntlet - Remove Gauntlet Entries | `…Editor_EloGauntlet.RemoveGauntletEntries` |
-| MuJoCo Creature/Build Verification Scene | `CreatureEditor.CreatureSceneBuilder.Build` ² |
 | IsaacBox/Rebuild Rig Asset From JSON | `IsaacBox.EditorTools.IsaacBoxSetup.RebuildRigAsset` |
 | IsaacBox/Build Prefab | `…IsaacBoxSetup.BuildPrefab` |
 | IsaacBox/Rebuild Materials From GLB Textures | `…IsaacBoxMaterials.RebuildMenu` |

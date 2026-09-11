@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace PoRacer.Editor
+namespace PoRacer.EditorTools
 {
     /// <summary>
     /// Creates the two shared particle material assets under Assets/Resources/FX.
