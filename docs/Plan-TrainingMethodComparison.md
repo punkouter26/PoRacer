@@ -1,7 +1,14 @@
-# Plan — Three Training Methods, One Walking Standard
+# Plan — Training Methods, One Walking Standard
 
 > Written 2026-09-24. Goal: every creature in the race walks equally well, and the
-> app can show which of the three training methods got it there best.
+> app can show which training tool got it there best.
+>
+> **Scope change (2026-09-24, AGENTS rule J):** training now happens **only in
+> MuJoCo/Newton (C) and Isaac Lab (B)**. Method A (ML-Agents) is no longer trained.
+> Its three brains keep racing until the bugs are retrained in B or C (their MuJoCo
+> bodies already exist, see Phase 2). Wherever this plan says "three methods" or
+> "18 brains", read "two tools" and "12 brains". The first head-to-head is the Worm5
+> experiment (`training/worm/WORM_SPEC.md`).
 
 ## The three methods
 

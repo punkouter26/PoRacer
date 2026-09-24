@@ -222,20 +222,22 @@ encodes the controller, never the creature.
   is a human: no superhuman angular velocities, no torque beyond human muscle
   capability.
 
-## J. Three training methods, compared side by side
+## J. Training happens in MuJoCo and Isaac Lab only
 
-* This app **compares three ways of training locomotion**. None of them is the
-  default and none is being phased out:
-  1. **Unity ML-Agents** — PPO (+ GAIL / BC demos) on Unity physics.
-  2. **Isaac Lab** — RSL-RL PPO on Isaac Sim / PhysX GPU.
-  3. **MuJoCo / Newton** — MuJoCo Warp + torch PPO.
-* Unity remains the host app and the viewer for all three.
-* A comparison is only fair if every method is judged by the **same walking
-  standard, measured the same way** — see `DOCS/Plan-TrainingMethodComparison.md`.
-  Never declare a method better on its own reward curve; reward scales differ
-  between the three trainers.
-* Every creature trained outside Unity needs its rig imported into that
-  simulator first (see rule K).
+* **All RL training is done with MuJoCo / Newton or Isaac Lab**, and the app
+  compares the two:
+  1. **MuJoCo / Newton**: MuJoCo Warp + torch PPO.
+  2. **Isaac Lab**: RSL-RL PPO on Isaac Sim / PhysX GPU.
+* **No new training in Unity ML-Agents** (PhysX-in-Unity). The ML-Agents brains
+  already racing (Quadruped, Hexapod, Crab) keep racing until they are retrained
+  in one of the two tools.
+* Unity remains the host app and the viewer for both.
+* A comparison is only fair if both tools are judged by the **same walking
+  standard, measured the same way** (see `docs/Plan-TrainingMethodComparison.md`),
+  and train the same body under the same contract (e.g. `training/worm/WORM_SPEC.md`).
+  Never declare a tool better on its own reward curve; reward scales differ.
+* Every creature needs its rig imported into the simulator training it first
+  (see rule K).
 
 ## K. Skinned mesh first, then training
 
@@ -245,10 +247,14 @@ encodes the controller, never the creature.
 * The user will supply additional creature/human models over time. For now,
   **focus on training the initial model with all the behaviours it needs**;
   do not start new creatures without an explicit request and a supplied mesh.
+* **Exception:** a simple primitive test creature (capsules or boxes only, such
+  as the Worm5 test worms) may be trained without a mesh **when the user
+  explicitly approves it**. Its rig is then defined in code (e.g.
+  `training/worm/build_worm.py`) and shared by every simulator.
 
 ## L. Long training runs take over the machine
 
-* When an RL run (any of the three methods) will take **30+ minutes**, first **save and close the
+* When an RL run (MuJoCo or Isaac Lab) will take **30+ minutes**, first **save and close the
   Unity editor** to free the machine and avoid stalls. Tell the user when the
   run starts and explicitly tell them when they can reopen the editor
   (i.e., training is over).
@@ -262,11 +268,16 @@ encodes the controller, never the creature.
 
 ## N. Unity tooling — pick the best tool for the job
 
+* **Claude Code plugin:** `claude plugin install unity@claude-plugins-official`
+  (Unity's official skills: CLI, packages, physics collision, UI Toolkit, URP).
 * Use whichever of these gives the best results for the task at hand:
   * **Unity CLI Pipeline** (`com.unity.pipeline`) for builds/automation.
-  * **MCP plugins:** <https://github.com/AnkleBreaker-Studio/unity-mcp-plugin>,
-    <https://github.com/CoplayDev/unity-mcp>,
-    <https://github.com/IvanMurzak/Unity-MCP>.
+  * **MCP plugins:** <https://github.com/CoplayDev/unity-mcp> (HTTP on port 8080,
+    starts with the editor) and
+    <https://github.com/AnkleBreaker-Studio/unity-mcp-plugin> (bridge on 7890).
+* **Not used:** <https://github.com/IvanMurzak/Unity-MCP>. It was installed and
+  removed on 2026-09-24 because it kept connecting to its cloud service
+  (ai-game.dev) after being pinned to local mode, and flooded the console.
 
 ## O. Unity stall prevention — set once, verify per session
 
