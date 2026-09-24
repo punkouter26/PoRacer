@@ -1,0 +1,266 @@
+{
+ "model": "worm5",
+ "frame": "MuJoCo: x forward (head at +x), y left, z up. Unity (x, y, z) = MuJoCo (-y, z, x); see WORM_SPEC.md",
+ "segments": 5,
+ "segmentSpacing": 0.2,
+ "capsuleHalfLength": 0.075,
+ "radius": 0.045,
+ "segmentMass": 1.3359622759390595,
+ "linkMass": 0.1,
+ "linkInertia": 0.0002,
+ "totalMass": 7.079811379695298,
+ "jointRangeRad": 0.7853981633974483,
+ "kp": 30.0,
+ "forceLimit": 12.0,
+ "jointDamping": 1.0,
+ "armature": 0.01,
+ "friction": 0.9,
+ "spawnHeight": 0.049999999999999996,
+ "physicsDt": 0.005,
+ "decimation": 4,
+ "bodies": [
+  {
+   "name": "seg0",
+   "parent": null,
+   "pos": [
+    0,
+    0,
+    0.049999999999999996
+   ],
+   "mass": 1.3359622759390595,
+   "capsule": {
+    "halfLength": 0.075,
+    "radius": 0.045,
+    "axis": "x"
+   }
+  },
+  {
+   "name": "link0",
+   "parent": "seg0",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 0.1,
+   "inertia": 0.0002
+  },
+  {
+   "name": "seg1",
+   "parent": "link0",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 1.3359622759390595,
+   "capsule": {
+    "halfLength": 0.075,
+    "radius": 0.045,
+    "axis": "x"
+   }
+  },
+  {
+   "name": "link1",
+   "parent": "seg1",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 0.1,
+   "inertia": 0.0002
+  },
+  {
+   "name": "seg2",
+   "parent": "link1",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 1.3359622759390595,
+   "capsule": {
+    "halfLength": 0.075,
+    "radius": 0.045,
+    "axis": "x"
+   }
+  },
+  {
+   "name": "link2",
+   "parent": "seg2",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 0.1,
+   "inertia": 0.0002
+  },
+  {
+   "name": "seg3",
+   "parent": "link2",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 1.3359622759390595,
+   "capsule": {
+    "halfLength": 0.075,
+    "radius": 0.045,
+    "axis": "x"
+   }
+  },
+  {
+   "name": "link3",
+   "parent": "seg3",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 0.1,
+   "inertia": 0.0002
+  },
+  {
+   "name": "seg4",
+   "parent": "link3",
+   "pos": [
+    -0.1,
+    0,
+    0
+   ],
+   "mass": 1.3359622759390595,
+   "capsule": {
+    "halfLength": 0.075,
+    "radius": 0.045,
+    "axis": "x"
+   }
+  }
+ ],
+ "joints": [
+  {
+   "name": "j0_pitch",
+   "body": "link0",
+   "axis": [
+    0,
+    1,
+    0
+   ],
+   "anchor": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j0_yaw",
+   "body": "seg1",
+   "axis": [
+    0,
+    0,
+    1
+   ],
+   "anchor": [
+    0.1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j1_pitch",
+   "body": "link1",
+   "axis": [
+    0,
+    1,
+    0
+   ],
+   "anchor": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j1_yaw",
+   "body": "seg2",
+   "axis": [
+    0,
+    0,
+    1
+   ],
+   "anchor": [
+    0.1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j2_pitch",
+   "body": "link2",
+   "axis": [
+    0,
+    1,
+    0
+   ],
+   "anchor": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j2_yaw",
+   "body": "seg3",
+   "axis": [
+    0,
+    0,
+    1
+   ],
+   "anchor": [
+    0.1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j3_pitch",
+   "body": "link3",
+   "axis": [
+    0,
+    1,
+    0
+   ],
+   "anchor": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "j3_yaw",
+   "body": "seg4",
+   "axis": [
+    0,
+    0,
+    1
+   ],
+   "anchor": [
+    0.1,
+    0,
+    0
+   ]
+  }
+ ],
+ "actionOrder": [
+  "j0_pitch",
+  "j0_yaw",
+  "j1_pitch",
+  "j1_yaw",
+  "j2_pitch",
+  "j2_yaw",
+  "j3_pitch",
+  "j3_yaw"
+ ]
+}
