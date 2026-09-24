@@ -160,6 +160,7 @@ namespace PoRacer.Systems
                     if (remaining.Status == RacerStatus.Racing)
                     {
                         remaining.Status = RacerStatus.Dnf;
+                        remaining.Knockout = KnockoutReason.PodiumCutoff;
                         remaining.Place = -1;
                     }
                 }
@@ -194,9 +195,9 @@ namespace PoRacer.Systems
             }
         }
 
-        public void NotifyFailure(string racerId)
+        public void NotifyFailure(string racerId, KnockoutReason reason = KnockoutReason.Unspecified)
         {
-            MarkDnf(_model.FindRacer(racerId));
+            MarkDnf(_model.FindRacer(racerId), reason);
             CheckRaceEnd();
         }
 
@@ -238,7 +239,7 @@ namespace PoRacer.Systems
                     }
                     if (_model.ElapsedSeconds - _lastProgressTime[racer.RacerId] >= NO_PROGRESS_TIMEOUT_SECONDS)
                     {
-                        MarkDnf(racer);
+                        MarkDnf(racer, KnockoutReason.Stalled);
                     }
                 }
             }
@@ -287,13 +288,14 @@ namespace PoRacer.Systems
 
         public void Dispose() { }
 
-        private void MarkDnf(RacerState racer)
+        private void MarkDnf(RacerState racer, KnockoutReason reason)
         {
             if (racer == null || racer.Status != RacerStatus.Racing)
             {
                 return;
             }
             racer.Status = RacerStatus.Dnf;
+            racer.Knockout = reason;
             racer.Place = -1;
             _dnfPublisher.Publish(new RacerDnfMessage(racer.RacerId));
         }

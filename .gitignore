@@ -124,3 +124,6 @@ Assets/Local.meta
 # Transient per-session harness state. Its siblings in .claude/state/ are
 # tracked on purpose; this one is rewritten on every context compaction.
 .claude/state/precompact-state.md
+
+# Written by the IvanMurzak Unity-MCP plugin; carries a cloud auth token.
+.mcp.json

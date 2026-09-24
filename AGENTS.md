@@ -117,6 +117,8 @@ spec behind each one lives above in sections 1–4; this block is the short form
   in the same session.
 * Commit real, working increments. Compile clean, and for anything touching
   runtime, do a play-mode check as well.
+* **Before any git sync (pull/push), commit all local changes first.** Never
+  sync with a dirty tree — uncommitted work can be lost or force-conflicted.
 
 ## B. Project context — read first, every time
 * At the start of every task, check the repo root for a `DOCS/` folder and
@@ -139,6 +141,9 @@ spec behind each one lives above in sections 1–4; this block is the short form
   protects the newest run of each prefix). Confirm port `6006` is free first —
   a crashed run leaks its TensorBoard listener, and the next launch then trains
   blind.
+* **Training new agents means clearing old behaviours.** When a new set of
+  agents starts training, remove old TensorBoard behaviours/runs that are no
+  longer going to be used, so only live curves remain.
 
 ## D. Racer colours are a legend, not decoration
 A viewer must be able to tell what is driving a racer at a glance. Colour
@@ -213,6 +218,71 @@ encodes the controller, never the creature.
   motion, and **mass scaled to the creature's size**. A creature that moves in a
   way a real animal of that size and weight could not is a bug, however good its
   reward curve looks.
+* **Joint speed and force must resemble real humans** when the trained agent
+  is a human: no superhuman angular velocities, no torque beyond human muscle
+  capability.
+
+## J. Three training methods, compared side by side
+
+* This app **compares three ways of training locomotion**. None of them is the
+  default and none is being phased out:
+  1. **Unity ML-Agents** — PPO (+ GAIL / BC demos) on Unity physics.
+  2. **Isaac Lab** — RSL-RL PPO on Isaac Sim / PhysX GPU.
+  3. **MuJoCo / Newton** — MuJoCo Warp + torch PPO.
+* Unity remains the host app and the viewer for all three.
+* A comparison is only fair if every method is judged by the **same walking
+  standard, measured the same way** — see `DOCS/Plan-TrainingMethodComparison.md`.
+  Never declare a method better on its own reward curve; reward scales differ
+  between the three trainers.
+* Every creature trained outside Unity needs its rig imported into that
+  simulator first (see rule K).
+
+## K. Skinned mesh first, then training
+
+* **Before attempting to train a creature, ask the user for its skinned mesh.**
+  The rig structure (bone hierarchy, joint anchors, mass distribution) is
+  extracted from that model and imported into whichever simulator is training it.
+* The user will supply additional creature/human models over time. For now,
+  **focus on training the initial model with all the behaviours it needs**;
+  do not start new creatures without an explicit request and a supplied mesh.
+
+## L. Long training runs take over the machine
+
+* When an RL run (any of the three methods) will take **30+ minutes**, first **save and close the
+  Unity editor** to free the machine and avoid stalls. Tell the user when the
+  run starts and explicitly tell them when they can reopen the editor
+  (i.e., training is over).
+
+## M. Collisions are complete
+
+* **Every body part of every creature must collide accurately with everything
+  else.** Creatures never pass through each other, and never pass through
+  environment geometry. Missing collider = bug, no matter how stable the sim
+  looks.
+
+## N. Unity tooling — pick the best tool for the job
+
+* Use whichever of these gives the best results for the task at hand:
+  * **Unity CLI Pipeline** (`com.unity.pipeline`) for builds/automation.
+  * **MCP plugins:** <https://github.com/AnkleBreaker-Studio/unity-mcp-plugin>,
+    <https://github.com/CoplayDev/unity-mcp>,
+    <https://github.com/IvanMurzak/Unity-MCP>.
+
+## O. Unity stall prevention — set once, verify per session
+
+* Set these in Unity to avoid editor stalling:
+  * **Editor preferences:** Interaction Mode → **No Throttling**
+    (`EditorPrefs` key `InteractionMode` = 1).
+  * **Player settings:** **Run In Background** enabled
+    (`PlayerSettings.runInBackground = true`).
+* Do this via MCP when an editor session is connected; verify before long
+  training runs.
+
+## P. How agents write to the user
+
+* Output plain, non-technical language the user can act on — decide follow-ups
+  without decoding jargon.
+* Any answer longer than 100 words ends with a **TL;DR of ~20 words**.
 
 ---
 

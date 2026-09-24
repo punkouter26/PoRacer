@@ -54,6 +54,42 @@ namespace PoRacer.Tests
         }
 
         [Test]
+        public void NoProgress_RecordsStalledAsTheReason()
+        {
+            _sut.Advance(Systems_Race.NO_PROGRESS_TIMEOUT_SECONDS + 1f);
+
+            Assert.That(_model.FindRacer("worm#1").Knockout, Is.EqualTo(KnockoutReason.Stalled));
+        }
+
+        [Test]
+        public void NotifyFailure_RecordsTheReasonGiven()
+        {
+            _sut.NotifyFailure("worm#1", KnockoutReason.LeftTrack);
+
+            Assert.That(_model.FindRacer("worm#1").Knockout, Is.EqualTo(KnockoutReason.LeftTrack));
+            Assert.That(_model.FindRacer("worm#2").Knockout, Is.EqualTo(KnockoutReason.None));
+        }
+
+        [Test]
+        public void PodiumCutoff_RecordsCutoffNotFailure()
+        {
+            _sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing },
+                new() { RacerId = "b", CreatureId = "spider", Status = RacerStatus.Racing },
+                new() { RacerId = "c", CreatureId = "crab", Status = RacerStatus.Racing },
+                new() { RacerId = "d", CreatureId = "blob", Status = RacerStatus.Racing }
+            });
+
+            _sut.NotifyFinish("a");
+            _sut.NotifyFinish("b");
+            _sut.NotifyFinish("c");
+
+            Assert.That(_model.FindRacer("d").Knockout, Is.EqualTo(KnockoutReason.PodiumCutoff));
+            Assert.That(_model.FindRacer("a").Knockout, Is.EqualTo(KnockoutReason.None));
+        }
+
+        [Test]
         public void ProgressKeepsRacerAlive()
         {
             float half = Systems_Race.NO_PROGRESS_TIMEOUT_SECONDS * 0.6f;

@@ -766,9 +766,11 @@ namespace PoRacer.Systems
                     // touch differently than its siblings with the same brain.
                     // Applied one frame later — a joint written in the frame it was
                     // instantiated rejects the drive as non-finite.
-                    QuirkDef quirk = PickQuirk();
+                    QuirkDef quirk = _config.QuirksEnabled ? PickQuirk() : Quirks[0];
                     // Small jitter so same-quirk siblings still differ a touch.
-                    float quirkPower = quirk.Power * (0.99f + (float)_rng.NextDouble() * 0.02f);
+                    float quirkPower = _config.QuirksEnabled
+                        ? quirk.Power * (0.99f + (float)_rng.NextDouble() * 0.02f)
+                        : 1f;
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
 
                     bool isMujoco = instance.GetComponent<IMujocoCreature>() != null;

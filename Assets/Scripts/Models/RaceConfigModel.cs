@@ -33,6 +33,10 @@ namespace PoRacer.Models
         // Index into Systems_MapCatalog.Entries; the menu writes it, spawn reads it.
         public int SelectedMapIndex;
 
+        // Random per-racer power/mass quirks (TURBO, HEAVY...). Off for the walking
+        // exam: a +12 % drive or +12 % mass is a handicap the brain did not earn.
+        public bool QuirksEnabled = true;
+
         public event Action Changed;
 
         public int GetCount(string creatureId)

@@ -765,6 +765,7 @@ namespace PoRacer.EditorTools
                     case RacerStatus.Dnf: _step.dnf++; break;
                 }
                 placings.Add($"{racer.DisplayName} {racer.Status} {racer.Progress:0.0}m" +
+                    (racer.Status == RacerStatus.Dnf ? $" ({racer.Knockout})" : string.Empty) +
                     (racer.Place > 0 ? $" P{racer.Place}" : string.Empty));
             }
             _step.placings = placings.ToArray();

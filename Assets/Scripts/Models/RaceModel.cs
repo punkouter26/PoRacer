@@ -19,6 +19,8 @@ namespace PoRacer.Models
         public string DisplayName { get; set; }
         public float Progress { get; set; }
         public RacerStatus Status { get; set; }
+        // Set together with Status = Dnf; None for every other status.
+        public KnockoutReason Knockout { get; set; }
         public int Place { get; set; }
         public float FinishTime { get; set; }
         // Meters past the finish line when the crossing was reported; breaks

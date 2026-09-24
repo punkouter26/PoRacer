@@ -1,3 +1,4 @@
+using PoRacer.Models;
 using PoRacer.Presentation;
 using PoRacer.Systems;
 using UnityEngine;
@@ -179,10 +180,19 @@ namespace PoRacer.Views
                 return;
             }
             Vector3 position = _transform.position;
-            if (!IsFinite(position) || !IsInsideArena(position)
-                || (!_retired && _agent != null && _agent.Failed))
+            if (!IsFinite(position))
             {
-                Recover();
+                Recover(KnockoutReason.Diverged);
+                return;
+            }
+            if (!IsInsideArena(position))
+            {
+                Recover(KnockoutReason.LeftTrack);
+                return;
+            }
+            if (!_retired && _agent != null && _agent.Failed)
+            {
+                Recover(KnockoutReason.AgentFailed);
                 return;
             }
             _lastGoodPosition = position;
@@ -243,7 +253,7 @@ namespace PoRacer.Views
                     return;
                 }
                 _race.NotifyWipeout(_racerId, position, true);
-                _race.NotifyFailure(_racerId);
+                _race.NotifyFailure(_racerId, KnockoutReason.KnockedDown);
                 FxUtil.KnockoutPuff(position);
             // Grit under the smoke: the puff alone reads as a vanish, the debris
             // reads as a crash.
@@ -301,7 +311,7 @@ namespace PoRacer.Views
         /// the divergence — clamping velocities does not, because the garbage is
         /// in the joint positions the link poses are derived from.
         /// </summary>
-        private void Recover()
+        private void Recover(KnockoutReason reason)
         {
             if (Time.time < _nextRecoveryTime)
             {
@@ -326,7 +336,7 @@ namespace PoRacer.Views
             _race.NotifyWipeout(_racerId, safe, retiring);
             if (retiring)
             {
-                Retire();
+                Retire(reason);
             }
         }
 
@@ -338,10 +348,10 @@ namespace PoRacer.Views
         /// resumes falling through the floor the moment nothing is watching.
         /// Drives are already zeroed by the rescue, so the links just go limp.
         /// </summary>
-        private void Retire()
+        private void Retire(KnockoutReason reason)
         {
             _retired = true;
-            _race.NotifyFailure(_racerId);
+            _race.NotifyFailure(_racerId, reason);
             if (_agent is MonoBehaviour agentBehaviour)
             {
                 agentBehaviour.enabled = false;
