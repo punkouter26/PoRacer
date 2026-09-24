@@ -1,7 +1,11 @@
 # Acrobat course training. Pairs with SCN_TRAIN_ACROBAT / Builds/AcrobatEnv, built by
 # Editor_BuildCourseTrainingScene: one copy of the authored mountain course per
 # creature, each driven by Systems_CourseTrainingArea along the centreline.
-# The four behaviours below are exactly what that scene contains.
+# The three behaviours below are exactly what that scene contains.
+#
+# The shared blocks are anchored on Crab. They used to live on Centipede, and
+# removing Centipede (c8ea452) left three dangling aliases that stopped this file
+# parsing at all; the values below are the originals, unchanged.
 #
 # Warm start from the flat-ground demos: a coded gait is still a gait on a road.
 # The curriculum widens where episodes START along the course (course_start_span)
@@ -12,10 +16,23 @@ behaviors:
   Crab:
     trainer_type: ppo
     threaded: true
-    hyperparameters: *id001
-    network_settings: *id002
+    hyperparameters: &id001
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      learning_rate_schedule: linear
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings: &id002
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
     reward_signals:
-      extrinsic: *id003
+      extrinsic: &id003
+        gamma: 0.995
+        strength: 1.0
       gail:
         gamma: 0.99
         strength: 0.05

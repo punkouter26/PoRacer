@@ -110,8 +110,17 @@ gap counts against it, as it should: it is part of what that method costs.
       | B · Isaac Lab | `ISAAC/install.ps1`: clones Isaac Lab into `ISAAC/isaaclab` and installs Isaac Sim ≥ 5.0 (**~10 GB**, NVIDIA licence to accept). IsaacBox was trained here this way | `ISAAC/isaaclab` gone; the installer and the Boy task code are still there |
       | C · MuJoCo | `mujoco`, `mujoco_warp`, `warp`, torch with CUDA 12.8 (the RTX 5070 Ti is Blackwell / sm_120 and needs cu128) | Packages missing |
       Hardware is fine: RTX 5070 Ti Laptop 12 GB, 1.2 TB free.
-- [ ] Reinstall all three environments (needs your go-ahead for the Isaac download
-      and licence).
+- [x] **A · ML-Agents rebuilt (2026-09-24):** `.venv` on Python 3.10.11 with the
+      documented pins. `mlagents-learn` starts. torch is `2.4.1+cpu` on purpose:
+      2.4.1 has no Blackwell (sm_120) kernels, and ML-Agents trains its small MLP
+      on the CPU anyway.
+- [x] **C · MuJoCo rebuilt (2026-09-24):** `.venv-mjwarp` on Python 3.11.9 with
+      torch `2.11.0+cu128`, `mujoco 3.12.0`, `mujoco-warp 3.12.0` (now on PyPI,
+      and the same version as `Packages/org.mujoco`, so what trains is what races),
+      `warp-lang 1.17.0`, tensorboard, onnx and onnxruntime. The MojucuBoy env builds
+      and steps on the GPU (3,268 steps/s at 256 worlds while Unity was also busy).
+- [ ] **B · Isaac Lab:** needs your go-ahead for the ~10 GB Isaac Sim download and
+      the NVIDIA licence.
 - [ ] Decide how a viewer tells the three methods apart in a race (see *Open
       questions*).
 - [x] AGENTS.md rule J rewritten: three methods, one standard.
@@ -170,6 +179,31 @@ meaningless.
       any results.
 
 ### Phase 3: One shared training recipe (1 day)
+
+**Where the three stand today:** see [TrainingRecipeComparison.md](TrainingRecipeComparison.md).
+They differ in the task itself (reach a point / chase a target / follow a velocity
+command / hold a heading), the speed target (none / 1.0 / 0–1 / 1.5 one-sided), what
+counts as a fall, policy rate (10 Hz vs 50 Hz), episode length (15 s vs 20 s), how
+rewards scale with time, and PPO settings. Only C trains get-up, and only A uses demos.
+
+**Draft recipe, for your review before Phase 4:**
+
+| Item | Shared value |
+|---|---|
+| Task | follow waypoints along the track; the policy sees the direction to the next waypoint **and** its target speed |
+| Target speed | the creature's Froude 0.25 speed, **two-sided** exp kernel (overshoot costs too) |
+| Policy rate | 50 Hz everywhere (ML-Agents: DecisionPeriod 4) |
+| Episode | 20 s; timeouts bootstrapped in all three |
+| Rewards | same terms, weight × value × dt: speed tracking, heading, uprightness, torque² (applied torque, normalised), action rate, foot slip. No alive bonus |
+| Falls | one definition: body up < 0.5 **or** torso below 50 % of stance height. Stage 1 ends the episode on a fall; stage 2 starts 30 % of episodes sprawled and rewards standing |
+| Actions | rest pose + action × 0.5 × joint half-range; PD gains from the shared rig file |
+| Randomisation | gains ±20 %, mass ±10 %, friction 0.6–1.2, a 0.5 m/s push every 10–15 s |
+| PPO | 3×128 hidden units, γ 0.99 per 0.02 s, λ 0.95, 5 epochs, LR 3e-4 constant, entropy 0.005, initial σ 0.5 |
+| Known unavoidable gap | ML-Agents fixes its activation (Swish) and has no adaptive-KL schedule; B and C use ELU. Recorded, not hidden |
+
+**Fixes needed before any A run counts:** `TRAINING_MAX_STEP` must be 4000 for 20 s at
+0.005 s (it is 3000 = 15 s), and `AcrobatLoco01.yaml` must be rewritten without its
+dangling aliases.
 Only the trainer changes between methods. Everything else is fixed:
 - **Same inputs**: body state, target direction and target speed.
 - **Same outputs**: `target = rest + action × range`, driven by the joint PD drives.
