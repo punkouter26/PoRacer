@@ -3,6 +3,8 @@
     "rootNamespace": "PoRacer.WormRace.EditorTools",
     "references": [
         "PoRacer.WormRace",
+        "PoRacer.CreatureRace.Editor",
+        "PoRacer.CreatureRace",
         "Unity.InferenceEngine",
         "Mujoco.Runtime",
         "VContainer"

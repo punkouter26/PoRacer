@@ -12,45 +12,127 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 176facb0d41fd074dbfae6ce8837e2c4, type: 3}
   m_Name: WormRaceSettings
   m_EditorClassIdentifier: PoRacer.WormRace::PoRacer.WormRace.WormRaceSettings
-  _rigJson: {fileID: 4900000, guid: 3a8fa1c5545e76849908455334fb289a, type: 3}
-  _racers:
-  - _name: MuJoCo worm
-    _method: MuJoCo
-    _physics: 0
-    _brain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
-    _brainFile: worm_mujoco.onnx
-    _material: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
-    _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
-  - _name: Isaac worm
-    _method: Isaac Lab
-    _physics: 1
-    _brain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
-    _brainFile: worm_isaac.onnx
-    _material: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
-    _color: {r: 1, g: 0.55, b: 0.1, a: 1}
-  - _name: Isaac3Worm
-    _method: Isaac Lab 3
-    _physics: 0
-    _brain: {fileID: 5022602860645237092, guid: 87a51fb8deea72d43a17c21ac26bef5e, type: 3}
-    _brainFile: worm_isaaclab3.onnx
-    _material: {fileID: 2100000, guid: a5b6a53a34538b4468d28fc8a34510e5, type: 2}
-    _color: {r: 0.6, g: 0.3, b: 0.85, a: 1}
-  _trackLength: 20
-  _laneSpacing: 2
-  _startLineZ: 0
-  _startGap: 0.01
-  _countdownSeconds: 3
-  _timeLimitSeconds: 60
-  _resultsHoldSeconds: 4
-  _seriesLength: 5
-  _autoStartSeries: 1
-  _selfTestSettleSeconds: 1
+  _race:
+    _rigJson: {fileID: 4900000, guid: 3a8fa1c5545e76849908455334fb289a, type: 3}
+    _leadBody: seg0
+    _observation:
+      _referenceBody: seg2
+      _linearVelocityScale: 0.5
+      _angularVelocityScale: 0.25
+      _jointVelocityScale: 0.1
+      _jointPositionsRelativeToRest: 0
+      _includeTargetSpeed: 0
+      _targetSpeed: 0
+      _targetSpeedDivisor: 2
+    _previousActionClipped: 1
+    _racers:
+    - _name: MuJoCo worm
+      _method: MuJoCo
+      _physics: 0
+      _brain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
+      _brainFile: worm_mujoco.onnx
+      _material: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
+      _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
+    - _name: Isaac worm
+      _method: Isaac Lab
+      _physics: 1
+      _brain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
+      _brainFile: worm_isaac.onnx
+      _material: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
+      _color: {r: 1, g: 0.55, b: 0.1, a: 1}
+    - _name: Isaac3Worm
+      _method: Isaac Lab 3
+      _physics: 0
+      _brain: {fileID: 5022602860645237092, guid: 87a51fb8deea72d43a17c21ac26bef5e, type: 3}
+      _brainFile: worm_isaaclab3.onnx
+      _material: {fileID: 2100000, guid: a5b6a53a34538b4468d28fc8a34510e5, type: 2}
+      _color: {r: 0.6, g: 0.3, b: 0.85, a: 1}
+    _trackLength: 20
+    _laneSpacing: 2
+    _startLineZ: 0
+    _startGap: 0.01
+    _countdownSeconds: 3
+    _timeLimitSeconds: 60
+    _resultsHoldSeconds: 4
+    _seriesLength: 5
+    _autoStartSeries: 1
+    _selfTestSettleSeconds: 1
+    _fallenUprightThreshold: -1
+    _selfTests:
+    - _name: ZeroActionTest
+      _alias: zero
+      _kind: 0
+      _defaultSeconds: 5
+      _expectation: 'zero action: nose moves < 2 cm, speed < 1 cm/s, every |joint| < 0.05 rad, segment 2 centre at the capsule radius (0.045 m) +/- 1 cm, for every racer in its own physics'
+      _joint: 
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: 
+      _probeBodyB: 
+      _probePoint: {x: 0, y: 0, z: 0}
+      _probeAxis: {x: 0, y: 0, z: 1}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 0
+      _probeLabel: 
+      _maxLeadDisplacement: 0.02
+      _maxSpeed: 0.01
+      _maxJointFromRest: 0.05
+      _expectedReferenceHeight: 0.045
+      _referenceHeightTolerance: 0.01
+      _minUpright: -1
+    - _name: YawSignTest
+      _alias: yaw
+      _kind: 1
+      _defaultSeconds: 2
+      _expectation: 'MuJoCo j0_yaw = +0.5 rad swings segment 1 toward MuJoCo -y = Unity +x (the worm''s right when facing +Z): j0_yaw reads > +0.3 rad and segment 1 sits > 2 cm to the right of the head, for every racer in its own physics'
+      _joint: j0_yaw
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: seg0
+      _probeBodyB: seg1
+      _probePoint: {x: 0, y: 0, z: 0}
+      _probeAxis: {x: 0, y: -1, z: 0}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 0
+      _probeLabel: segment1 to the worm's right (Unity +x)
+      _maxLeadDisplacement: 0.02
+      _maxSpeed: 0.01
+      _maxJointFromRest: 0.05
+      _expectedReferenceHeight: 0
+      _referenceHeightTolerance: 0.01
+      _minUpright: -1
+    - _name: PitchSignTest
+      _alias: pitch
+      _kind: 1
+      _defaultSeconds: 2
+      _expectation: 'MuJoCo j0_pitch = +0.5 rad rotates segment 1 about +y, lifting it relative to the head: j0_pitch reads > +0.3 rad and segment 1 sits > 2 cm above the head''s plane, for every racer in its own physics'
+      _joint: j0_pitch
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: seg0
+      _probeBodyB: seg1
+      _probePoint: {x: 0, y: 0, z: 0}
+      _probeAxis: {x: 0, y: 0, z: 1}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 0
+      _probeLabel: segment1 above the head's plane
+      _maxLeadDisplacement: 0.02
+      _maxSpeed: 0.01
+      _maxJointFromRest: 0.05
+      _expectedReferenceHeight: 0
+      _referenceHeightTolerance: 0.01
+      _minUpright: -1
+    _mujocoSolverIterations: 10
+    _dumpMujocoMjcf: 1
+    _title: WORM RACE
+    _reportPrefix: wormrace
+    _finishRule: first segment-0 nose past the finish line; time limit ranks by distance
+    _holdLabel: holds straight
+    _brainsFolder: Assets/WormRace/Brains
+    _rebuildCommand: PoRacer.WormRace.EditorTools.Editor_BuildWormRaceScene.Build()
   _wormPhysicsMaterial: {fileID: 13400000, guid: 94e3dd543c95fe14aae1d52ad1c94e85, type: 2}
   _passiveDamping: 1
   _solverIterations: 16
   _solverVelocityIterations: 4
   _foldArmatureIntoInertia: 1
-  _mujocoSolverIterations: 10
-  _dumpMujocoMjcf: 1
   _crossSimulatorProxies: 1
-  _previousActionClipped: 1

@@ -1,3 +1,6 @@
+// SUPERSEDED by Assets/Scripts/CreatureRace/Brain/CreatureProbe.cs (creature template, 2026-09-24).
+// Kept out of compilation, content unchanged, until someone deletes this file and its .meta.
+#if PORACER_WORMRACE_LEGACY
 using UnityEngine;
 
 namespace PoRacer.WormRace
@@ -28,3 +31,4 @@ namespace PoRacer.WormRace
         }
     }
 }
+#endif

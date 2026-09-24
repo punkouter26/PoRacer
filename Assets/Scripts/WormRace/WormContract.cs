@@ -19,15 +19,14 @@ namespace PoRacer.WormRace
     /// </code>
     ///
     /// B is segment 2, the middle segment, in MuJoCo's convention: x forward (toward the
-    /// head), y left, z up.
+    /// head), y left, z up. The observation itself is assembled by the creature template
+    /// (CreatureObservation) from the settings' observation definition, which
+    /// Editor_BuildWormRaceScene writes to exactly this layout.
     /// </summary>
     internal static class WormContract
     {
-        public const int OBS_SIZE = 35;
         public const int ACTION_SIZE = 8;
         public const int SEGMENT_COUNT = 5;
-        public const int HEAD_SEGMENT = 0;
-        public const int SECOND_SEGMENT = 1;
         public const int REFERENCE_SEGMENT = 2;
 
         /// <summary>45 degrees. Both the joint limit and the action scale.</summary>
@@ -36,32 +35,11 @@ namespace PoRacer.WormRace
         public const int DECIMATION = 4;
         public const float PHYSICS_DT = 0.005f;
 
-        public const float LINEAR_VELOCITY_SCALE = 0.5f;
-        public const float ANGULAR_VELOCITY_SCALE = 0.25f;
-        public const float JOINT_VELOCITY_SCALE = 0.1f;
-
-        public const int OBS_GRAVITY = 0;
-        public const int OBS_LINEAR_VELOCITY = 3;
-        public const int OBS_ANGULAR_VELOCITY = 6;
-        public const int OBS_JOINT_POSITION = 9;
-        public const int OBS_JOINT_VELOCITY = 17;
-        public const int OBS_PREVIOUS_ACTION = 25;
-        public const int OBS_GOAL = 33;
-
-        public const string INPUT_NAME = "obs";
-        public const string OUTPUT_NAME = "actions";
-
         /// <summary>Action order, verified against worm_rig.json's actionOrder at load.</summary>
         public static readonly string[] ActionOrder =
         {
             "j0_pitch", "j0_yaw", "j1_pitch", "j1_yaw",
             "j2_pitch", "j2_yaw", "j3_pitch", "j3_yaw",
         };
-
-        /// <summary>Index of j0_yaw in the action vector; the sign test drives it.</summary>
-        public const int J0_YAW_INDEX = 1;
-
-        /// <summary>Index of j0_pitch in the action vector; the pitch sign test drives it.</summary>
-        public const int J0_PITCH_INDEX = 0;
     }
 }

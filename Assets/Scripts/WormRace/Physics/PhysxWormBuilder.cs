@@ -1,3 +1,4 @@
+using PoRacer.CreatureRace;
 using UnityEngine;
 
 namespace PoRacer.WormRace
@@ -13,7 +14,7 @@ namespace PoRacer.WormRace
     /// MuJoCo hinges and its jointPosition would not map back to qpos (the same reasoning
     /// as MujocoBipedRigBuilder's placeholder chains).
     ///
-    /// Frame map (WormFrames SPEC map): positions Unity = (-y, z, x) of MuJoCo; hinge axes
+    /// Frame map (CreatureFrames SPEC map): positions Unity = (-y, z, x) of MuJoCo; hinge axes
     /// go through the axial map, so pitch (MuJoCo y) is Unity +x and yaw (MuJoCo z) is
     /// Unity -y, and a positive jointPosition is a positive MuJoCo qpos. Nothing is scaled:
     /// every localScale stays (1, 1, 1), because PhysX cooks colliders through the
@@ -27,9 +28,10 @@ namespace PoRacer.WormRace
     /// </summary>
     internal static class PhysxWormBuilder
     {
-        public static GameObject Build(WormRig rig, WormRaceSettings settings, WormPilot pilot, string rootName,
-                                       Vector3 rootOrigin, Vector3 laneForward, Material material,
-                                       Mesh segmentMesh, out Transform[] segmentTransforms)
+        public static GameObject Build(WormRig rig, WormRaceSettings settings, CreatureLayout layout,
+                                       CreaturePilot pilot, string rootName, Vector3 rootOrigin,
+                                       Vector3 laneForward, Material material, Mesh segmentMesh,
+                                       out Transform[] segmentTransforms)
         {
             var root = new GameObject(rootName);
             // Built facing Unity +Z (MuJoCo +x under the SPEC map), then turned onto the lane.
@@ -38,7 +40,7 @@ namespace PoRacer.WormRace
             int bodyCount = rig.Bodies.Length;
             var bodyObjects = new GameObject[bodyCount];
             var colliders = new CapsuleCollider[bodyCount];
-            var segments = new ArticulationBody[WormContract.SEGMENT_COUNT];
+            var bodies = new ArticulationBody[bodyCount];
             var joints = new ArticulationBody[WormContract.ACTION_SIZE];
             segmentTransforms = new Transform[WormContract.SEGMENT_COUNT];
 
@@ -49,18 +51,18 @@ namespace PoRacer.WormRace
 
                 var bodyObject = new GameObject(def.Name);
                 bodyObject.transform.SetParent(parent, false);
-                bodyObject.transform.localPosition = WormFrames.UnityFromSpecPolar(def.PositionMuJoCo);
+                bodyObject.transform.localPosition = CreatureFrames.UnityFromSpecPolar(def.PositionMuJoCo);
                 bodyObject.transform.localRotation = Quaternion.identity;
                 bodyObject.transform.localScale = Vector3.one;
 
                 ArticulationBody body = bodyObject.AddComponent<ArticulationBody>();
+                bodies[bodyIndex] = body;
                 if (def.HasCapsule)
                 {
                     // Collider before the explicit mass properties, so an automatic
                     // recompute triggered by the new collider cannot overwrite them.
                     colliders[bodyIndex] = AddCapsule(bodyObject, def, settings.WormPhysicsMaterial,
                                                       material, segmentMesh);
-                    segments[def.SegmentIndex] = body;
                     segmentTransforms[def.SegmentIndex] = bodyObject.transform;
                 }
                 ConfigureBody(body, def, rig, settings);
@@ -83,7 +85,7 @@ namespace PoRacer.WormRace
             }
 
             PhysxWormView view = root.AddComponent<PhysxWormView>();
-            view.Bind(segments, joints, pilot, laneForward, rig.NoseOffset, PassiveJointDamping(rig, settings));
+            view.Bind(bodies, joints, pilot, laneForward, layout, PassiveJointDamping(rig, settings));
             return root;
         }
 
@@ -134,7 +136,7 @@ namespace PoRacer.WormRace
             }
 
             Vector3 axisUnity = def.HasJoint
-                ? WormFrames.UnityFromSpecAxial(def.JointAxisMuJoCo).normalized
+                ? CreatureFrames.UnityFromSpecAxial(def.JointAxisMuJoCo).normalized
                 : Vector3.zero;
             if (def.HasJoint && settings.FoldArmatureIntoInertia)
             {
@@ -159,7 +161,7 @@ namespace PoRacer.WormRace
             }
 
             body.jointType = ArticulationJointType.RevoluteJoint;
-            Vector3 anchorPosition = WormFrames.UnityFromSpecPolar(def.JointAnchorMuJoCo);
+            Vector3 anchorPosition = CreatureFrames.UnityFromSpecPolar(def.JointAnchorMuJoCo);
             // PhysX twists about the anchor frame's +X; put +X on the axial-mapped axis.
             Quaternion anchorRotation = Quaternion.FromToRotation(Vector3.right, axisUnity);
             // Both anchors written explicitly rather than derived (matchAnchors): the child

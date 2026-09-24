@@ -9,7 +9,7 @@ namespace PoRacer.WormRace
     /// PhysX worm are the same animal by construction.
     ///
     /// Everything is kept in MuJoCo coordinates here (x forward, y left, z up). The builders
-    /// apply their own frame map; see <see cref="WormFrames"/>.
+    /// apply their own frame map; see CreatureFrames.
     ///
     /// The parser is strict on purpose: the builders assume a tree in which every non-root
     /// body carries exactly one hinge (the pitch link and the yaw segment), and a rig that
@@ -50,9 +50,6 @@ namespace PoRacer.WormRace
         public float JointRangeRad { get; private set; }
         public float SegmentRadius { get; private set; }
         public float SegmentHalfLength { get; private set; }
-
-        /// <summary>Distance from segment 0's centre to the tip of its capsule.</summary>
-        public float NoseOffset => SegmentHalfLength + SegmentRadius;
 
         public static bool TryParse(string json, out WormRig rig, out string error)
         {

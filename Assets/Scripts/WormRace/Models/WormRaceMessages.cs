@@ -1,3 +1,6 @@
+// SUPERSEDED by Assets/Scripts/CreatureRace/Models/CreatureRaceMessages.cs (creature template, 2026-09-24).
+// Kept out of compilation, content unchanged, until someone deletes this file and its .meta.
+#if PORACER_WORMRACE_LEGACY
 namespace PoRacer.WormRace
 {
     // Grouped in one file after the project's own Assets/Scripts/Models/Messages.cs.
@@ -37,3 +40,4 @@ namespace PoRacer.WormRace
         }
     }
 }
+#endif

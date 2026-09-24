@@ -1,4 +1,5 @@
 using Mujoco;
+using PoRacer.CreatureRace;
 using UnityEngine;
 
 namespace PoRacer.WormRace
@@ -26,7 +27,7 @@ namespace PoRacer.WormRace
     internal static class WormProxyBuilder
     {
         public static void BuildMocapProxies(Transform mujocoWorld, Transform[] physxSegments,
-                                             WormRig rig, int lane)
+                                             WormRig rig, CreatureContact contact, int lane)
         {
             for (int segmentIndex = 0; segmentIndex < physxSegments.Length; segmentIndex++)
             {
@@ -44,7 +45,7 @@ namespace PoRacer.WormRace
                 geom.ShapeType = MjShapeComponent.ShapeTypes.Capsule;
                 geom.Capsule.Radius = rig.SegmentRadius;
                 geom.Capsule.HalfHeight = rig.SegmentHalfLength;
-                MujocoWorldBuilder.ApplyContact(geom, rig.Friction);
+                MujocoCreatureWorld.ApplyContact(geom, contact);
 
                 mocapObject.AddComponent<MocapProxyFollower>().Bind(source);
             }

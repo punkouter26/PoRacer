@@ -1,4 +1,4 @@
-using MessagePipe;
+using PoRacer.CreatureRace;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -6,15 +6,14 @@ using VContainer.Unity;
 namespace PoRacer.WormRace
 {
     /// <summary>
-    /// Composition root of SCN_WORM_RACE. The only place anything in the worm race is
-    /// bound; every class asks for exactly what it uses (architecture.md: no GameContext).
+    /// Composition root of SCN_WORM_RACE: the creature template's shared race bindings
+    /// (CreatureRaceInstaller: config, model, race system, HUD, camera, MessagePipe) plus the
+    /// worm's own spawner, which adds the PhysX lane and the cross-simulator stand-ins.
+    /// Every class asks for exactly what it uses (architecture.md: no GameContext).
     ///
-    ///   Model   WormRaceModel                          race state, one racer per settings lane
-    ///   System  WormRaceSystem (entry point)           series / race / self-test flow
-    ///           WormSpawnSystem                        worms, MuJoCo world, stand-ins
-    ///   View    WormRaceHudView, WormRaceCameraView    authored in the scene
-    ///           MujocoWormView, PhysxWormView          spawned per race, bound by the builders
-    ///   Pipe    countdown, race finished, series finished
+    ///   Settings  WormRaceSettings (its Race config + the PhysX knobs)
+    ///   Spawner   WormSpawnSystem : ICreatureSpawner   MuJoCo worms (generic builder), PhysX worms, stand-ins
+    ///   View      MujocoCreatureView, PhysxWormView     spawned per race, bound by the builders
     /// </summary>
     public sealed class WormRaceLifetimeScope : LifetimeScope
     {
@@ -33,19 +32,8 @@ namespace PoRacer.WormRace
                 settings = ScriptableObject.CreateInstance<WormRaceSettings>();
             }
             builder.RegisterInstance(settings);
-
-            // One racer model per lane of the settings' racer list, fixed for the session.
-            builder.Register<WormRaceModel>(Lifetime.Singleton).WithParameter(settings.LaneCount);
-            builder.Register<WormSpawnSystem>(Lifetime.Singleton);
-            builder.RegisterEntryPoint<WormRaceSystem>().AsSelf();
-
-            builder.RegisterComponentInHierarchy<WormRaceHudView>();
-            builder.RegisterComponentInHierarchy<WormRaceCameraView>();
-
-            MessagePipeOptions options = builder.RegisterMessagePipe();
-            builder.RegisterMessageBroker<WormCountdownMessage>(options);
-            builder.RegisterMessageBroker<WormRaceFinishedMessage>(options);
-            builder.RegisterMessageBroker<WormSeriesFinishedMessage>(options);
+            new CreatureRaceInstaller(settings.Race).Install(builder);
+            builder.Register<WormSpawnSystem>(Lifetime.Singleton).AsImplementedInterfaces();
         }
     }
 }

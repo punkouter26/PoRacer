@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c12636fa15952524eb1de66eef4a7afb, type: 3}
+  m_Name: QuadRaceSettings
+  m_EditorClassIdentifier: PoRacer.CreatureRace::PoRacer.CreatureRace.CreatureRaceSettings
+  _race:
+    _rigJson: {fileID: 4900000, guid: a2bd185a24f22d742960aaf06c925ad7, type: 3}
+    _leadBody: 
+    _observation:
+      _referenceBody: 
+      _linearVelocityScale: 0.5
+      _angularVelocityScale: 0.25
+      _jointVelocityScale: 0.1
+      _jointPositionsRelativeToRest: 0
+      _includeTargetSpeed: 1
+      _targetSpeed: 0
+      _targetSpeedDivisor: 2
+    _previousActionClipped: 1
+    _racers:
+    - _name: Quad (MuJoCo)
+      _method: MuJoCo
+      _physics: 0
+      _brain: {fileID: 0}
+      _brainFile: quad_mujoco.onnx
+      _material: {fileID: 2100000, guid: 64e8416d6bfa1e24cbacfc655be45c56, type: 2}
+      _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
+    - _name: Quad (Isaac Lab 3)
+      _method: Isaac Lab 3
+      _physics: 0
+      _brain: {fileID: 0}
+      _brainFile: quad_isaaclab3.onnx
+      _material: {fileID: 2100000, guid: cb2012eff42868549b273c84a651609b, type: 2}
+      _color: {r: 0.6, g: 0.3, b: 0.85, a: 1}
+    _trackLength: 30
+    _laneSpacing: 3
+    _startLineZ: 0
+    _startGap: 0.01
+    _countdownSeconds: 3
+    _timeLimitSeconds: 60
+    _resultsHoldSeconds: 4
+    _seriesLength: 5
+    _autoStartSeries: 1
+    _selfTestSettleSeconds: 1
+    _fallenUprightThreshold: 0.5
+    _selfTests:
+    - _name: ZeroActionTest
+      _alias: zero
+      _kind: 0
+      _defaultSeconds: 5
+      _expectation: 'zero action (every servo at its rest angle): the quad stands - chest moves < 5 cm, speed < 5 cm/s, every joint within 0.1 rad of rest, torso at the rest height (0.90 m) +/- 5 cm and upright (up . world up >= 0.9), for every racer'
+      _joint: 
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: 
+      _probeBodyB: 
+      _probePoint: {x: 0, y: 0, z: 0}
+      _probeAxis: {x: 0, y: 0, z: 1}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 0
+      _probeLabel: 
+      _maxLeadDisplacement: 0.05
+      _maxSpeed: 0.05
+      _maxJointFromRest: 0.1
+      _expectedReferenceHeight: 0.9
+      _referenceHeightTolerance: 0.05
+      _minUpright: 0.9
+    - _name: HipSignTest
+      _alias: hip
+      _kind: 1
+      _defaultSeconds: 2
+      _expectation: 'MuJoCo Upper_-1_1 (front-left hip) = rest + 0.5 rad turns the leg about +y, swinging the front-left foot toward MuJoCo -x (backward, training/bugs/README.md): Upper_-1_1 reads > +0.3 rad and the foot moves > 2 cm backward relative to the torso, for every racer'
+      _joint: Upper_-1_1
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: Quad_v01
+      _probeBodyB: Lower_-1_1
+      _probePoint: {x: 0, y: 0, z: -0.108}
+      _probeAxis: {x: -1, y: 0, z: 0}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 1
+      _probeLabel: front-left foot moved backward (MuJoCo -x)
+      _maxLeadDisplacement: 0.02
+      _maxSpeed: 0.01
+      _maxJointFromRest: 0.05
+      _expectedReferenceHeight: 0
+      _referenceHeightTolerance: 0.01
+      _minUpright: -1
+    - _name: KneeSignTest
+      _alias: knee
+      _kind: 1
+      _defaultSeconds: 2
+      _expectation: 'MuJoCo Lower_-1_1 (front-left knee) = rest + 0.5 rad turns the leg about +y, swinging the front-left foot toward MuJoCo -x (backward, training/bugs/README.md): Lower_-1_1 reads > +0.3 rad and the foot moves > 2 cm backward relative to the torso, for every racer'
+      _joint: Lower_-1_1
+      _targetRad: 0.5
+      _minJointRad: 0.3
+      _probeBodyA: Quad_v01
+      _probeBodyB: Lower_-1_1
+      _probePoint: {x: 0, y: 0, z: -0.108}
+      _probeAxis: {x: -1, y: 0, z: 0}
+      _minProbeOffset: 0.02
+      _probeRelativeToRelease: 1
+      _probeLabel: front-left foot moved backward (MuJoCo -x)
+      _maxLeadDisplacement: 0.02
+      _maxSpeed: 0.01
+      _maxJointFromRest: 0.05
+      _expectedReferenceHeight: 0
+      _referenceHeightTolerance: 0.01
+      _minUpright: -1
+    _mujocoSolverIterations: 10
+    _dumpMujocoMjcf: 1
+    _title: QUAD RACE
+    _reportPrefix: quadrace
+    _finishRule: first torso front past the finish line; time limit ranks by distance; a fallen quad is never stood up (rule H)
+    _holdLabel: stands at rest
+    _brainsFolder: Assets/QuadRace/Brains
+    _rebuildCommand: PoRacer.QuadRace.EditorTools.Editor_BuildQuadRaceScene.Build()

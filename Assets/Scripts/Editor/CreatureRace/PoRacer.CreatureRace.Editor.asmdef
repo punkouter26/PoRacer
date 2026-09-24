@@ -1,0 +1,20 @@
+{
+    "name": "PoRacer.CreatureRace.Editor",
+    "rootNamespace": "PoRacer.CreatureRace.EditorTools",
+    "references": [
+        "PoRacer.CreatureRace",
+        "Unity.InferenceEngine",
+        "VContainer"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

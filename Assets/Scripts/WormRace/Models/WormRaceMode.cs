@@ -1,3 +1,6 @@
+// SUPERSEDED by Assets/Scripts/CreatureSelfTestDefinition (data-driven self-tests) + CreatureRaceRequest (creature template, 2026-09-24).
+// Kept out of compilation, content unchanged, until someone deletes this file and its .meta.
+#if PORACER_WORMRACE_LEGACY
 namespace PoRacer.WormRace
 {
     /// <summary>What a play session of SCN_WORM_RACE does. See WormRaceRequest.</summary>
@@ -13,3 +16,4 @@ namespace PoRacer.WormRace
         PitchSignTest,
     }
 }
+#endif

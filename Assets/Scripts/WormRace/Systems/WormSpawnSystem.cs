@@ -1,129 +1,109 @@
 using System;
 using System.Collections.Generic;
+using PoRacer.CreatureRace;
 using UnityEngine;
 
 namespace PoRacer.WormRace
 {
     /// <summary>
-    /// Puts the worms on the start line and takes them away again. Owns the parsed rig, the
-    /// shared segment mesh and every GameObject a race creates at runtime (the worms, the
-    /// MuJoCo world, the collision stand-ins); the track, camera, light and HUD are authored
-    /// in SCN_WORM_RACE and never touched here.
+    /// The worm's <see cref="ICreatureSpawner"/>: puts the worms on the start line and takes
+    /// them away again. Owns the parsed rig, the shared render meshes and every GameObject a
+    /// race creates at runtime (the worms, the MuJoCo world, the collision stand-ins); the
+    /// track, camera, light and HUD are authored in SCN_WORM_RACE and never touched here.
     ///
-    /// One worm per entry of WormRaceSettings' racer list, lane = list index, each built in
-    /// the physics its entry selects. Each nose starts <see cref="WormRaceSettings.StartGap"/>
-    /// behind the start line, the worm straight and lying on the floor at the rig's spawn
-    /// height, exactly the training reset minus its yaw and joint noise.
+    /// One worm per entry of the racer list, lane = list index, each built in the physics its
+    /// entry selects: MuJoCo worms through the creature template's generic
+    /// <see cref="MujocoCreatureBuilder"/> (fed by <see cref="WormRigAdapter"/>), PhysX worms
+    /// through the worm's own <see cref="PhysxWormBuilder"/>. Each nose starts
+    /// <see cref="CreatureRaceConfig.StartGap"/> behind the start line, the worm straight and
+    /// lying on the floor at the rig's spawn height.
     ///
-    /// ONE MuJoCo world per race. Every MuJoCo worm is created in the same frame, under the
-    /// same MjScene, so the plug-in compiles them into one model: they collide with each
-    /// other natively, and each worm's view resolves its own bodies, joints and actuators by
-    /// the unique names the plug-in generates (MujocoId, QposAddress, DofAddress), so no
-    /// index is ever shared between worms. Adjacent-segment excludes are per worm.
+    /// ONE MuJoCo world per race: every MuJoCo worm is created in the same frame under the
+    /// same MjScene, so they collide natively and never share an index. ACROSS simulators
+    /// (AGENTS rule M) every PhysX worm gets five mocap stand-ins inside the MuJoCo world and
+    /// every MuJoCo worm five kinematic stand-ins in PhysX.
     ///
-    /// ACROSS simulators (AGENTS rule M) every PhysX worm gets five mocap stand-ins inside
-    /// the MuJoCo world, and every MuJoCo worm gets five kinematic stand-ins in PhysX, so
-    /// every MuJoCo/PhysX pair is covered. PhysX worms collide with each other natively.
-    ///
-    /// The builders attach each worm's physics adapter (a View) and bind it to its pilot;
-    /// this system only ever holds the resulting GameObjects - the same factory boundary
-    /// the race scene's Systems_Spawn has (DOCS/Plan-P1-Worm.md D13).
-    ///
-    /// Despawn and the next Spawn must be at least one frame apart (D14): Destroy is
-    /// deferred, and MjScene's singleton only frees when the old one is really gone.
+    /// Despawn and the next Spawn must be at least one frame apart (DOCS/Plan-P1-Worm.md D14).
     /// </summary>
-    public sealed class WormSpawnSystem : IDisposable
+    public sealed class WormSpawnSystem : ICreatureSpawner, IDisposable
     {
         private readonly WormRaceSettings _settings;
+        private readonly CreatureRaceConfig _config;
         private readonly List<GameObject> _worms = new();
         private readonly List<GameObject> _kinematicProxies = new();
         private readonly List<Transform[]> _physxSegments = new();
         private readonly List<int> _physxLanes = new();
         private readonly List<Transform[]> _mujocoGeoms = new();
         private readonly List<int> _mujocoLanes = new();
+        private readonly CreatureMeshCache _meshes = new();
         private WormRig _rig;
-        private string _rigError = string.Empty;
-        private Mesh _segmentMesh;
+        private CreatureLayout _layout;
+        private string _error = string.Empty;
         private GameObject _mujocoWorld;
 
         public WormSpawnSystem(WormRaceSettings settings)
         {
             _settings = settings;
+            _config = settings.Race;
         }
 
-        internal bool MujocoSupported => MujocoWorldBuilder.IsSupported;
+        public bool MujocoSupported => MujocoCreatureWorld.IsSupported;
 
-        internal bool TryGetRig(out WormRig rig, out string error)
+        public bool TryPrepare(out CreatureLayout layout, out string error)
         {
-            if (_rig == null && string.IsNullOrEmpty(_rigError))
+            if (_layout == null && string.IsNullOrEmpty(_error))
             {
-                TextAsset rigJson = _settings.RigJson;
-                if (rigJson == null)
-                {
-                    _rigError = $"no worm_rig.json assigned. Copy training/worm/worm_rig.json to "
-                              + $"{WormRacePaths.RIG_JSON} and re-run Editor_BuildWormRaceScene.Build().";
-                }
-                else if (!WormRig.TryParse(rigJson.text, out _rig, out _rigError))
-                {
-                    _rig = null;
-                }
+                _error = Prepare();
             }
-            rig = _rig;
-            error = _rigError;
-            return _rig != null;
-        }
-
-        /// <summary>Where a lane's worm root goes so its nose sits just behind the line.</summary>
-        internal Vector3 LaneOrigin(int lane)
-        {
-            return new Vector3(_settings.LaneX(lane), 0f, _settings.StartLineZ);
+            layout = _layout;
+            error = _error;
+            return _layout != null;
         }
 
         /// <summary>
         /// Builds every racer's worm. A MuJoCo racer on a platform without MuJoCo is skipped
         /// (its pilot has already been failed by the race system).
         /// </summary>
-        internal void Spawn(WormRig rig, WormPilot[] pilots)
+        public void Spawn(CreatureLayout layout, CreaturePilot[] pilots)
         {
             Despawn();
-            if (_segmentMesh == null)
-            {
-                _segmentMesh = WormCapsuleMesh.Create(rig.SegmentRadius, rig.SegmentHalfLength);
-            }
+            Mesh segmentMesh = _meshes.Capsule(_rig.SegmentRadius, _rig.SegmentHalfLength);
 
-            IReadOnlyList<WormRacerDefinition> racers = _settings.Racers;
+            IReadOnlyList<CreatureRacerDefinition> racers = _config.Racers;
             Vector3 forward = Vector3.forward;
-            Vector3 setBack = forward * (rig.NoseOffset + _settings.StartGap);
-            bool mujocoAvailable = MujocoSupported;
+            Vector3 setBack = forward * (layout.LeadOffset.x + _config.StartGap);
 
             // World first: the MjScene singleton must exist before any Mj component, and
             // every MuJoCo worm and stand-in must exist before it compiles (next frame).
-            if (mujocoAvailable && AnyRacerUses(racers, WormPhysicsKind.MujocoPlugin))
+            if (MujocoSupported && AnyRacerUses(racers, CreaturePhysicsKind.MujocoPlugin))
             {
-                _mujocoWorld = MujocoWorldBuilder.Build(_settings.MujocoSolverIterations,
-                                                        _settings.DumpMujocoMjcf, rig.Friction);
+                _mujocoWorld = MujocoCreatureWorld.Build(_config.MujocoSolverIterations, _config.MjcfDumpFile,
+                                                         layout.Rig.FloorContact);
             }
 
             for (int lane = 0; lane < racers.Count && lane < pilots.Length; lane++)
             {
-                WormRacerDefinition racer = racers[lane];
-                Vector3 rootOrigin = LaneOrigin(lane) - setBack;
+                CreatureRacerDefinition racer = racers[lane];
+                Vector3 rootOrigin = _config.LaneOrigin(lane) - setBack;
                 string rootName = $"Worm_L{lane}_{racer.Name}";
-                if (racer.Physics == WormPhysicsKind.MujocoPlugin)
+                if (racer.Physics == CreaturePhysicsKind.MujocoPlugin)
                 {
                     if (_mujocoWorld == null)
                     {
                         continue;
                     }
-                    _worms.Add(MujocoWormBuilder.Build(rig, pilots[lane], rootName, rootOrigin, forward,
-                                                       racer.Material, _segmentMesh, out Transform[] geoms));
-                    _mujocoGeoms.Add(geoms);
+                    MujocoCreatureInstance worm = MujocoCreatureBuilder.Build(
+                        layout, pilots[lane], rootName, rootOrigin, forward, racer.Material, _meshes);
+                    _worms.Add(worm.Root);
+                    // The adapter gives the worm exactly its five segment capsules, in order.
+                    _mujocoGeoms.Add(worm.Geoms);
                     _mujocoLanes.Add(lane);
                 }
                 else
                 {
-                    _worms.Add(PhysxWormBuilder.Build(rig, _settings, pilots[lane], rootName, rootOrigin, forward,
-                                                      racer.Material, _segmentMesh, out Transform[] segments));
+                    _worms.Add(PhysxWormBuilder.Build(_rig, _settings, layout, pilots[lane], rootName, rootOrigin,
+                                                      forward, racer.Material, segmentMesh,
+                                                      out Transform[] segments));
                     _physxSegments.Add(segments);
                     _physxLanes.Add(lane);
                 }
@@ -133,23 +113,24 @@ namespace PoRacer.WormRace
                 && _mujocoGeoms.Count > 0 && _physxSegments.Count > 0)
             {
                 // Same frame as the world: MuJoCo only sees what exists when it compiles.
+                CreatureContact contact = WormRigAdapter.SegmentContact(_rig);
                 for (int index = 0; index < _physxSegments.Count; index++)
                 {
                     WormProxyBuilder.BuildMocapProxies(_mujocoWorld.transform, _physxSegments[index],
-                                                       rig, _physxLanes[index]);
+                                                       _rig, contact, _physxLanes[index]);
                 }
                 for (int index = 0; index < _mujocoGeoms.Count; index++)
                 {
                     _kinematicProxies.Add(WormProxyBuilder.BuildKinematicProxies(
-                        _mujocoGeoms[index], rig, _settings.WormPhysicsMaterial, _mujocoLanes[index]));
+                        _mujocoGeoms[index], _rig, _settings.WormPhysicsMaterial, _mujocoLanes[index]));
                 }
             }
         }
 
-        internal void Despawn()
+        public void Despawn()
         {
             // Stop MuJoCo stepping before anything it simulates is queued for destruction.
-            MujocoWorldBuilder.Suspend(_mujocoWorld);
+            MujocoCreatureWorld.Suspend(_mujocoWorld);
             DestroyAll(_kinematicProxies);
             DestroyAll(_worms);
             DestroyIfAlive(ref _mujocoWorld);
@@ -162,14 +143,34 @@ namespace PoRacer.WormRace
         public void Dispose()
         {
             Despawn();
-            if (_segmentMesh != null)
-            {
-                UnityEngine.Object.Destroy(_segmentMesh);
-                _segmentMesh = null;
-            }
+            _meshes.Dispose();
         }
 
-        private static bool AnyRacerUses(IReadOnlyList<WormRacerDefinition> racers, WormPhysicsKind physics)
+        private string Prepare()
+        {
+            TextAsset rigJson = _config.RigJson;
+            if (rigJson == null)
+            {
+                return $"no worm_rig.json assigned. Copy training/worm/worm_rig.json to {WormRacePaths.RIG_JSON} "
+                     + $"and re-run {_config.RebuildCommand}.";
+            }
+            if (!WormRig.TryParse(rigJson.text, out _rig, out string error))
+            {
+                _rig = null;
+                return error;
+            }
+            // The contract's float action scale, so targets and observations stay bit-identical
+            // to the worm's own pre-template pilot (the rig's 0.7853981... rounds differently).
+            if (!CreatureLayout.TryCreate(WormRigAdapter.ToCreatureRig(_rig), _config.Observation, _config.LeadBody,
+                                          WormContract.JOINT_RANGE_RAD, out _layout, out error))
+            {
+                _layout = null;
+                return "worm_rig.json: " + error;
+            }
+            return string.Empty;
+        }
+
+        private static bool AnyRacerUses(IReadOnlyList<CreatureRacerDefinition> racers, CreaturePhysicsKind physics)
         {
             for (int lane = 0; lane < racers.Count; lane++)
             {

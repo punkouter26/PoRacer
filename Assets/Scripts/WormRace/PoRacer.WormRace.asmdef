@@ -2,6 +2,7 @@
     "name": "PoRacer.WormRace",
     "rootNamespace": "PoRacer.WormRace",
     "references": [
+        "PoRacer.CreatureRace",
         "Mujoco.Runtime",
         "Unity.InferenceEngine",
         "VContainer",

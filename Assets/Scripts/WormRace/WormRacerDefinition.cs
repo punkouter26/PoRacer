@@ -1,3 +1,6 @@
+// SUPERSEDED by Assets/Scripts/CreatureRace/Race/CreatureRacerDefinition.cs (creature template, 2026-09-24).
+// Kept out of compilation, content unchanged, until someone deletes this file and its .meta.
+#if PORACER_WORMRACE_LEGACY
 using System;
 using Unity.InferenceEngine;
 using UnityEngine;
@@ -52,3 +55,4 @@ namespace PoRacer.WormRace
             : PHYSX_PHYSICS_LABEL;
     }
 }
+#endif

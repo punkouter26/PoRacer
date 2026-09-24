@@ -139,10 +139,18 @@ today) is tested exactly like the others and must pass too.
 | `yaw` (2 s) | j0_yaw target = +0.5 rad | WORM_SPEC sign test: j0_yaw reads more than +0.3 rad, and segment 1 is more than 2 cm to the worm's **right = Unity +x**. Expect about +0.45 to +0.5 rad and about +4.5 cm |
 | `pitch` (2 s) | j0_pitch target = +0.5 rad | j0_pitch reads more than +0.3 rad, and segment 1 is more than 2 cm **above** the head's plane. Expect about +4 cm |
 
-`"allPassed": true` in each file is the bar. If a test fails:
+`"allPassed": true` in each file is the bar. Since 2026-09-24 (the creature template, section 10)
+each racer entry reports `probeOffsetMeters` (segment 1 minus segment 0 in segment 0's frame,
+MuJoCo x forward, y left, z up), `probeAlongAxisMeters` (the tested direction: -y for yaw, +z
+for pitch; it replaces `secondSegmentLateralMeters` / `secondSegmentVerticalMeters`),
+`leadDisplacementMeters` (was `noseDisplacementMeters`), `referenceHeightMeters` and
+`referenceUpright`; the zero test's verdict reads `still= atRestPose= atHeight=` (was
+`still= straight= onFloor=`). The numbers and pass rules are unchanged: re-run on the template,
+zero/yaw/pitch gave exactly the values below (yaw +0.4834 rad / 4.65 cm MuJoCo, +0.4388 rad /
+4.25 cm PhysX; pitch +0.4609 rad / 4.45 cm, +0.4638 rad / 4.47 cm). If a test fails:
 
 - **yaw or pitch fails on the PhysX worms only** (segment 1 swings left, or the angle reads
-  negative): the PhysX axis map is off. Check `WormFrames.UnityFromSpecAxial` and the
+  negative): the PhysX axis map is off. Check `CreatureFrames.UnityFromSpecAxial` and the
   anchor rotation in `PhysxWormBuilder`. The MuJoCo worm's signs come from MuJoCo itself.
 - **yaw or pitch fails on the MuJoCo worms only**: the plug-in built a different body.
   Diff the generated MJCF (section 5). **On one MuJoCo worm only**: its ids or qpos/ctrl
@@ -274,6 +282,11 @@ position.
 
 ## 6. The knobs (`Assets/WormRace/WormRaceSettings.asset`)
 
+Since the creature template (section 10) everything except the PhysX knobs sits under the
+asset's **Race** block (the template's `CreatureRaceConfig`): racers, track, race timing,
+observation, self-tests, MuJoCo options and labels. `Editor_BuildWormRaceScene` writes all of
+it; re-run it rather than editing by hand, except for a racer's Physics choice, which it keeps.
+
 The body itself (masses, gains, limits, friction) is **not** here; it comes from
 `worm_rig.json`, so an Inspector edit cannot make the worms different animals.
 
@@ -289,8 +302,8 @@ The body itself (masses, gains, limits, friction) is **not** here; it comes from
 **Choosing lane 2's physics.** The Isaac3Worm defaults to **Mujoco Plugin**, because
 it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver, whose contact and
 joint model is MuJoCo's. If that trainer falls back to PhysX, set lane 2's Physics to
-**Physx Articulation** (Inspector: `Assets/WormRace/WormRaceSettings.asset > Racers >
-Element 2 > Physics`). It takes effect on the next play; the scene builder keeps the choice
+**Physx Articulation** (Inspector: `Assets/WormRace/WormRaceSettings.asset > Race >
+Racers > Element 2 > Physics`). It takes effect on the next play; the scene builder keeps the choice
 on re-runs. Any lane can be switched the same way. PhysX racers use the PhysX settings
 below (passive damping, solver iterations); MuJoCo racers use the MuJoCo ones.
 
@@ -323,15 +336,21 @@ MessagePipe messages, UniTask for the countdown and the race loop.
 
 | Kind | Types |
 |---|---|
-| Model | `WormRaceModel`, `WormRacerModel` |
-| Config | `WormRaceSettings` (asset) with its `WormRacerDefinition` list (one per lane; `WormPhysicsKind` selects the simulator) |
-| System | `WormRaceSystem` (entry point: series, race, self-test flow, one pilot per lane), `WormSpawnSystem` (worms, the one MuJoCo world, stand-ins) |
-| Per-racer logic | `WormPilot` (hold, decimation, observation, inference, clipping, race clock), `WormPolicy` (Inference Engine), `WormObservation` (the 35 numbers, shared by every worm) |
-| View | `MujocoWormView`, `PhysxWormView` (physics adapters, no decisions), `WormRaceHudView`, `WormRaceCameraView`, two proxy followers |
-| Messages | `WormCountdownMessage`, `WormRaceFinishedMessage`, `WormSeriesFinishedMessage` |
-| Scope | `WormRaceLifetimeScope` (sizes `WormRaceModel` to the racer list) |
+Since 2026-09-24 the worm runs on the creature template (section 10); only the worm-specific
+pieces are still in `Assets/Scripts/WormRace`.
 
-**How the MuJoCo worm gets into Unity.** Not through the MJCF importer. `MujocoWormBuilder`
+| Kind | Types |
+|---|---|
+| Model | `CreatureRaceModel`, `CreatureRacerModel` (template) |
+| Config | `WormRaceSettings` (asset): its `Race` block is the template's `CreatureRaceConfig` (racers as `CreatureRacerDefinition`, `CreaturePhysicsKind` selects the simulator; self-tests as `CreatureSelfTestDefinition` data), plus the PhysX knobs |
+| System | `CreatureRaceSystem` (template entry point: series, race, self-test flow, one pilot per lane), `WormSpawnSystem` (the worm's `ICreatureSpawner`: MuJoCo worms via the template builder, PhysX worms, the one MuJoCo world, stand-ins) |
+| Per-racer logic | `CreaturePilot` (hold, decimation, observation, inference, clipping, race clock), `CreaturePolicy`, `CreatureObservation` (the 35 numbers, per the settings' observation definition) |
+| Body | `WormRig` (worm_rig.json) -> `WormRigAdapter` -> `CreatureRig` for MuJoCo; `PhysxWormBuilder` still builds from `WormRig` |
+| View | `MujocoCreatureView` (template), `PhysxWormView` (physics adapters, no decisions), `CreatureRaceHudView`, `CreatureRaceCameraView`, two proxy followers |
+| Messages | `CreatureCountdownMessage`, `CreatureRaceFinishedMessage`, `CreatureSeriesFinishedMessage` |
+| Scope | `WormRaceLifetimeScope` (`CreatureRaceInstaller` + `WormSpawnSystem`) |
+
+**How the MuJoCo worm gets into Unity.** Not through the MJCF importer. `MujocoCreatureBuilder` (fed by `WormRigAdapter`)
 adds the plug-in's own components (`MjBody`, `MjGeom`, `MjHingeJoint`, `MjInertial`,
 `MjFreeJoint`, `MjExclude`, `MjActuator`) straight from `worm_rig.json` at race start.
 Why:
@@ -383,7 +402,7 @@ instead of the worms passing through each other.
 plug-in's MuJoCo frame (Unity (x, y, z) = MuJoCo (x, z, y)), including segment 2's
 velocity via `mj_objectVelocity` - the same quantities the trainer computes. A PhysX
 worm reads `ArticulationBody` state and converts with WORM_SPEC's Unity mapping
-(positions (z, -x, y), axes (-z, x, -y)). Both then go through `WormObservation`, which only
+(positions (z, -x, y), axes (-z, x, -y)). Both then go through `CreatureObservation`, which only
 projects onto segment 2's axes, so the two worlds' different orientation (the MuJoCo worm's
 lane is its world +y, the Isaac worm's is its world +x) is invisible to both policies,
 exactly like the ±45° spawn yaw they trained with.
@@ -445,5 +464,47 @@ Delete `Assets/Scripts/WormRace`, `Assets/Scripts/Editor/WormRace`, `Assets/Worm
 Nothing else in the project refers to them.
 
 ---
+
+## 10. The creature template, and the quad race
+
+The worm race was turned into a template any MuJoCo-Warp-trained creature can race on
+(`Assets/Scripts/CreatureRace`, assembly `PoRacer.CreatureRace`; editor side
+`Assets/Scripts/Editor/CreatureRace`). A creature brings a rig JSON in the trainers' format
+(`training/quad/quad_rig.json`: bodies with parent/pos/quat/mass/inertiaDiag/ipos/iquat,
+geoms capsule|box|sphere with size and pos/quat or fromto and contact, hinge joints with
+axis/pos/range/damping/armature/solreflimit, position actuators with kp/ctrlrange/forcerange,
+optional excludes, `actionOrder`, `restPose`, `actionScaleRad`, `physics.decimation`,
+`torso`, `spawnRootHeight`, `task.targetSpeed`), a settings asset and a scene builder. The
+template supplies the MuJoCo builder and view, the observation (reference body, goal,
+optional target speed / divisor; worm 35, quad 36), the pilot (target = rest + a x scale,
+decimation from the rig), the race system, HUD, camera, reports and a data-driven self-test
+list. `CreatureRaceSceneKit` and `CreatureRaceHarness` are the shared builder and CLI pieces.
+
+**Quad race** (`Assets/Scenes/SCN_QUAD_RACE.unity`, `Assets/QuadRace/`): two lanes 3 m apart,
+30 m, 60 s. "Quad (MuJoCo)" BLUE with `quad_mujoco.onnx`, "Quad (Isaac Lab 3)" PURPLE with
+`quad_isaaclab3.onnx`, both on the MuJoCo plug-in. The builder copies
+`training/quad/quad_rig.json` and any `training/quad/export/quad_*.onnx` into
+`Assets/QuadRace/` when they change, so re-run it after the trainers export. No righting
+(rule H): a fallen quad keeps its own policy; the HUD shows `RACING (DOWN)` and the report
+`fellOver` / `falls`.
+
+```powershell
+unity cmd eval --code "return PoRacer.QuadRace.EditorTools.Editor_BuildQuadRaceScene.Build();"
+unity cmd eval --code "return PoRacer.QuadRace.EditorTools.Editor_QuadRace.SelfTest(\"zero\");"   # also "hip", "knee"
+unity cmd eval --code "return PoRacer.QuadRace.EditorTools.Editor_QuadRace.Start(5);"
+unity cmd eval --code "return PoRacer.QuadRace.EditorTools.Editor_QuadRace.Status();"
+```
+
+Self-tests: `zero` (every servo at rest: stands still, joints within 0.1 rad, torso at the
+rig's rest height +/- 5 cm, upright >= 0.9), `hip` / `knee` (+0.5 rad on the front-left hip /
+knee must read positive and move the front-left foot > 2 cm backward, MuJoCo -x, relative to
+the torso: training/bugs/README.md's sign convention). Results in `Logs/quadrace_*.json`.
+First run, 2026-09-24, no brains yet: zero passed (torso 0.8998 m, upright 1.0, no drift),
+hip passed (+0.61 rad, foot 0.38 m back), knee passed (+0.505 rad, foot 0.142 m back), and a
+1-race run completed with both quads standing at the line (NO BRAIN).
+
+**Superseded worm files.** The worm's own copies of what moved into the template are compiled
+out (`#if PORACER_WORMRACE_LEGACY`, content unchanged) and marked `// SUPERSEDED by ...` in
+their first line; delete them and their `.meta` files when convenient.
 
 **TL;DR:** three lanes (MuJoCo, Isaac, Isaac Lab 3 with a MuJoCo/PhysX switch in the settings); copy brains, run the builder, pass zero/yaw/pitch, then `Editor_WormRace.Start(5)`.
