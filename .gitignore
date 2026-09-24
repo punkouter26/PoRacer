@@ -127,3 +127,6 @@ Assets/Local.meta
 
 # Written by the IvanMurzak Unity-MCP plugin; carries a cloud auth token.
 .mcp.json
+
+# Worm5 MuJoCo training runs (checkpoints, TensorBoard events); the exported ONNX is in training/worm/export.
+training/worm/mujoco/runs/

@@ -1,0 +1,21 @@
+{
+    "name": "PoRacer.WormRace.Editor",
+    "rootNamespace": "PoRacer.WormRace.EditorTools",
+    "references": [
+        "PoRacer.WormRace",
+        "Unity.InferenceEngine",
+        "Mujoco.Runtime",
+        "VContainer"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

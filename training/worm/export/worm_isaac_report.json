@@ -1,0 +1,85 @@
+{
+  "tool": "isaaclab-rsl_rl",
+  "meanSpeed": 0.17822176218032837,
+  "stdSpeed": 0.01135418564081192,
+  "meanDistance20s": 3.564434766769409,
+  "stepsTrained": 94371840,
+  "wallMinutes": 29.990667696793874,
+  "onnxMaxAbsErr": 1.1920928955078125e-06,
+  "notes": "Isaac Lab 0.54.4 / Isaac Sim 5.1.0.0 (PhysX 5, TGS), rsl-rl-lib 5.0.1. 100 deterministic episodes of 1000 policy steps (20 s), seed 12345, spec reset (yaw U(+/-45 deg) about the head, joint noise +/-0.05 rad), no randomisation, actions = clip(ONNX mean, -1, 1). Speed = seg2 displacement along +x (read at step 1000) / 20 s; std is over episodes (population std); health-guard (diverged) episodes excluded. Joint damping mode 'joint' ('joint' = PhysX joint viscous friction 2.0, drive damping 0; force limit 6.0 N*m). wallMinutes = training loop wall time (excludes simulator start-up). Parity: onnxruntime (CPU) vs the torch policy on GPU, on every rollout observation.",
+  "details": {
+    "checkpoint": "ISAAC\\logs\\rsl_rl\\worm5\\2026-09-24_15-55-51_worm_isaac_01\\model_959.pt",
+    "checkpointIteration": 959,
+    "episodes": 100,
+    "healthyEpisodes": 100,
+    "seed": 12345,
+    "meanInstantaneousVx": 0.18239198625087738,
+    "health": {
+      "divergedWorlds": 0,
+      "meanAbsRollRateSeg2": 0.3064378499984741,
+      "peakAbsRollRateSeg2": 4.881507873535156,
+      "peakJointSpeedRadS": 5.263754367828369,
+      "fractionTimeAnyActuatorSaturated": 0.9998800754547119,
+      "fractionTimeSaturatedPerJoint": {
+        "j0_pitch": 0.7877500057220459,
+        "j0_yaw": 0.5448100566864014,
+        "j1_pitch": 0.7402900457382202,
+        "j1_yaw": 0.4297700524330139,
+        "j2_pitch": 0.8872799873352051,
+        "j2_yaw": 0.590630054473877,
+        "j3_pitch": 0.6469700336456299,
+        "j3_yaw": 0.5401500463485718
+      },
+      "meanSegmentHeightM": 0.0531492680311203,
+      "meanAbsLateralDrift20sM": 0.2909194529056549,
+      "meanLateralDrift20sM": 0.08179391920566559
+    },
+    "minDistance20s": 3.1249570846557617,
+    "maxDistance20s": 3.885730266571045,
+    "onnx": {
+      "path": "training\\worm\\export\\worm_isaac.onnx",
+      "opset": 15,
+      "irVersion": 8,
+      "io": {
+        "inputs": [
+          [
+            "obs",
+            [
+              1,
+              35
+            ],
+            "tensor(float)"
+          ]
+        ],
+        "outputs": [
+          [
+            "actions",
+            [
+              1,
+              8
+            ],
+            "tensor(float)"
+          ]
+        ]
+      }
+    },
+    "training": {
+      "iterations": 960,
+      "stepsTrained": 94371840,
+      "wallMinutes": 29.990667696793874,
+      "stopReason": "wall_clock_budget",
+      "finalMeanEpisodeReward": 7.5450516080856325,
+      "finalMeanStepReward": 0.007640122746427854,
+      "finalMeanForwardSpeedSeg2": 0.17603025833765665,
+      "divergedWorldsTotal": 0,
+      "tool": "isaaclab-rsl_rl",
+      "task": "Isaac-Worm5-Flat-v0",
+      "numEnvs": 4096,
+      "budgetMinutes": 30.0,
+      "processMinutes": 30.098386450608572,
+      "stepsPerSecond": 52445.11445699309,
+      "dampingMode": "joint",
+      "seed": 42
+    }
+  }
+}

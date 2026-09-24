@@ -1,0 +1,21 @@
+{
+    "name": "PoRacer.WormRace",
+    "rootNamespace": "PoRacer.WormRace",
+    "references": [
+        "Mujoco.Runtime",
+        "Unity.InferenceEngine",
+        "VContainer",
+        "MessagePipe",
+        "MessagePipe.VContainer",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

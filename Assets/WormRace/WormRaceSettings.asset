@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 176facb0d41fd074dbfae6ce8837e2c4, type: 3}
+  m_Name: WormRaceSettings
+  m_EditorClassIdentifier: PoRacer.WormRace::PoRacer.WormRace.WormRaceSettings
+  _rigJson: {fileID: 4900000, guid: 3a8fa1c5545e76849908455334fb289a, type: 3}
+  _mujocoBrain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
+  _isaacBrain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
+  _mujocoMaterial: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
+  _isaacMaterial: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
+  _mujocoColor: {r: 0.16, g: 0.45, b: 0.95, a: 1}
+  _isaacColor: {r: 1, g: 0.55, b: 0.1, a: 1}
+  _trackLength: 20
+  _laneSpacing: 2
+  _startLineZ: 0
+  _startGap: 0.01
+  _countdownSeconds: 3
+  _timeLimitSeconds: 60
+  _resultsHoldSeconds: 4
+  _seriesLength: 5
+  _autoStartSeries: 1
+  _selfTestSettleSeconds: 1
+  _wormPhysicsMaterial: {fileID: 13400000, guid: 94e3dd543c95fe14aae1d52ad1c94e85, type: 2}
+  _passiveDamping: 1
+  _solverIterations: 16
+  _solverVelocityIterations: 4
+  _foldArmatureIntoInertia: 1
+  _mujocoSolverIterations: 10
+  _dumpMujocoMjcf: 1
+  _crossSimulatorProxies: 1
+  _previousActionClipped: 1

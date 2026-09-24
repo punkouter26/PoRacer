@@ -1,0 +1,27 @@
+{
+  "tool": "mujoco",
+  "meanSpeed": 0.4503493967056275,
+  "stdSpeed": 0.006728235808669522,
+  "meanDistance20s": 9.00698793411255,
+  "stepsTrained": 345735168,
+  "wallMinutes": 29.99,
+  "onnxMaxAbsErr": 1.9073486328125e-06,
+  "notes": "100 deterministic 20 s episodes in MuJoCo Warp (mujoco-warp 3.12.0), spec reset, seed 12345, no domain randomisation; speed = segment-2 x displacement / 20 s; parity over 10000 visited observations vs policy.pt",
+  "simulator": "mujoco_warp",
+  "episodes": 100,
+  "episodesDiverged": 0,
+  "stdDistance20s": 0.13456471617339047,
+  "meanInstantaneousSpeedX": 0.4517425447702408,
+  "minSpeed": 0.43448586463928224,
+  "maxSpeed": 0.46221342086791994,
+  "onnx": "training/worm/export/worm_mujoco.onnx",
+  "evaluatedAt": "2026-09-24T15:55:19",
+  "plausibility": {
+    "meanAbsRollRateSeg2": 0.49283018708229065,
+    "peakAbsRollRateSeg2": 5.478900909423828,
+    "peakJointSpeed": 6.7063446044921875,
+    "fractionTimeAnyActuatorSaturated": 0.9999200105667114,
+    "meanSegmentHeight": 0.05369987338781357,
+    "forceLimit": 6.0
+  }
+}
