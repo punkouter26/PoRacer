@@ -1,0 +1,462 @@
+#usda 1.0
+(
+    defaultPrim = "worm"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "worm" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI"]
+)
+{
+    custom bool newton:selfCollisionEnabled = 1
+    custom bool physxArticulation:enabledSelfCollisions = 1
+
+    def "Looks"
+    {
+        def Material "wormPhysicsMaterial" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            custom float newton:rollingFriction = 0.0001
+            custom float newton:torsionalFriction = 0.005
+            float physics:dynamicFriction = 0.9
+            float physics:restitution = 0
+            float physics:staticFriction = 0.9
+        }
+    }
+
+    def Xform "seg0" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.005694777, 0.005694777, 0.0012753666)
+        float physics:mass = 1.335962
+        quatf physics:principalAxes = (0.70710677, 0, -0.70710677, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI", "PhysicsFilteredPairsAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.15
+            rel material:binding:physics = </worm/Looks/wormPhysicsMaterial> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            prepend rel physics:filteredPairs = </worm/seg1/collision>
+            color3f[] primvars:displayColor = [(0.35, 0.55, 0.9)]
+            double radius = 0.045
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "link0" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+        float physics:mass = 0.1
+        quatf physics:principalAxes = (1, 0, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.1, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Xform "seg1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.005694777, 0.005694777, 0.0012753666)
+        float physics:mass = 1.335962
+        quatf physics:principalAxes = (0.70710677, 0, -0.70710677, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.2, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI", "PhysicsFilteredPairsAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.15
+            rel material:binding:physics = </worm/Looks/wormPhysicsMaterial> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            prepend rel physics:filteredPairs = [
+                </worm/seg0/collision>,
+                </worm/seg2/collision>,
+            ]
+            color3f[] primvars:displayColor = [(0.35, 0.55, 0.9)]
+            double radius = 0.045
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "link1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+        float physics:mass = 0.1
+        quatf physics:principalAxes = (1, 0, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.30000000000000004, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Xform "seg2" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.005694777, 0.005694777, 0.0012753666)
+        float physics:mass = 1.335962
+        quatf physics:principalAxes = (0.70710677, 0, -0.70710677, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.4, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI", "PhysicsFilteredPairsAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.15
+            rel material:binding:physics = </worm/Looks/wormPhysicsMaterial> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            prepend rel physics:filteredPairs = [
+                </worm/seg1/collision>,
+                </worm/seg3/collision>,
+            ]
+            color3f[] primvars:displayColor = [(0.35, 0.55, 0.9)]
+            double radius = 0.045
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "link2" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+        float physics:mass = 0.1
+        quatf physics:principalAxes = (1, 0, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.5, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Xform "seg3" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.005694777, 0.005694777, 0.0012753666)
+        float physics:mass = 1.335962
+        quatf physics:principalAxes = (0.70710677, 0, -0.70710677, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.6, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI", "PhysicsFilteredPairsAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.15
+            rel material:binding:physics = </worm/Looks/wormPhysicsMaterial> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            prepend rel physics:filteredPairs = [
+                </worm/seg2/collision>,
+                </worm/seg4/collision>,
+            ]
+            color3f[] primvars:displayColor = [(0.35, 0.55, 0.9)]
+            double radius = 0.045
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "link3" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+        float physics:mass = 0.1
+        quatf physics:principalAxes = (1, 0, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.7, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+    }
+
+    def Xform "seg4" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.005694777, 0.005694777, 0.0012753666)
+        float physics:mass = 1.335962
+        quatf physics:principalAxes = (0.70710677, 0, -0.70710677, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.7999999999999999, 0, 0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI", "PhysicsFilteredPairsAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.15
+            rel material:binding:physics = </worm/Looks/wormPhysicsMaterial> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            prepend rel physics:filteredPairs = </worm/seg3/collision>
+            color3f[] primvars:displayColor = [(0.35, 0.55, 0.9)]
+            double radius = 0.045
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Scope "joints"
+    {
+        def PhysicsRevoluteJoint "j0_pitch" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </worm/seg0>
+            rel physics:body1 = </worm/link0>
+            point3f physics:localPos0 = (-0.1, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j0_yaw" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Z"
+            rel physics:body0 = </worm/link0>
+            rel physics:body1 = </worm/seg1>
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.1, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j1_pitch" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </worm/seg1>
+            rel physics:body1 = </worm/link1>
+            point3f physics:localPos0 = (-0.1, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j1_yaw" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Z"
+            rel physics:body0 = </worm/link1>
+            rel physics:body1 = </worm/seg2>
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.1, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j2_pitch" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </worm/seg2>
+            rel physics:body1 = </worm/link2>
+            point3f physics:localPos0 = (-0.1, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j2_yaw" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Z"
+            rel physics:body0 = </worm/link2>
+            rel physics:body1 = </worm/seg3>
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.1, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j3_pitch" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </worm/seg3>
+            rel physics:body1 = </worm/link3>
+            point3f physics:localPos0 = (-0.1, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+
+        def PhysicsRevoluteJoint "j3_yaw" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 6
+            float drive:angular:physics:stiffness = 0.5235988
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 2
+            custom float newton:angular:limitDamping = 0
+            custom float newton:angular:limitStiffness = 0
+            custom float newton:armature = 0.01
+            custom float newton:friction = 0
+            uniform token physics:axis = "Z"
+            rel physics:body0 = </worm/link3>
+            rel physics:body1 = </worm/seg4>
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.1, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0.01
+        }
+    }
+}
+

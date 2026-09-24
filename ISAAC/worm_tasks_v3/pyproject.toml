@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "worm_tasks_v3"
+version = "0.1.0"
+description = "Isaac Lab 3 (Newton / MuJoCo-Warp) task for Worm5 (training/worm/WORM_SPEC.md)"
+requires-python = ">=3.12"
+# isaaclab, isaaclab_newton, isaaclab_tasks, isaaclab_rl and rsl-rl-lib come from the Isaac Lab 3
+# checkout (ISAAC/isaaclab3) this package is installed INTO; deliberately not listed so pip never
+# resolves them from PyPI.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["worm_tasks_v3*"]
