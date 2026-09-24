@@ -212,6 +212,28 @@ length from the catalogue `spawnHeight` (0.75 m), but the Phase 2 models show bo
 stand with the root at 0.526 m. They spawn 0.27 m in the air and drop every race.
 Fix the catalogue values before the next exam.
 
+### Exam re-run under fair rules (2026-09-24, `Logs/walkexam_20260924_1504.md`)
+
+This run had the 12 s get-up window for the Isaac robots, W4 steering, and the
+corrected Hexapod/Crab spawn heights. It stopped at 26 of 54 trials: play mode ended
+with no compile and no error, both times while other heavy GPU work was running.
+Re-run the rest with nothing else on the GPU.
+
+| Creature | Flat speed | Flat steering | Courses | Out by |
+|---|---|---|---|---|
+| Quadruped | 23 % | 42° ✗ | 12–24 %, fallen 51 % on Acrobat | stalled |
+| Hexapod | 33 % | 30° ✗ | 11–15 % | stalled |
+| Crab | 5 % | 60° ✗ | 4–13 % | stalled |
+| Isaac H1 | 63 % | 2° ✓ | 41–79 %, steering ✓ | stalled; left track |
+| IsaacBox | 75 % | 2° ✓ | 31–91 % (**W1 ✓ on Apartment**), steering ✓ | stalled; left track |
+| MojucuBoy | 143 % (too fast) | 7° ✓ | 154–207 %, steering 21–34° ✗ | left track |
+
+- **Getting up:** still 0 recoveries from any fall, including the Isaac robots now
+  that they have the full 12 s. The old 1 s rule was not what stopped them.
+- **Steering:** the bugs don't head down the track (30–79° off); the bipeds do on Flat.
+- **Nothing meets the standard.** The closest is IsaacBox on Apartment, which fails
+  only on get-up.
+
 ### Phase 2: One body, three simulators (3–5 days)
 
 **Bugs → MuJoCo done (2026-09-24):** `training/bugs/` has `Quad_v01.xml`, `Hexapod_v01.xml`
