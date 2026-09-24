@@ -33,7 +33,12 @@
 #>
 param(
     [string]$IsaacLabRef = "main",
-    [string]$Python = "$PSScriptRoot\..\Python311\python.exe"
+    [string]$Python = "$PSScriptRoot\..\Python311\python.exe",
+    # Step 5 rewrites Assets/unity_export/IsaacBox/isaacbox_rig.json with the rig
+    # builder's PROVISIONAL joint order, over the simulator order export_bundle.py
+    # wrote - which is what the IsaacBox racer reads at spawn. Opt-in, so setting up
+    # the environment can never break the shipped racer.
+    [switch]$RebuildRig
 )
 
 $ErrorActionPreference = "Stop"
@@ -175,9 +180,13 @@ if ($LASTEXITCODE -ne 0) { throw "GPU/torch check failed - see the message above
 # ---- 5. rig outputs ---------------------------------------------------------------------
 # Run the rig build under the STANDALONE python: it is pure Python, and only that
 # interpreter has usd-core, so the USD validation actually runs instead of silently skipping.
-$RigPy = if (Test-Path $Standalone) { $Standalone } else { $Py }
-Write-Host "-- regenerating the rig (USD + json) with $RigPy"
-& $RigPy (Join-Path $Root "boy_rig\build_boy_rig.py")
+if ($RebuildRig) {
+    $RigPy = if (Test-Path $Standalone) { $Standalone } else { $Py }
+    Write-Host "-- regenerating the rig (USD + json) with $RigPy"
+    & $RigPy (Join-Path $Root "boy_rig\build_boy_rig.py")
+} else {
+    Write-Host "-- rig rebuild skipped (pass -RebuildRig; it overwrites the shipped IsaacBox rig json)"
+}
 
 # Report the remaining resolver state. One conflict is expected and upstream: isaacsim-kernel
 # pins fastapi 0.115.7 (which wants starlette<0.46) while isaaclab pins starlette==0.49.1.

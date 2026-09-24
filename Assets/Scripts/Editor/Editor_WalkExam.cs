@@ -67,9 +67,17 @@ namespace PoRacer.EditorTools
         private const float FALL_CONFIRM_SECONDS = 0.5f;
         private const float RECOVERY_CONFIRM_SECONDS = 1f;
 
+        // W4 steering: the direction the body TRAVELS against the direction the track
+        // runs, sampled over short windows. Travel rather than facing, because the Crab
+        // is built to scuttle sideways and would fail a facing test for doing its job.
+        private const float MAX_HEADING_ERROR_DEGREES = 15f;
+        private const float HEADING_WINDOW_SECONDS = 0.5f;
+        // Below this much ground covered in a window the direction is noise, not steering.
+        private const float MIN_HEADING_TRAVEL_METERS = 0.05f;
+
         private static readonly string[] NotYetMeasured =
         {
-            "W4 heading", "W5 foot skating", "W6 smoothness", "W8 torque/speed limits", "W9 ELO"
+            "W5 foot skating", "W6 smoothness", "W8 torque/speed limits", "W9 ELO"
         };
 
         [Serializable]
@@ -99,6 +107,9 @@ namespace PoRacer.EditorTools
             public float fallenFraction;
             public int falls;
             public int recoveries;
+            // Distance-weighted mean angle between travel and the track, degrees; -1
+            // when the racer never covered enough ground to have a direction.
+            public float headingErrorDegrees;
             public float fpsMin;
         }
 
@@ -118,9 +129,11 @@ namespace PoRacer.EditorTools
             public float meanFallenFraction;
             public int falls;
             public int recoveries;
+            public float meanHeadingErrorDegrees;
             public string w1Speed;
             public string w2Uptime;
             public string w3Falls;
+            public string w4Steering;
             public string w7GetUp;
             public bool passesMeasured;
         }
@@ -170,6 +183,11 @@ namespace PoRacer.EditorTools
         private static float _tippedFor;
         private static float _standingFor;
         private static int _lastFrame;
+        private static Systems_CoursePath _coursePath;
+        private static Vector3 _headingWindowStart;
+        private static float _headingWindowSeconds;
+        private static float _headingErrorWeighted;
+        private static float _headingTravel;
 
         public static string Start(string creaturesCsv = "", string mapsCsv = "0,1,2", int trials = 3)
         {
@@ -435,7 +453,13 @@ namespace PoRacer.EditorTools
                 // Rest-relative, so a creature authored lying along its body axis still
                 // reads 1 when it stands the way it was built to.
                 _restInverse = Quaternion.Inverse(_body.rotation);
+                _headingWindowStart = _body.position;
             }
+            RaceCourseView course = _spawn.ActiveCourse;
+            _coursePath = course != null ? course.Path : null;
+            _headingWindowSeconds = 0f;
+            _headingErrorWeighted = 0f;
+            _headingTravel = 0f;
             _startFixedTime = Time.fixedTime;
             _endFixedTime = -1f;
             _sampledSeconds = 0f;
@@ -484,6 +508,7 @@ namespace PoRacer.EditorTools
             {
                 _fallenSeconds += step;
             }
+            SampleHeading(step, racer.Progress);
             if (!_isDown)
             {
                 _tippedFor = uprightness < FALLEN_COS ? _tippedFor + step : 0f;
@@ -504,6 +529,34 @@ namespace PoRacer.EditorTools
                     _tippedFor = 0f;
                 }
             }
+        }
+
+        /// <summary>
+        /// Every HEADING_WINDOW_SECONDS, compares the ground the body actually covered
+        /// with the way the track runs there: +Z on a builder map, the centreline's
+        /// heading on a course. Weighted by distance, so a creature standing still
+        /// contributes nothing and a long straight stride counts in full.
+        /// </summary>
+        private static void SampleHeading(float step, float progressMeters)
+        {
+            _headingWindowSeconds += step;
+            if (_headingWindowSeconds < HEADING_WINDOW_SECONDS)
+            {
+                return;
+            }
+            _headingWindowSeconds = 0f;
+            Vector3 position = _body.position;
+            Vector3 travel = position - _headingWindowStart;
+            _headingWindowStart = position;
+            travel.y = 0f;
+            float distance = travel.magnitude;
+            if (distance < MIN_HEADING_TRAVEL_METERS)
+            {
+                return;
+            }
+            Vector3 trackDirection = _coursePath != null ? _coursePath.HeadingAt(progressMeters) : Vector3.forward;
+            _headingErrorWeighted += Vector3.Angle(travel, trackDirection) * distance;
+            _headingTravel += distance;
         }
 
         private static void EndTrial()
@@ -527,6 +580,7 @@ namespace PoRacer.EditorTools
                     _trial.uprightFraction = _uprightSeconds / _sampledSeconds;
                     _trial.fallenFraction = _fallenSeconds / _sampledSeconds;
                 }
+                _trial.headingErrorDegrees = _headingTravel > 0f ? _headingErrorWeighted / _headingTravel : -1f;
             }
             if (_trial.fpsMin == float.MaxValue)
             {
@@ -578,6 +632,8 @@ namespace PoRacer.EditorTools
         {
             var cardsByKey = new Dictionary<string, ReportCard>();
             var knockoutsByKey = new Dictionary<string, Dictionary<string, int>>();
+            // Trials that covered no ground have no heading and are left out of the mean.
+            var headedTrialsByKey = new Dictionary<string, int>();
             for (int trialIndex = 0; trialIndex < _report.trials.Count; trialIndex++)
             {
                 TrialResult trial = _report.trials[trialIndex];
@@ -612,6 +668,12 @@ namespace PoRacer.EditorTools
                 card.meanFallenFraction += trial.fallenFraction;
                 card.falls += trial.falls;
                 card.recoveries += trial.recoveries;
+                if (trial.headingErrorDegrees >= 0f)
+                {
+                    card.meanHeadingErrorDegrees += trial.headingErrorDegrees;
+                    headedTrialsByKey.TryGetValue(key, out int headed);
+                    headedTrialsByKey[key] = headed + 1;
+                }
             }
             for (int cardIndex = 0; cardIndex < _report.cards.Count; cardIndex++)
             {
@@ -626,6 +688,19 @@ namespace PoRacer.EditorTools
                 card.w1Speed = Verdict(speedOk);
                 card.w2Uptime = Verdict(uptimeOk);
                 card.w3Falls = Verdict(fallsOk);
+                bool steeringOk = false;
+                string cardKey = card.creatureId + "|" + card.map;
+                if (headedTrialsByKey.TryGetValue(cardKey, out int headedTrials) && headedTrials > 0)
+                {
+                    card.meanHeadingErrorDegrees /= headedTrials;
+                    steeringOk = card.meanHeadingErrorDegrees < MAX_HEADING_ERROR_DEGREES;
+                    card.w4Steering = Verdict(steeringOk);
+                }
+                else
+                {
+                    card.meanHeadingErrorDegrees = -1f;
+                    card.w4Steering = "n/a (never moved)";
+                }
                 bool getUpOk = true;
                 if (card.falls == 0)
                 {
@@ -636,7 +711,7 @@ namespace PoRacer.EditorTools
                     getUpOk = (float)card.recoveries / card.falls >= MIN_RECOVERY_RATE;
                     card.w7GetUp = Verdict(getUpOk);
                 }
-                card.passesMeasured = speedOk && uptimeOk && fallsOk && getUpOk;
+                card.passesMeasured = speedOk && uptimeOk && fallsOk && steeringOk && getUpOk;
                 card.knockouts = DescribeCounts(knockoutsByKey[card.creatureId + "|" + card.map]);
             }
         }
@@ -683,8 +758,8 @@ namespace PoRacer.EditorTools
             text.Append("Finished ").Append(_report.finishedAt).Append(". Speed target is Froude ")
                 .Append(FROUDE_NUMBER.ToString("0.00")).Append(" on the catalogue's rest height. ")
                 .Append("Not measured yet: ").Append(string.Join(", ", NotYetMeasured)).Append(".\n\n");
-            text.Append("| Creature | Map | Finished | Speed (target) | W1 speed | W2 uptime | W3 fallen | W7 get-up | Knockouts |\n");
-            text.Append("|---|---|---|---|---|---|---|---|---|\n");
+            text.Append("| Creature | Map | Finished | Speed (target) | W1 speed | W2 uptime | W3 fallen | W4 steering | W7 get-up | Knockouts |\n");
+            text.Append("|---|---|---|---|---|---|---|---|---|---|\n");
             for (int cardIndex = 0; cardIndex < _report.cards.Count; cardIndex++)
             {
                 ReportCard card = _report.cards[cardIndex];
@@ -696,6 +771,8 @@ namespace PoRacer.EditorTools
                     .Append(" | ").Append(card.w1Speed).Append(' ').Append(card.speedRatio.ToString("P0"))
                     .Append(" | ").Append(card.w2Uptime).Append(' ').Append(card.meanUprightFraction.ToString("P0"))
                     .Append(" | ").Append(card.w3Falls).Append(' ').Append(card.meanFallenFraction.ToString("P0"))
+                    .Append(" | ").Append(card.w4Steering)
+                    .Append(card.meanHeadingErrorDegrees >= 0f ? " " + card.meanHeadingErrorDegrees.ToString("0") + "°" : string.Empty)
                     .Append(" | ").Append(card.w7GetUp).Append(" (").Append(card.recoveries).Append('/')
                     .Append(card.falls).Append(')')
                     .Append(" | ").Append(card.knockouts).Append(" |\n");

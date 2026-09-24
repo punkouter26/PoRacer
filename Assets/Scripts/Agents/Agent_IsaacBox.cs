@@ -23,21 +23,20 @@ namespace PoRacer.Agents
 
         [SerializeField] private float _groundProbeDistance = 4f;
 
-        [Tooltip("dot(root.up, world.up) below this counts as down. 0.5 is 60 degrees off vertical.")]
-        [SerializeField] private float _fallenUprightDot = 0.5f;
-
-        [Tooltip("How long it must stay down before RacerView is told it Failed.")]
-        [SerializeField] private float _fallenGraceSeconds = 1f;
-
         private IsaacBoxAgent _agent;
         private IsaacBoxTargetSampler _sampler;
         private Action _areaReset;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
         private bool _held;
         private bool _startHeld;
-        private float _fallenFor;
+        private bool _failed;
 
-        public bool Failed => _fallenFor >= _fallenGraceSeconds;
+        /// <summary>
+        /// A physics failure he cannot come back from, and nothing else. Falls go to
+        /// RacerView's 12 s knockdown referee like every other racer (AGENTS rule H);
+        /// see Agent_IsaacH1.Failed for why the old 1 s fall check had to go.
+        /// </summary>
+        public bool Failed => _failed;
 
         /// <summary>
         /// Held by parking the policy and pinning the base, which is the same pair
@@ -116,10 +115,6 @@ namespace PoRacer.Agents
             }
             if (_startHeld)
             {
-                // Pinned on the line. The fallen timer stays at zero rather than
-                // counting: a racer cannot be judged down during a hold it is not
-                // allowed to move out of.
-                _fallenFor = 0f;
                 return;
             }
             ArticulationBody root = Root;
@@ -127,8 +122,11 @@ namespace PoRacer.Agents
             {
                 return;
             }
-            bool down = Vector3.Dot(root.transform.up, Vector3.up) < _fallenUprightDot;
-            _fallenFor = down ? _fallenFor + Time.fixedDeltaTime : 0f;
+            Vector3 position = root.transform.position;
+            if (!float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(position.z))
+            {
+                _failed = true;
+            }
         }
 
         /// <summary>
@@ -146,10 +144,6 @@ namespace PoRacer.Agents
             if (root != null)
             {
                 root.immovable = _startHeld;
-            }
-            if (!_startHeld)
-            {
-                _fallenFor = 0f;
             }
         }
 
@@ -179,7 +173,6 @@ namespace PoRacer.Agents
         private void Release()
         {
             _held = false;
-            _fallenFor = 0f;
             // Hands him to the start gate rather than straight to the policy: ground
             // under his feet is permission to stand, not permission to race.
             ApplyStartGate();

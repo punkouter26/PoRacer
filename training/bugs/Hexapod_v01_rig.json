@@ -1,0 +1,1670 @@
+{
+  "name": "Hexapod_v01",
+  "prefab": "Assets/Prefabs/Hexapod_v01.prefab",
+  "mjcf": "training/bugs/Hexapod_v01.xml",
+  "mjcf_literal": "training/bugs/Hexapod_v01_literal.xml",
+  "damping_mode": "Unity damping as MuJoCo joint damping (outside the forceLimit clamp); the literal actuator-kv form is in mjcf_literal (unstable at 5 ms)",
+  "generator": "training/bugs/prefab_to_mjcf.py",
+  "frames": {
+    "unity": "left-handed, Y-up, +X right, +Z forward",
+    "mujoco": "right-handed, Z-up, +X forward, +Y left",
+    "position_map": "(x,y,z)_unity -> (z,-x,y)_mujoco",
+    "axis_map": "(x,y,z)_unity -> (-z,x,-y)_mujoco",
+    "quat_map": "(x,y,z,w)_unity -> (w,-z,x,-y)_mujoco",
+    "joint_angle_sign": "Unity jointPosition == MuJoCo qpos (same sign, radians)"
+  },
+  "units": {
+    "stiffness": "N*m/rad (Unity ArticulationDrive.stiffness docs) == MuJoCo kp",
+    "damping": "N*m*s/rad (Unity ArticulationDrive.damping docs) == MuJoCo kv",
+    "target": "degrees in Unity xDrive.target; radians in MuJoCo ctrl",
+    "limits": "degrees in Unity; radians in MJCF"
+  },
+  "catalog_spawn_height": 0.75,
+  "unity_spawn_root_height": 0.8,
+  "rest_root_height": 0.5256000000000001,
+  "prefab_root_height": 0.7,
+  "total_mass": 70.0,
+  "friction_mujoco": 0.6,
+  "unity_materials": [
+    {
+      "name": "<Unity default>",
+      "dynamicFriction": 0.6,
+      "staticFriction": 0.6,
+      "bounciness": 0.0,
+      "frictionCombine": "average",
+      "bounceCombine": "average",
+      "source": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)"
+    }
+  ],
+  "agent": {
+    "class": "PoRacer.Runtime::PoRacer.Agents.Agent_Creature",
+    "root": "Hexapod_v01",
+    "action_order": [
+      "Upper_-1_0",
+      "Lower_-1_0",
+      "Upper_-1_1",
+      "Lower_-1_1",
+      "Upper_-1_2",
+      "Lower_-1_2",
+      "Upper_1_0",
+      "Lower_1_0",
+      "Upper_1_1",
+      "Lower_1_1",
+      "Upper_1_2",
+      "Lower_1_2"
+    ],
+    "jointDriveScale_deg": 45.0,
+    "maxJointTorque_Nm": 700.0,
+    "gaitFrequency_hz": 0.9,
+    "gaitPhases": [
+      3.1415927,
+      4.712389,
+      0.0,
+      1.5707964,
+      3.1415927,
+      4.712389,
+      0.0,
+      1.5707964,
+      3.1415927,
+      4.712389,
+      0.0,
+      1.5707964
+    ],
+    "gaitAmplitudes": [
+      0.7,
+      0.5,
+      0.7,
+      0.5,
+      0.7,
+      0.5,
+      0.7,
+      0.5,
+      0.7,
+      0.5,
+      0.7,
+      0.5
+    ],
+    "gaitOffsets": [],
+    "decisionPeriod": 20
+  },
+  "action_scale_rad": 0.7853981633974483,
+  "action_to_ctrl": "ctrl[i] = clip(action[i],-1,1) * action_scale_rad (actuator i == Unity _joints[i])",
+  "actuator_order": [
+    "Upper_-1_0",
+    "Lower_-1_0",
+    "Upper_-1_1",
+    "Lower_-1_1",
+    "Upper_-1_2",
+    "Lower_-1_2",
+    "Upper_1_0",
+    "Lower_1_0",
+    "Upper_1_1",
+    "Lower_1_1",
+    "Upper_1_2",
+    "Lower_1_2"
+  ],
+  "joint_qpos_order": [
+    "Upper_-1_0",
+    "Lower_-1_0",
+    "Upper_-1_1",
+    "Lower_-1_1",
+    "Upper_-1_2",
+    "Lower_-1_2",
+    "Upper_1_0",
+    "Lower_1_0",
+    "Upper_1_1",
+    "Lower_1_1",
+    "Upper_1_2",
+    "Lower_1_2"
+  ],
+  "bodies": [
+    {
+      "name": "Hexapod_v01",
+      "parent": null,
+      "articulation_body_file_id": 2485933480795093727,
+      "mass": 40.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.0,
+        0.7,
+        0.0
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        1.1,
+        0.24,
+        0.7
+      ],
+      "geoms": [
+        {
+          "unity_collider": "box",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "type": "box",
+          "half_extents_unity": [
+            0.55,
+            0.12,
+            0.35
+          ]
+        }
+      ],
+      "joint": null
+    },
+    {
+      "name": "Upper_-1_0",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 4261080487669968976,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.628,
+        -0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 9.915644194846736e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_-1_0",
+      "parent": "Upper_-1_0",
+      "articulation_body_file_id": 5579602887465201956,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.3256,
+        -0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 1.0719475829060002e-07,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    },
+    {
+      "name": "Upper_-1_1",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 6588606872225740619,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.628,
+        0.0
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 7.022819941312481e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_-1_1",
+      "parent": "Upper_-1_1",
+      "articulation_body_file_id": 5690393137655100860,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.3256,
+        0.0
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 6.728593974439934e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    },
+    {
+      "name": "Upper_-1_2",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 1214286233739693702,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.628,
+        0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 9.915644194846736e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_-1_2",
+      "parent": "Upper_-1_2",
+      "articulation_body_file_id": 6575570885921089229,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        -0.682,
+        0.3256,
+        0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 1.0719475829060002e-07,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    },
+    {
+      "name": "Upper_1_0",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 8413863421035478455,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.628,
+        -0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 9.915644194846736e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_1_0",
+      "parent": "Upper_1_0",
+      "articulation_body_file_id": 1429143858265049642,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.3256,
+        -0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 1.0719475829060002e-07,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    },
+    {
+      "name": "Upper_1_1",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 142590332522625517,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.628,
+        0.0
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 7.022819941312481e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_1_1",
+      "parent": "Upper_1_1",
+      "articulation_body_file_id": 8967818457600065497,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.3256,
+        0.0
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 6.728593974439934e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    },
+    {
+      "name": "Upper_1_2",
+      "parent": "Hexapod_v01",
+      "articulation_body_file_id": 8530051405717925174,
+      "mass": 3.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.628,
+        0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.36300000000000004,
+        0.1512,
+        0.301
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.18150000000000002,
+          "half_height_total": 0.18150000000000002,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.36300000000000004,
+              0.1512,
+              0.301
+            ]
+          },
+          "type": "sphere"
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 9.915644194846736e-08,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -40.0,
+        "upper_deg": 40.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.6981317007977318,
+          0.6981317007977318
+        ]
+      }
+    },
+    {
+      "name": "Lower_1_2",
+      "parent": "Upper_1_2",
+      "articulation_body_file_id": 297030244608882562,
+      "mass": 2.0,
+      "implicit_com": true,
+      "implicit_tensor": true,
+      "com_unity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertia_tensor_unity": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "inertia_rotation_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "linear_damping": 0.05,
+      "angular_damping": 0.05,
+      "immovable": false,
+      "use_gravity": true,
+      "world_pos_unity": [
+        0.682,
+        0.3256,
+        0.8166666899999999
+      ],
+      "world_rot_unity": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "lossy_scale_unity": [
+        0.29040000000000005,
+        0.1512,
+        0.24080000000000001
+      ],
+      "geoms": [
+        {
+          "unity_collider": "capsule",
+          "material": "Unity built-in default (collider m_Material fileID 0, DynamicsManager m_DefaultMaterial fileID 0)",
+          "center_unity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.14520000000000002,
+          "half_height_total": 0.1512,
+          "direction": 1,
+          "unity_raw": {
+            "radius": 0.5,
+            "height": 2.0,
+            "direction": 1,
+            "lossyScale": [
+              0.29040000000000005,
+              0.1512,
+              0.24080000000000001
+            ]
+          },
+          "type": "capsule",
+          "fromto_unity": [
+            [
+              0.0,
+              -0.005999999999999978,
+              0.0
+            ],
+            [
+              0.0,
+              0.005999999999999978,
+              0.0
+            ]
+          ]
+        }
+      ],
+      "joint": {
+        "type": "revolute",
+        "twist": "limited",
+        "swingY": "free",
+        "swingZ": "free",
+        "anchor_body_unity": [
+          0.0,
+          0.1512,
+          0.0
+        ],
+        "axis_body_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "axis_world_unity": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor_mismatch_m": 1.0719475829060002e-07,
+        "rest_angle_rad": 0.0,
+        "rest_swing_deg": 0.0,
+        "lower_deg": -50.0,
+        "upper_deg": 50.0,
+        "stiffness_Nm_per_rad": 3500.0,
+        "damping_Nms_per_rad": 233.33334,
+        "force_limit_Nm": 700.0,
+        "drive_target_deg": 0.0,
+        "drive_target_velocity": 0.0,
+        "drive_type": "force",
+        "joint_friction_coef": 0.05,
+        "axis_body_mujoco": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "range_rad": [
+          -0.8726646259971648,
+          0.8726646259971648
+        ]
+      }
+    }
+  ],
+  "side_checks": [
+    {
+      "body": "Upper_-1_0",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_-1_0",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Upper_-1_1",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_-1_1",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Upper_-1_2",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_-1_2",
+      "unity_x": -0.682,
+      "mujoco_y": 0.682,
+      "ok": true
+    },
+    {
+      "body": "Upper_1_0",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_1_0",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    },
+    {
+      "body": "Upper_1_1",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_1_1",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    },
+    {
+      "body": "Upper_1_2",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    },
+    {
+      "body": "Lower_1_2",
+      "unity_x": 0.682,
+      "mujoco_y": -0.682,
+      "ok": true
+    }
+  ],
+  "notes": [
+    "Upper_-1_0: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF",
+    "Upper_-1_1: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF",
+    "Upper_-1_2: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF",
+    "Upper_1_0: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF",
+    "Upper_1_1: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF",
+    "Upper_1_2: capsule height*scale (0.3024) <= 2*radius (0.3630); PhysX treats it as a sphere of r=0.1815, so does the MJCF"
+  ]
+}

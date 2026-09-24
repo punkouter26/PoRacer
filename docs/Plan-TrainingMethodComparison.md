@@ -119,8 +119,10 @@ gap counts against it, as it should: it is part of what that method costs.
       and the same version as `Packages/org.mujoco`, so what trains is what races),
       `warp-lang 1.17.0`, tensorboard, onnx and onnxruntime. The MojucuBoy env builds
       and steps on the GPU (3,268 steps/s at 256 worlds while Unity was also busy).
-- [ ] **B · Isaac Lab:** needs your go-ahead for the ~10 GB Isaac Sim download and
-      the NVIDIA licence.
+- [ ] **B · Isaac Lab:** approved 2026-09-24 (download and NVIDIA licence); installing
+      with `ISAAC/install.ps1`. The installer's rig-rebuild step is now opt-in
+      (`-RebuildRig`): it used to overwrite `Assets/unity_export/IsaacBox/isaacbox_rig.json`
+      with a provisional joint order, which is the file the IsaacBox racer reads.
 - [ ] Decide how a viewer tells the three methods apart in a race (see *Open
       questions*).
 - [x] AGENTS.md rule J rewritten: three methods, one standard.
@@ -131,7 +133,10 @@ gap counts against it, as it should: it is part of what that method costs.
   and `RacerView` retires any racer whose agent reports `Failed`. Every other
   creature gets the 12 s knockdown window of rule H to get back up. So the Isaac
   robots can never show a get-up, and method B is penalised by the referee rather
-  than by its training. **Needs a decision:** give them the same 12 s window.
+  than by its training. **Fixed 2026-09-24:** their `Failed` now means only a
+  non-finite pose (as for `Agent_MojucuBoy`), so falls go to the same 12 s
+  knockdown referee as everyone else. The baseline exam started before this fix,
+  so its Isaac knockouts show up as `AgentFailed`.
 - **Random quirks** (TURBO +12 % drive, HEAVY +12 % mass...) are rolled per racer.
   Now switchable (`RaceConfigModel.QuirksEnabled`); the exam turns them off.
 
@@ -143,8 +148,10 @@ three race maps, N trials each, quirks off, speed on the physics clock. It write
 target), W2 uptime, W3 time fallen, W7 get-up (from real falls), completion, and
 the **knockout reason**, which the referee now records for every DNF
 (`KnockoutReason`: KnockedDown, Stalled, LeftTrack, Diverged, AgentFailed,
-PodiumCutoff). W4, W5, W6 and W8 still need per-agent data and are marked "not
-measured yet".
+PodiumCutoff). **W4 steering added** (after the baseline run started): the
+distance-weighted angle between where the body travels and where the track runs,
+in 0.5 s windows. Travel, not facing, because the Crab is built to scuttle sideways.
+W5, W6 and W8 still need per-agent data and are marked "not measured yet".
 
     unity cmd eval --code "return PoRacer.EditorTools.Editor_WalkExam.Start(\"\", \"0,1,2\", 3);"
     unity cmd eval --code "return PoRacer.EditorTools.Editor_WalkExam.Status();"
@@ -165,7 +172,56 @@ Still to do for Phase 1:
 - [ ] **Run the exam on the 6 current brains.** That gives the baseline and shows
       how far apart they really are.
 
+### Baseline exam result (2026-09-24, `Logs/walkexam_20260924_1404.md`)
+
+The run stopped at 24 of 54 trials (play mode ended, most likely an editor recompile),
+after one complete round on every map plus a second round on Flat. It predates the
+Isaac fall fix and W4. **Not one brain passes W1 (speed) on Flat**, and none finishes
+a course.
+
+| Creature (method) | Flat speed vs target | Courses | How they go out on courses |
+|---|---|---|---|
+| Quadruped (A) | 20 % | 7–24 %, upright 16–94 % | fell and stayed down; left the track |
+| Hexapod (A) | 17 % | 11–13 % | stalled once on Flat |
+| Crab (A) | **3 %**, stalls | 3–11 % | stalled (barely moves; travels 75° off the track) |
+| Isaac H1 (B) | 63 % | 71–73 % | old 1 s fall rule; left the track |
+| IsaacBox (B) | 75 % | 85–93 % (**passes W1 on Apartment**) | old 1 s fall rule |
+| MojucuBoy (C) | **143 % (too fast)** | 154–207 %, upright 74–88 % | left the track |
+
+- **Getting up:** nobody got up after any fall (0 recoveries).
+- **Uprightness on Flat:** fine for everyone (100 %).
+- **The spread:** from 3 % to 207 % of target. The standard is far from met by any
+  method today.
+
+A check run after the fixes (IsaacBox and Crab on Acrobat, 1 trial) confirmed W4 works
+(IsaacBox 7°, Crab 75°), and that IsaacBox now lies down and is judged by the normal
+referee (Stalled) instead of being retired after 1 s.
+
+**Speed targets for Hexapod and Crab are about 19 % too high.** The exam takes leg
+length from the catalogue `spawnHeight` (0.75 m), but the Phase 2 models show both
+stand with the root at 0.526 m. They spawn 0.27 m in the air and drop every race.
+Fix the catalogue values before the next exam.
+
 ### Phase 2: One body, three simulators (3–5 days)
+
+**Bugs → MuJoCo done (2026-09-24):** `training/bugs/` has `Quad_v01.xml`, `Hexapod_v01.xml`
+and `Crab_v01.xml`, generated from the prefabs by `prefab_to_mjcf.py`, plus a
+`<name>_rig.json` each and a README of the conventions. The axis mapping is the same as
+MujocoBiped's CONTRACT.md. Stiffness is N·m/rad, so kp = Unity stiffness. All three
+pass `check_bug_mjcf.py`:
+- body and joint counts match the prefabs, and masses match exactly;
+- each stands for 5 s with no drift;
+- each loads in mujoco_warp and matches the CPU result.
+
+Open points from the conversion:
+- Damping is on the joint rather than in the drive, because the literal Unity setup
+  is unstable at 5 ms in MuJoCo. Joints are about 1–2° off a fine-step reference, but
+  a full-torque joint moves slower than in Unity. The twin check decides whether that
+  is acceptable.
+- Ground friction is Unity's default 0.6, below the 0.8–1.0 in AGENTS §2E. That gap
+  is in Unity itself.
+- The Quadruped is 90 kg at 0.9 m tall with 900 N·m joints. Worth a physical-plausibility
+  look (rule I).
 Each creature must be *the same animal* in all three sims, or the comparison is
 meaningless.
 - [ ] Export every rig to all three formats: Unity prefab ↔ MJCF (MuJoCo) ↔
@@ -186,7 +242,7 @@ command / hold a heading), the speed target (none / 1.0 / 0–1 / 1.5 one-sided)
 counts as a fall, policy rate (10 Hz vs 50 Hz), episode length (15 s vs 20 s), how
 rewards scale with time, and PPO settings. Only C trains get-up, and only A uses demos.
 
-**Draft recipe, for your review before Phase 4:**
+**Shared recipe (approved 2026-09-24):**
 
 | Item | Shared value |
 |---|---|
