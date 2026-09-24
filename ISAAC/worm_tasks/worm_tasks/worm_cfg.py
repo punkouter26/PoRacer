@@ -2,9 +2,11 @@
 
 Physics parameters are those of WORM_SPEC.md "Body":
 
-* position servo  kp 30 N*m/rad, force limit +/-12 N*m          -> PhysX implicit drive
-                                                                     (stiffness 30, maxForce 12)
-* joint damping   1.0 N*m*s/rad (MuJoCo: passive, on the joint)  -> see DAMPING_MODE below
+All values are read from training/worm/worm_rig.json via :mod:`worm_tasks.spec`:
+
+* position servo  kp 30 N*m/rad, force limit +/-6 N*m           -> PhysX implicit drive
+                                                                     (stiffness 30, maxForce 6)
+* joint damping   2.0 N*m*s/rad (MuJoCo: passive, on the joint)  -> see DAMPING_MODE below
 * armature        0.01                                           -> PhysX joint armature
 * joint limits    +/-45 deg (from the USD, i.e. from worm.xml)
 
@@ -14,13 +16,13 @@ DAMPING_MODE (env var ``WORM_DAMPING_MODE``):
     PhysX 5 (Isaac Sim >= 5.0) articulation joints have a *viscous friction* coefficient:
     tau = -c_v * qdot, applied by the solver on the joint, independent of the drive and NOT
     limited by the drive's maxForce. That is exactly MuJoCo's ``<joint damping>``. The drive
-    then has damping 0, so drive force = clip(kp * (target - q), +/-12), which is exactly
+    then has damping 0, so drive force = clip(kp * (target - q), +/-6), which is exactly
     MuJoCo's ``<position kp forcerange>`` actuator force. This is the spec-identical setting.
 
 ``drive``
-    Drive damping 1.0 and no joint viscous friction: drive force =
-    clip(kp * (target - q) - 1.0 * qdot, +/-12). Same damping coefficient, but the damping
-    torque counts against the 12 N*m limit (MuJoCo's does not). Kept as a fallback.
+    Drive damping (2.0) and no joint viscous friction: drive force =
+    clip(kp * (target - q) - 2.0 * qdot, +/-6). Same damping coefficient, but the damping
+    torque counts against the 6 N*m limit (MuJoCo's does not). Kept as a fallback.
 """
 
 from __future__ import annotations

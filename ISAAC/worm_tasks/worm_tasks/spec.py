@@ -21,8 +21,8 @@ with open(os.path.join(WORM_DIR, "worm_rig.json"), "r", encoding="utf-8") as _f:
 
 # ------------------------------------------------------------------------------ body --
 KP = float(RIG["kp"])                      # 30 N*m/rad
-FORCE_LIMIT = float(RIG["forceLimit"])     # 12 N*m
-JOINT_DAMPING = float(RIG["jointDamping"])  # 1.0 N*m*s/rad (MuJoCo: joint damping; PhysX: drive damping)
+FORCE_LIMIT = float(RIG["forceLimit"])     # 6 N*m (was 12 before the corkscrew fix)
+JOINT_DAMPING = float(RIG["jointDamping"])  # 2.0 N*m*s/rad (was 1.0); MuJoCo joint damping = PhysX joint viscous friction
 ARMATURE = float(RIG["armature"])          # 0.01 kg*m^2
 FRICTION = float(RIG["friction"])          # 0.9
 SPAWN_Z = float(RIG["spawnHeight"])        # 0.05 m
@@ -53,16 +53,25 @@ GOAL_DIR_W = (1.0, 0.0)  # world +x, straight down the race lane
 W_PROGRESS = 1.0
 W_HEADING = 0.1
 W_ACTION_RATE = -0.02
-W_EFFORT = -0.01
+W_EFFORT = -0.01  # (applied torque / FORCE_LIMIT)^2, FORCE_LIMIT read from the rig (6)
+W_ROLL_RATE = -0.1  # abs(seg2 angular velocity about its own long axis, B-frame x) [rad/s]
+W_BELLY_DOWN = 0.2  # seg2 z axis . world z
 # Was -0.1: the Isaac smoke run learned a diagonal sidewinder that drifted 6 m sideways in
 # 20 s for 5 m forward, and the race lanes are 2 m apart. WORM_SPEC.md changed on both sides.
 W_LATERAL = -0.5
 PROGRESS_CLIP = (-1.0, 2.0)  # m/s
 
+# ------------------------------------------------------------- simulation health guard --
+# WORM_SPEC.md item 12: non-finite state, or any joint speed [rad/s] or body linear [m/s] /
+# angular [rad/s] speed above this, ends the episode as TERMINAL (no bootstrap), with zero
+# reward for that step; counted as health/diverged_worlds.
+HEALTH_MAX_SPEED = 500.0
+
 # ---------------------------------------------------------------------- episode/reset --
 EPISODE_LENGTH_S = 20.0
 RESET_YAW = math.radians(45.0)
 RESET_JOINT_NOISE = 0.05
+EVAL_SEED = 12345  # WORM_SPEC.md item 15
 
 # ------------------------------------------------------------------ randomisation --
 FRICTION_SCALE = (0.85, 1.15)

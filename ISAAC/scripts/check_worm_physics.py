@@ -100,13 +100,14 @@ def main():
               f"  armature {float(d.joint_armature[0,j]):.4f}  friction(s,d,visc) {[round(float(v), 4) for v in fr[j]]}")
     check("limits +/-0.785398", bool(torch.all((lim[:, 1] - 0.785398).abs() < 1e-4) and torch.all((lim[:, 0] + 0.785398).abs() < 1e-4)))
     check("kp 30", bool(torch.all((d.joint_stiffness[0] - 30).abs() < 1e-5)))
-    check("effort limit 12", bool(torch.all((d.joint_effort_limits[0] - 12).abs() < 1e-5)))
+    check(f"effort limit {spec.FORCE_LIMIT}", bool(torch.all((d.joint_effort_limits[0] - spec.FORCE_LIMIT).abs() < 1e-5)))
     check("armature 0.01", bool(torch.all((d.joint_armature[0] - 0.01).abs() < 1e-6)))
     if DAMPING_MODE == "joint":
-        check("drive damping 0 + joint viscous friction 1.0",
-              bool(torch.all(d.joint_damping[0].abs() < 1e-6) and torch.all((fr[:, 2] - 1.0).abs() < 1e-5)))
+        check(f"drive damping 0 + joint viscous friction {spec.JOINT_DAMPING}",
+              bool(torch.all(d.joint_damping[0].abs() < 1e-6) and torch.all((fr[:, 2] - spec.JOINT_DAMPING).abs() < 1e-5)))
     else:
-        check("drive damping 1.0, no viscous friction", bool(torch.all((d.joint_damping[0] - 1).abs() < 1e-6)))
+        check(f"drive damping {spec.JOINT_DAMPING}, no viscous friction",
+              bool(torch.all((d.joint_damping[0] - spec.JOINT_DAMPING).abs() < 1e-6)))
     mats = view.get_material_properties()[0]
     print(f"  worm shape materials (static, dynamic, restitution): {mats.tolist()}")
     check("worm material 0.9/0.9/0", bool(torch.all((mats[:, :2] - 0.9).abs() < 1e-5) and torch.all(mats[:, 2] == 0)))
@@ -149,9 +150,10 @@ def main():
     visc0 = d.joint_viscous_friction_coeff.clone()
     e = torch.tensor([0, 1, 2], device=env.device)
     robot.write_joint_stiffness_to_sim(0.0, env_ids=e)
-    robot.write_joint_damping_to_sim(torch.tensor([[0.0], [0.0], [1.0]], device=env.device).expand(3, robot.num_joints).contiguous(), env_ids=e)
+    c = spec.JOINT_DAMPING
+    robot.write_joint_damping_to_sim(torch.tensor([[0.0], [0.0], [c]], device=env.device).expand(3, robot.num_joints).contiguous(), env_ids=e)
     robot.write_joint_viscous_friction_coefficient_to_sim(
-        torch.tensor([[1.0], [0.0], [0.0]], device=env.device).expand(3, robot.num_joints).contiguous(), env_ids=e)
+        torch.tensor([[c], [0.0], [0.0]], device=env.device).expand(3, robot.num_joints).contiguous(), env_ids=e)
     for a in robot.actuators.values():
         a.stiffness[e] = 0.0
         a.damping[e] = d.joint_damping[e]
@@ -163,7 +165,7 @@ def main():
     for k in range(10):
         step(1)
         trace.append([float(v) for v in d.joint_vel[:3, ids["j3_yaw"]]])
-    for lbl, i in (("joint viscous 1.0", 0), ("none           ", 1), ("drive damping 1", 2)):
+    for lbl, i in ((f"joint viscous {c}", 0), ("none             ", 1), (f"drive damping {c}", 2)):
         print(f"  {lbl}: qdot after 1/4/10 substeps = {trace[0][i]:.3f} / {trace[3][i]:.3f} / {trace[9][i]:.3f}")
     check("viscous friction damps like drive damping", abs(trace[9][0] - trace[9][2]) < 0.15 * abs(trace[9][1]) and trace[9][0] < 0.8 * trace[9][1],
           "(env0 ~ env2, both well below env1)")
@@ -191,6 +193,46 @@ def main():
     print(f"  per-step reward env0 (zero action, at rest): {float(rew[0]):.6f}")
     check("worm rests on the floor (z ~ radius 0.045)", bool(torch.all((z - 0.045).abs() < 0.01)))
     check("worm at rest", float(v.norm(dim=-1).max()) < 0.02)
+
+    print("\n== friction slide test: per-env randomised friction, worm sliding at 1 m/s along +x")
+    from isaaclab.managers import EventTermCfg, SceneEntityCfg
+
+    import worm_tasks.mdp as wmdp
+
+    fcfg = EventTermCfg(func=wmdp.randomize_friction_scale, mode="reset",
+                        params={"asset_cfg": SceneEntityCfg("robot"), "base": spec.FRICTION,
+                                "scale_range": spec.FRICTION_SCALE, "step": spec.FRICTION_SCALE_STEP})
+    fterm = wmdp.randomize_friction_scale(fcfg, env)
+    all_ids = torch.arange(env.num_envs, device=env.device)
+    fterm(env, all_ids, **fcfg.params)
+    fterm.scale[:] = torch.tensor([0.85, 1.0, 1.15, 0.9])[: env.num_envs]
+    mats = view.get_material_properties()
+    mats[:, :, 0] = mats[:, :, 1] = (spec.FRICTION * fterm.scale).unsqueeze(-1)
+    view.set_material_properties(mats, torch.arange(env.num_envs))
+    q = torch.zeros(env.num_envs, robot.num_joints, device=env.device)
+    root = d.default_root_state.clone()
+    root[:, :3] = env.scene.env_origins
+    root[:, 2] = env.scene.env_origins[:, 2] + spec.RIG["radius"] + 0.0005
+    root[:, 3:7] = torch.tensor([1.0, 0, 0, 0], device=env.device)
+    root[:, 7:] = 0.0
+    robot.write_root_state_to_sim(root)
+    robot.write_joint_state_to_sim(q, torch.zeros_like(q))
+    robot.set_joint_position_target(q)
+    step(20)  # settle
+    root = robot.data.root_state_w.clone()
+    root[:, 7:] = 0.0
+    root[:, 7] = 1.0
+    robot.write_root_state_to_sim(root)
+    robot.write_joint_state_to_sim(robot.data.joint_pos.clone(), torch.zeros_like(q))
+    step(1)
+    v0 = d.body_link_lin_vel_w[:, bid["seg2"], 0].clone()
+    step(8)
+    v1 = d.body_link_lin_vel_w[:, bid["seg2"], 0].clone()
+    mu = (v0 - v1) / (8 * dt) / 9.81
+    for i in range(env.num_envs):
+        want = spec.FRICTION * float(fterm.scale[i])
+        check(f"env{i} worm-floor mu = 0.9*s = {want:.3f}", abs(float(mu[i]) - want) < 0.05 * want,
+              f"measured {float(mu[i]):.3f} (decel over 0.04 s)")
 
     print("\n" + ("ALL RUNTIME CHECKS PASSED" if not FAILS else f"FAILED: {FAILS}"))
     env.close()

@@ -9,9 +9,11 @@
    NOT clipped, observation normaliser baked in; opset 15, IR 8, fixed batch 1.
    -> training/worm/export/worm_isaac.onnx
 3. Evaluates --episodes deterministic 20 s episodes in Isaac (Isaac-Worm5-Flat-Play-v0: spec
-   reset, no randomisation), one episode per env, all in parallel. Speed of an episode =
-   (seg2 x after 1000 policy steps - seg2 x at reset) / 20 s, i.e. progress along the goal (+x).
-4. onnxruntime vs torch parity on real observations from that rollout (max abs error).
+   reset, no randomisation, seed 12345), one episode per env, all in parallel, driven by the
+   ONNX itself: actions = clip(ONNX mean, -1, 1) (WORM_SPEC.md item 15). Speed of an episode =
+   (seg2 x read at step 1000 - seg2 x at reset) / 20 s. Worlds ended by the health guard
+   (item 12) are counted and left out of the speed statistics.
+4. onnxruntime vs torch parity on every observation of that rollout (max abs error).
 5. Writes worm_isaac_report.json and worm_isaac_rig_order.json next to the ONNX.
 """
 
@@ -39,12 +41,11 @@ parser.add_argument("--task", default="Isaac-Worm5-Flat-Play-v0")
 parser.add_argument("--checkpoint", default=None, help="model_N.pt (default: newest run, newest model).")
 parser.add_argument("--log_root", default=os.path.join(REPO, "ISAAC", "logs", "rsl_rl"))
 parser.add_argument("--episodes", type=int, default=100)
-parser.add_argument("--parity_samples", type=int, default=2000)
 parser.add_argument("--out_dir", default=os.path.join(REPO, "training", "worm", "export"))
 parser.add_argument("--onnx_name", default="worm_isaac.onnx")
 parser.add_argument("--report_name", default="worm_isaac_report.json")
 parser.add_argument("--rig_order_name", default="worm_isaac_rig_order.json")
-parser.add_argument("--seed", type=int, default=7)
+parser.add_argument("--seed", type=int, default=None, help="Default: WORM_SPEC.md item 15 (12345).")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 args.headless = True
@@ -60,6 +61,7 @@ import worm_tasks  # noqa: E402,F401
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg  # noqa: E402
 from isaaclab_tasks.utils import load_cfg_from_registry  # noqa: E402
 from rsl_rl.runners import OnPolicyRunner  # noqa: E402
+from isaaclab.utils.math import quat_apply_inverse  # noqa: E402
 from worm_tasks import spec  # noqa: E402
 from worm_tasks.worm_cfg import DAMPING_MODE  # noqa: E402
 
@@ -93,7 +95,7 @@ def main():
         load_cfg_from_registry(args.task, "rsl_rl_cfg_entry_point"), metadata.version("rsl-rl-lib")
     )
     env_cfg.scene.num_envs = args.episodes
-    env_cfg.seed = args.seed
+    env_cfg.seed = spec.EVAL_SEED if args.seed is None else args.seed
     # one spare second so no env auto-resets inside the measured 1000 steps
     env_cfg.episode_length_s = spec.EPISODE_LENGTH_S + 1.0
     env = RslRlVecEnvWrapper(gym.make(args.task, cfg=env_cfg), clip_actions=agent_cfg.clip_actions)
@@ -131,47 +133,78 @@ def main():
 
     # ---------------------------------------------------------------------- evaluation --
     seg2 = robot.body_names.index(spec.REF_BODY)
+    seg_ids = [robot.body_names.index(n) for n in spec.SEGMENT_NAMES]
     origins = raw.scene.env_origins
-    obs_log = []
-    per_step = min(raw.num_envs, -(-args.parity_samples // EPISODE_STEPS))  # ceil
+    tm = raw.termination_manager
+    n_env = raw.num_envs
+    dev = raw.device
+    sat_level = spec.FORCE_LIMIT * (1.0 - 1e-4)
+    max_err = 0.0
     with torch.inference_mode():
         env.reset()
         obs = env.get_observations()
         x0 = (robot.data.body_link_pos_w[:, seg2, :2] - origins[:, :2]).clone()
-        vx_sum = torch.zeros(raw.num_envs, device=raw.device)
-        seg_ids = [robot.body_names.index(n) for n in spec.SEGMENT_NAMES]
-        z_max = torch.zeros(raw.num_envs, device=raw.device)
-        grounded_sum = torch.zeros(raw.num_envs, device=raw.device)
-        qd_max = torch.zeros(raw.num_envs, device=raw.device)
+        vx_sum = torch.zeros(n_env, device=dev)
+        roll_sum = torch.zeros(n_env, device=dev)
+        roll_max = torch.zeros(n_env, device=dev)
+        qd_max = torch.zeros(n_env, device=dev)
+        sat_steps = torch.zeros(n_env, device=dev)
+        sat_joint = torch.zeros(n_env, robot.num_joints, device=dev)
+        height_sum = torch.zeros(n_env, device=dev)
+        diverged = torch.zeros(n_env, dtype=torch.bool, device=dev)
         for step in range(EPISODE_STEPS):
-            actions = actor(obs)  # deterministic mean, unclipped (the wrapper clips before the env)
-            obs_log.append(torch.cat([obs["policy"][:per_step].cpu(), actions[:per_step].cpu()], dim=1))
-            obs, _, dones, _ = env.step(actions)
-            if bool(dones.any()):
-                raise RuntimeError(f"an env reset inside the measured window at step {step}")
-            vx_sum += robot.data.body_link_lin_vel_w[:, seg2, 0]
-            seg_z = robot.data.body_link_pos_w[:, seg_ids, 2] - origins[:, 2:3]
-            z_max = torch.maximum(z_max, seg_z.max(dim=1).values)
-            grounded_sum += (seg_z < spec.RIG["radius"] + 0.01).float().sum(dim=1)
-            qd_max = torch.maximum(qd_max, robot.data.joint_vel.abs().max(dim=1).values)
-        x1 = robot.data.body_link_pos_w[:, seg2, :2] - origins[:, :2]
-    dist = (x1[:, 0] - x0[:, 0]).cpu().numpy()
-    lateral = (x1[:, 1] - x0[:, 1]).cpu().numpy()
-    speed = dist / spec.EPISODE_LENGTH_S
-    mean_vx = (vx_sum / EPISODE_STEPS).cpu().numpy()
-    print(f"[export_worm] {args.episodes} episodes: speed {speed.mean():+.4f} +/- {speed.std():.4f} m/s, "
-          f"distance {dist.mean():+.3f} m in 20 s (min {dist.min():+.3f}, max {dist.max():+.3f}); "
-          f"mean instantaneous vx {mean_vx.mean():+.4f} m/s; |lateral| {np.abs(lateral).mean():.3f} m; "
-          f"max segment height {float(z_max.max()):.3f} m, segments grounded {float((grounded_sum / EPISODE_STEPS).mean()):.2f}/5, "
-          f"max |qdot| {float(qd_max.max()):.1f} rad/s")
+            o = obs["policy"]
+            o_np = o.detach().cpu().numpy().astype(np.float32)
+            onnx_mean = np.concatenate([sess.run(None, {"obs": o_np[i:i + 1]})[0] for i in range(n_env)], axis=0)
+            torch_mean = actor(obs).detach().cpu().numpy()
+            max_err = max(max_err, float(np.abs(onnx_mean - torch_mean).max()))
+            # clip(ONNX mean, -1, 1): the RSL-RL wrapper clips with clip_actions = 1.0
+            obs, _, dones, _ = env.step(torch.from_numpy(onnx_mean).to(dev))
+            div_now = tm.get_term("diverged")
+            diverged |= div_now
+            if bool((dones & ~div_now).any()):
+                raise RuntimeError(f"a healthy env reset inside the measured window at step {step}")
+            d = robot.data
+            vx_sum += d.body_link_lin_vel_w[:, seg2, 0]
+            w_b = quat_apply_inverse(d.body_link_quat_w[:, seg2], d.body_link_ang_vel_w[:, seg2])
+            roll = w_b[:, 0].abs()
+            roll_sum += roll
+            roll_max = torch.maximum(roll_max, roll)
+            qd_max = torch.maximum(qd_max, d.joint_vel.abs().max(dim=1).values)
+            sat = d.applied_torque.abs() >= sat_level
+            sat_steps += sat.any(dim=1).float()
+            sat_joint += sat.float()
+            height_sum += (d.body_link_pos_w[:, seg_ids, 2] - origins[:, 2:3]).mean(dim=1)
+        x1 = robot.data.body_link_pos_w[:, seg2, :2] - origins[:, :2]  # read at step 1000
+    ok = (~diverged).cpu().numpy()
+    n_div = int(diverged.sum())
 
-    # ------------------------------------------------------------------------ parity --
-    pairs = torch.cat(obs_log, dim=0)[: args.parity_samples]
-    obs_np = pairs[:, : spec.NUM_OBS].numpy().astype(np.float32)
-    torch_act = pairs[:, spec.NUM_OBS:].numpy()
-    ort_act = np.concatenate([sess.run(None, {"obs": o[None]})[0] for o in obs_np], axis=0)
-    max_err = float(np.abs(ort_act - torch_act).max())
-    print(f"[export_worm] onnxruntime vs torch (GPU policy) on {len(obs_np)} real observations: max|diff| = {max_err:.3e}")
+    def good(t):
+        return t.cpu().numpy()[ok]
+
+    dist = good(x1[:, 0] - x0[:, 0])
+    lateral = good(x1[:, 1] - x0[:, 1])
+    speed = dist / spec.EPISODE_LENGTH_S
+    mean_vx = good(vx_sum / EPISODE_STEPS)
+    health = {
+        "divergedWorlds": n_div,
+        "meanAbsRollRateSeg2": float(good(roll_sum / EPISODE_STEPS).mean()),
+        "peakAbsRollRateSeg2": float(good(roll_max).max()),
+        "peakJointSpeedRadS": float(good(qd_max).max()),
+        "fractionTimeAnyActuatorSaturated": float(good(sat_steps / EPISODE_STEPS).mean()),
+        "fractionTimeSaturatedPerJoint": {
+            n: float(good(sat_joint[:, robot.joint_names.index(n)] / EPISODE_STEPS).mean()) for n in spec.ACTION_ORDER
+        },
+        "meanSegmentHeightM": float(good(height_sum / EPISODE_STEPS).mean()),
+        "meanAbsLateralDrift20sM": float(np.abs(lateral).mean()),
+        "meanLateralDrift20sM": float(lateral.mean()),
+    }
+    print(f"[export_worm] {ok.sum()}/{n_env} healthy episodes (diverged {n_div}): "
+          f"speed {speed.mean():+.4f} +/- {speed.std():.4f} m/s, distance {dist.mean():+.3f} m in 20 s "
+          f"(min {dist.min():+.3f}, max {dist.max():+.3f}); mean instantaneous vx {mean_vx.mean():+.4f} m/s")
+    print(f"[export_worm] health: {json.dumps(health)}")
+    print(f"[export_worm] onnxruntime vs torch (GPU policy) on {EPISODE_STEPS * n_env} real observations: "
+          f"max|diff| = {max_err:.3e}")
 
     # ------------------------------------------------------------------------ reports --
     run_dir = os.path.dirname(ckpt)
@@ -191,23 +224,21 @@ def main():
         "notes": (
             f"Isaac Lab {metadata.version('isaaclab')} / Isaac Sim {metadata.version('isaacsim')} (PhysX 5, TGS), "
             f"rsl-rl-lib {metadata.version('rsl-rl-lib')}. {args.episodes} deterministic episodes of 1000 policy steps "
-            "(20 s), spec reset (yaw U(+/-45 deg) about the head, joint noise +/-0.05 rad), no randomisation. "
-            "Speed = seg2 displacement along +x / 20 s; std is over episodes (population std). "
-            f"Joint damping mode '{DAMPING_MODE}' ('joint' = PhysX joint viscous friction 1.0, drive damping 0). "
+            "(20 s), seed 12345, spec reset (yaw U(+/-45 deg) about the head, joint noise +/-0.05 rad), no "
+            "randomisation, actions = clip(ONNX mean, -1, 1). Speed = seg2 displacement along +x (read at step "
+            "1000) / 20 s; std is over episodes (population std); health-guard (diverged) episodes excluded. "
+            f"Joint damping mode '{DAMPING_MODE}' ('joint' = PhysX joint viscous friction {spec.JOINT_DAMPING}, drive damping 0; force limit {spec.FORCE_LIMIT} N*m). "
             "wallMinutes = training loop wall time (excludes simulator start-up). Parity: onnxruntime (CPU) vs the "
-            "torch policy on GPU, on real rollout observations."
+            "torch policy on GPU, on every rollout observation."
         ),
         "details": {
             "checkpoint": os.path.relpath(ckpt, REPO),
             "checkpointIteration": ckpt_iter,
             "episodes": args.episodes,
+            "healthyEpisodes": int(ok.sum()),
+            "seed": env_cfg.seed,
             "meanInstantaneousVx": float(mean_vx.mean()),
-            "meanAbsLateral20s": float(np.abs(lateral).mean()),
-            "plausibility": {
-                "maxSegmentHeightM": float(z_max.max()),
-                "meanSegmentsGrounded": float((grounded_sum / EPISODE_STEPS).mean()),
-                "maxJointSpeedRadS": float(qd_max.max()),
-            },
+            "health": health,
             "minDistance20s": float(dist.min()),
             "maxDistance20s": float(dist.max()),
             "onnx": {"path": os.path.relpath(onnx_path, REPO), "opset": 15, "irVersion": model.ir_version, "io": io},

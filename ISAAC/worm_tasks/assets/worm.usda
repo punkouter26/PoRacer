@@ -510,8 +510,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -526,7 +526,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -534,8 +534,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -550,7 +550,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -558,8 +558,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -574,7 +574,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -582,8 +582,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -598,7 +598,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -606,8 +606,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -622,7 +622,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -630,8 +630,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -646,7 +646,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -654,8 +654,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -670,7 +670,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
 
@@ -678,8 +678,8 @@ def Xform "worm"
             apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
         )
         {
-            float drive:angular:physics:damping = 1
-            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:damping = 2
+            float drive:angular:physics:maxForce = 6
             float drive:angular:physics:stiffness = 30
             uniform token drive:angular:physics:type = "force"
             uniform token physics:axis = "X"
@@ -694,7 +694,7 @@ def Xform "worm"
             float physics:lowerLimit = -44.99999
             float physics:upperLimit = 44.99999
             float physxJoint:armature = 0.01
-            float physxLimit:X:damping = 1
+            float physxLimit:X:damping = 2
             float physxLimit:X:stiffness = 0
         }
     }

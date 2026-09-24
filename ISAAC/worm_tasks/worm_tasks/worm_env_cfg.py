@@ -5,7 +5,8 @@ Observation (35 floats, this order - it is the ONNX input layout):
     last_action(8) goal_dir_b(2)
 Action: 8 joint targets in ACTION_ORDER, target = a * 0.785398 rad, a clipped to [-1, 1] by the
 RSL-RL wrapper (agent cfg clip_actions=1.0). Physics 0.005 s, decimation 4 -> 50 Hz.
-Episode 20 s (1000 policy steps), time-out only (bootstrapped), no fall termination.
+Episode 20 s (1000 policy steps), time-out (bootstrapped) + simulation health guard (terminal),
+no fall termination.
 """
 
 from __future__ import annotations
@@ -157,14 +158,27 @@ class RewardsCfg:
     effort = RewTerm(
         func=mdp.effort_mean, weight=spec.W_EFFORT, params={"asset_cfg": JOINTS, "force_limit": spec.FORCE_LIMIT}
     )
+    roll_rate = RewTerm(func=mdp.roll_rate, weight=spec.W_ROLL_RATE, params={"asset_cfg": REF})
+    belly_down = RewTerm(func=mdp.belly_down, weight=spec.W_BELLY_DOWN, params={"asset_cfg": REF})
     lateral_drift = RewTerm(func=mdp.lateral_drift, weight=spec.W_LATERAL, params={"asset_cfg": REF})
 
 
 @configclass
 class TerminationsCfg:
     # a time-out is not a failure: time_out=True puts it in extras["time_outs"], which RSL-RL
-    # PPO uses to bootstrap the value. The worm cannot fall: no other termination.
-    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    # PPO uses to bootstrap the value. The worm cannot fall: no fall termination.
+    # Health guard (WORM_SPEC.md item 12): terminal, no bootstrap, zero reward that step (the
+    # reward terms read this term). A world that diverges on its time-out step is terminal too.
+    diverged = DoneTerm(
+        func=mdp.sim_diverged,
+        time_out=False,
+        params={"asset_cfg": SceneEntityCfg("robot"), "max_speed": spec.HEALTH_MAX_SPEED},
+    )
+    time_out = DoneTerm(
+        func=mdp.time_out_healthy,
+        time_out=True,
+        params={"asset_cfg": SceneEntityCfg("robot"), "max_speed": spec.HEALTH_MAX_SPEED},
+    )
 
 
 @configclass

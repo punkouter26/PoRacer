@@ -12,4 +12,13 @@ from .observations import (  # noqa: F401
     ref_gravity_b,
     ref_lin_vel_b,
 )
-from .rewards import action_rate_mean, effort_mean, heading, lateral_drift, progress  # noqa: F401
+from .rewards import (  # noqa: F401
+    action_rate_mean,
+    belly_down,
+    effort_mean,
+    heading,
+    lateral_drift,
+    progress,
+    roll_rate,
+)
+from .terminations import diverged_mask, sim_diverged, time_out_healthy  # noqa: F401

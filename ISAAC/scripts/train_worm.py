@@ -16,7 +16,8 @@ Order of events (project rule C: TensorBoard first):
 4. Tear down: env -> TensorBoard (port verified released) -> simulator.
 
 Besides RSL-RL's own scalars, every iteration logs ``Worm/mean_forward_speed_seg2_x`` (seg2 world
-velocity along +x, averaged over all envs and rollout steps) and ``Worm/mean_step_reward``.
+velocity along +x, averaged over all envs and rollout steps), ``Worm/mean_step_reward`` and
+``health/diverged_worlds`` (worlds ended by the WORM_SPEC.md item-12 health guard that iteration).
 The run folder gets ``train_summary.json`` (steps, wall time, stop reason) for export_worm.py.
 """
 
@@ -168,6 +169,8 @@ class WormRunner(OnPolicyRunner):
         it = self.current_learning_iteration
         total_it = it + max_iterations
         speed, step_rew = 0.0, 0.0
+        tm = self.env.unwrapped.termination_manager
+        diverged_total = 0
         while it < total_it:
             elapsed = time.time() - t_start
             if elapsed + last_iter_s > budget_s:
@@ -176,6 +179,7 @@ class WormRunner(OnPolicyRunner):
             start = time.time()
             speed_sum = torch.zeros((), device=self.device)
             rew_sum = torch.zeros((), device=self.device)
+            div_sum = torch.zeros((), device=self.device, dtype=torch.long)
             with torch.inference_mode():
                 for _ in range(self.cfg["num_steps_per_env"]):
                     actions = self.alg.act(obs)
@@ -187,6 +191,7 @@ class WormRunner(OnPolicyRunner):
                     self.logger.process_env_step(rewards, dones, extras, None)
                     speed_sum += robot.data.body_link_lin_vel_w[:, seg2, 0].mean().to(self.device)
                     rew_sum += rewards.mean()
+                    div_sum += tm.get_term("diverged").sum().to(self.device)
                 collect_time = time.time() - start
                 start = time.time()
                 self.alg.compute_returns(obs)
@@ -197,10 +202,14 @@ class WormRunner(OnPolicyRunner):
 
             n = self.cfg["num_steps_per_env"]
             speed, step_rew = float(speed_sum) / n, float(rew_sum) / n
+            diverged = int(div_sum)
+            diverged_total += diverged
             if self.logger.writer is not None:
                 w = self.logger.writer
                 w.add_scalar("Worm/mean_forward_speed_seg2_x", speed, it)
                 w.add_scalar("Worm/mean_step_reward", step_rew, it)
+                w.add_scalar("health/diverged_worlds", diverged, it)
+                w.add_scalar("health/diverged_worlds_total", diverged_total, it)
                 w.add_scalar("Worm/wall_minutes", (time.time() - t_start) / 60.0, it)
             ep_rew = statistics.mean(self.logger.rewbuffer) if len(self.logger.rewbuffer) else float("nan")
             self.logger.log(
@@ -210,7 +219,7 @@ class WormRunner(OnPolicyRunner):
             )
             print(f"[train_worm] it {it:5d}  steps {self.logger.tot_timesteps:>11d}  "
                   f"{(time.time() - t_start) / 60:6.2f} min  mean episode reward {ep_rew:8.3f}  "
-                  f"mean step reward {step_rew:+.5f}  seg2 forward speed {speed:+.4f} m/s")
+                  f"mean step reward {step_rew:+.5f}  seg2 forward speed {speed:+.4f} m/s  diverged {diverged}")
             if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
                 self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))
             it += 1
@@ -228,6 +237,7 @@ class WormRunner(OnPolicyRunner):
             "finalMeanEpisodeReward": statistics.mean(self.logger.rewbuffer) if len(self.logger.rewbuffer) else None,
             "finalMeanStepReward": step_rew,
             "finalMeanForwardSpeedSeg2": speed,
+            "divergedWorldsTotal": diverged_total,
         }
 
 
