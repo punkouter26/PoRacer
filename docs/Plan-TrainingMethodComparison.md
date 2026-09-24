@@ -119,8 +119,11 @@ gap counts against it, as it should: it is part of what that method costs.
       and the same version as `Packages/org.mujoco`, so what trains is what races),
       `warp-lang 1.17.0`, tensorboard, onnx and onnxruntime. The MojucuBoy env builds
       and steps on the GPU (3,268 steps/s at 256 worlds while Unity was also busy).
-- [ ] **B · Isaac Lab:** approved 2026-09-24 (download and NVIDIA licence); installing
-      with `ISAAC/install.ps1`. The installer's rig-rebuild step is now opt-in
+- [x] **B · Isaac Lab installed (2026-09-24)** with `ISAAC/install.ps1`: torch
+      2.7.0+cu128 running real kernels on sm_120. A 64-env, 2-iteration IsaacBox training
+      run started TensorBoard first, trained, saved checkpoints and shut down cleanly.
+      The installer exits 1 only because `pip check` reports two known version clashes
+      (fastapi/starlette upstream, ipython/psutil); training is unaffected. The installer's rig-rebuild step is now opt-in
       (`-RebuildRig`): it used to overwrite `Assets/unity_export/IsaacBox/isaacbox_rig.json`
       with a provisional joint order, which is the file the IsaacBox racer reads.
 - [ ] Decide how a viewer tells the three methods apart in a race (see *Open
