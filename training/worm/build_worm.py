@@ -30,8 +30,8 @@ LINK_MASS = 0.10             # intermediate pitch link
 LINK_INERTIA = 2e-4
 JOINT_RANGE_DEG = 45.0
 KP = 30.0                    # N*m/rad
-FORCE_LIMIT = 12.0           # N*m; lifts ~2 segments at arm's length, no more
-JOINT_DAMPING = 1.0          # N*m*s/rad, on the joint (stable at 5 ms, see training/bugs)
+FORCE_LIMIT = 6.0             # N*m; lifts about one segment (1.34 kg at 0.2 m = 2.6 N*m) plus margin. Was 12: the MuJoCo smoke run hopped and corkscrewed at 3 m/s, which rule I forbids
+JOINT_DAMPING = 2.0          # N*m*s/rad, on the joint (stable at 5 ms, see training/bugs). Was 1.0
 ARMATURE = 0.01
 FRICTION = 0.9               # AGENTS 2E: static 0.8-1.0; no bounce
 SPAWN_Z = RADIUS + 0.005     # lying on the floor, 5 mm clear

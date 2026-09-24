@@ -12,7 +12,11 @@ implementation differ. Any change here must be made on both sides.
   Segment 0 is the head, at +x.
 - 4 joints. Each is a pitch hinge (axis y) on a 0.1 kg link, then a yaw hinge
   (axis z) into the next segment. **8 actuated DoF, each ±45°.**
-- Position servos: kp 30 N·m/rad, force limit ±12 N·m, joint damping 1.0, armature 0.01.
+- Position servos: kp 30 N·m/rad, force limit **±6 N·m**, joint damping **2.0**,
+  armature 0.01. These were ±12 and 1.0 until the first MuJoCo smoke run learned a
+  hopping corkscrew at 3 m/s, with the head spinning 31 rad/s about its long axis
+  (AGENTS rule I). 6 N·m lifts about one segment (2.6 N·m) with margin, so the worm
+  has to crawl.
 - Friction 0.9 (floor and body), no bounce. Adjacent segments do not collide with each
   other; all other self-collision is on.
 - Physics dt 0.005 s. Policy at **50 Hz** (decimation 4).
@@ -52,7 +56,9 @@ Reward per policy step, multiplied by dt = 0.02 s (so the weights are per second
 | progress | 1.0 | segment-2 world velocity · goal direction, clipped to [−1, 2] m/s |
 | heading | 0.1 | cos(angle between segment-2 horizontal forward axis and goal) |
 | action rate | −0.02 | mean over joints of (aₜ − aₜ₋₁)² |
-| effort | −0.01 | mean over joints of (applied torque ÷ 12)² |
+| effort | −0.01 | mean over joints of (applied torque ÷ 6)² |
+| roll rate | −0.1 | abs(segment-2 angular velocity about its own long axis, B-frame x), rad/s. Stops the corkscrew |
+| belly down | +0.2 | segment-2 z axis · world z (1 when the body is the right way up) |
 | lateral drift | −0.5 | abs(segment-2 world velocity · world y). Was −0.1: the Isaac smoke run learned a diagonal sidewinder that drifted 6 m sideways for 5 m forward, and the race lanes are 2 m apart |
 
 ## Resets and randomisation
@@ -83,7 +89,7 @@ TensorBoard starts before each run (rule C).
 2. **Heading reward:** segment 2's +x axis, projected onto the horizontal plane and
    normalised; the reward is its world-x component.
 3. **Velocities:** taken at segment 2's body origin, which is also its centre of mass.
-4. **Effort:** actuator force only, clip(kp·(target − q), ±12). Passive joint damping is
+4. **Effort:** actuator force only, clip(kp·(target − q), ±6). Passive joint damping is
    excluded (MuJoCo `actuator_force`).
 5. **Actions:** clipped to [−1, 1] before the env. The previous-action observation and
    the action-rate penalty both use the clipped values. The ONNX outputs the unclipped
@@ -102,9 +108,23 @@ TensorBoard starts before each run (rule C).
 11. **PPO:** clipped value loss; advantages normalised over the whole rollout; Adam; one
     state-independent log-std per action; observation normaliser (x − mean)/(std + 0.01),
     updated throughout training.
-12. **Joint damping in PhysX:** joint viscous friction 1.0 (a passive −c·q̇ that the
-    12 N·m limit does not cap), which is the same as MuJoCo's joint damping. The drive
-    has kp 30, damping 0 and a 12 N·m limit, the same as MuJoCo's position servo.
+12. **Simulation health guard (both sides):** a world whose state is non-finite, or
+    with any joint or body speed above 500 (rad/s or m/s), ends as terminal. It gets
+    no value bootstrap and zero reward for that step, then resets. Count it as
+    `health/diverged_worlds`, and leave those episodes out of the speed statistics.
+13. **Order within a step:** clip the action and set targets → 4 substeps → recompute
+    body kinematics → add 1 to the episode counter and check for timeout → reward on
+    the post-step state → reset finished worlds → return the observation (post-reset
+    for worlds that reset). The timeout bootstrap is r += γ·V(s_t), as in RSL-RL.
+    Effort uses the actuator force from the last substep.
+14. **Friction combining:** MuJoCo takes the larger of the two values, so every geom,
+    floor included, is scaled to 0.9·s. In PhysX, both materials are set so every
+    worm–floor and worm–worm pair is 0.9·s.
+15. **kp randomisation** scales stiffness only; force limit and damping stay fixed.
+    The observation normaliser starts at mean 0 and variance 1. Evaluation uses seed
+    12345, spec resets with no randomisation, and actions = clip(ONNX mean, −1, 1).
+16. **Joint damping in PhysX:** joint viscous friction 2.0 (a passive −c·q̇ that the 6 N·m limit does not cap), which is the same as MuJoCo's joint damping. The drive
+    has kp 30, damping 0 and a 6 N·m limit, the same as MuJoCo's position servo.
     Checked by a free-decay test.
 
 ## Export: the same ONNX interface for both

@@ -4,8 +4,8 @@
   <option timestep="0.005" gravity="0 0 -9.81" integrator="implicitfast" solver="Newton" iterations="10" ls_iterations="8" cone="pyramidal"/>
   <default>
     <geom condim="3" friction="0.9 0.005 0.0001" solref="0.01 1" solimp="0.9 0.95 0.001"/>
-    <joint type="hinge" limited="true" range="-0.785398 0.785398" damping="1.0" armature="0.01"/>
-    <position kp="30.0" ctrlrange="-0.785398 0.785398" forcerange="-12.0 12.0"/>
+    <joint type="hinge" limited="true" range="-0.785398 0.785398" damping="2.0" armature="0.01"/>
+    <position kp="30.0" ctrlrange="-0.785398 0.785398" forcerange="-6.0 6.0"/>
   </default>
   <worldbody>
     <geom name="floor" type="plane" size="0 0 1" friction="0.9 0.005 0.0001" rgba="0.3 0.32 0.35 1"/>
