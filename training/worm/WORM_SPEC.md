@@ -53,7 +53,7 @@ Reward per policy step, multiplied by dt = 0.02 s (so the weights are per second
 | heading | 0.1 | cos(angle between segment-2 horizontal forward axis and goal) |
 | action rate | −0.02 | mean over joints of (aₜ − aₜ₋₁)² |
 | effort | −0.01 | mean over joints of (applied torque ÷ 12)² |
-| lateral drift | −0.1 | abs(segment-2 world velocity · world y) |
+| lateral drift | −0.5 | abs(segment-2 world velocity · world y). Was −0.1: the Isaac smoke run learned a diagonal sidewinder that drifted 6 m sideways for 5 m forward, and the race lanes are 2 m apart |
 
 ## Resets and randomisation
 
@@ -75,6 +75,37 @@ Reward per policy step, multiplied by dt = 0.02 s (so the weights are per second
 | Budget | **30 min wall clock each**, one tool at a time, Unity closed |
 
 TensorBoard starts before each run (rule C).
+
+## Details resolved while building (binding for both sides)
+
+1. **Goal observation:** world +x rotated into segment 2's full orientation (inverse
+   quaternion); keep x and y, then renormalise.
+2. **Heading reward:** segment 2's +x axis, projected onto the horizontal plane and
+   normalised; the reward is its world-x component.
+3. **Velocities:** taken at segment 2's body origin, which is also its centre of mass.
+4. **Effort:** actuator force only, clip(kp·(target − q), ±12). Passive joint damping is
+   excluded (MuJoCo `actuator_force`).
+5. **Actions:** clipped to [−1, 1] before the env. The previous-action observation and
+   the action-rate penalty both use the clipped values. The ONNX outputs the unclipped
+   mean.
+6. **Reset:** yaw is applied about the head (segment 0, the root body). Joint noise is
+   uniform ±0.05 rad per joint.
+7. **Randomisation**, drawn at every reset:
+   - friction: one scale per env, static = dynamic = 0.9·s;
+   - segment masses: independent per segment (links not randomised), with inertia
+     scaled to match;
+   - kp: independent per joint.
+8. **Episode starts:** lengths are randomised at the start of training.
+9. **Budget:** the 30 minutes count from the first rollout.
+10. **Evaluation speed:** segment-2 displacement along +x ÷ 20 s over 100 episodes; the
+    std is across episodes.
+11. **PPO:** clipped value loss; advantages normalised over the whole rollout; Adam; one
+    state-independent log-std per action; observation normaliser (x − mean)/(std + 0.01),
+    updated throughout training.
+12. **Joint damping in PhysX:** joint viscous friction 1.0 (a passive −c·q̇ that the
+    12 N·m limit does not cap), which is the same as MuJoCo's joint damping. The drive
+    has kp 30, damping 0 and a 12 N·m limit, the same as MuJoCo's position servo.
+    Checked by a free-decay test.
 
 ## Export: the same ONNX interface for both
 

@@ -1,0 +1,702 @@
+#usda 1.0
+(
+    defaultPrim = "worm"
+    doc = """Generated from Composed Stage of root layer C:\\Users\\punko\\Downloads\\PoRacer\\ISAAC\\worm_tasks\\assets\\_import\\worm.usd
+"""
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "worm"
+{
+    def Xform "seg0" (
+        apiSchemas = ["IsaacRobotAPI"]
+    )
+    {
+        string[] isaac:changelog
+        string isaac:description
+        token isaac:license
+        string isaac:namespace
+        rel isaac:physics:robotJoints
+        rel isaac:physics:robotLinks = [
+            </worm/seg0/seg0>,
+            </worm/seg0/link0>,
+            </worm/seg0/seg1>,
+            </worm/seg0/link1>,
+            </worm/seg0/seg2>,
+            </worm/seg0/link2>,
+            </worm/seg0/seg3>,
+            </worm/seg0/link3>,
+            </worm/seg0/seg4>,
+        ]
+        token isaac:robotType
+        string isaac:source
+        string isaac:version
+
+        def Xform "seg0" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "PhysicsArticulationRootAPI", "PhysxArticulationAPI", "PhysicsFilteredPairsAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            float physics:density = 0
+            rel physics:filteredPairs = </worm/seg0/seg1>
+            float physics:mass = 1.3359623
+            bool physxArticulation:enabledSelfCollisions = 1
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+                def Xform "seg0" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </worm/Looks/material_rgba>
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg0"
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+
+                def Xform "seg0"
+                {
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg0" (
+                        apiSchemas = ["PhysicsCollisionAPI"]
+                    )
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+        }
+
+        def Xform "link0" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            point3f physics:centerOfMass = (0, 0, 0)
+            float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+            float physics:mass = 0.1
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.10000000149011612, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+            }
+        }
+
+        def Xform "seg1" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "PhysicsFilteredPairsAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            float physics:density = 0
+            rel physics:filteredPairs = [
+                </worm/seg0/seg0>,
+                </worm/seg0/seg2>,
+            ]
+            float physics:mass = 1.3359623
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.20000000298023224, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+                def Xform "seg1" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </worm/Looks/material_rgba>
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg1"
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+
+                def Xform "seg1"
+                {
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg1" (
+                        apiSchemas = ["PhysicsCollisionAPI"]
+                    )
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+        }
+
+        def Xform "link1" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            point3f physics:centerOfMass = (0, 0, 0)
+            float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+            float physics:mass = 0.1
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.30000001192092896, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+            }
+        }
+
+        def Xform "seg2" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "PhysicsFilteredPairsAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            float physics:density = 0
+            rel physics:filteredPairs = [
+                </worm/seg0/seg1>,
+                </worm/seg0/seg3>,
+            ]
+            float physics:mass = 1.3359623
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.4000000059604645, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+                def Xform "seg2" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </worm/Looks/material_rgba>
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg2"
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+
+                def Xform "seg2"
+                {
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg2" (
+                        apiSchemas = ["PhysicsCollisionAPI"]
+                    )
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+        }
+
+        def Xform "link2" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            point3f physics:centerOfMass = (0, 0, 0)
+            float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+            float physics:mass = 0.1
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.5, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+            }
+        }
+
+        def Xform "seg3" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "PhysicsFilteredPairsAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            float physics:density = 0
+            rel physics:filteredPairs = [
+                </worm/seg0/seg2>,
+                </worm/seg0/seg4>,
+            ]
+            float physics:mass = 1.3359623
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.6000000238418579, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+                def Xform "seg3" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </worm/Looks/material_rgba>
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg3"
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+
+                def Xform "seg3"
+                {
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg3" (
+                        apiSchemas = ["PhysicsCollisionAPI"]
+                    )
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+        }
+
+        def Xform "link3" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            point3f physics:centerOfMass = (0, 0, 0)
+            float3 physics:diagonalInertia = (0.0002, 0.0002, 0.0002)
+            float physics:mass = 0.1
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.7000000476837158, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+            }
+        }
+
+        def Xform "seg4" (
+            apiSchemas = ["PhysicsRigidBodyAPI", "PhysxRigidBodyAPI", "PhysicsMassAPI", "PhysicsFilteredPairsAPI", "IsaacLinkAPI"]
+        )
+        {
+            string isaac:nameOverride
+            float physics:density = 0
+            rel physics:filteredPairs = </worm/seg0/seg3>
+            float physics:mass = 1.3359623
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.8000000715255737, 0, 0.05000000074505806)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            def Xform "visuals" (
+                instanceable = false
+            )
+            {
+                def Xform "seg4" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </worm/Looks/material_rgba>
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg4"
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+
+            def Xform "collisions" (
+                instanceable = false
+            )
+            {
+                token visibility = "invisible"
+
+                def Xform "seg4"
+                {
+                    quatd xformOp:orient = (1, 0, 0, 0)
+                    double3 xformOp:scale = (1, 1, 1)
+                    double3 xformOp:translate = (0, 0, 0)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                    def Capsule "seg4" (
+                        apiSchemas = ["PhysicsCollisionAPI"]
+                    )
+                    {
+                        uniform token axis = "X"
+                        float3[] extent = [(-0.120000005, -0.045, -0.045), (0.120000005, 0.045, 0.045)]
+                        double height = 0.15000000596046448
+                        double radius = 0.04500000178813934
+                    }
+                }
+            }
+        }
+    }
+
+    def Scope "Looks"
+    {
+        def Material "material_rgba"
+        {
+            token outputs:mdl:displacement.connect = </worm/Looks/material_rgba/Shader.outputs:out>
+            token outputs:mdl:surface.connect = </worm/Looks/material_rgba/Shader.outputs:out>
+            token outputs:mdl:volume.connect = </worm/Looks/material_rgba/Shader.outputs:out>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                uniform token info:implementationSource = "sourceAsset"
+                uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@
+                uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"
+                color3f inputs:diffuse_color_constant = (0.35, 0.55, 0.9)
+                token outputs:out
+            }
+        }
+
+        def Material "material_rgba_0"
+        {
+            token outputs:mdl:displacement.connect = </worm/Looks/material_rgba_0/Shader.outputs:out>
+            token outputs:mdl:surface.connect = </worm/Looks/material_rgba_0/Shader.outputs:out>
+            token outputs:mdl:volume.connect = </worm/Looks/material_rgba_0/Shader.outputs:out>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                uniform token info:implementationSource = "sourceAsset"
+                uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@
+                uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"
+                color3f inputs:diffuse_color_constant = (0.3, 0.32, 0.35)
+                token outputs:out
+            }
+        }
+    }
+
+    def Scope "joints"
+    {
+        def PhysicsRevoluteJoint "j0_pitch" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/seg0>
+            rel physics:body1 = </worm/seg0/link0>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (-0.1, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, 0, 0.7071068)
+            quatf physics:localRot1 = (0.7071068, 0, 0, 0.7071068)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j0_yaw" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/link0>
+            rel physics:body1 = </worm/seg0/seg1>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.1, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, -0.7071068, 0)
+            quatf physics:localRot1 = (0.7071068, 0, -0.7071068, 0)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j1_pitch" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/seg1>
+            rel physics:body1 = </worm/seg0/link1>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (-0.10000001, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, 0, 0.7071068)
+            quatf physics:localRot1 = (0.7071068, 0, 0, 0.7071068)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j1_yaw" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/link1>
+            rel physics:body1 = </worm/seg0/seg2>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.099999994, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, -0.7071068, 0)
+            quatf physics:localRot1 = (0.7071068, 0, -0.7071068, 0)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j2_pitch" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/seg2>
+            rel physics:body1 = </worm/seg0/link2>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (-0.099999994, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, 0, 0.7071068)
+            quatf physics:localRot1 = (0.7071068, 0, 0, 0.7071068)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j2_yaw" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/link2>
+            rel physics:body1 = </worm/seg0/seg3>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.100000024, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, -0.7071068, 0)
+            quatf physics:localRot1 = (0.7071068, 0, -0.7071068, 0)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j3_pitch" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/seg3>
+            rel physics:body1 = </worm/seg0/link3>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (-0.100000024, 0, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, 0, 0.7071068)
+            quatf physics:localRot1 = (0.7071068, 0, 0, 0.7071068)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+
+        def PhysicsRevoluteJoint "j3_yaw" (
+            apiSchemas = ["PhysxJointAPI", "PhysxLimitAPI:X", "PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1
+            float drive:angular:physics:maxForce = 12
+            float drive:angular:physics:stiffness = 30
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "X"
+            rel physics:body0 = </worm/seg0/link3>
+            rel physics:body1 = </worm/seg0/seg4>
+            float physics:breakForce = 3.4028235e38
+            float physics:breakTorque = 3.4028235e38
+            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos1 = (0.100000024, 0, 0)
+            quatf physics:localRot0 = (0.7071068, 0, -0.7071068, 0)
+            quatf physics:localRot1 = (0.7071068, 0, -0.7071068, 0)
+            float physics:lowerLimit = -44.99999
+            float physics:upperLimit = 44.99999
+            float physxJoint:armature = 0.01
+            float physxLimit:X:damping = 1
+            float physxLimit:X:stiffness = 0
+        }
+    }
+}
+

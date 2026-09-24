@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "worm_tasks"
+version = "0.1.0"
+description = "Isaac Lab task for the Worm5 two-trainer comparison (training/worm/WORM_SPEC.md)"
+requires-python = ">=3.10"
+# isaaclab, isaaclab_tasks, isaaclab_rl and rsl-rl-lib come from the Isaac Lab checkout this
+# package is installed INTO; they are deliberately not listed so pip never resolves them from PyPI.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["worm_tasks*"]
