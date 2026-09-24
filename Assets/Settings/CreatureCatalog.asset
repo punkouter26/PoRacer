@@ -23,13 +23,13 @@ MonoBehaviour:
     displayName: Hexapod
     prefab: {fileID: 6008898445888945672, guid: 210857db33869fc408aec2265c1888c9, type: 3}
     model: {fileID: 5022602860645237092, guid: e201d9a2974be304f8b4fdbb9db60ec7, type: 3}
-    spawnHeight: 0.75
+    spawnHeight: 0.526
     brainInPrefab: 0
   - id: Crab_v01
     displayName: Crab
     prefab: {fileID: 2626330789806534991, guid: db0da39f06a16a149ab3f959ddd8a352, type: 3}
     model: {fileID: 5022602860645237092, guid: 940b1a522dee84c47b1cbbcbbedaa40d, type: 3}
-    spawnHeight: 0.75
+    spawnHeight: 0.526
     brainInPrefab: 0
   - id: IsaacH1_v01
     displayName: Isaac H1
