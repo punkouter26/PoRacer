@@ -11,8 +11,6 @@ namespace PoRacer.WormRace
         public const string SETTINGS = ROOT + "/WormRaceSettings.asset";
         public const string RIG_JSON = ROOT + "/worm_rig.json";
         public const string BRAINS = ROOT + "/Brains";
-        public const string MUJOCO_BRAIN = BRAINS + "/worm_mujoco.onnx";
-        public const string ISAAC_BRAIN = BRAINS + "/worm_isaac.onnx";
         public const string MATERIALS = ROOT + "/Materials";
         public const string UI = ROOT + "/UI";
         public const string SCENE = "Assets/Scenes/SCN_WORM_RACE.unity";

@@ -31,11 +31,17 @@ namespace PoRacer.WormRace
     /// </summary>
     internal static class MujocoWormBuilder
     {
-        public static GameObject Build(WormRig rig, WormRaceSettings settings, WormPilot pilot,
+        /// <summary>
+        /// Builds one MuJoCo worm. Any number can be built in the same frame under the same
+        /// MjScene: the plug-in gives every element a unique generated name and the view
+        /// resolves ids and qpos/qvel/ctrl addresses per component after the compile, so the
+        /// worms never share an index; each worm excludes only its own adjacent segments.
+        /// </summary>
+        public static GameObject Build(WormRig rig, WormPilot pilot, string rootName,
                                        Vector3 rootOrigin, Vector3 laneForward, Material material,
                                        Mesh segmentMesh, out Transform[] segmentGeoms)
         {
-            var root = new GameObject("MuJoCoWorm");
+            var root = new GameObject(rootName);
             root.transform.SetPositionAndRotation(rootOrigin, Quaternion.identity);
 
             // Unity +X (= MuJoCo body +x under the swap) turned onto the lane direction.

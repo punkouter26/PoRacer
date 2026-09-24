@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using MessagePipe;
@@ -11,8 +12,11 @@ namespace PoRacer.WormRace
     /// <summary>
     /// Runs SCN_WORM_RACE: a series of N races (or one self-test), start to finish.
     ///
-    /// Per race: spawn both worms straight on the start line, a 3-2-1 countdown with both
-    /// pilots held (physics runs, so both worms settle onto the floor the same way; the
+    /// One racer per entry of WormRaceSettings' racer list (lane = index), each with its own
+    /// pilot and brain; nothing here knows which lane runs in which simulator.
+    ///
+    /// Per race: spawn every worm straight on the start line, a 3-2-1 countdown with every
+    /// pilot held (physics runs, so all worms settle onto the floor the same way; the
     /// policies do not), GO, then wait until each worm has finished, run out of time or
     /// failed. The first nose past the finish line wins; at the time limit the rest rank
     /// by distance. Results go to the model (HUD), to MessagePipe, and to
@@ -40,13 +44,6 @@ namespace PoRacer.WormRace
         private const float SIGN_TEST_MIN_ANGLE_RAD = 0.3f;
         private const float SIGN_TEST_MIN_OFFSET = 0.02f;
 
-        private const string MUJOCO_NAME = "MuJoCo worm";
-        private const string MUJOCO_METHOD = "MuJoCo";
-        private const string MUJOCO_PHYSICS = "MuJoCo (org.mujoco plug-in)";
-        private const string ISAAC_NAME = "Isaac worm";
-        private const string ISAAC_METHOD = "Isaac Lab";
-        private const string ISAAC_PHYSICS = "PhysX ArticulationBody";
-
         private readonly WormRaceSettings _settings;
         private readonly WormRaceModel _model;
         private readonly WormSpawnSystem _spawn;
@@ -54,9 +51,10 @@ namespace PoRacer.WormRace
         private readonly IPublisher<WormRaceFinishedMessage> _raceFinishedPublisher;
         private readonly IPublisher<WormSeriesFinishedMessage> _seriesFinishedPublisher;
         private readonly CancellationTokenSource _cts = new();
-        private readonly WormPilot[] _pilots = new WormPilot[WormRaceModel.RACER_COUNT];
-        private readonly WormPolicy[] _policies = new WormPolicy[WormRaceModel.RACER_COUNT];
-        private readonly int[] _ranking = new int[WormRaceModel.RACER_COUNT];
+        private readonly int _racerCount;
+        private readonly WormPilot[] _pilots;
+        private readonly WormPolicy[] _policies;
+        private readonly int[] _ranking;
 
         private WormRaceReport.Series _series;
         private string _stamp = string.Empty;
@@ -73,6 +71,11 @@ namespace PoRacer.WormRace
             _countdownPublisher = countdownPublisher;
             _raceFinishedPublisher = raceFinishedPublisher;
             _seriesFinishedPublisher = seriesFinishedPublisher;
+            // The model was sized from the same list; take the smaller in case they differ.
+            _racerCount = Mathf.Min(model.Racers.Count, settings.Racers.Count);
+            _pilots = new WormPilot[_racerCount];
+            _policies = new WormPolicy[_racerCount];
+            _ranking = new int[_racerCount];
         }
 
         public void Start()
@@ -104,7 +107,7 @@ namespace PoRacer.WormRace
                 return;
             }
             float raceClock = 0f;
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 if (pilot == null)
@@ -134,7 +137,7 @@ namespace PoRacer.WormRace
             _disposed = true;
             _cts.Cancel();
             _cts.Dispose();
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 _policies[lane]?.Dispose();
                 _policies[lane] = null;
@@ -185,22 +188,27 @@ namespace PoRacer.WormRace
             {
                 return false;
             }
+            if (_racerCount == 0)
+            {
+                error = "WormRaceSettings has no racers. Run "
+                      + "PoRacer.WormRace.EditorTools.Editor_BuildWormRaceScene.Build() to seed the racer list.";
+                return false;
+            }
             if (Mathf.Abs(Time.fixedDeltaTime - WormContract.PHYSICS_DT) > TIMESTEP_TOLERANCE)
             {
-                Debug.LogError($"[WormRace] Time.fixedDeltaTime is {Time.fixedDeltaTime:F4} s but both worms "
+                Debug.LogError($"[WormRace] Time.fixedDeltaTime is {Time.fixedDeltaTime:F4} s but the worms "
                              + $"trained at {WormContract.PHYSICS_DT:F3} s with decimation {WormContract.DECIMATION}. "
                              + "They will race at the wrong control rate; restore the project timestep.");
             }
-            if (_pilots[WormRaceModel.MUJOCO_LANE] == null)
+            if (_pilots[0] == null)
             {
-                _policies[WormRaceModel.MUJOCO_LANE] = WormPolicy.Create(
-                    _settings.MujocoBrain, MUJOCO_NAME, WormRacePaths.MUJOCO_BRAIN);
-                _policies[WormRaceModel.ISAAC_LANE] = WormPolicy.Create(
-                    _settings.IsaacBrain, ISAAC_NAME, WormRacePaths.ISAAC_BRAIN);
-                for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+                for (int lane = 0; lane < _racerCount; lane++)
                 {
-                    WormPolicy policy = _policies[lane];
-                    _pilots[lane] = new WormPilot(policy, _settings.PreviousActionClipped);
+                    WormRacerDefinition definition = _settings.Racers[lane];
+                    WormPolicy policy = WormPolicy.Create(definition.Brain, definition.Name,
+                                                          definition.ExpectedBrainPath);
+                    _policies[lane] = policy;
+                    _pilots[lane] = new WormPilot(policy, definition.Name, _settings.PreviousActionClipped);
                     WormRacerModel racer = _model.Racers[lane];
                     racer.BrainReady = policy.IsReady;
                     racer.BrainError = policy.Error;
@@ -246,10 +254,7 @@ namespace PoRacer.WormRace
             _series.finishedAt = WormReportWriter.Now();
             WriteSeries();
             _model.Phase = WormRacePhase.SeriesComplete;
-            _model.Message = $"Series done: {_model.Racers[WormRaceModel.MUJOCO_LANE].Name} "
-                           + $"{_model.WinsFor(WormRaceModel.MUJOCO_LANE)} - "
-                           + $"{_model.WinsFor(WormRaceModel.ISAAC_LANE)} "
-                           + _model.Racers[WormRaceModel.ISAAC_LANE].Name;
+            _model.Message = SeriesTally();
             _seriesFinishedPublisher.Publish(new WormSeriesFinishedMessage(_model.ReportPath));
         }
 
@@ -259,21 +264,26 @@ namespace PoRacer.WormRace
             _model.ElapsedSeconds = 0f;
             _model.CountdownValue = 0;
             float physicsDt = Time.fixedDeltaTime;
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 _pilots[lane].ResetForRace();
                 _pilots[lane].Configure(_spawn.LaneOrigin(lane), Vector3.forward, finishDistance, timeLimit, physicsDt);
                 _model.Racers[lane].ResetForRace();
             }
 
-            bool spawnMujoco = _spawn.MujocoSupported;
-            if (!spawnMujoco)
+            if (!_spawn.MujocoSupported)
             {
-                _pilots[WormRaceModel.MUJOCO_LANE].Fail(
-                    "MuJoCo runs only on Windows in this project (Packages/org.mujoco ships mujoco.dll only, "
-                  + "AGENTS rule F).");
+                for (int lane = 0; lane < _racerCount; lane++)
+                {
+                    if (_settings.Racers[lane].Physics == WormPhysicsKind.MujocoPlugin)
+                    {
+                        _pilots[lane].Fail(
+                            $"{_model.Racers[lane].Name}: MuJoCo runs only on Windows in this project "
+                          + "(Packages/org.mujoco ships mujoco.dll only, AGENTS rule F).");
+                    }
+                }
             }
-            _spawn.Spawn(rig, _pilots[WormRaceModel.MUJOCO_LANE], _pilots[WormRaceModel.ISAAC_LANE], spawnMujoco);
+            _spawn.Spawn(rig, _pilots);
             _model.WormsSpawned = true;
 
             // MjScene compiles in its Start, at the top of the next frame.
@@ -293,7 +303,7 @@ namespace PoRacer.WormRace
         }
 
         /// <summary>
-        /// Both simulators must have stepped at least once before GO. A MuJoCo worm whose
+        /// Every racer's simulator must have stepped at least once before GO. A MuJoCo worm whose
         /// model failed to compile never gets a control callback; it is failed here, with a
         /// pointer to the console, instead of hanging the race.
         /// </summary>
@@ -303,7 +313,7 @@ namespace PoRacer.WormRace
             {
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 if (!pilot.PhysicsReady && pilot.Status != WormRacerStatus.Failed)
@@ -316,7 +326,7 @@ namespace PoRacer.WormRace
 
         private void ReleaseAll()
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 _pilots[lane].Release();
             }
@@ -347,7 +357,7 @@ namespace PoRacer.WormRace
             var race = new WormRaceReport.Race { raceNumber = raceNumber };
             bool anyFinished = false;
             bool anyTimedOut = false;
-            for (int place = 0; place < WormRaceModel.RACER_COUNT; place++)
+            for (int place = 0; place < _racerCount; place++)
             {
                 int lane = _ranking[place];
                 WormPilot pilot = _pilots[lane];
@@ -387,7 +397,7 @@ namespace PoRacer.WormRace
             _model.Phase = WormRacePhase.Results;
             _model.Message = winner >= 0
                 ? $"Race {raceNumber}: {race.winner} wins ({endReason})"
-                : $"Race {raceNumber}: no winner, both failed";
+                : $"Race {raceNumber}: no winner, every racer failed";
 
             _series.races.Add(race);
             _series.completedRaces = raceNumber;
@@ -399,11 +409,11 @@ namespace PoRacer.WormRace
         /// <summary>Finished by time, then timed-out by distance, then failed by distance.</summary>
         private void RankLanes()
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 _ranking[lane] = lane;
             }
-            for (int index = 1; index < WormRaceModel.RACER_COUNT; index++)
+            for (int index = 1; index < _racerCount; index++)
             {
                 int current = _ranking[index];
                 int slot = index - 1;
@@ -462,7 +472,7 @@ namespace PoRacer.WormRace
         private void RebuildSummary()
         {
             _series.summary.Clear();
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormRacerModel racer = _model.Racers[lane];
                 var summary = new WormRaceReport.RacerSummary
@@ -470,6 +480,10 @@ namespace PoRacer.WormRace
                     lane = lane,
                     name = racer.Name,
                     method = racer.Method,
+                    physics = racer.Physics,
+                    brain = racer.BrainName,
+                    brainLoaded = racer.BrainReady,
+                    brainError = racer.BrainError,
                     wins = _model.WinsFor(lane),
                 };
                 float timeSum = 0f;
@@ -552,7 +566,7 @@ namespace PoRacer.WormRace
             await SpawnGrid(rig, float.PositiveInfinity, float.PositiveInfinity, token);
             _model.Phase = WormRacePhase.SelfTest;
             _model.Message = $"Self-test {mode}: settling";
-            // Held straight while both settle onto the floor, exactly as before a race.
+            // Held straight while every worm settles onto the floor, exactly as before a race.
             await UniTask.Delay(TimeSpan.FromSeconds(_settings.SelfTestSettleSeconds), cancellationToken: token);
             await WaitForPhysics(token);
 
@@ -570,7 +584,7 @@ namespace PoRacer.WormRace
             {
                 action[joint] = SIGN_TEST_TARGET_RAD / WormContract.JOINT_RANGE_RAD;
             }
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 _pilots[lane].SetActionOverride(action);
                 _pilots[lane].Release();
@@ -618,7 +632,7 @@ namespace PoRacer.WormRace
                 expectation = Expectation(mode),
                 allPassed = true,
             };
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 var finalJoints = new float[WormContract.ACTION_SIZE];
@@ -630,7 +644,11 @@ namespace PoRacer.WormRace
                 {
                     lane = lane,
                     name = _model.Racers[lane].Name,
+                    method = _model.Racers[lane].Method,
                     physics = _model.Racers[lane].Physics,
+                    brain = _model.Racers[lane].BrainName,
+                    brainLoaded = _model.Racers[lane].BrainReady,
+                    brainError = _model.Racers[lane].BrainError,
                     status = pilot.Status.ToString(),
                     commandedJointRad = joint >= 0 ? pilot.LastJointPosition(joint) : 0f,
                     maxAbsJointRad = pilot.MaxAbsJointSinceRelease,
@@ -694,15 +712,15 @@ namespace PoRacer.WormRace
             {
                 case WormRaceMode.ZeroActionTest:
                     return "zero action: nose moves < 2 cm, speed < 1 cm/s, every |joint| < 0.05 rad, "
-                         + "segment 2 centre at the capsule radius (0.045 m) +/- 1 cm, in both physics";
+                         + "segment 2 centre at the capsule radius (0.045 m) +/- 1 cm, for every racer in its own physics";
                 case WormRaceMode.YawSignTest:
                     return "MuJoCo j0_yaw = +0.5 rad swings segment 1 toward MuJoCo -y = Unity +x (the worm's "
                          + "right when facing +Z): j0_yaw reads > +0.3 rad and segment 1 sits > 2 cm to the "
-                         + "right of the head, in both physics";
+                         + "right of the head, for every racer in its own physics";
                 case WormRaceMode.PitchSignTest:
                     return "MuJoCo j0_pitch = +0.5 rad rotates segment 1 about +y, lifting it relative to the "
                          + "head: j0_pitch reads > +0.3 rad and segment 1 sits > 2 cm above the head's "
-                         + "plane, in both physics";
+                         + "plane, for every racer in its own physics";
                 default:
                     return string.Empty;
             }
@@ -712,24 +730,38 @@ namespace PoRacer.WormRace
 
         private void ConfigureRacerModels()
         {
-            WormRacerModel mujoco = _model.Racers[WormRaceModel.MUJOCO_LANE];
-            mujoco.Name = MUJOCO_NAME;
-            mujoco.Method = MUJOCO_METHOD;
-            mujoco.Physics = MUJOCO_PHYSICS;
-            mujoco.Color = _settings.MujocoColor;
-            mujoco.BrainName = _settings.MujocoBrain != null ? _settings.MujocoBrain.name : "missing";
+            for (int lane = 0; lane < _racerCount; lane++)
+            {
+                WormRacerDefinition definition = _settings.Racers[lane];
+                WormRacerModel racer = _model.Racers[lane];
+                racer.Name = definition.Name;
+                racer.Method = definition.Method;
+                racer.Physics = definition.PhysicsLabel;
+                racer.Color = definition.Color;
+                racer.BrainName = definition.Brain != null ? definition.Brain.name : "missing";
+                // Until TryPrepare loads it, so the HUD never shows a brain that is absent.
+                racer.BrainReady = definition.Brain != null;
+            }
+        }
 
-            WormRacerModel isaac = _model.Racers[WormRaceModel.ISAAC_LANE];
-            isaac.Name = ISAAC_NAME;
-            isaac.Method = ISAAC_METHOD;
-            isaac.Physics = ISAAC_PHYSICS;
-            isaac.Color = _settings.IsaacColor;
-            isaac.BrainName = _settings.IsaacBrain != null ? _settings.IsaacBrain.name : "missing";
+        /// <summary>"Series done: MuJoCo worm 5 - Isaac worm 0 - Isaac Lab 3 worm 0".</summary>
+        private string SeriesTally()
+        {
+            var text = new StringBuilder("Series done: ");
+            for (int lane = 0; lane < _racerCount; lane++)
+            {
+                if (lane > 0)
+                {
+                    text.Append(" - ");
+                }
+                text.Append(_model.Racers[lane].Name).Append(' ').Append(_model.WinsFor(lane));
+            }
+            return text.ToString();
         }
 
         private bool AllPhysicsReady()
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 if (!pilot.PhysicsReady && pilot.Status != WormRacerStatus.Failed)
@@ -742,7 +774,7 @@ namespace PoRacer.WormRace
 
         private bool AllDone()
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 if (!_pilots[lane].IsDone)
                 {
@@ -754,7 +786,7 @@ namespace PoRacer.WormRace
 
         private bool AllReached(float seconds)
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 if (pilot.Status != WormRacerStatus.Failed && pilot.ElapsedSeconds < seconds)
@@ -767,7 +799,7 @@ namespace PoRacer.WormRace
 
         private void FailStragglers(string reason)
         {
-            for (int lane = 0; lane < WormRaceModel.RACER_COUNT; lane++)
+            for (int lane = 0; lane < _racerCount; lane++)
             {
                 WormPilot pilot = _pilots[lane];
                 if (!pilot.IsDone)

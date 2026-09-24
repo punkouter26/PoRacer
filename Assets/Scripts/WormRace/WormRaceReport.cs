@@ -64,6 +64,10 @@ namespace PoRacer.WormRace
             public int lane;
             public string name;
             public string method;
+            public string physics;
+            public string brain;
+            public bool brainLoaded;
+            public string brainError;
             public int wins;
             public int finishes;
             public float meanFinishTimeSeconds = -1f;
@@ -93,7 +97,11 @@ namespace PoRacer.WormRace
         {
             public int lane;
             public string name;
+            public string method;
             public string physics;
+            public string brain;
+            public bool brainLoaded;
+            public string brainError;
             public string status;
             public bool passed;
             public string verdict;

@@ -13,12 +13,28 @@ MonoBehaviour:
   m_Name: WormRaceSettings
   m_EditorClassIdentifier: PoRacer.WormRace::PoRacer.WormRace.WormRaceSettings
   _rigJson: {fileID: 4900000, guid: 3a8fa1c5545e76849908455334fb289a, type: 3}
-  _mujocoBrain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
-  _isaacBrain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
-  _mujocoMaterial: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
-  _isaacMaterial: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
-  _mujocoColor: {r: 0.16, g: 0.45, b: 0.95, a: 1}
-  _isaacColor: {r: 1, g: 0.55, b: 0.1, a: 1}
+  _racers:
+  - _name: MuJoCo worm
+    _method: MuJoCo
+    _physics: 0
+    _brain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
+    _brainFile: worm_mujoco.onnx
+    _material: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
+    _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
+  - _name: Isaac worm
+    _method: Isaac Lab
+    _physics: 1
+    _brain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
+    _brainFile: worm_isaac.onnx
+    _material: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
+    _color: {r: 1, g: 0.55, b: 0.1, a: 1}
+  - _name: Isaac Lab 3 worm
+    _method: Isaac Lab 3
+    _physics: 0
+    _brain: {fileID: 0}
+    _brainFile: worm_isaaclab3.onnx
+    _material: {fileID: 2100000, guid: a5b6a53a34538b4468d28fc8a34510e5, type: 2}
+    _color: {r: 0.6, g: 0.3, b: 0.85, a: 1}
   _trackLength: 20
   _laneSpacing: 2
   _startLineZ: 0

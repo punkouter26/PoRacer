@@ -5,7 +5,7 @@ namespace PoRacer.WormRace
     {
         /// <summary>N races back to back, results to Logs/wormrace_*.json.</summary>
         Race,
-        /// <summary>Both worms at zero action: must lie still, straight, on the floor.</summary>
+        /// <summary>Every worm at zero action: must lie still, straight, on the floor.</summary>
         ZeroActionTest,
         /// <summary>j0_yaw = +0.5 rad: segment 1 must swing to the worm's right (Unity +x).</summary>
         YawSignTest,

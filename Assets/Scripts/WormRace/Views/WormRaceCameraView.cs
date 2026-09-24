@@ -4,8 +4,8 @@ using VContainer;
 namespace PoRacer.WormRace
 {
     /// <summary>
-    /// Side-and-above follow camera that keeps both worms in frame: it tracks the average
-    /// nose position along the track and stays centred between the lanes. Reads the model
+    /// Side-and-above follow camera that keeps the pack in frame: it tracks the average nose
+    /// position of the racing worms along the track and stays centred on the lanes. Reads the model
     /// in LateUpdate because a camera has to move every frame; it decides nothing.
     /// </summary>
     [DisallowMultipleComponent]
@@ -56,24 +56,32 @@ namespace PoRacer.WormRace
             {
                 return _model.StartFocus;
             }
+            // Follow the worms that are actually racing: a NO BRAIN worm lies on the start
+            // line and would drag the frame back. Everyone still in, if none has a brain.
+            if (!TryAverageNose(true, out float noseZ) && !TryAverageNose(false, out noseZ))
+            {
+                return _model.StartFocus;
+            }
+            // Centred between the lanes, on the floor, at the pack's average nose.
+            return new Vector3(_model.StartFocus.x, 0f, noseZ);
+        }
+
+        private bool TryAverageNose(bool brainedOnly, out float noseZ)
+        {
             float noseSum = 0f;
             int counted = 0;
             for (int lane = 0; lane < _model.Racers.Count; lane++)
             {
                 WormRacerModel racer = _model.Racers[lane];
-                if (racer.Status == WormRacerStatus.Failed)
+                if (racer.Status == WormRacerStatus.Failed || (brainedOnly && !racer.BrainReady))
                 {
                     continue;
                 }
                 noseSum += racer.Nose.z;
                 counted++;
             }
-            if (counted == 0)
-            {
-                return _model.StartFocus;
-            }
-            // Centred between the lanes, on the floor, at the pack's average nose.
-            return new Vector3(_model.StartFocus.x, 0f, noseSum / counted);
+            noseZ = counted > 0 ? noseSum / counted : 0f;
+            return counted > 0;
         }
     }
 }

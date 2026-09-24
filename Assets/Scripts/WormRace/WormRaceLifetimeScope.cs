@@ -9,7 +9,7 @@ namespace PoRacer.WormRace
     /// Composition root of SCN_WORM_RACE. The only place anything in the worm race is
     /// bound; every class asks for exactly what it uses (architecture.md: no GameContext).
     ///
-    ///   Model   WormRaceModel                          race state, read by HUD and camera
+    ///   Model   WormRaceModel                          race state, one racer per settings lane
     ///   System  WormRaceSystem (entry point)           series / race / self-test flow
     ///           WormSpawnSystem                        worms, MuJoCo world, stand-ins
     ///   View    WormRaceHudView, WormRaceCameraView    authored in the scene
@@ -34,7 +34,8 @@ namespace PoRacer.WormRace
             }
             builder.RegisterInstance(settings);
 
-            builder.Register<WormRaceModel>(Lifetime.Singleton);
+            // One racer model per lane of the settings' racer list, fixed for the session.
+            builder.Register<WormRaceModel>(Lifetime.Singleton).WithParameter(settings.LaneCount);
             builder.Register<WormSpawnSystem>(Lifetime.Singleton);
             builder.RegisterEntryPoint<WormRaceSystem>().AsSelf();
 

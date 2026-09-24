@@ -59,8 +59,10 @@ namespace PoRacer.WormRace.EditorTools
         }
 
         /// <summary>
-        /// "zero": both worms at zero action must lie still and straight on the floor.
-        /// "yaw":  j0_yaw = +0.5 rad must swing segment 1 to Unity +x in both physics.
+        /// Every racer in WormRaceSettings is tested, each in its own physics, and every one
+        /// must pass (a racer without a brain too: the tests use fixed actions).
+        /// "zero": every worm at zero action must lie still and straight on the floor.
+        /// "yaw":  j0_yaw = +0.5 rad must swing segment 1 to Unity +x.
         /// "pitch": j0_pitch = +0.5 rad must lift segment 1 relative to the head.
         /// <paramref name="seconds"/> 0 uses the defaults (5 s zero, 2 s sign tests).
         /// </summary>

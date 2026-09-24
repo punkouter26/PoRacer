@@ -58,8 +58,14 @@ nearly all the time, so the effort penalty may be too weak to shape an efficient
    first metre every time. The cause was the explicit per-step joint damping
    (`ArticulationBody.jointForce`) on these light links. Switching
    `WormRaceSettings > Passive Damping` to *Drive Damping Per Radian* makes it stable.
-4. **Scene builder bug:** `Editor_BuildWormRaceScene` left `WormRaceLifetimeScope._settings`
-   empty in the saved scene. It was set by hand; the builder itself still needs fixing.
+4. **Scene builder bug (fixed):** `Editor_BuildWormRaceScene` left
+   `WormRaceLifetimeScope._settings` (and the HUD's panel settings) empty in the saved scene.
+   `EditorSceneManager.NewScene` unloaded the assets it had loaded into local variables
+   before the scene was built. The builder now creates the scene first, then loads the
+   assets, and reads the saved file back to check both links.
+5. **The Isaac worm's Unity distance depends on the track layout.** Its crawl on
+   Unity's PhysX is chaotic: 2.95 m on the two-lane track and 1.07 m on the three-lane
+   track, from the same code. Only compare it within one layout.
 
 ## Files
 

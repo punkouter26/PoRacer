@@ -22,6 +22,7 @@ namespace PoRacer.WormRace
         private const float DIVERGENCE_SPEED = 500f;
 
         private readonly WormPolicy _policy;
+        private readonly string _label;
         private readonly bool _previousActionClipped;
         private readonly float[] _obs = new float[WormContract.OBS_SIZE];
         private readonly float[] _rawAction = new float[WormContract.ACTION_SIZE];
@@ -42,9 +43,10 @@ namespace PoRacer.WormRace
         private float _finishDistance = float.PositiveInfinity;
         private float _timeLimit = float.PositiveInfinity;
 
-        public WormPilot(WormPolicy policy, bool previousActionClipped)
+        public WormPilot(WormPolicy policy, string label, bool previousActionClipped)
         {
             _policy = policy;
+            _label = label ?? string.Empty;
             _previousActionClipped = previousActionClipped;
             FailReason = string.Empty;
         }
@@ -152,7 +154,7 @@ namespace PoRacer.WormRace
             ResultDistance = Distance;
             _held = true;
             _holdTargetsWritten = false;
-            Debug.LogError("[WormRace] racer out: " + reason);
+            Debug.LogError($"[WormRace] racer out ({_label}): {reason}");
         }
 
         /// <summary>

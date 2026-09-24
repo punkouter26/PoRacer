@@ -6,7 +6,7 @@ namespace PoRacer.WormRace
     /// <summary>
     /// Stands up the MuJoCo world for one race: the MjScene singleton, the solver options
     /// from worm.xml, and a ground plane at y = 0 (where the Unity track's collider top is,
-    /// so both worms lie on the same surface without either engine knowing the other).
+    /// so every worm lies on the same surface without either engine knowing the other).
     ///
     /// Same shape and same ordering rules as the race scene's Systems_MujocoWorld:
     ///   * MjScene is added FIRST. Every MjComponent.OnEnable reads MjScene.Instance, and
@@ -18,7 +18,8 @@ namespace PoRacer.WormRace
     ///
     /// Created in code per race rather than authored in the scene (AGENTS rule G) for the
     /// same reason as Systems_MujocoWorld: MjScene compiles exactly once, from whatever
-    /// Mj components exist at that moment, so it has to be born with the worm it simulates.
+    /// Mj components exist at that moment, so it has to be born with the worms it simulates
+    /// (every MuJoCo racer of the race, plus the PhysX worms' mocap stand-ins).
     /// It has no visible part; the ground you see is the authored Unity track.
     /// </summary>
     internal static class MujocoWorldBuilder

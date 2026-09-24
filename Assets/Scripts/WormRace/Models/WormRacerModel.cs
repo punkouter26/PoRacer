@@ -22,7 +22,7 @@ namespace PoRacer.WormRace
 
         public int Lane { get; }
         public string Name { get; internal set; }
-        /// <summary>Training method shown on the HUD: "MuJoCo" or "Isaac Lab".</summary>
+        /// <summary>Training method shown on the HUD, e.g. "MuJoCo", "Isaac Lab", "Isaac Lab 3".</summary>
         public string Method { get; internal set; }
         /// <summary>The simulator stepping this worm in Unity.</summary>
         public string Physics { get; internal set; }

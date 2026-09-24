@@ -7,19 +7,21 @@ namespace PoRacer.WormRace
     /// Race-wide state for SCN_WORM_RACE. Plain C#; WormRaceSystem is its only writer.
     /// The editor harness (Editor_WormRace) polls <see cref="Phase"/> and
     /// <see cref="ReportPath"/> to know when a series is done and where its results went.
+    ///
+    /// One <see cref="WormRacerModel"/> per lane; the count is WormRaceSettings' racer list,
+    /// fixed for the play session (WormRaceLifetimeScope passes it in).
     /// </summary>
     public sealed class WormRaceModel
     {
-        public const int MUJOCO_LANE = 0;
-        public const int ISAAC_LANE = 1;
-        public const int RACER_COUNT = 2;
+        private readonly List<WormRacerModel> _racers;
+        private readonly int[] _wins;
 
-        private readonly List<WormRacerModel> _racers = new(RACER_COUNT);
-        private readonly int[] _wins = new int[RACER_COUNT];
-
-        public WormRaceModel()
+        public WormRaceModel(int racerCount)
         {
-            for (int lane = 0; lane < RACER_COUNT; lane++)
+            int count = racerCount > 0 ? racerCount : 0;
+            _racers = new List<WormRacerModel>(count);
+            _wins = new int[count];
+            for (int lane = 0; lane < count; lane++)
             {
                 _racers.Add(new WormRacerModel(lane));
             }
@@ -53,7 +55,7 @@ namespace PoRacer.WormRace
 
         public int WinsFor(int lane)
         {
-            return lane >= 0 && lane < RACER_COUNT ? _wins[lane] : 0;
+            return lane >= 0 && lane < _wins.Length ? _wins[lane] : 0;
         }
 
         public bool IsFinished => Phase == WormRacePhase.SeriesComplete
@@ -62,7 +64,7 @@ namespace PoRacer.WormRace
 
         internal void AddWin(int lane)
         {
-            if (lane >= 0 && lane < RACER_COUNT)
+            if (lane >= 0 && lane < _wins.Length)
             {
                 _wins[lane]++;
             }
@@ -70,7 +72,7 @@ namespace PoRacer.WormRace
 
         internal void ResetSeries()
         {
-            for (int lane = 0; lane < RACER_COUNT; lane++)
+            for (int lane = 0; lane < _wins.Length; lane++)
             {
                 _wins[lane] = 0;
                 _racers[lane].ResetForRace();

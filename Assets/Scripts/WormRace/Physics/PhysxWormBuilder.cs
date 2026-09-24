@@ -3,8 +3,9 @@ using UnityEngine;
 namespace PoRacer.WormRace
 {
     /// <summary>
-    /// Builds the Isaac-trained worm as a Unity ArticulationBody chain (PhysX), from the
-    /// same worm_rig.json the MuJoCo worm is built from, at race start.
+    /// Builds a PhysX worm (the Isaac-trained worm, or any racer set to PhysX) as a Unity
+    /// ArticulationBody chain, from the same worm_rig.json the MuJoCo worms are built from,
+    /// at race start. Separate PhysX worms collide with each other natively.
     ///
     /// The tree is worm.xml's exactly: seg0 (floating root) - link0 (pitch hinge, 0.1 kg,
     /// no geometry) - seg1 (yaw hinge) - link1 - ... - seg4. Two hinges per joint, on two
@@ -26,11 +27,11 @@ namespace PoRacer.WormRace
     /// </summary>
     internal static class PhysxWormBuilder
     {
-        public static GameObject Build(WormRig rig, WormRaceSettings settings, WormPilot pilot,
+        public static GameObject Build(WormRig rig, WormRaceSettings settings, WormPilot pilot, string rootName,
                                        Vector3 rootOrigin, Vector3 laneForward, Material material,
                                        Mesh segmentMesh, out Transform[] segmentTransforms)
         {
-            var root = new GameObject("IsaacWorm");
+            var root = new GameObject(rootName);
             // Built facing Unity +Z (MuJoCo +x under the SPEC map), then turned onto the lane.
             root.transform.SetPositionAndRotation(rootOrigin, Quaternion.LookRotation(laneForward, Vector3.up));
 

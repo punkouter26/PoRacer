@@ -10,7 +10,7 @@ namespace PoRacer.WormRace
 {
     /// <summary>
     /// The worm race HUD, UI Toolkit, hierarchy built in C# like the project's RaceHudView:
-    /// a status card with one row per worm (name, training method, physics, distance,
+    /// a status card with one row per racer lane (name, training method, physics, distance,
     /// speed, state), a centre banner for 3-2-1-GO, and a results panel with times and the
     /// series tally. Refreshed on a 100 ms schedule by reading the model (DOCS/Plan-P1-Worm.md
     /// D5), and text is only rebuilt when the value it shows actually changed.
@@ -374,6 +374,8 @@ namespace PoRacer.WormRace
                 _name = Text(string.Empty, BASE_FONT_SIZE, TextColor, true);
                 column.Add(_name);
                 _detail = Text(string.Empty, SMALL_FONT_SIZE, DimTextColor, false);
+                // Method | physics | NO BRAIN can outgrow the card; wrap rather than clip.
+                _detail.style.whiteSpace = WhiteSpace.Normal;
                 column.Add(_detail);
                 _numbers = Text(string.Empty, BASE_FONT_SIZE, TextColor, false);
                 column.Add(_numbers);

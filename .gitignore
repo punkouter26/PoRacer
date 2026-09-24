@@ -79,6 +79,7 @@ Python311/
 # Isaac Lab checkout + Isaac Sim wheels, cloned by ISAAC/install.ps1. Tens of GB
 # of third-party source and binaries; the repo only owns what ISAAC/ authors.
 ISAAC/isaaclab/
+ISAAC/isaaclab3/
 ISAAC/logs/
 
 # Python build artifacts from the editable ISAAC task package.

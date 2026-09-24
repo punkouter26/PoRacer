@@ -16,7 +16,7 @@ namespace PoRacer.WormRace
     public readonly struct WormRaceFinishedMessage
     {
         public readonly int RaceNumber;
-        /// <summary>Lane of the winner, -1 when both failed.</summary>
+        /// <summary>Lane of the winner, -1 when every racer failed.</summary>
         public readonly int WinnerLane;
 
         public WormRaceFinishedMessage(int raceNumber, int winnerLane)

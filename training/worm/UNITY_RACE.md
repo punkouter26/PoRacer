@@ -4,15 +4,20 @@ Everything in this folder mirrors where it goes under the project root. Nothing 
 under `Assets/` yet, on purpose: a long exam was running in the Unity editor, and any new
 file under `Assets/` triggers a recompile that would have killed it.
 
-Two worms race down two straight lanes, 20 m long and 2 m apart:
+Three worms race down three straight lanes, 20 m long and 2 m apart, centred on x = 0:
 
-| Lane | Racer | Colour | Brain | Physics inside Unity |
-|---|---|---|---|---|
-| 0 (x = -1 m) | **MuJoCo worm** | BLUE | `worm_mujoco.onnx` | MuJoCo, through the `org.mujoco` plug-in (the simulator it trained in) |
-| 1 (x = +1 m) | **Isaac worm** | ORANGE | `worm_isaac.onnx` | PhysX `ArticulationBody` (Unity's own physics) |
+| Lane | Racer | Method | Colour | Brain | Physics inside Unity (default) |
+|---|---|---|---|---|---|
+| 0 (x = -2 m) | **MuJoCo worm** | MuJoCo | BLUE | `worm_mujoco.onnx` | MuJoCo, through the `org.mujoco` plug-in (the simulator it trained in) |
+| 1 (x = 0 m) | **Isaac worm** | Isaac Lab | ORANGE | `worm_isaac.onnx` | PhysX `ArticulationBody` (Unity's own physics) |
+| 2 (x = +2 m) | **Isaac Lab 3 worm** | Isaac Lab 3 | PURPLE | `worm_isaaclab3.onnx` | MuJoCo plug-in (it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver); switch to PhysX if that trainer falls back to PhysX (section 6) |
 
-Both have the same body (`worm_rig.json`), the same 35-number observation and the same
+All have the same body (`worm_rig.json`), the same 35-number observation and the same
 8 actions (`training/worm/WORM_SPEC.md`). Red and green are not used (AGENTS rule D).
+
+The racers are a list in `WormRaceSettings` (section 6), one entry per lane, so a fourth
+racer is one more entry plus a scene rebuild; nothing in the code knows how many lanes
+there are or which lane runs in which simulator.
 
 ---
 
@@ -29,10 +34,13 @@ robocopy training\worm\unity_staging\Assets Assets /E
 New-Item -ItemType Directory -Force Assets\WormRace\Brains | Out-Null
 Copy-Item training\worm\worm_rig.json Assets\WormRace\worm_rig.json
 
-# 3. The brains (once the two training runs have exported them).
-Copy-Item training\worm\export\worm_mujoco.onnx Assets\WormRace\Brains\worm_mujoco.onnx
-Copy-Item training\worm\export\worm_isaac.onnx  Assets\WormRace\Brains\worm_isaac.onnx
+# 3. The brains (once the training runs have exported them).
+Copy-Item training\worm\export\worm_mujoco.onnx     Assets\WormRace\Brains\worm_mujoco.onnx
+Copy-Item training\worm\export\worm_isaac.onnx      Assets\WormRace\Brains\worm_isaac.onnx
+Copy-Item training\worm\export\worm_isaaclab3.onnx  Assets\WormRace\Brains\worm_isaaclab3.onnx
 ```
+
+After copying a brain, run the scene builder again (section 2) so the settings pick it up.
 
 Then let Unity import and compile. The console must show **no errors**. Unity creates the
 `.meta` files itself; do not write any by hand.
@@ -49,8 +57,9 @@ Re-copy `worm_rig.json` every time `build_worm.py` is re-run. The rig changed on
 numbers from this file, so a stale copy races a different animal from the one trained.
 
 If a brain is missing, nothing crashes: that worm lies still (straight) for the whole
-race, the HUD says "NO BRAIN", and the console and the results file say exactly which
-file to copy where.
+race, the HUD says "NO BRAIN", and the console and the results file (`brainError`) say
+exactly which file to copy where. As of 2026-09-24 `worm_isaaclab3.onnx` does not exist
+yet, so lane 2 races that way.
 
 ## 2. Build the scene
 
@@ -64,22 +73,38 @@ scene first; the builder refuses to run over one.
 Expected output, roughly:
 
 ```
-materials: blue (MuJoCo), orange (Isaac), ground, line white/black
+materials: blue (MuJoCo), orange (Isaac), purple (Isaac Lab 3), ground, line white/black
 physics material: Assets/WormRace/PM_WormRace.physicMaterial (0.90 static/dynamic, no bounce)
 panel settings: Assets/WormRace/UI/WormRacePanelSettings.asset
 settings: Assets/WormRace/WormRaceSettings.asset
-  rig:          Assets/WormRace/worm_rig.json
-  MuJoCo brain: Assets/WormRace/Brains/worm_mujoco.onnx
-  Isaac brain:  Assets/WormRace/Brains/worm_isaac.onnx
-scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track, WormRaceHud
-saved Assets/Scenes/SCN_WORM_RACE.unity
+  rig: Assets/WormRace/worm_rig.json
+  lane 0: MuJoCo worm (MuJoCo, MuJoCo plug-in) brain: Assets/WormRace/Brains/worm_mujoco.onnx
+  lane 1: Isaac worm (Isaac Lab, PhysX ArticulationBody) brain: Assets/WormRace/Brains/worm_isaac.onnx
+  lane 2: Isaac Lab 3 worm (Isaac Lab 3, MuJoCo plug-in) brain: MISSING - copy training/worm/export/worm_isaaclab3.onnx to Assets/WormRace/Brains/worm_isaaclab3.onnx (the worm lies still, HUD says NO BRAIN)
+scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track (3 lanes), WormRaceHud
+saved Assets/Scenes/SCN_WORM_RACE.unity (checked on disk: scope -> settings, HUD -> panel settings)
 ```
 
 A line saying `MISSING - copy ...` means that file is not in place yet. Copy it and run the
-builder again; it is safe to re-run and keeps every asset's GUID.
+builder again; it is safe to re-run and keeps every asset's GUID. A re-run refreshes each
+known racer's name, method, colour, material and brain, but **keeps its Physics choice**
+(a racer's first run adds it with the default in the table above, marked `new`). Entries
+added by hand after the three known ones are kept and get a lane.
+
+The last line is a check, not a claim: after saving, the builder reads the `.unity` file
+back and looks for the scope's `_settings` link and the HUD's `PanelSettings` link by GUID.
+If either is missing it ends with `ERROR` instead of `saved`.
+
+*Fixed 2026-09-24:* earlier builds saved `WormRaceLifetimeScope._settings` (and the HUD's
+`PanelSettings`) as `{fileID: 0}`. The builder loaded those assets first and then called
+`EditorSceneManager.NewScene(..., Single)`, which unloads every asset nothing in memory
+references - the settings and panel assets were held only in local variables, so they were
+destroyed under their C# references, and assigning a destroyed object through
+`SerializedObject` stores nothing. The builder now creates the new scene first and loads
+the assets after it.
 
 What it creates (all authored once, AGENTS rule G): the ground (the only track collider,
-its top at y = 0), three white lane lines, a white start line at z = 0, a chequered
+its top at y = 0), one white lane line per lane edge (four for three lanes), a white start line at z = 0, a chequered
 black-and-white finish line at z = 20, a follow camera, a light, the HUD, and the
 `WormRaceLifetimeScope`. The worms and the MuJoCo world are created at the start of each
 race and removed after it.
@@ -99,10 +124,16 @@ unity cmd eval --code "return PoRacer.WormRace.EditorTools.Editor_WormRace.SelfT
 unity cmd eval --code "return PoRacer.WormRace.EditorTools.Editor_WormRace.SelfTest(\"pitch\");"
 ```
 
-Each self-test spawns both worms, holds them straight for 1 s so they settle, then
-replaces both brains with a fixed action and measures. The same code measures both worms.
+Run them one at a time: wait until `Status()` says `done` (and `unity cmd editor_status`
+shows `"playMode":"stopped"`) before starting the next. Entering play mode can time out on
+the CLI bridge; if a launch fails, wait and retry.
 
-| Test | Fixed action | Must be true for BOTH worms (the file's `passed` / `verdict`) |
+Each self-test spawns every racer, holds them straight for 1 s so they settle, then
+replaces every brain with a fixed action and measures. The same code measures every worm,
+each in its own physics. The tests do not use the brains, so a racer with NO BRAIN (lane 2
+today) is tested exactly like the others and must pass too.
+
+| Test | Fixed action | Must be true for EVERY worm (the file's `passed` / `verdict`) |
 |---|---|---|
 | `zero` (5 s) | all zero | Lies still: nose moves < 2 cm and speed < 1 cm/s. Stays straight: every joint within 0.05 rad. Lies on the floor: segment 2's centre at 0.045 m (the radius) ± 1 cm |
 | `yaw` (2 s) | j0_yaw target = +0.5 rad | WORM_SPEC sign test: j0_yaw reads more than +0.3 rad, and segment 1 is more than 2 cm to the worm's **right = Unity +x**. Expect about +0.45 to +0.5 rad and about +4.5 cm |
@@ -110,15 +141,22 @@ replaces both brains with a fixed action and measures. The same code measures bo
 
 `"allPassed": true` in each file is the bar. If a test fails:
 
-- **yaw or pitch fails on the Isaac worm only** (segment 1 swings left, or the angle reads
+- **yaw or pitch fails on the PhysX worms only** (segment 1 swings left, or the angle reads
   negative): the PhysX axis map is off. Check `WormFrames.UnityFromSpecAxial` and the
   anchor rotation in `PhysxWormBuilder`. The MuJoCo worm's signs come from MuJoCo itself.
-- **yaw or pitch fails on the MuJoCo worm only**: the plug-in built a different body.
-  Diff the generated MJCF (section 5).
-- **zero fails on the Isaac worm** by creeping or twitching: the passive joint damping
+- **yaw or pitch fails on the MuJoCo worms only**: the plug-in built a different body.
+  Diff the generated MJCF (section 5). **On one MuJoCo worm only**: its ids or qpos/ctrl
+  addresses are crossed with the other MuJoCo worm's (section 7, "Several MuJoCo worms").
+- **zero fails on a PhysX worm** by creeping or twitching: the passive joint damping
   mode. Try the other settings in `WormRaceSettings > Passive Damping` (section 6).
 - **zero fails with the worm sitting 1-2 cm into the floor on MuJoCo**: soft-contact
   sinking. It is not a sign error; widen the tolerance or look at `solref`.
+
+Results on 2026-09-24 (three lanes, lane 2 on the MuJoCo plug-in with no brain): all
+three passed in all three tests. Yaw: j0_yaw +0.483 rad and segment 1 +4.65 cm right on
+both MuJoCo worms, +0.439 rad and +4.25 cm on the PhysX worm. Pitch: +0.461 rad and
++4.45 cm up (MuJoCo), +0.464 rad and +4.47 cm (PhysX). With lane 2 switched to PhysX,
+zero and yaw passed as well (lane 2 then matched lane 1 exactly).
 
 ## 4. Race
 
@@ -133,15 +171,18 @@ unity cmd eval --code "return PoRacer.WormRace.EditorTools.Editor_WormRace.Stop(
 Or open `Assets/Scenes/SCN_WORM_RACE.unity` and press Play: it runs the default series of
 5 by itself (`WormRaceSettings > Auto Start Series`).
 
-Each race: both worms appear straight on the start line; **3-2-1** with both brains held
-(physics runs, so both settle onto the floor the same way); **GO**; the first nose (the tip
+Each race: every worm appears straight on the start line; **3-2-1** with every brain held
+(physics runs, so all settle onto the floor the same way); **GO**; the first nose (the tip
 of segment 0) across the finish line wins. If a worm has not finished after **60 s** it is
-ranked by distance. Between races the results stay up for 4 s, then the worms are removed
-and respawned.
+ranked by distance. The race ends when every worm has finished, timed out or failed.
+Between races the results stay up for 4 s, then the worms are removed and respawned.
 
-The HUD (top left) shows, per worm: name, training method, physics, distance (m), speed
-(m/s) and state; the centre shows the countdown; the bottom-right panel shows each race's
-places, finish times (or "time limit"), distances, average speeds and the running score.
+The HUD (top left) shows one row per lane: name, training method, physics, distance (m),
+speed (m/s) and state, plus "NO BRAIN (holds straight)" for a racer without a brain; the
+centre shows the countdown; the bottom-right panel shows each race's places, finish times
+(or "time limit"), distances, average speeds and the running score. The camera follows the
+average nose of the worms that have a brain, so a NO BRAIN worm on the start line does not
+drag the frame back.
 
 Results: `Logs/wormrace_<stamp>.json`, rewritten after every race, so a run that is cut
 short still has every finished race in it. `Status()` prints its path and contents.
@@ -156,28 +197,45 @@ Shape:
     { "raceNumber": 1, "winner": "MuJoCo worm", "winnerMethod": "MuJoCo", "endReason": "finish",
       "racers": [
         { "lane": 0, "name": "MuJoCo worm", "method": "MuJoCo", "physics": "MuJoCo (org.mujoco plug-in)",
-          "brain": "worm_mujoco", "brainLoaded": true, "status": "Finished", "place": 1,
-          "finishTimeSeconds": 31.42, "distanceMeters": 20.0, "averageSpeedMps": 0.637, "failReason": "" },
+          "brain": "worm_mujoco", "brainLoaded": true, "brainError": "", "status": "Finished", "place": 1,
+          "finishTimeSeconds": 44.15, "distanceMeters": 20.0, "averageSpeedMps": 0.453, "failReason": "" },
         { "lane": 1, "name": "Isaac worm", "method": "Isaac Lab", "physics": "PhysX ArticulationBody",
-          "status": "TimedOut", "place": 2, "finishTimeSeconds": -1.0, "distanceMeters": 14.2,
-          "averageSpeedMps": 0.237 } ] } ],
+          "status": "TimedOut", "place": 2, "finishTimeSeconds": -1.0, "distanceMeters": 1.07,
+          "averageSpeedMps": 0.018, "...": "..." },
+        { "lane": 2, "name": "Isaac Lab 3 worm", "method": "Isaac Lab 3",
+          "physics": "MuJoCo (org.mujoco plug-in)", "brain": "missing", "brainLoaded": false,
+          "brainError": "Isaac Lab 3 worm: no brain assigned. Copy the exported ONNX to Assets/WormRace/Brains/worm_isaaclab3.onnx and re-run ...",
+          "status": "TimedOut", "place": 3, "distanceMeters": -0.01, "...": "..." } ] } ],
   "summary": [
-    { "name": "MuJoCo worm", "wins": 5, "finishes": 5, "meanFinishTimeSeconds": 31.5,
-      "bestFinishTimeSeconds": 30.9, "meanDistanceMeters": 20.0, "meanAverageSpeedMps": 0.635 },
-    { "name": "Isaac worm", "wins": 0, "finishes": 0, "meanFinishTimeSeconds": -1.0, "...": "..." } ]
+    { "lane": 0, "name": "MuJoCo worm", "method": "MuJoCo", "physics": "MuJoCo (org.mujoco plug-in)",
+      "brain": "worm_mujoco", "brainLoaded": true, "brainError": "", "wins": 1, "finishes": 1,
+      "meanFinishTimeSeconds": 44.15, "bestFinishTimeSeconds": 44.15, "meanDistanceMeters": 20.0,
+      "meanAverageSpeedMps": 0.453 },
+    { "lane": 1, "name": "Isaac worm", "...": "..." },
+    { "lane": 2, "name": "Isaac Lab 3 worm", "brainLoaded": false, "brainError": "...", "...": "..." } ]
 }
 ```
 
-(The numbers are illustrative.) `-1` means "does not apply". `endReason` is `finish`,
-`timeLimit` (nobody finished) or `failed` (both out). `status` is `Finished`, `TimedOut` or
+(From a real 1-race run.) One `racers` entry per lane in finishing order, and one
+`summary` entry per lane in lane order. `-1` means "does not apply". `endReason` is `finish`,
+`timeLimit` (nobody finished) or `failed` (every racer out). The self-test files carry the
+same `method`, `physics`, `brain`, `brainLoaded` and `brainError` per racer. `status` is `Finished`, `TimedOut` or
 `Failed`; a failed worm has a `failReason` (non-finite physics, a speed above 500 per
 WORM_SPEC detail 12, or MuJoCo not available on this platform).
 
 What to expect: the trainers' own reports (`training/worm/export/*_report.json`) give each
 brain's mean speed in its own simulator. **The MuJoCo worm races in the simulator it
-trained in, so it should roughly match its report.** The Isaac worm trained in Isaac
-Sim's PhysX and races in Unity's PhysX; a gap between its report speed and its Unity speed
-is a sim-to-sim gap, not a race result, and is worth writing down on its own.
+trained in, so it should roughly match its report** (0.45 m/s, 20 m in about 44 s). The
+Isaac worm trained in Isaac Sim's PhysX and races in Unity's PhysX; a gap between its
+report speed and its Unity speed is a sim-to-sim gap, not a race result, and is worth
+writing down on its own.
+
+**The Isaac worm's distance depends on the track layout.** Its Unity gait barely moves and
+is chaotic: tiny numerical differences grow into very different races. With the same code
+it covered 2.95 m in 60 s in the old two-lane layout (lanes at x = +/-1, 7 m wide ground;
+reproduced exactly), -2.52 m in a two-lane test on the wider three-lane ground, and 1.07 m
+in the three-lane layout (lane 1 at x = 0; repeated exactly). It never diverged. Compare it
+only within one layout.
 
 ## 5. Check the MuJoCo worm is worm.xml
 
@@ -188,6 +246,13 @@ the plug-in actually compiled to `Application.temporaryCachePath/wormrace_mujoco
 Names get a `_<n>` suffix and every attribute is written out explicitly; ignore that.
 What must match:
 
+There is one MJCF for the whole race: every MuJoCo racer is in it (two with the default
+roster), so everything below appears once **per MuJoCo worm**. The plug-in orders the
+`<actuator>` section by each actuator's position under its own parent, so the worms'
+actuators come interleaved (`j0_pitch_13`, `j0_pitch_40`, `j0_yaw_16`, ...). That is
+harmless: each worm's view looks its actuators up by their generated names, never by
+position.
+
 - 5 capsule geoms, `size="0.045 0.075"`, `mass="1.335962"`, friction `0.9 0.005 0.0001`,
   `condim="3"`, `solref="0.01 1"`, `solimp="0.9 0.95 0.001"`.
 - 4 link bodies at `pos="-0.1 0 0"` with `<inertial mass="0.1" diaginertia="0.0002 0.0002 0.0002">`.
@@ -196,40 +261,60 @@ What must match:
   `limited="true"`, `damping="2"`, `armature="0.01"`.
 - 8 `<position>` actuators in action order: `kp="30"`, `ctrlrange="-0.785398 0.785398"`,
   `forcerange="-6 6"`, `ctrllimited="true"`, `forcelimited="true"`.
-- 4 `<exclude>` pairs seg0-seg1, seg1-seg2, seg2-seg3, seg3-seg4.
+- 4 `<exclude>` pairs seg0-seg1, seg1-seg2, seg2-seg3, seg3-seg4 per worm, each inside one
+  worm (8 in total with two MuJoCo worms). Nothing excludes one worm from another: MuJoCo
+  worms collide with each other natively.
 - `<option>`: `integrator="implicitfast"`, `solver="Newton"`, `iterations="10"`,
   `cone="pyramidal"`, `timestep="0.005"`, `gravity="0 0 -9.81"`.
 - seg0's `quat` is a +90° turn about z (`0.7071 0 0 0.7071`, or its negative - the
   same rotation). That is the lane direction: the plug-in maps Unity +z to MuJoCo +y.
-- Extra, and expected: the floor plane and five `mocap="true"` bodies (the Isaac worm's
-  collision stand-ins, section 7).
+  Each worm's seg0 `pos` x is its lane (-2 and +2 with the default roster).
+- Extra, and expected: the floor plane and five `mocap="true"` bodies per PhysX worm,
+  named `MocapProxy_L<lane>_Seg<n>` (their collision stand-ins, section 7).
 
 ## 6. The knobs (`Assets/WormRace/WormRaceSettings.asset`)
 
 The body itself (masses, gains, limits, friction) is **not** here; it comes from
-`worm_rig.json`, so an Inspector edit cannot make the two worms different animals.
+`worm_rig.json`, so an Inspector edit cannot make the worms different animals.
+
+**Racers** - the list of lanes, lane 0 first. Each entry:
+
+| Field | What it is |
+|---|---|
+| Name / Method | HUD and results labels ("Isaac Lab 3 worm" / "Isaac Lab 3") |
+| **Physics** | **`Mujoco Plugin`** or **`Physx Articulation`**: the simulator that steps this worm in Unity |
+| Brain / Brain File | the ONNX, and its expected file name under `Assets/WormRace/Brains/` (used to find it and for the missing-brain message) |
+| Material / Color | the segment material and the HUD swatch (never red or green, rule D) |
+
+**Choosing lane 2's physics.** The Isaac Lab 3 worm defaults to **Mujoco Plugin**, because
+it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver, whose contact and
+joint model is MuJoCo's. If that trainer falls back to PhysX, set lane 2's Physics to
+**Physx Articulation** (Inspector: `Assets/WormRace/WormRaceSettings.asset > Racers >
+Element 2 > Physics`). It takes effect on the next play; the scene builder keeps the choice
+on re-runs. Any lane can be switched the same way. PhysX racers use the PhysX settings
+below (passive damping, solver iterations); MuJoCo racers use the MuJoCo ones.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Track Length / Lane Spacing / Start Line Z | 20 / 2 / 0 | Race geometry. Re-run the scene builder after changing these so the painted lines move too |
+| Track Length / Lane Spacing / Start Line Z | 20 / 2 / 0 | Race geometry; lanes are Lane Spacing apart and centred on x = 0. Re-run the scene builder after changing these, or the number of racers, so the painted lines move too |
 | Countdown Seconds / Time Limit Seconds / Results Hold Seconds | 3 / 60 / 4 | Race timing |
 | Series Length / Auto Start Series | 5 / on | What pressing Play does. The CLI overrides both |
-| Passive Damping | Joint Force Outside Limit | PhysX worm only, see below |
-| Solver Iterations / Velocity Iterations | 16 / 4 | PhysX worm, per body; no project setting is touched |
+| Passive Damping | **Drive Damping Per Radian** | PhysX worms only, see below. Keep it: Joint Force Outside Limit diverged |
+| Solver Iterations / Velocity Iterations | 16 / 4 | PhysX worms, per body; no project setting is touched |
 | Fold Armature Into Inertia | on | PhysX has no armature; adds MuJoCo's 0.01 to each hinge's child inertia about its axis |
 | Mujoco Solver Iterations | 10 | worm.xml's value |
-| Cross Simulator Proxies | on | Collision stand-ins between the two simulators (section 7) |
+| Cross Simulator Proxies | on | Collision stand-ins between MuJoCo worms and PhysX worms (section 7) |
 | Previous Action Clipped | on | WORM_SPEC detail 5: the previous-action observation uses clipped actions |
 
 **Passive Damping.** WORM_SPEC detail 16 says the joint damping is a passive
 `-c·q̇` that the servo's force limit does not cap, and the servo is `kp` with no damping.
-Unity's `ArticulationBody` has no viscous joint friction, so by default the Isaac worm's
-view applies `-c·q̇` through `ArticulationBody.jointForce` every physics step (drive
-damping 0). That matches the trained model but is explicit; at c = 2 and 5 ms it is
-comfortably stable for these link inertias. If the zero test shows creeping or buzzing,
-the other two options put the damping inside the drive (implicit, but capped together
-with the servo by the force limit), read per radian (Unity's documentation) or per degree
-(what `MujocoBiped` measured on this Unity version).
+Unity's `ArticulationBody` has no viscous joint friction. *Joint Force Outside Limit*
+applies `-c·q̇` through `ArticulationBody.jointForce` every physics step (drive damping 0):
+that matches the trained model, but it is explicit, and on these light links the Isaac
+worm diverged in every race with it (RESULTS.md, problem 3). *Drive Damping Per Radian*
+(the setting in use, and now also the code default) puts the damping inside the drive:
+implicit and stable, but capped together with the servo by the force limit. *Per Degree*
+is what `MujocoBiped` measured drive damping to behave like on this Unity version.
 
 ## 7. How it is put together
 
@@ -239,11 +324,12 @@ MessagePipe messages, UniTask for the countdown and the race loop.
 | Kind | Types |
 |---|---|
 | Model | `WormRaceModel`, `WormRacerModel` |
-| System | `WormRaceSystem` (entry point: series, race, self-test flow), `WormSpawnSystem` (worms, MuJoCo world, stand-ins) |
-| Per-racer logic | `WormPilot` (hold, decimation, observation, inference, clipping, race clock), `WormPolicy` (Inference Engine), `WormObservation` (the 35 numbers, shared by both worms) |
+| Config | `WormRaceSettings` (asset) with its `WormRacerDefinition` list (one per lane; `WormPhysicsKind` selects the simulator) |
+| System | `WormRaceSystem` (entry point: series, race, self-test flow, one pilot per lane), `WormSpawnSystem` (worms, the one MuJoCo world, stand-ins) |
+| Per-racer logic | `WormPilot` (hold, decimation, observation, inference, clipping, race clock), `WormPolicy` (Inference Engine), `WormObservation` (the 35 numbers, shared by every worm) |
 | View | `MujocoWormView`, `PhysxWormView` (physics adapters, no decisions), `WormRaceHudView`, `WormRaceCameraView`, two proxy followers |
 | Messages | `WormCountdownMessage`, `WormRaceFinishedMessage`, `WormSeriesFinishedMessage` |
-| Scope | `WormRaceLifetimeScope` |
+| Scope | `WormRaceLifetimeScope` (sizes `WormRaceModel` to the racer list) |
 
 **How the MuJoCo worm gets into Unity.** Not through the MJCF importer. `MujocoWormBuilder`
 adds the plug-in's own components (`MjBody`, `MjGeom`, `MjHingeJoint`, `MjInertial`,
@@ -259,28 +345,43 @@ Why:
 - An editor-time import would bake a prefab that has to be kept in step with worm.xml by
   hand, and could not sit in the scene anyway: MjScene compiles once, from whatever Mj
   components exist when it starts, so the world and the worm must be created together.
-- Building from `worm_rig.json` means both worms come from the same file.
+- Building from `worm_rig.json` means every worm comes from the same file.
+
+**Several MuJoCo worms.** All MuJoCo racers of a race live in the race's one `MjScene`:
+`WormSpawnSystem` creates the world, then every MuJoCo worm and every mocap stand-in in the
+same frame, so the plug-in compiles them into one model at the start of the next frame
+(a worm created later would never be simulated). The plug-in names every element
+`<GameObject>_<counter>`, so the worms' `seg0`s become e.g. `seg0_8` and `seg0_35`. Each
+worm's view keeps its own `MjBody`/`MjHingeJoint`/`MjActuator` components and reads their
+`MujocoId`, `QposAddress` and `DofAddress` after the compile, so body ids, qpos/qvel
+addresses and ctrl indices are per worm and never shared; each view subscribes its own
+control callback and writes only its own ctrl entries. Excludes are only between adjacent
+segments of one worm; two MuJoCo worms collide with each other natively. The yaw and pitch
+self-tests prove this per worm (a crossed index would move the wrong worm).
 
 Section 5's dump is the check that the result is worm.xml.
 
 **How MuJoCo and PhysX share one scene.** They do not share anything physical. MuJoCo
-steps inside `MjScene.FixedUpdate` and writes the MuJoCo worm's transforms; PhysX steps
-the Isaac worm after all `FixedUpdate`s. Both run at `Time.fixedDeltaTime` = 0.005 s, one
+steps inside `MjScene.FixedUpdate` and writes the MuJoCo worms' transforms; PhysX steps
+the PhysX worms after all `FixedUpdate`s. Both run at `Time.fixedDeltaTime` = 0.005 s, one
 step per `FixedUpdate`, and each worm's pilot counts its own physics steps, so the race
 clock is fair whichever simulator Unity runs first. Each has its own floor at y = 0: an
 infinite MuJoCo plane, and the track's box collider (friction 0.9, `Maximum` combine,
 like MuJoCo's max rule).
 
-Because neither simulator can see the other, each worm gets a copy of the other's five
-capsules as a collision stand-in (AGENTS rule M): five MuJoCo mocap bodies following the
-Isaac worm's segments, and five kinematic PhysX capsules following the MuJoCo worm's.
-Both are one-way (each worm sees the other as an unstoppable moving object) and one 5 ms
-step late. With the lanes 2 m apart a contact would be an accident; the stand-ins make it
-a collision instead of the worms passing through each other.
+Because neither simulator can see the other, every worm gets a copy of its five capsules
+in the other simulator as a collision stand-in (AGENTS rule M): five MuJoCo mocap bodies
+per PhysX worm (`MocapProxy_L<lane>_Seg<n>`), and five kinematic PhysX capsules per MuJoCo
+worm (`KinematicProxy_L<lane>_Seg<n>`). So every MuJoCo/PhysX pair is covered, whatever
+the lane count and whichever physics each lane picks. Worms in the same simulator need no
+stand-ins: MuJoCo worms share the MjScene, PhysX worms share the PhysX scene. Stand-ins are
+one-way (each worm sees the other as an unstoppable moving object) and one 5 ms step late.
+With the lanes 2 m apart a contact would be an accident; the stand-ins make it a collision
+instead of the worms passing through each other.
 
-**Observation frames.** The MuJoCo worm reads everything from MuJoCo's own data, in the
+**Observation frames.** A MuJoCo worm reads everything from MuJoCo's own data, in the
 plug-in's MuJoCo frame (Unity (x, y, z) = MuJoCo (x, z, y)), including segment 2's
-velocity via `mj_objectVelocity` - the same quantities the trainer computes. The Isaac
+velocity via `mj_objectVelocity` - the same quantities the trainer computes. A PhysX
 worm reads `ArticulationBody` state and converts with WORM_SPEC's Unity mapping
 (positions (z, -x, y), axes (-z, x, -y)). Both then go through `WormObservation`, which only
 projects onto segment 2's axes, so the two worlds' different orientation (the MuJoCo worm's
@@ -297,7 +398,9 @@ torn down. Nothing ever stands it up or moves it.
 
 ## 8. Known risks
 
-1. **Compiled, but never run in Unity.** Both assemblies were compiled outside Unity with
+1. **Run in Unity since.** The self-tests pass for all three lanes and races run (sections
+   3 and 4); the notes below are from before the first run and are kept for the record.
+   Both assemblies were first compiled outside Unity with
    `dotnet build` against this project's own Unity 6000.6 engine DLLs and the package DLLs
    in `Library/ScriptAssemblies`, restricted to exactly the references in the two asmdefs:
    0 errors (the only warnings are CS0649 on `[SerializeField]` fields, the same as the
@@ -320,14 +423,20 @@ torn down. Nothing ever stands it up or moves it.
    is C MuJoCo 3.x. Small numerical differences are possible.
 5. **Stand-ins are one-way and a step late**, and a mocap body carries no velocity into
    MuJoCo's friction. Fine for accidental bumps; not a model of worm-to-worm wrestling.
-6. **MuJoCo is Windows-only here** (`mujoco.dll` only, AGENTS rule F). Elsewhere the MuJoCo
-   worm is marked failed with that reason and the Isaac worm races alone.
+6. **MuJoCo is Windows-only here** (`mujoco.dll` only, AGENTS rule F). Elsewhere every MuJoCo
+   racer is marked failed with that reason and the PhysX racers race alone.
 7. **If the generated MJCF fails to compile**, the MuJoCo plug-in itself stops play mode
    (`MjScene.CreateScene`). The CLI then reports "play mode exited before the job finished";
    the console has the MuJoCo error.
 8. **Finish rule** uses the nose (the tip of segment 0's capsule, 0.12 m ahead of its
-   centre), the same point for both worms, with the crossing interpolated inside the
+   centre), the same point for every worm, with the crossing interpolated inside the
    physics step.
+9. **Countdown timing is wall-clock**, so the number of physics steps a worm spends settling
+   before GO varies a little between runs; the MuJoCo worm's finish time moves by a few
+   tenths of a second (44.1-44.7 s seen) for that reason.
+10. **The HUD writes glyphs into `Assets/UI/PoRacerFont SDF.asset`** (a dynamic font atlas)
+    the first time it draws new characters in play mode. Revert that file if it shows up
+    in `git status` after a race and nothing else changed it.
 
 ## 9. Removing it
 
@@ -337,4 +446,4 @@ Nothing else in the project refers to them.
 
 ---
 
-**TL;DR:** copy the staged folder into Assets plus the rig and two ONNX files, run the scene builder, pass the zero/yaw/pitch self-tests, then `Editor_WormRace.Start(5)`; results land in `Logs/wormrace_*.json`.
+**TL;DR:** three lanes (MuJoCo, Isaac, Isaac Lab 3 with a MuJoCo/PhysX switch in the settings); copy brains, run the builder, pass zero/yaw/pitch, then `Editor_WormRace.Start(5)`.

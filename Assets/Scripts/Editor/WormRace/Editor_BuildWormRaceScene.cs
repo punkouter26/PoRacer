@@ -20,17 +20,44 @@ namespace PoRacer.WormRace.EditorTools
     /// start, see WormSpawnSystem).
     ///
     /// Creates or updates, keeping GUIDs:
-    ///   Assets/WormRace/WormRaceSettings.asset        wired to the rig, brains, materials
+    ///   Assets/WormRace/WormRaceSettings.asset        wired to the rig, the racer list, materials
     ///   Assets/WormRace/PM_WormRace.physicMaterial    0.9 / 0.9, no bounce (worm_rig.json)
-    ///   Assets/WormRace/Materials/*.mat               BLUE MuJoCo, ORANGE Isaac, track
+    ///   Assets/WormRace/Materials/*.mat               one per racer (BLUE, ORANGE, PURPLE), track
     ///   Assets/WormRace/UI/WormRacePanelSettings.asset
     /// Red and green are never used (AGENTS rule D): they belong to heuristic bots and the
     /// baseline RL racer.
+    ///
+    /// The racer list (one lane each) is seeded from <see cref="Roster"/>: names, methods,
+    /// colours, materials and brains are refreshed on every run, but a racer's Physics
+    /// choice, once made in the Inspector, is never overwritten. Racers added by hand after
+    /// the known ones are kept, and get a lane too.
+    ///
+    /// ORDER MATTERS: the new scene is created BEFORE any asset is loaded. NewScene in
+    /// Single mode unloads every asset nothing in memory references, and the settings asset
+    /// and the panel settings (referenced only by this method's locals) were being destroyed
+    /// under their C# wrappers; assigning such a fake-null object through SerializedObject
+    /// writes nothing, so the scope's _settings and the HUD's PanelSettings were saved as
+    /// {fileID: 0}. Build() now also checks the saved file for both links.
     ///
     /// Invoke: unity cmd eval --code "return PoRacer.WormRace.EditorTools.Editor_BuildWormRaceScene.Build();"
     /// </summary>
     public static class Editor_BuildWormRaceScene
     {
+        /// <summary>A known racer, in lane order. Physics is only the default for a new entry.</summary>
+        private sealed class RacerSpec
+        {
+            public string name;
+            public string method;
+            public string brainFile;
+            public string materialPath;
+            public Color color;
+            public int defaultPhysics;
+        }
+
+        // WormPhysicsKind values (the enum is internal to the runtime assembly).
+        private const int PHYSICS_MUJOCO = 0;
+        private const int PHYSICS_PHYSX = 1;
+        private const string EXPORT_FOLDER = "training/worm/export/";
         private const string URP_LIT = "Universal Render Pipeline/Lit";
         private const string SOURCE_PANEL_SETTINGS = "Assets/UI/RaceHudPanelSettings.asset";
         private const string DEFAULT_THEME = "Assets/UI/DefaultRuntimeTheme.tss";
@@ -40,6 +67,7 @@ namespace PoRacer.WormRace.EditorTools
         private const string PHYSICS_MATERIAL = WormRacePaths.ROOT + "/PM_WormRace.physicMaterial";
         private const string MATERIAL_MUJOCO = WormRacePaths.MATERIALS + "/M_WormMuJoCo_Blue.mat";
         private const string MATERIAL_ISAAC = WormRacePaths.MATERIALS + "/M_WormIsaac_Orange.mat";
+        private const string MATERIAL_ISAACLAB3 = WormRacePaths.MATERIALS + "/M_WormIsaacLab3_Purple.mat";
         private const string MATERIAL_GROUND = WormRacePaths.MATERIALS + "/M_WormTrack_Ground.mat";
         private const string MATERIAL_WHITE = WormRacePaths.MATERIALS + "/M_WormTrack_LineWhite.mat";
         private const string MATERIAL_BLACK = WormRacePaths.MATERIALS + "/M_WormTrack_LineBlack.mat";
@@ -65,11 +93,36 @@ namespace PoRacer.WormRace.EditorTools
         private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
         private static readonly Color MujocoBlue = new(0.16f, 0.45f, 0.95f);
         private static readonly Color IsaacOrange = new(1.0f, 0.55f, 0.10f);
+        private static readonly Color IsaacLab3Purple = new(0.60f, 0.30f, 0.85f);
         private static readonly Color GroundGrey = new(0.30f, 0.32f, 0.35f);
         private static readonly Color LineWhite = new(0.92f, 0.92f, 0.92f);
         private static readonly Color LineBlack = new(0.07f, 0.07f, 0.08f);
         private static readonly Vector3 CameraOffset = new(5.5f, 3.2f, -3.0f);
         private static readonly Vector3 LightEuler = new(50f, -30f, 0f);
+
+        /// <summary>
+        /// The known racers, lane 0 first. Lane 2's brain comes from Isaac Lab 3 on Newton's
+        /// MuJoCo-Warp solver, hence MuJoCo by default; switch it to PhysX in the settings if
+        /// that trainer falls back to PhysX.
+        /// </summary>
+        private static readonly RacerSpec[] Roster =
+        {
+            new()
+            {
+                name = "MuJoCo worm", method = "MuJoCo", brainFile = "worm_mujoco.onnx",
+                materialPath = MATERIAL_MUJOCO, color = MujocoBlue, defaultPhysics = PHYSICS_MUJOCO,
+            },
+            new()
+            {
+                name = "Isaac worm", method = "Isaac Lab", brainFile = "worm_isaac.onnx",
+                materialPath = MATERIAL_ISAAC, color = IsaacOrange, defaultPhysics = PHYSICS_PHYSX,
+            },
+            new()
+            {
+                name = "Isaac Lab 3 worm", method = "Isaac Lab 3", brainFile = "worm_isaaclab3.onnx",
+                materialPath = MATERIAL_ISAACLAB3, color = IsaacLab3Purple, defaultPhysics = PHYSICS_MUJOCO,
+            },
+        };
 
         [MenuItem("PoRacer/Worm Race/Build Scene")]
         public static string Build()
@@ -83,6 +136,17 @@ namespace PoRacer.WormRace.EditorTools
                 return "ABORT: the open scene has unsaved changes - save or discard them first "
                      + "(creating a new scene would raise a modal prompt).";
             }
+            Shader lit = Shader.Find(URP_LIT);
+            if (lit == null)
+            {
+                return $"ABORT: shader '{URP_LIT}' not found; is URP installed and active?";
+            }
+
+            // FIRST, before any asset is loaded or created: NewScene (Single) unloads every
+            // asset nothing references, which destroyed the settings and panel assets held
+            // only in locals here and left the scene's links at {fileID: 0}. See the class
+            // summary.
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var log = new StringBuilder();
             EnsureFolder(WormRacePaths.ROOT);
@@ -90,17 +154,15 @@ namespace PoRacer.WormRace.EditorTools
             EnsureFolder(WormRacePaths.BRAINS);
             EnsureFolder(WormRacePaths.UI);
 
-            Shader lit = Shader.Find(URP_LIT);
-            if (lit == null)
+            var racerMaterials = new Material[Roster.Length];
+            for (int index = 0; index < Roster.Length; index++)
             {
-                return $"ABORT: shader '{URP_LIT}' not found; is URP installed and active?";
+                racerMaterials[index] = UpsertMaterial(Roster[index].materialPath, lit, Roster[index].color, 0.45f);
             }
-            Material blue = UpsertMaterial(MATERIAL_MUJOCO, lit, MujocoBlue, 0.45f);
-            Material orange = UpsertMaterial(MATERIAL_ISAAC, lit, IsaacOrange, 0.45f);
             Material ground = UpsertMaterial(MATERIAL_GROUND, lit, GroundGrey, 0.15f);
             Material white = UpsertMaterial(MATERIAL_WHITE, lit, LineWhite, 0.2f);
             Material black = UpsertMaterial(MATERIAL_BLACK, lit, LineBlack, 0.2f);
-            log.Append("materials: blue (MuJoCo), orange (Isaac), ground, line white/black\n");
+            log.Append("materials: blue (MuJoCo), orange (Isaac), purple (Isaac Lab 3), ground, line white/black\n");
 
             var rigJson = AssetDatabase.LoadAssetAtPath<TextAsset>(WormRacePaths.RIG_JSON);
             float friction = ReadFriction(rigJson);
@@ -108,22 +170,34 @@ namespace PoRacer.WormRace.EditorTools
             log.Append($"physics material: {PHYSICS_MATERIAL} ({friction:0.00} static/dynamic, no bounce)\n");
 
             PanelSettings panel = UpsertPanelSettings(log);
-            WormRaceSettings settings = UpsertSettings(rigJson, blue, orange, physicsMaterial, log);
+            WormRaceSettings settings = UpsertSettings(rigJson, racerMaterials, physicsMaterial, log);
             AssetDatabase.SaveAssets();
 
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            BuildScope(settings);
+            WormRaceLifetimeScope scope = BuildScope(settings);
             BuildLight();
             BuildCamera(settings);
             BuildTrack(settings, ground, white, black, physicsMaterial);
-            BuildHud(panel);
-            log.Append("scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track, WormRaceHud\n");
+            UIDocument hud = BuildHud(panel);
+            log.Append("scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track (")
+               .Append(settings.LaneCount).Append(" lanes), WormRaceHud\n");
 
+            string unlinked = UnlinkedReferences(scope, settings, hud, panel);
+            if (unlinked.Length > 0)
+            {
+                return log.Append("ABORT before saving: ").Append(unlinked).ToString();
+            }
+            EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene, WormRacePaths.SCENE))
             {
                 return log.Append("ABORT: could not save ").Append(WormRacePaths.SCENE).ToString();
             }
-            log.Append("saved ").Append(WormRacePaths.SCENE).Append('\n');
+            string missingOnDisk = LinksMissingOnDisk(settings, panel);
+            if (missingOnDisk.Length > 0)
+            {
+                return log.Append("ERROR: saved, but ").Append(missingOnDisk).ToString();
+            }
+            log.Append("saved ").Append(WormRacePaths.SCENE)
+               .Append(" (checked on disk: scope -> settings, HUD -> panel settings)\n");
             return log.ToString();
         }
 
@@ -221,7 +295,7 @@ namespace PoRacer.WormRace.EditorTools
             return panel;
         }
 
-        private static WormRaceSettings UpsertSettings(TextAsset rigJson, Material blue, Material orange,
+        private static WormRaceSettings UpsertSettings(TextAsset rigJson, Material[] racerMaterials,
                                                        PhysicsMaterial physicsMaterial, StringBuilder log)
         {
             var settings = AssetDatabase.LoadAssetAtPath<WormRaceSettings>(WormRacePaths.SETTINGS);
@@ -230,24 +304,90 @@ namespace PoRacer.WormRace.EditorTools
                 settings = ScriptableObject.CreateInstance<WormRaceSettings>();
                 AssetDatabase.CreateAsset(settings, WormRacePaths.SETTINGS);
             }
-            var mujocoBrain = AssetDatabase.LoadAssetAtPath<ModelAsset>(WormRacePaths.MUJOCO_BRAIN);
-            var isaacBrain = AssetDatabase.LoadAssetAtPath<ModelAsset>(WormRacePaths.ISAAC_BRAIN);
 
             var serialized = new SerializedObject(settings);
             Assign(serialized, "_rigJson", rigJson);
-            Assign(serialized, "_mujocoBrain", mujocoBrain);
-            Assign(serialized, "_isaacBrain", isaacBrain);
-            Assign(serialized, "_mujocoMaterial", blue);
-            Assign(serialized, "_isaacMaterial", orange);
             Assign(serialized, "_wormPhysicsMaterial", physicsMaterial);
+            log.Append("settings: ").Append(WormRacePaths.SETTINGS).Append('\n');
+            log.Append("  rig: ").Append(rigJson != null ? WormRacePaths.RIG_JSON : "MISSING - copy training/worm/worm_rig.json to " + WormRacePaths.RIG_JSON).Append('\n');
+            UpsertRacers(serialized, racerMaterials, log);
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(settings);
-
-            log.Append("settings: ").Append(WormRacePaths.SETTINGS).Append('\n');
-            log.Append("  rig:          ").Append(rigJson != null ? WormRacePaths.RIG_JSON : "MISSING - copy training/worm/worm_rig.json to " + WormRacePaths.RIG_JSON).Append('\n');
-            log.Append("  MuJoCo brain: ").Append(mujocoBrain != null ? WormRacePaths.MUJOCO_BRAIN : "MISSING - copy training/worm/export/worm_mujoco.onnx to " + WormRacePaths.MUJOCO_BRAIN).Append('\n');
-            log.Append("  Isaac brain:  ").Append(isaacBrain != null ? WormRacePaths.ISAAC_BRAIN : "MISSING - copy training/worm/export/worm_isaac.onnx to " + WormRacePaths.ISAAC_BRAIN).Append('\n');
             return settings;
+        }
+
+        /// <summary>
+        /// Puts the known racers in lanes 0..n-1 of _racers, in <see cref="Roster"/> order.
+        /// An existing entry (matched by name) keeps its Physics choice; a new one gets the
+        /// roster's default. Entries the roster does not know stay, after the known ones.
+        /// </summary>
+        private static void UpsertRacers(SerializedObject serialized, Material[] racerMaterials, StringBuilder log)
+        {
+            SerializedProperty racers = serialized.FindProperty("_racers");
+            if (racers == null || !racers.isArray)
+            {
+                Debug.LogError("[WormRace] WormRaceSettings has no _racers list");
+                return;
+            }
+            for (int lane = 0; lane < Roster.Length; lane++)
+            {
+                RacerSpec spec = Roster[lane];
+                int existing = FindRacer(racers, spec.name, lane);
+                bool isNew = existing < 0;
+                if (isNew)
+                {
+                    racers.InsertArrayElementAtIndex(Mathf.Min(lane, racers.arraySize));
+                    existing = Mathf.Min(lane, racers.arraySize - 1);
+                }
+                if (existing != lane)
+                {
+                    racers.MoveArrayElement(existing, lane);
+                }
+
+                string brainPath = WormRacePaths.BRAINS + "/" + spec.brainFile;
+                var brain = AssetDatabase.LoadAssetAtPath<ModelAsset>(brainPath);
+                SerializedProperty entry = racers.GetArrayElementAtIndex(lane);
+                entry.FindPropertyRelative("_name").stringValue = spec.name;
+                entry.FindPropertyRelative("_method").stringValue = spec.method;
+                entry.FindPropertyRelative("_brainFile").stringValue = spec.brainFile;
+                entry.FindPropertyRelative("_brain").objectReferenceValue = brain;
+                entry.FindPropertyRelative("_material").objectReferenceValue = racerMaterials[lane];
+                entry.FindPropertyRelative("_color").colorValue = spec.color;
+                SerializedProperty physics = entry.FindPropertyRelative("_physics");
+                if (isNew)
+                {
+                    physics.enumValueIndex = spec.defaultPhysics;
+                }
+
+                log.Append("  lane ").Append(lane).Append(": ").Append(spec.name).Append(" (")
+                   .Append(spec.method).Append(", ")
+                   .Append(physics.enumValueIndex == PHYSICS_PHYSX ? "PhysX ArticulationBody" : "MuJoCo plug-in")
+                   .Append(isNew ? ", new" : string.Empty).Append(") brain: ")
+                   .Append(brain != null
+                       ? brainPath
+                       : "MISSING - copy " + EXPORT_FOLDER + spec.brainFile + " to " + brainPath
+                         + " (the worm lies still, HUD says NO BRAIN)")
+                   .Append('\n');
+            }
+            for (int lane = Roster.Length; lane < racers.arraySize; lane++)
+            {
+                log.Append("  lane ").Append(lane).Append(": ")
+                   .Append(racers.GetArrayElementAtIndex(lane).FindPropertyRelative("_name").stringValue)
+                   .Append(" (added by hand, kept as is)\n");
+            }
+        }
+
+        /// <summary>Index of the entry called <paramref name="name"/> at or after <paramref name="from"/>, or -1.</summary>
+        private static int FindRacer(SerializedProperty racers, string name, int from)
+        {
+            for (int index = from; index < racers.arraySize; index++)
+            {
+                if (racers.GetArrayElementAtIndex(index).FindPropertyRelative("_name").stringValue == name)
+                {
+                    return index;
+                }
+            }
+            return -1;
         }
 
         private static void Assign(SerializedObject serialized, string field, Object value)
@@ -280,13 +420,56 @@ namespace PoRacer.WormRace.EditorTools
 
         // ---------------------------------------------------------------- scene --
 
-        private static void BuildScope(WormRaceSettings settings)
+        private static WormRaceLifetimeScope BuildScope(WormRaceSettings settings)
         {
             var scopeObject = new GameObject("WormRaceLifetimeScope");
             var scope = scopeObject.AddComponent<WormRaceLifetimeScope>();
             var serialized = new SerializedObject(scope);
             Assign(serialized, "_settings", settings);
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return scope;
+        }
+
+        /// <summary>The two links the old builder lost, re-read from the live objects.</summary>
+        private static string UnlinkedReferences(WormRaceLifetimeScope scope, WormRaceSettings settings,
+                                                 UIDocument hud, PanelSettings panel)
+        {
+            var problems = new StringBuilder();
+            if (settings == null)
+            {
+                problems.Append("the settings asset is not loaded; ");
+            }
+            else if (new SerializedObject(scope).FindProperty("_settings").objectReferenceValue != settings)
+            {
+                problems.Append("WormRaceLifetimeScope._settings did not take the settings asset; ");
+            }
+            if (panel == null)
+            {
+                problems.Append("the panel settings asset is not loaded; ");
+            }
+            else if (hud.panelSettings != panel)
+            {
+                problems.Append("the HUD's UIDocument did not take the panel settings; ");
+            }
+            return problems.ToString();
+        }
+
+        /// <summary>Reads the saved .unity file back and looks for both links by GUID.</summary>
+        private static string LinksMissingOnDisk(WormRaceSettings settings, PanelSettings panel)
+        {
+            string text = File.ReadAllText(WormRacePaths.SCENE);
+            var problems = new StringBuilder();
+            string settingsGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(settings));
+            if (!text.Contains("_settings: {fileID: 11400000, guid: " + settingsGuid))
+            {
+                problems.Append("the saved scene has no _settings link to ").Append(WormRacePaths.SETTINGS).Append("; ");
+            }
+            string panelGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(panel));
+            if (!text.Contains("m_PanelSettings: {fileID: 11400000, guid: " + panelGuid))
+            {
+                problems.Append("the saved scene has no PanelSettings link to ").Append(PANEL_SETTINGS).Append("; ");
+            }
+            return problems.ToString();
         }
 
         private static void BuildLight()
@@ -323,7 +506,8 @@ namespace PoRacer.WormRace.EditorTools
             float spacing = settings.LaneSpacing;
             float start = settings.StartLineZ;
             float finish = start + settings.TrackLength;
-            float laneCount = WormRaceModel.RACER_COUNT;
+            int laneCount = Mathf.Max(1, settings.LaneCount);
+            // Lanes are centred on x = 0 (WormRaceSettings.LaneX), one lane width each.
             float halfWidth = laneCount * spacing * 0.5f;
 
             // Ground: the only collider on the track. Its top face is y = 0, where the
@@ -339,7 +523,7 @@ namespace PoRacer.WormRace.EditorTools
             // Lane lines: both outer edges and every divider.
             float lineStart = start - LANE_LINE_OVERHANG;
             float lineEnd = finish + LANE_LINE_OVERHANG;
-            for (int edge = 0; edge <= WormRaceModel.RACER_COUNT; edge++)
+            for (int edge = 0; edge <= laneCount; edge++)
             {
                 float x = -halfWidth + edge * spacing;
                 Block($"LaneLine_{edge}", track.transform, white,
@@ -400,12 +584,13 @@ namespace PoRacer.WormRace.EditorTools
             }
         }
 
-        private static void BuildHud(PanelSettings panel)
+        private static UIDocument BuildHud(PanelSettings panel)
         {
             var hudObject = new GameObject("WormRaceHud");
             var document = hudObject.AddComponent<UIDocument>();
             document.panelSettings = panel;
             hudObject.AddComponent<WormRaceHudView>();
+            return document;
         }
 
         [Serializable]
