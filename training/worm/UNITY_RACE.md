@@ -10,7 +10,7 @@ Three worms race down three straight lanes, 20 m long and 2 m apart, centred on 
 |---|---|---|---|---|---|
 | 0 (x = -2 m) | **MuJoCo worm** | MuJoCo | BLUE | `worm_mujoco.onnx` | MuJoCo, through the `org.mujoco` plug-in (the simulator it trained in) |
 | 1 (x = 0 m) | **Isaac worm** | Isaac Lab | ORANGE | `worm_isaac.onnx` | PhysX `ArticulationBody` (Unity's own physics) |
-| 2 (x = +2 m) | **Isaac Lab 3 worm** | Isaac Lab 3 | PURPLE | `worm_isaaclab3.onnx` | MuJoCo plug-in (it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver); switch to PhysX if that trainer falls back to PhysX (section 6) |
+| 2 (x = +2 m) | **Isaac3Worm** | Isaac Lab 3 | PURPLE | `worm_isaaclab3.onnx` | MuJoCo plug-in (it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver); switch to PhysX if that trainer falls back to PhysX (section 6) |
 
 All have the same body (`worm_rig.json`), the same 35-number observation and the same
 8 actions (`training/worm/WORM_SPEC.md`). Red and green are not used (AGENTS rule D).
@@ -80,7 +80,7 @@ settings: Assets/WormRace/WormRaceSettings.asset
   rig: Assets/WormRace/worm_rig.json
   lane 0: MuJoCo worm (MuJoCo, MuJoCo plug-in) brain: Assets/WormRace/Brains/worm_mujoco.onnx
   lane 1: Isaac worm (Isaac Lab, PhysX ArticulationBody) brain: Assets/WormRace/Brains/worm_isaac.onnx
-  lane 2: Isaac Lab 3 worm (Isaac Lab 3, MuJoCo plug-in) brain: MISSING - copy training/worm/export/worm_isaaclab3.onnx to Assets/WormRace/Brains/worm_isaaclab3.onnx (the worm lies still, HUD says NO BRAIN)
+  lane 2: Isaac3Worm (Isaac Lab 3, MuJoCo plug-in) brain: MISSING - copy training/worm/export/worm_isaaclab3.onnx to Assets/WormRace/Brains/worm_isaaclab3.onnx (the worm lies still, HUD says NO BRAIN)
 scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track (3 lanes), WormRaceHud
 saved Assets/Scenes/SCN_WORM_RACE.unity (checked on disk: scope -> settings, HUD -> panel settings)
 ```
@@ -202,9 +202,9 @@ Shape:
         { "lane": 1, "name": "Isaac worm", "method": "Isaac Lab", "physics": "PhysX ArticulationBody",
           "status": "TimedOut", "place": 2, "finishTimeSeconds": -1.0, "distanceMeters": 1.07,
           "averageSpeedMps": 0.018, "...": "..." },
-        { "lane": 2, "name": "Isaac Lab 3 worm", "method": "Isaac Lab 3",
+        { "lane": 2, "name": "Isaac3Worm", "method": "Isaac Lab 3",
           "physics": "MuJoCo (org.mujoco plug-in)", "brain": "missing", "brainLoaded": false,
-          "brainError": "Isaac Lab 3 worm: no brain assigned. Copy the exported ONNX to Assets/WormRace/Brains/worm_isaaclab3.onnx and re-run ...",
+          "brainError": "Isaac3Worm: no brain assigned. Copy the exported ONNX to Assets/WormRace/Brains/worm_isaaclab3.onnx and re-run ...",
           "status": "TimedOut", "place": 3, "distanceMeters": -0.01, "...": "..." } ] } ],
   "summary": [
     { "lane": 0, "name": "MuJoCo worm", "method": "MuJoCo", "physics": "MuJoCo (org.mujoco plug-in)",
@@ -212,7 +212,7 @@ Shape:
       "meanFinishTimeSeconds": 44.15, "bestFinishTimeSeconds": 44.15, "meanDistanceMeters": 20.0,
       "meanAverageSpeedMps": 0.453 },
     { "lane": 1, "name": "Isaac worm", "...": "..." },
-    { "lane": 2, "name": "Isaac Lab 3 worm", "brainLoaded": false, "brainError": "...", "...": "..." } ]
+    { "lane": 2, "name": "Isaac3Worm", "brainLoaded": false, "brainError": "...", "...": "..." } ]
 }
 ```
 
@@ -281,12 +281,12 @@ The body itself (masses, gains, limits, friction) is **not** here; it comes from
 
 | Field | What it is |
 |---|---|
-| Name / Method | HUD and results labels ("Isaac Lab 3 worm" / "Isaac Lab 3") |
+| Name / Method | HUD and results labels ("Isaac3Worm" / "Isaac Lab 3") |
 | **Physics** | **`Mujoco Plugin`** or **`Physx Articulation`**: the simulator that steps this worm in Unity |
 | Brain / Brain File | the ONNX, and its expected file name under `Assets/WormRace/Brains/` (used to find it and for the missing-brain message) |
 | Material / Color | the segment material and the HUD swatch (never red or green, rule D) |
 
-**Choosing lane 2's physics.** The Isaac Lab 3 worm defaults to **Mujoco Plugin**, because
+**Choosing lane 2's physics.** The Isaac3Worm defaults to **Mujoco Plugin**, because
 it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver, whose contact and
 joint model is MuJoCo's. If that trainer falls back to PhysX, set lane 2's Physics to
 **Physx Articulation** (Inspector: `Assets/WormRace/WormRaceSettings.asset > Racers >

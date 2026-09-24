@@ -119,7 +119,7 @@ namespace PoRacer.WormRace.EditorTools
             },
             new()
             {
-                name = "Isaac Lab 3 worm", method = "Isaac Lab 3", brainFile = "worm_isaaclab3.onnx",
+                name = "Isaac3Worm", method = "Isaac Lab 3", brainFile = "worm_isaaclab3.onnx",
                 materialPath = MATERIAL_ISAACLAB3, color = IsaacLab3Purple, defaultPhysics = PHYSICS_MUJOCO,
             },
         };

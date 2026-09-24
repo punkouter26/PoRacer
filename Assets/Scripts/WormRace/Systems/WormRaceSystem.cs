@@ -744,7 +744,7 @@ namespace PoRacer.WormRace
             }
         }
 
-        /// <summary>"Series done: MuJoCo worm 5 - Isaac worm 0 - Isaac Lab 3 worm 0".</summary>
+        /// <summary>"Series done: MuJoCo worm 5 - Isaac worm 0 - Isaac3Worm 0".</summary>
         private string SeriesTally()
         {
             var text = new StringBuilder("Series done: ");

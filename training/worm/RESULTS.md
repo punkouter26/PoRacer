@@ -1,5 +1,30 @@
 # Worm5 results: MuJoCo vs Isaac Lab (2026-09-24)
 
+## Round 2: a third worm, Isaac3Worm (Isaac Lab 3)
+
+Isaac Lab v3.0.0-beta2.patch1, kit-less, on the **Newton** backend with the **MuJoCo-Warp**
+solver (`ISAAC/worm_tasks_v3`). Same body, contract and 30-minute budget.
+
+| | MuJoCo worm | Isaac worm (Lab 2.3, PhysX) | **Isaac3Worm** (Lab 3, Newton) |
+|---|---|---|---|
+| Training throughput | 192k steps/s | 52k steps/s | ~125k steps/s |
+| Own-simulator test (100 × 20 s) | **0.450 m/s** | 0.178 m/s | 0.326 m/s |
+| Same physics (in MuJoCo 3.12) | **0.450 m/s** | 0.142 m/s | 0.322 m/s |
+| Unity race (3-lane track, 5 races) | **0.451 m/s, won 5/5, 44.3 s** | 0.018 m/s (1.1 m) | 0.322 m/s (19.3 m at the 60 s limit) |
+
+- **Isaac Lab 3 beats Isaac Lab 2.3** by 1.8× in its own simulator, 2.3× in identical
+  physics and 18× in the Unity race. It also transfers into Unity with no loss, because
+  it trains on MuJoCo-style physics and the game runs the MuJoCo plug-in.
+- **MuJoCo is still best:** 1.4× Isaac3Worm, with 1.5× the training throughput.
+- **Isaac3Worm's training collapsed** at 18.2–18.5 minutes: 0.32 m/s → 0 in about 30
+  iterations, and it never recovered (the final checkpoint scores 0.0006 m/s). The race
+  and tests use **model_1350**, the last checkpoint before the collapse (17.8 min, 133 M
+  steps). The report file's `stepsTrained` (218 M) is the whole run, not this checkpoint.
+- In the Unity race Isaac3Worm keeps its trained speed exactly (0.322 vs 0.326) and misses
+  the 20 m finish by 0.7 m.
+
+## Round 1: MuJoCo vs Isaac Lab 2.3
+
 One worm body and one training contract ([WORM_SPEC.md](WORM_SPEC.md)). 30 minutes of
 training each on an RTX 5070 Ti Laptop, one run after the other, Unity closed.
 

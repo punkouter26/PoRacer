@@ -1,0 +1,97 @@
+{
+  "tool": "isaaclab3-newton-mjwarp-rsl_rl",
+  "meanSpeed": 0.0005540843121707439,
+  "stdSpeed": 0.002127769635990262,
+  "meanDistance20s": 0.011081686243414879,
+  "stepsTrained": 217743360,
+  "wallMinutes": 29.986910820007324,
+  "onnxMaxAbsErr": 4.76837158203125e-06,
+  "notes": "Isaac Lab 6.1.14 (tag v3.0.0-beta2.patch1), kit-less: Newton 1.2.1 with the MuJoCo-Warp solver (mujoco-warp 3.8.1, warp 1.13.0; Newton method, 10 iterations, implicitfast, pyramidal cone, dt 0.005 s), no Isaac Sim / PhysX. rsl-rl-lib 5.0.1, torch 2.10.0+cu128. 100 deterministic episodes of 1000 policy steps (20 s), seed 12345, spec reset (yaw U(+/-45 deg) about the head, joint noise +/-0.05 rad), no randomisation, actions = clip(ONNX mean, -1, 1). Speed = seg2 displacement along +x (read at step 1000) / 20 s; std is over episodes (population std); health-guard (diverged) episodes excluded. Joint damping 2.0 is MuJoCo's own passive dof_damping (as worm.xml); servo kp 30.0, force limit 6.0 N*m. wallMinutes = training loop wall time (excludes start-up). Parity: onnxruntime (CPU) vs the torch policy on GPU, on every rollout observation.",
+  "details": {
+    "checkpoint": "ISAAC\\logs\\rsl_rl_v3\\worm5_newton\\2026-09-24_17-45-57_newton30\\model_2214.pt",
+    "checkpointIteration": 2214,
+    "episodes": 100,
+    "healthyEpisodes": 100,
+    "seed": 12345,
+    "meanInstantaneousVx": 0.0006077844882383943,
+    "health": {
+      "divergedWorlds": 0,
+      "meanAbsRollRateSeg2": 0.03642865642905235,
+      "peakAbsRollRateSeg2": 4.880603313446045,
+      "peakJointSpeedRadS": 5.7827582359313965,
+      "fractionTimeAnyActuatorSaturated": 0.4065999984741211,
+      "fractionTimeSaturatedPerJoint": {
+        "j0_pitch": 0.026900000870227814,
+        "j0_yaw": 0.014249998144805431,
+        "j1_pitch": 0.4051700234413147,
+        "j1_yaw": 0.010460000485181808,
+        "j2_pitch": 0.024900000542402267,
+        "j2_yaw": 0.014510001055896282,
+        "j3_pitch": 0.025949997827410698,
+        "j3_yaw": 0.012240001000463963
+      },
+      "meanSegmentHeightM": 0.08319024741649628,
+      "meanAbsLateralDrift20sM": 0.09348028898239136,
+      "meanLateralDrift20sM": 0.0930766612291336
+    },
+    "minDistance20s": -0.07532978057861328,
+    "maxDistance20s": 0.1454324722290039,
+    "onnx": {
+      "path": "training\\worm\\export\\worm_isaaclab3_final.onnx",
+      "opset": 15,
+      "irVersion": 8,
+      "io": {
+        "inputs": [
+          [
+            "obs",
+            [
+              1,
+              35
+            ],
+            "tensor(float)"
+          ]
+        ],
+        "outputs": [
+          [
+            "actions",
+            [
+              1,
+              8
+            ],
+            "tensor(float)"
+          ]
+        ]
+      }
+    },
+    "training": {
+      "iterations": 2215,
+      "stepsTrained": 217743360,
+      "wallMinutes": 29.986910820007324,
+      "stopReason": "wall_clock_budget",
+      "finalMeanEpisodeReward": 4.906555004119873,
+      "finalMeanStepReward": 0.004916952922940254,
+      "finalMeanForwardSpeedSeg2": 0.0005597765557467937,
+      "divergedWorldsTotal": 0,
+      "tool": "isaaclab3-newton-mjwarp-rsl_rl",
+      "task": "Isaac-Worm5-Flat-Newton-v0",
+      "numEnvs": 4096,
+      "budgetMinutes": 30.0,
+      "processMinutes": 30.177041991551718,
+      "stepsPerSecond": 121021.33566818383,
+      "physics": "Newton SolverMuJoCo (mujoco_warp): Newton solver, 10 iterations, 8 ls iterations, implicitfast, pyramidal cone, tolerance 1e-8, dt 0.005 s",
+      "versions": {
+        "isaaclab": "6.1.14",
+        "isaaclab_newton": "0.13.6",
+        "isaaclab_rl": "0.5.5",
+        "newton": "1.2.1",
+        "mujoco": "3.8.1",
+        "mujoco-warp": "3.8.1",
+        "warp-lang": "1.13.0",
+        "torch": "2.10.0+cu128",
+        "rsl-rl-lib": "5.0.1"
+      },
+      "graphDecimation": true,
+      "seed": 42
+    }
+  }
+}
