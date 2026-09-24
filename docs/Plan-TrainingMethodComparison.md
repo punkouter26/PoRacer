@@ -10,6 +10,51 @@
 > "18 brains", read "two tools" and "12 brains". The first head-to-head is the Worm5
 > experiment (`training/worm/WORM_SPEC.md`).
 
+## Status and direction (updated 2026-09-24, after the Worm5 experiments)
+
+**What the worms proved** ([training/worm/RESULTS.md](../training/worm/RESULTS.md)):
+training on **MuJoCo Warp** physics and racing on Unity's **MuJoCo plug-in** keeps 100 %
+of the trained speed. Training on PhysX and racing on Unity's PhysX kept about 10 %, and
+the physics blew up until damping was reworked. Two tools reach MuJoCo Warp:
+
+| Tool | Worm speed in Unity | Notes |
+|---|---|---|
+| **Plain MuJoCo Warp** (`training/worm/mujoco`) | **0.451 m/s** | 192k steps/s; best final worm; no collapse |
+| **Isaac Lab 3 + Newton, MuJoCo Warp solver** (`ISAAC/worm_tasks_v3`) | 0.322 m/s | ~125k steps/s; fastest learner in the first 10 min; beta; collapsed at 18 min |
+| Isaac Lab 2.3 + PhysX | 0.018 m/s | retired for new training |
+
+**New direction:** every creature trains on MuJoCo Warp, with **plain MuJoCo Warp** as
+the default and **Isaac Lab 3 (Newton, MuJoCo Warp solver)** as the Isaac Lab entry in
+comparisons. Every creature **races on the MuJoCo plug-in** in Unity. Consequences:
+
+- **Phase 2 gets simpler.** The body check is MuJoCo against MuJoCo (the same engine),
+  not MuJoCo against Unity PhysX. The PhysX damping mismatch in `training/bugs` stops
+  mattering.
+- **Android becomes a priority (rule F).** MuJoCo creatures are missing on phones until
+  `libmujoco.so` (arm64) from joanllobera/mujoco-bin is added to `Packages/org.mujoco`.
+- **One reusable pipeline instead of one-off code:** rig → MJCF → trainer → ONNX →
+  Unity MuJoCo builder → self-tests → exam. The worm code is the template.
+
+| Phase | State |
+|---|---|
+| 0 · Training setups | ✅ MuJoCo Warp, Isaac Lab 2.3, Isaac Lab 3 (Newton) all run here |
+| 1 · Walking exam | ✅ Built and run twice; W5/W6/W8 still to add. No creature meets the standard |
+| 2 · Bodies in MuJoCo | 🟡 Worm ✅, bugs ✅ (MJCF), MojucuBoy ✅ (already MuJoCo). **H1 and IsaacBox still need MJCF** |
+| 3 · Shared recipe | ✅ Written; used for the worm. Needs a legged version (Froude speed, uprightness, get-up stage) |
+| 4 · Pilot | 🟡 Worm done. **Next: Quadruped**, trained with plain MuJoCo Warp and Isaac Lab 3 |
+| 5 · All creatures | ⬜ |
+| 6 · Everyone to the standard, including get-up | ⬜ No creature has ever got up after a fall |
+| 7 · In-app head-to-head | 🟡 Worm race scene (N lanes, selectable physics) is the template |
+
+**Next steps, in order:**
+1. Generalise the worm pipeline into a **creature template**: an MJCF-driven trainer,
+   exporter and evaluator, and a Unity MuJoCo builder that works for any rig.
+2. **Quadruped pilot:** legged recipe, trained with plain MuJoCo Warp and Isaac Lab 3,
+   raced in Unity on the MuJoCo plug-in, then the walking exam.
+3. **Android MuJoCo library** (rule F), so MuJoCo racers work on phones.
+4. Roll out to Hexapod, Crab and MojucuBoy; convert H1 and IsaacBox to MJCF.
+5. Add get-up training, and re-run the exam until each creature passes.
+
 ## The three methods
 
 | | Method | Physics it trains on | Runs where in the game |
