@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
   Installs Builds/Android/PoRacer.apk on the connected device, drives the app
-  through menu -> race -> debug sheet, and collects the evidence.
+  through menu -> race -> debug sheet, and collects the evidence. Build the APK
+  first (Editor_BuildAsync.Start("apk") from the running editor).
 
 .DESCRIPTION
   Everything this script does is the half of a deploy that only a physically
@@ -141,9 +142,10 @@ if ($install -notmatch "Success") {
 Adb logcat -c | Out-Null
 Adb shell monkey -p $PackageName -c android.intent.category.LAUNCHER 1 | Out-Null
 Start-Sleep -Seconds 12
-Shot "01-menu-maps"
+Shot "01-menu"
 
-# Map screen -> roster screen. NEXT is the bottom-row primary action.
+# The menu is one screen: maps, roster and RACE together. RACE is the bottom-row
+# primary action, and the roster starts with one of each creature selected.
 #
 # 0.896, NOT 0.93. Measured off a real 960x2142 capture: the button spans roughly
 # 0.862-0.930 of screen height, so 0.93 lands on its bottom border and the tap is
@@ -151,19 +153,14 @@ Shot "01-menu-maps"
 # you were already on, which reads as "the app is stuck" rather than "the tap
 # missed". Keep these fractions on the CENTRE of each control.
 Tap 0.5 0.896
-Start-Sleep -Seconds 3
-Shot "02-menu-racers"
-
-# START RACING sits on the same bottom row of the roster screen.
-Tap 0.5 0.892
 Start-Sleep -Seconds $RaceSeconds
-Shot "03-race"
+Shot "02-race"
 
 # DBG is the bottom-left furniture anchor; the sheet needs a beat to populate,
 # because its first refresh is also what starts the ProfilerRecorders.
 Tap 0.085 0.954
 Start-Sleep -Seconds 5
-Shot "04-debug-sheet"
+Shot "03-debug-sheet"
 
 # --- Logs ---
 $logPath = Join-Path $OutDir "logcat.txt"
