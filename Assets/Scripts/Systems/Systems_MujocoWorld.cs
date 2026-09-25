@@ -104,6 +104,22 @@ namespace PoRacer.Systems
             _pendingCourse = null;
         }
 
+        /// <summary>
+        /// As <see cref="Build(Views.RaceCourseView)"/>, plus every solid box and sphere
+        /// collider under <paramref name="scenery"/> mirrored into MuJoCo, so a MuJoCo
+        /// racer is stopped by the same barriers, stands and props as the PhysX racers
+        /// (AGENTS rule M) instead of walking through them on its own infinite plane.
+        /// </summary>
+        internal static void Build(Views.RaceCourseView course, Transform scenery)
+        {
+            bool fresh = _world == null;
+            Build(course);
+            if (fresh && _world != null && scenery != null)
+            {
+                MirrorSceneryColliders(_world.transform, scenery);
+            }
+        }
+
         internal static void Build()
         {
             if (_world != null || !IsSupported)
@@ -332,6 +348,66 @@ namespace PoRacer.Systems
             Debug.Log($"MuJoCo course road: {built} slab(s) over {path.Length:0.0} m "
                     + $"at half-width {course.HalfWidth:0.0} m.");
         }
+
+        /// <summary>
+        /// Copies static colliders into the MuJoCo world as geoms of the same shape, pose
+        /// and size. Only boxes and spheres: they map onto MuJoCo primitives exactly.
+        /// Mesh colliders are skipped - MuJoCo convex-hulls meshes (see
+        /// <see cref="BuildCourseRoad"/>), which would fill a course's valleys solid.
+        /// Triggers and anything on a rigidbody or articulation are not scenery.
+        /// Must run before MjScene compiles its model at the end of the frame.
+        /// </summary>
+        private static void MirrorSceneryColliders(Transform parent, Transform scenery)
+        {
+            var mirror = new GameObject("MuJoCoScenery");
+            mirror.transform.SetParent(parent, false);
+            Collider[] colliders = scenery.GetComponentsInChildren<Collider>();
+            int mirrored = 0;
+            for (int colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex++)
+            {
+                Collider source = colliders[colliderIndex];
+                if (!source.enabled || source.isTrigger
+                    || source.attachedRigidbody != null || source.attachedArticulationBody != null)
+                {
+                    continue;
+                }
+                Transform sourceTransform = source.transform;
+                Vector3 scale = sourceTransform.lossyScale;
+                Vector3 center;
+                MjGeom geom;
+                if (source is BoxCollider box)
+                {
+                    center = box.center;
+                    geom = AddGeom(mirror.transform, source.name, sourceTransform, center);
+                    geom.ShapeType = MjShapeComponent.ShapeTypes.Box;
+                    geom.Box.Extents = Vector3.Scale(box.size, Abs(scale)) * 0.5f;
+                }
+                else if (source is SphereCollider sphere)
+                {
+                    center = sphere.center;
+                    geom = AddGeom(mirror.transform, source.name, sourceTransform, center);
+                    geom.ShapeType = MjShapeComponent.ShapeTypes.Sphere;
+                    geom.Sphere.Radius = sphere.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+                }
+                else
+                {
+                    continue;
+                }
+                ApplyGroundFriction(geom);
+                mirrored++;
+            }
+            Debug.Log($"MuJoCo scenery: {mirrored} collider(s) mirrored from '{scenery.name}'.");
+        }
+
+        private static MjGeom AddGeom(Transform parent, string name, Transform source, Vector3 localCenter)
+        {
+            var geomObject = new GameObject(name);
+            geomObject.transform.SetParent(parent, false);
+            geomObject.transform.SetPositionAndRotation(source.TransformPoint(localCenter), source.rotation);
+            return geomObject.AddComponent<MjGeom>();
+        }
+
+        private static Vector3 Abs(Vector3 value) => new(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
 
         /// <summary>
         /// The MuJoCo ground. At y = 0 for a builder map — exactly where

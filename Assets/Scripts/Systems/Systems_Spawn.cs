@@ -555,7 +555,7 @@ namespace PoRacer.Systems
             {
                 // The course goes in with the world, not after it: every geom has to exist
                 // before MjScene compiles its model at the end of this frame.
-                Systems_MujocoWorld.Build(_course);
+                Systems_MujocoWorld.Build(_course, _track.transform);
                 MarkStage("mujoco world build", ref stageClock);
             }
 
