@@ -24,7 +24,12 @@ namespace PoRacer.Views
         private const long REFRESH_INTERVAL_MS = 250;
         private const float PILL_TOP_PERCENT = 22f;
         private const float TEAM_SWATCH = 8f;
-        private const float STAT_COLUMN_WIDTH = 60f;
+        // Four of these plus the team name must fit the results card on a narrow
+        // handset; at 60 the last column (+5) hung past the card's right edge.
+        private const float STAT_COLUMN_WIDTH = 50f;
+        // The last-race column only ever holds "+N", so it takes less room and
+        // leaves it to the team name.
+        private const float DELTA_COLUMN_WIDTH = 34f;
         // The results panel ends with a divider and the button row; the league goes above both.
         private const int RESULTS_TRAILING_CHILDREN = 2;
 
@@ -111,7 +116,7 @@ namespace PoRacer.Views
             header.Add(StatCell("PTS", UiTheme.TextDim, bold: true));
             header.Add(StatCell("WON", UiTheme.TextDim, bold: true));
             header.Add(StatCell("RAN", UiTheme.TextDim, bold: true));
-            header.Add(StatCell(string.Empty, UiTheme.TextDim, bold: true));
+            header.Add(StatCell(string.Empty, UiTheme.TextDim, bold: true, DELTA_COLUMN_WIDTH));
             _block.Add(header);
 
             for (int rowIndex = 0; rowIndex < TrainerTeams.LeagueOrder.Length; rowIndex++)
@@ -124,6 +129,10 @@ namespace PoRacer.Views
                 row.Add(swatch);
                 Label name = MakeLabel(UiTheme.FONT_SM, UiTheme.Text, bold: false, TrainerTeams.DisplayName(team));
                 name.style.flexGrow = 1f;
+                name.style.flexShrink = 1f;
+                name.style.minWidth = 0f;
+                name.style.overflow = Overflow.Hidden;
+                name.style.textOverflow = TextOverflow.Ellipsis;
                 row.Add(name);
                 _pointsLabels[rowIndex] = StatCell("0", UiTheme.Text, bold: true);
                 row.Add(_pointsLabels[rowIndex]);
@@ -131,7 +140,7 @@ namespace PoRacer.Views
                 row.Add(_winsLabels[rowIndex]);
                 _racesLabels[rowIndex] = StatCell("0", UiTheme.TextDim, bold: false);
                 row.Add(_racesLabels[rowIndex]);
-                _lastRaceLabels[rowIndex] = StatCell(string.Empty, UiTheme.Gold, bold: true);
+                _lastRaceLabels[rowIndex] = StatCell(string.Empty, UiTheme.Gold, bold: true, DELTA_COLUMN_WIDTH);
                 row.Add(_lastRaceLabels[rowIndex]);
                 _teamRows[rowIndex] = row;
                 _block.Add(row);
@@ -235,10 +244,10 @@ namespace PoRacer.Views
             return spacer;
         }
 
-        private static Label StatCell(string text, Color color, bool bold)
+        private static Label StatCell(string text, Color color, bool bold, float width = STAT_COLUMN_WIDTH)
         {
             Label cell = MakeLabel(UiTheme.FONT_XS, color, bold, text);
-            cell.style.width = STAT_COLUMN_WIDTH;
+            cell.style.width = width;
             cell.style.flexShrink = 0f;
             cell.style.unityTextAlign = TextAnchor.MiddleRight;
             return cell;

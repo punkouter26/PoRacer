@@ -62,6 +62,8 @@ namespace PoRacer.Views
         private static readonly Color FpsBad = new(0.91f, 0.42f, 0.35f);
 
         private RaceModel _raceModel;
+        private QualityModel _qualityModel;
+        private int _lastShownTier = -1;
         private VisualElement _panel;
         private bool _diagnosticsActive;
         private Label _fpsLabel;
@@ -115,9 +117,10 @@ namespace PoRacer.Views
         private float _leaderSpeed;
 
         [Inject]
-        public void Construct(RaceModel raceModel)
+        public void Construct(RaceModel raceModel, QualityModel qualityModel)
         {
             _raceModel = raceModel;
+            _qualityModel = qualityModel;
         }
 
         private void Start()
@@ -323,10 +326,18 @@ namespace PoRacer.Views
         private void RefreshStrip()
         {
             int fps = Mathf.RoundToInt(_fps);
-            if (fps != _lastShownFps)
+            // The quality tier rides on the fps readout, but only once the governor
+            // has stepped down: then the number and the reason for the softer image
+            // sit side by side. At full quality it says nothing, which keeps this
+            // fixed top-centre anchor clear of the title and the right-hand button.
+            int tier = _qualityModel != null ? _qualityModel.Tier : QualityModel.TIER_HIGH;
+            if (fps != _lastShownFps || tier != _lastShownTier)
             {
                 _lastShownFps = fps;
-                _fpsLabel.text = $"{fps} FPS";
+                _lastShownTier = tier;
+                _fpsLabel.text = tier == QualityModel.TIER_HIGH
+                    ? $"{fps} FPS"
+                    : $"{fps} FPS · {QualityModel.ShortName(tier)}";
                 _fpsLabel.style.color = fps >= 55 ? FpsGood : fps >= 30 ? FpsWarn : FpsBad;
             }
             if (_stripLabel == null)

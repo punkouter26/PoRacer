@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19446149a1446fa499fdf9441d9ddef8, type: 3}
+  m_Name: SkyCatalog
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Models.SkyCatalog
+  _presets:
+  - {fileID: 11400000, guid: a6e716ea92b144c4cb5de246a3062a94, type: 2}
+  - {fileID: 11400000, guid: d619a2048519c10469c920cc111cc094, type: 2}
+  - {fileID: 11400000, guid: a17c29cac59f5ee479d657877c2dcb1d, type: 2}
+  - {fileID: 11400000, guid: 04151cc66566f2642952cefda0b8354f, type: 2}
+  - {fileID: 11400000, guid: acba665f0e2f3234a866413e06c838d8, type: 2}

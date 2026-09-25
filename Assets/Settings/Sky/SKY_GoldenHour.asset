@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0384146f56bc17c4495c0ba8ee846175, type: 3}
+  m_Name: SKY_GoldenHour
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Models.SkyPreset
+  <DisplayName>k__BackingField: Golden hour
+  <Kinds>k__BackingField: 0000000008000000i
+  <SunIntensity>k__BackingField: 1.2
+  <SunTemperature>k__BackingField: 4300
+  <SunPitch>k__BackingField: 24
+  <SunYaw>k__BackingField: -55
+  <SkyTint>k__BackingField: {r: 0.75, g: 0.55, b: 0.42, a: 1}
+  <Atmosphere>k__BackingField: 1.6
+  <SkyExposure>k__BackingField: 1.25
+  <FogColor>k__BackingField: {r: 0.78, g: 0.62, b: 0.5, a: 1}
+  <FogStart>k__BackingField: 40
+  <FogEnd>k__BackingField: 130
+  <AmbientSky>k__BackingField: {r: 0.66, g: 0.52, b: 0.42, a: 1}
+  <AmbientEquator>k__BackingField: {r: 0.5, g: 0.42, b: 0.38, a: 1}
+  <AmbientGround>k__BackingField: {r: 0.26, g: 0.2, b: 0.17, a: 1}
+  <GradeFilter>k__BackingField: {r: 1, g: 0.94, b: 0.85, a: 1}
+  <Saturation>k__BackingField: 14
+  <Vignette>k__BackingField: 0.26
+  <Wetness>k__BackingField: 0
+  <AirColor>k__BackingField: {r: 0.85, g: 0.7, b: 0.5, a: 0.28}
+  <AirRate>k__BackingField: 12
+  <AirSizeMin>k__BackingField: 0.1
+  <AirSizeMax>k__BackingField: 0.35
+  <AirRise>k__BackingField: 0.05
+  <AirWindX>k__BackingField: 2
+  <AirWander>k__BackingField: 0.2
+  <AirStreaks>k__BackingField: 0
+  <GroundTone>k__BackingField: {r: 0.7, g: 0.58, b: 0.45, a: 1}

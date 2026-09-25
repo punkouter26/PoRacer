@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using MessagePipe;
 using PoRacer.Agents;
 using PoRacer.Models;
 using PoRacer.Views;
@@ -122,6 +123,7 @@ namespace PoRacer.Systems
         private readonly Systems_AudioMix _audioMix;
         private readonly Systems_Warmup _warmup;
         private readonly Systems_RacerTelemetry _telemetry;
+        private readonly IPublisher<TrackBuiltMessage> _trackBuiltPublisher;
         private readonly System.Random _rng = new();
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
@@ -148,7 +150,8 @@ namespace PoRacer.Systems
             Systems_TrackBuilder trackBuilder,
             Systems_AudioMix audioMix,
             Systems_Warmup warmup,
-            Systems_RacerTelemetry telemetry)
+            Systems_RacerTelemetry telemetry,
+            IPublisher<TrackBuiltMessage> trackBuiltPublisher)
         {
             _catalog = catalog;
             _config = config;
@@ -160,6 +163,7 @@ namespace PoRacer.Systems
             _audioMix = audioMix;
             _warmup = warmup;
             _telemetry = telemetry;
+            _trackBuiltPublisher = trackBuiltPublisher;
         }
 
         /// <summary>The authored course being raced, or null on builder maps.</summary>
@@ -504,6 +508,9 @@ namespace PoRacer.Systems
                     _cameraDirector.ClearKeepOut();
                 }
                 MarkStage("track build", ref stageClock);
+                // The sky rolls for the kind actually built (a failed course falls
+                // back to Flat above), and the reflection probe re-renders over it.
+                _trackBuiltPublisher.Publish(new TrackBuiltMessage(_currentTrack));
                 // Freshly built colliders must exist before racers land on them.
                 await UniTask.NextFrame(token);
                 if (!IsCurrent(generation))
@@ -842,6 +849,7 @@ namespace PoRacer.Systems
                     // Handed the buses at spawn: the view has no scope to inject from.
                     creatureRoot.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     creatureRoot.AddComponent<SkidMarkView>().Initialize(_currentTrack);
+                    creatureRoot.AddComponent<ContactShadowView>().Initialize(_currentTrack);
 
                     // Its team in the Sim Wars league. An ML-Agents racer whose model went
                     // missing races on its coded gait above, which makes it a heuristic bot.

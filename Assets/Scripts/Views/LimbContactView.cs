@@ -20,10 +20,12 @@ namespace PoRacer.Views
     ///     Dropped, or an articulated creature would rattle constantly against
     ///     itself as its own segments jostle.
     ///
-    /// The same contact also drives the impact sparks. Those keep their own gate
-    /// rather than borrowing the audio one: a spark is worth showing at a lower
-    /// impact than is worth hearing, and the visual budget is spent on the racers
-    /// near the camera rather than on the ones that happen to hold an audio voice.
+    /// The same contact also drives the visuals: a footprint and a dust puff where
+    /// a limb meets the ground, sparks on a hard landing, and a dust ring when a
+    /// racer bodychecks another or slams into the ground. Those keep their own
+    /// gates rather than borrowing the audio ones: a print is worth laying for a
+    /// step too soft to hear, and the visual budget is spent on the racers near the
+    /// camera rather than on the ones that happen to hold an audio voice.
     /// </summary>
     [DisallowMultipleComponent]
     internal sealed class LimbContactView : MonoBehaviour
@@ -32,8 +34,21 @@ namespace PoRacer.Views
         private const float MIN_SPARK_SPEED = 2.6f;
         private const float FULL_SPARK_SPEED = 7f;
         private const float MIN_SPARK_INTERVAL = 0.12f;
-        // Past this the sparks are a few pixels and not worth the emit call.
-        private const float SPARK_VISIBLE_RANGE = 45f;
+        // Footprints. Softer than the audible thud on purpose: a quiet step still
+        // leaves a mark, and the prints are the gait readout.
+        private const float MIN_FOOTFALL_SPEED = 0.5f;
+        private const float FULL_FOOTFALL_SPEED = 4.5f;
+        private const float MIN_FOOTFALL_INTERVAL = 0.12f;
+        // Ground faces up; a wall or a box side is not somewhere to leave a print.
+        private const float MIN_GROUND_NORMAL_Y = 0.55f;
+        // Dust rings: a clash between racers, or a limb slamming into the ground
+        // (a fall, not a step).
+        private const float MIN_CLASH_RING_SPEED = 3f;
+        private const float MIN_SLAM_RING_SPEED = 6f;
+        private const float FULL_RING_SPEED = 10f;
+        private const float MIN_RING_INTERVAL = 0.3f;
+        // Past this every effect is a few pixels and not worth the emit call.
+        private const float FX_VISIBLE_RANGE = 45f;
         private const float CAMERA_SAMPLE_INTERVAL = 0.25f;
 
         // Camera.main runs a tagged object lookup, and this class sits in the
@@ -45,6 +60,8 @@ namespace PoRacer.Views
 
         private CreatureAudioView _owner;
         private float _nextSparkTime;
+        private float _nextFootfallTime;
+        private float _nextRingTime;
 
         internal void Bind(CreatureAudioView owner)
         {
@@ -79,10 +96,20 @@ namespace PoRacer.Views
             }
             else
             {
-                // Our own limb. Silent, and not worth sparks either.
+                // Our own limb. Silent, and not worth any effect either.
                 return;
             }
+            // One range test covers every effect below: each is invisible past it.
+            if (!IsNearCamera(contact.point))
+            {
+                return;
+            }
+            if (staticGeometry)
+            {
+                TryFootfall(impactSpeed, contact);
+            }
             TrySparks(impactSpeed, contact);
+            TryImpactRing(impactSpeed, contact.point, staticGeometry);
         }
 
         /// <summary>
@@ -106,25 +133,48 @@ namespace PoRacer.Views
             return owner != null && owner != _owner;
         }
 
+        private void TryFootfall(float impactSpeed, ContactPoint contact)
+        {
+            if (impactSpeed < MIN_FOOTFALL_SPEED || Time.time < _nextFootfallTime
+                || contact.normal.y < MIN_GROUND_NORMAL_Y)
+            {
+                return;
+            }
+            _nextFootfallTime = Time.time + MIN_FOOTFALL_INTERVAL;
+            float strength = Mathf.InverseLerp(MIN_FOOTFALL_SPEED, FULL_FOOTFALL_SPEED, impactSpeed);
+            FootfallFx.Footfall(contact.point, contact.normal, strength);
+        }
+
         private void TrySparks(float impactSpeed, ContactPoint contact)
         {
             if (impactSpeed < MIN_SPARK_SPEED || Time.time < _nextSparkTime)
             {
                 return;
             }
-            if (!TryGetCameraPosition(out Vector3 cameraPosition))
-            {
-                return;
-            }
-            // Squared compare: a distance check per contact is not worth a sqrt.
-            float rangeSqr = SPARK_VISIBLE_RANGE * SPARK_VISIBLE_RANGE;
-            if ((contact.point - cameraPosition).sqrMagnitude > rangeSqr)
-            {
-                return;
-            }
             _nextSparkTime = Time.time + MIN_SPARK_INTERVAL;
             float strength = Mathf.InverseLerp(MIN_SPARK_SPEED, FULL_SPARK_SPEED, impactSpeed);
             FxUtil.ImpactSparks(contact.point, contact.normal, strength);
+        }
+
+        private void TryImpactRing(float impactSpeed, Vector3 point, bool staticGeometry)
+        {
+            float threshold = staticGeometry ? MIN_SLAM_RING_SPEED : MIN_CLASH_RING_SPEED;
+            if (impactSpeed < threshold || Time.time < _nextRingTime)
+            {
+                return;
+            }
+            _nextRingTime = Time.time + MIN_RING_INTERVAL;
+            FxUtil.ImpactRing(point, Mathf.InverseLerp(threshold, FULL_RING_SPEED, impactSpeed));
+        }
+
+        private static bool IsNearCamera(Vector3 point)
+        {
+            if (!TryGetCameraPosition(out Vector3 cameraPosition))
+            {
+                return false;
+            }
+            // Squared compare: a distance check per contact is not worth a sqrt.
+            return (point - cameraPosition).sqrMagnitude <= FX_VISIBLE_RANGE * FX_VISIBLE_RANGE;
         }
 
         /// <summary>

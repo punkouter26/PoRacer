@@ -11,13 +11,17 @@ namespace PoRacer.Presentation
     internal static class FxUtil
     {
         private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         private static Texture2D _softCircle;
         private static Material _softParticleMaterial;
         private static Material _glowParticleMaterial;
+        private static Material _contactShadowMaterial;
+        private static Mesh _flatQuad;
         private static ParticleSystem _knockoutPuff;
         private static ParticleSystem _impactSparks;
         private static ParticleSystem _wipeoutDebris;
+        private static ParticleSystem _impactRing;
 
         /// <summary>Radial-falloff white circle used as the universal particle sprite.</summary>
         public static Texture2D SoftCircle()
@@ -70,6 +74,121 @@ namespace PoRacer.Presentation
                 _glowParticleMaterial = LoadParticleMaterial("FX/M_ParticleGlow");
             }
             return _glowParticleMaterial;
+        }
+
+        /// <summary>
+        /// Shared soft black blob for the contact shadows under racers. One material
+        /// for the whole field, so every blob batches together.
+        /// </summary>
+        public static Material ContactShadowMaterial()
+        {
+            if (_contactShadowMaterial == null)
+            {
+                Material soft = LoadParticleMaterial("FX/M_ParticleSoft");
+                if (soft == null)
+                {
+                    return null;
+                }
+                soft.name = "ContactShadow";
+                soft.SetColor(BaseColorId, new Color(0f, 0f, 0f, 0.55f));
+                _contactShadowMaterial = soft;
+            }
+            return _contactShadowMaterial;
+        }
+
+        /// <summary>Unit quad lying in the XZ plane, facing up, with white vertex colour.</summary>
+        public static Mesh FlatQuad()
+        {
+            if (_flatQuad != null)
+            {
+                return _flatQuad;
+            }
+            var mesh = new Mesh { name = "FlatQuad" };
+            mesh.SetVertices(new[]
+            {
+                new Vector3(-0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, -0.5f),
+                new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, 0.5f)
+            });
+            mesh.SetUVs(0, new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) });
+            // The particle shader multiplies by vertex colour; without it the blob
+            // takes whatever the platform defaults a missing channel to.
+            mesh.SetColors(new[] { Color.white, Color.white, Color.white, Color.white });
+            mesh.SetNormals(new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up });
+            // Clockwise seen from above: the front face points up.
+            mesh.SetTriangles(new[] { 0, 2, 1, 2, 3, 1 }, 0);
+            mesh.RecalculateBounds();
+            _flatQuad = mesh;
+            return mesh;
+        }
+
+        /// <summary>
+        /// A ring of dust thrown flat outward from a heavy impact: a bodycheck
+        /// between two racers, or a limb slamming into the ground. The ring is what
+        /// separates a collision from a footstep at a glance, the way the clash
+        /// sound does for the ear. <paramref name="strength"/> is 0-1.
+        /// </summary>
+        public static void ImpactRing(Vector3 position, float strength)
+        {
+            if (_impactRing == null)
+            {
+                Material material = SoftParticleMaterial();
+                if (material == null)
+                {
+                    return;
+                }
+                var go = new GameObject("ImpactRing");
+                var ps = go.AddComponent<ParticleSystem>();
+                ParticleSystem.MainModule main = ps.main;
+                main.playOnAwake = false;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.5f);
+                main.gravityModifier = 0f;
+                main.maxParticles = 400;
+                ParticleSystem.EmissionModule emission = ps.emission;
+                emission.rateOverTime = 0f;
+                // Drag stops the ring after a body length instead of letting it sail.
+                ParticleSystem.LimitVelocityOverLifetimeModule drag = ps.limitVelocityOverLifetime;
+                drag.enabled = true;
+                drag.drag = 4f;
+                ParticleSystem.SizeOverLifetimeModule grow = ps.sizeOverLifetime;
+                grow.enabled = true;
+                grow.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 1.6f));
+                ParticleSystem.ColorOverLifetimeModule fade = ps.colorOverLifetime;
+                fade.enabled = true;
+                var gradient = new Gradient();
+                gradient.SetKeys(
+                    new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                    new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+                fade.color = gradient;
+                var ringRenderer = ps.GetComponent<ParticleSystemRenderer>();
+                ringRenderer.material = material;
+                ringRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                ringRenderer.receiveShadows = false;
+                _impactRing = ps;
+            }
+
+            float clamped = Mathf.Clamp01(strength);
+            int count = FxBudget.Scale(10 + Mathf.RoundToInt(clamped * 14f));
+            float speed = Mathf.Lerp(3f, 7f, clamped);
+            Color tone = Color.Lerp(FxBudget.GroundTone, Color.white, 0.45f);
+            var emitParams = new ParticleSystem.EmitParams
+            {
+                applyShapeToPosition = false,
+                startColor = new Color(tone.r, tone.g, tone.b, Mathf.Lerp(0.35f, 0.6f, clamped))
+            };
+            // Evenly spaced round the circle with a little jitter, so it reads as
+            // one ring rather than a random spray.
+            float step = Mathf.PI * 2f / count;
+            float phase = Random.value * step;
+            for (int ringIndex = 0; ringIndex < count; ringIndex++)
+            {
+                float angle = phase + ringIndex * step + Random.Range(-0.15f, 0.15f) * step;
+                var direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                emitParams.position = position + direction * 0.1f;
+                emitParams.velocity = (direction + Vector3.up * 0.12f) * speed * Random.Range(0.85f, 1.1f);
+                emitParams.startSize = Random.Range(0.14f, 0.26f) * Mathf.Lerp(0.8f, 1.4f, clamped);
+                _impactRing.Emit(emitParams, 1);
+            }
         }
 
         private static Material LoadParticleMaterial(string resourcePath)
@@ -137,7 +256,7 @@ namespace PoRacer.Presentation
                 _knockoutPuff = ps;
             }
             _knockoutPuff.transform.position = position;
-            _knockoutPuff.Emit(14);
+            _knockoutPuff.Emit(FxBudget.Scale(14));
         }
 
         /// <summary>
@@ -184,7 +303,7 @@ namespace PoRacer.Presentation
             }
 
             float clamped = Mathf.Clamp01(strength);
-            int count = 3 + Mathf.RoundToInt(clamped * 9f);
+            int count = FxBudget.Scale(3 + Mathf.RoundToInt(clamped * 9f));
             float speed = Mathf.Lerp(1.4f, 4.5f, clamped);
             var emitParams = new ParticleSystem.EmitParams { applyShapeToPosition = false };
             for (int sparkIndex = 0; sparkIndex < count; sparkIndex++)
@@ -252,7 +371,7 @@ namespace PoRacer.Presentation
                 _wipeoutDebris = ps;
             }
             _wipeoutDebris.transform.position = position;
-            _wipeoutDebris.Emit(22);
+            _wipeoutDebris.Emit(FxBudget.Scale(22));
         }
     }
 }

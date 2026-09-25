@@ -110,6 +110,7 @@ namespace PoRacer.Views
         private VisualElement _introCard;
         private Label _introRaceLabel;
         private Label _introTrackLabel;
+        private SkyModel _skyModel;
         private Label _introFieldLabel;
         private float _introCardHideAt;
 
@@ -144,12 +145,14 @@ namespace PoRacer.Views
             RaceModel raceModel,
             EloModel eloModel,
             RaceConfigModel configModel,
-            Systems_Spawn spawn)
+            Systems_Spawn spawn,
+            SkyModel skyModel)
         {
             _raceModel = raceModel;
             _eloModel = eloModel;
             _configModel = configModel;
             _spawn = spawn;
+            _skyModel = skyModel;
         }
 
         private void Start()
@@ -198,6 +201,11 @@ namespace PoRacer.Views
             _bannerLabel.style.top = new Length(40f, LengthUnit.Percent);
             _bannerLabel.style.left = 0;
             _bannerLabel.style.right = 0;
+            // Wraps inside the side gutters: the winner line at title size is wider
+            // than a narrow handset, and unwrapped it ran off both edges.
+            _bannerLabel.style.paddingLeft = UiTheme.SPACE_MD;
+            _bannerLabel.style.paddingRight = UiTheme.SPACE_MD;
+            _bannerLabel.style.whiteSpace = WhiteSpace.Normal;
             _bannerLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             _bannerLabel.style.fontSize = UiTheme.FONT_TITLE;
             _bannerLabel.style.color = UiTheme.Gold;
@@ -210,7 +218,12 @@ namespace PoRacer.Views
             // Podium: shown in the pause between races (top 3 with medal tints).
             _podiumPanel = new VisualElement { pickingMode = PickingMode.Ignore };
             _podiumPanel.style.position = Position.Absolute;
-            _podiumPanel.style.top = new Length(38f, LengthUnit.Percent);
+            // Anchored ABOVE the bottom furniture band and grown upward, not hung
+            // from 38% and grown down: once the Sim Wars table joined it, the panel
+            // ran into the band and the DBG button sat on top of RACE AGAIN. The
+            // space above it is empty sky on every shot, so that is where it grows.
+            _podiumPanel.style.bottom = UiTheme.CONTROL_SM + UiTheme.SPACE_SM * 2f;
+            _podiumPanel.style.maxHeight = new Length(78f, LengthUnit.Percent);
             // 6% side margins, not 12: at a 420 dp reference width a full row
             // ("Mighty Rocket the Isaac H1  18.5s  ELO 1216  +16") needs the room,
             // and the rows below are allowed to wrap rather than overflow the card.
@@ -366,8 +379,11 @@ namespace PoRacer.Views
             // the chips used to start at SPACE_XXL + SPACE_XS = 36, which put them
             // under the button and through the fps readout at the same time.
             _chipRow.style.top = TopFurniture + UiTheme.SPACE_XS;
-            _chipRow.style.left = 0;
-            _chipRow.style.right = 0;
+            // Inset from the edges, and every chip may shrink: three full names do
+            // not fit across a narrow handset, and without this the third chip ran
+            // off the right edge and the first two overlapped.
+            _chipRow.style.left = UiTheme.SPACE_SM;
+            _chipRow.style.right = UiTheme.SPACE_SM;
             _chipRow.style.flexDirection = FlexDirection.Row;
             _chipRow.style.justifyContent = Justify.Center;
             _chipRow.style.display = DisplayStyle.None;
@@ -380,6 +396,9 @@ namespace PoRacer.Views
                 chip.style.alignItems = Align.Center;
                 UiTheme.SetMargin(chip, 0f, UiTheme.SPACE_XS * 0.5f);
                 UiTheme.StyleChip(chip);
+                chip.style.flexShrink = 1f;
+                chip.style.minWidth = 0f;
+                chip.style.overflow = Overflow.Hidden;
                 chip.style.display = DisplayStyle.None;
 
                 var place = new Label((chipIndex + 1).ToString()) { pickingMode = PickingMode.Ignore };
@@ -387,15 +406,23 @@ namespace PoRacer.Views
                 place.style.fontSize = UiTheme.FONT_XS;
                 place.style.unityFontStyleAndWeight = FontStyle.Bold;
                 place.style.marginRight = UiTheme.SPACE_XS;
+                place.style.flexShrink = 0f;
                 chip.Add(place);
 
                 VisualElement swatch = UiTheme.MakeSwatch(UiTheme.TextDim, CHIP_SWATCH_SIZE);
                 swatch.style.marginRight = UiTheme.SPACE_XS;
+                swatch.style.flexShrink = 0f;
                 chip.Add(swatch);
 
                 var name = new Label { pickingMode = PickingMode.Ignore };
                 name.style.color = UiTheme.Text;
                 name.style.fontSize = UiTheme.FONT_XS;
+                // The name is what gives way: ellipsis, never a spill.
+                name.style.flexShrink = 1f;
+                name.style.minWidth = 0f;
+                name.style.whiteSpace = WhiteSpace.NoWrap;
+                name.style.overflow = Overflow.Hidden;
+                name.style.textOverflow = TextOverflow.Ellipsis;
                 chip.Add(name);
 
                 _chips[chipIndex] = chip;
@@ -517,7 +544,8 @@ namespace PoRacer.Views
                 string winnerMetric = winner.Status == RacerStatus.Finished
                     ? $"{winner.FinishTime:0.0}s"
                     : $"{winner.Progress:0.0}m";
-                _bannerLabel.text = $"WINNER  {winner.DisplayName}  {winnerMetric}";
+                // WINNER on its own line, so a long name wraps at a sensible point.
+                _bannerLabel.text = $"WINNER\n{winner.DisplayName}  {winnerMetric}";
                 _bannerLabel.style.fontSize = UiTheme.FONT_TITLE;
                 _bannerLabel.style.display = DisplayStyle.Flex;
                 PopBanner();
@@ -547,7 +575,11 @@ namespace PoRacer.Views
         {
             _introRaceLabel.text = $"RACE {_raceModel.RaceNumber}";
             _introTrackLabel.text = _raceModel.TrackName;
-            _introFieldLabel.text = $"{_raceModel.Racers.Count} RACERS";
+            // The sky is rolled per race, so the card names the one this race got.
+            SkyPreset sky = _skyModel != null ? _skyModel.Current : null;
+            _introFieldLabel.text = sky != null
+                ? $"{_raceModel.Racers.Count} RACERS  ·  {sky.DisplayName.ToUpperInvariant()}"
+                : $"{_raceModel.Racers.Count} RACERS";
             _introCard.style.opacity = 0f;
             _introCard.style.translate = new Translate(-INTRO_SLIDE_PX, 0f);
             _introCard.style.display = DisplayStyle.Flex;

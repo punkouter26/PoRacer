@@ -119,6 +119,21 @@ namespace PoRacer.Models
         }
     }
 
+    /// <summary>
+    /// The ground for the next race exists: generated or authored, colliders in
+    /// place, racers not yet spawned. Kind is the kind actually built, which is
+    /// Flat when a course map had to fall back for want of its scene entry.
+    /// </summary>
+    public readonly struct TrackBuiltMessage
+    {
+        public readonly PoRacer.Systems.TrackKind Kind;
+
+        public TrackBuiltMessage(PoRacer.Systems.TrackKind kind)
+        {
+            Kind = kind;
+        }
+    }
+
     public readonly struct PhotoFinishMessage
     {
         public readonly string WinnerId;

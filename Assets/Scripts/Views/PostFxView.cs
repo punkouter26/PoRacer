@@ -12,10 +12,15 @@ namespace PoRacer.Views
     /// <summary>
     /// Builds the scene look in code at startup: post-processing volume (bloom,
     /// ACES tonemapping, vignette, chromatic aberration, color grade), procedural
-    /// skybox, tri-light ambient, sun + fill light rig, distance fog, and per-map
-    /// ambient particles (fireflies, dust, pollen). No asset files needed.
-    /// Re-grades the whole mood per selected map: Flat = clean day, Lumpy = warm
-    /// dusk, Swamp = murky green. Race start fires an exposure flash pulse.
+    /// skybox, tri-light ambient, sun + fill light rig, distance fog, and ambient
+    /// air particles (fireflies, dust, pollen, drizzle). The mood itself comes
+    /// from the SkyPreset that Systems_Sky puts in the SkyModel: one per race,
+    /// rolled from the presets authored for the track kind. Race start fires an
+    /// exposure flash pulse.
+    ///
+    /// Also applies the quality tier Systems_QualityGovernor decides: render scale,
+    /// anti-aliasing, the costlier post effects, sun shadows, and the particle
+    /// budget every one-shot effect reads from FxBudget.
     ///
     /// Lighting depth comes from three code-generated pieces, none of which needs
     /// a bake or an asset:
@@ -32,7 +37,11 @@ namespace PoRacer.Views
     /// Adaptive Probe Volumes were considered and left off: the track is generated
     /// at runtime, so there is no static geometry to bake probes against, and
     /// switching the probe system over without a bake would lose the trilight
-    /// ambient this relies on.
+    /// ambient this relies on. Reflections come instead from one realtime probe
+    /// authored in the scene and rendered on demand, never per frame: once at each
+    /// race start and once per sky change. It is moved to the camera before each
+    /// render, because the three maps sit hundreds of metres apart and a probe
+    /// left over the Flat grid would show the Apartment racers an outdoor sky.
     /// </summary>
     public sealed class PostFxView : MonoBehaviour
     {
@@ -54,6 +63,23 @@ namespace PoRacer.Views
         private const float COOKIE_SIZE_METERS = 220f;
         private const int COOKIE_RESOLUTION = 256;
         private const float COOKIE_DRIFT_METERS_PER_SECOND = 1.6f;
+        // The air particles hang in a box this far ahead of the camera, so they are
+        // wherever the race is rather than only over the start line - including 50 m
+        // up the Acrobat road.
+        private const float AIR_BOX_AHEAD = 12f;
+        private const float AIR_BOX_START_HEIGHT = 4f;
+        private const float AIR_STREAK_LIFETIME_MIN = 1.1f;
+        private const float AIR_STREAK_LIFETIME_MAX = 1.6f;
+        private const float AIR_MOTE_LIFETIME_MIN = 6f;
+        private const float AIR_MOTE_LIFETIME_MAX = 12f;
+        // Frames between a probe being asked for and rendered: lets the new sky and
+        // the camera's move to the grid both reach the frame it captures.
+        private const int PROBE_RENDER_DELAY_FRAMES = 2;
+
+        // --- Quality tiers, indexed by QualityModel tier ------------------------
+        private static readonly float[] TierRenderScale = { 1f, 0.9f, 0.75f, 0.6f };
+        private static readonly float[] TierDetail = { 1f, 0.75f, 0.5f, 0.3f };
+        private static readonly float[] TierAirRate = { 1f, 0.7f, 0.4f, 0f };
 
         // --- Shot-driven look ---------------------------------------------------
         // A wide pack shot wants everything legible; a chase shot is allowed to be
@@ -78,6 +104,8 @@ namespace PoRacer.Views
         private const float BASE_ABERRATION = 0.08f;
         private const float ABERRATION_DECAY_PER_SECOND = 1.6f;
 
+        [SerializeField] private ReflectionProbe _environmentProbe;
+
         private VolumeProfile _profile;
         private Material _skyboxMaterial;
         private Vignette _vignette;
@@ -85,7 +113,21 @@ namespace PoRacer.Views
         private Light _sun;
         private Light _fillLight;
         private ParticleSystem _ambientFx;
-        private RaceConfigModel _config;
+        private ParticleSystemRenderer _ambientRenderer;
+        private Transform _ambientTransform;
+        private SkyModel _sky;
+        private QualityModel _quality;
+        private Bloom _bloom;
+        private MotionBlur _motionBlur;
+        private UniversalAdditionalCameraData _cameraData;
+        private float _airBaseRate;
+        private bool _dofAllowed = true;
+        private int _probeFramesUntilRender;
+        // Pipeline-asset values as authored. The asset is shared project state, and
+        // in the editor a runtime write outlives play mode; these go back on exit.
+        private float _authoredRenderScale = 1f;
+        private float _authoredShadowDistance;
+        private int _authoredCascadeCount;
         private Systems_CameraDirector _cameraDirector;
         private System.IDisposable _subscription;
         private float _flash;
@@ -109,11 +151,12 @@ namespace PoRacer.Views
         private static readonly int WetnessId = Shader.PropertyToID("_PoRacerWetness");
 
         [Inject]
-        public void Construct(RaceConfigModel config, Systems_CameraDirector cameraDirector,
+        public void Construct(SkyModel sky, QualityModel quality, Systems_CameraDirector cameraDirector,
             ISubscriber<RaceStartedMessage> raceStarted,
             ISubscriber<RacerFinishedMessage> racerFinished)
         {
-            _config = config;
+            _sky = sky;
+            _quality = quality;
             _cameraDirector = cameraDirector;
             _subscription = raceStarted.Subscribe(OnRaceStarted);
             _finishSubscription = racerFinished.Subscribe(OnRacerFinished);
@@ -123,21 +166,33 @@ namespace PoRacer.Views
         {
             _mainCamera = Camera.main;
             _pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            if (_pipeline != null)
+            {
+                _authoredRenderScale = _pipeline.renderScale;
+                _authoredShadowDistance = _pipeline.shadowDistance;
+                _authoredCascadeCount = _pipeline.shadowCascadeCount;
+            }
             SetupCamera();
             SetupVolume();
             SetupEnvironment();
             SetupSun();
             SetupCloudCookie();
             SetupAmbientFx();
+            SetupEnvironmentProbe();
         }
 
         private void Start()
         {
-            if (_config != null)
+            if (_sky != null)
             {
-                _config.Changed += OnConfigChanged;
-                OnConfigChanged();
+                _sky.Changed += OnSkyChanged;
+                OnSkyChanged();
             }
+            if (_quality != null)
+            {
+                _quality.Changed += ApplyQuality;
+            }
+            ApplyQuality();
         }
 
         private void Update()
@@ -146,6 +201,8 @@ namespace PoRacer.Views
             DriftClouds(deltaTime);
             AdaptShadowRange(deltaTime);
             UpdateShotLook(deltaTime);
+            FollowCameraWithAir();
+            RenderProbeWhenDue();
 
             if (_aberrationPulse > 0f)
             {
@@ -179,7 +236,7 @@ namespace PoRacer.Views
         /// track and the grade opens back up. Blending rather than switching keeps
         /// a cut from reading as a glitch.
         ///
-        /// The per-map mood set by ApplyMood stays the baseline; this only ever
+        /// The sky preset set by ApplySky stays the baseline; this only ever
         /// pushes away from it and returns.
         /// </summary>
         private void UpdateShotLook(float deltaTime)
@@ -218,7 +275,8 @@ namespace PoRacer.Views
             float blendedStart = Mathf.Lerp(DOF_DISABLED_START, focusStart, _shotCloseness);
             _depthOfField.gaussianStart.value = blendedStart;
             _depthOfField.gaussianEnd.value = blendedStart + DOF_FALLOFF_METERS;
-            _depthOfField.gaussianMaxRadius.value = DOF_MAX_RADIUS * _shotCloseness;
+            _depthOfField.gaussianMaxRadius.value =
+                _dofAllowed ? DOF_MAX_RADIUS * _shotCloseness : 0f;
         }
 
         /// <summary>
@@ -298,9 +356,19 @@ namespace PoRacer.Views
         {
             _subscription?.Dispose();
             _finishSubscription?.Dispose();
-            if (_config != null)
+            if (_sky != null)
             {
-                _config.Changed -= OnConfigChanged;
+                _sky.Changed -= OnSkyChanged;
+            }
+            if (_quality != null)
+            {
+                _quality.Changed -= ApplyQuality;
+            }
+            if (_pipeline != null)
+            {
+                _pipeline.renderScale = _authoredRenderScale;
+                _pipeline.shadowDistance = _authoredShadowDistance;
+                _pipeline.shadowCascadeCount = _authoredCascadeCount;
             }
             if (_profile != null)
             {
@@ -319,52 +387,90 @@ namespace PoRacer.Views
         private void OnRaceStarted(RaceStartedMessage message)
         {
             _flash = START_FLASH;
+            // The camera is on the grid of the track now being raced.
+            ScheduleProbeRender();
         }
 
-        private void OnConfigChanged()
+        private void OnSkyChanged()
         {
-            ApplyMood(Systems_MapCatalog.Get(_config.SelectedMapIndex).Kind);
+            SkyPreset preset = _sky.Current;
+            if (preset != null)
+            {
+                ApplySky(preset);
+            }
         }
 
-        private void ApplyMood(TrackKind kind)
+        private void ApplySky(SkyPreset preset)
         {
             // Read by SH_TrackGrid. A global rather than a material property: the
             // track builder spawns its ground chunks at race time, so there is no
             // single material instance to write to up front.
-            Shader.SetGlobalFloat(WetnessId, kind == TrackKind.Swamp ? 0.85f : 0f);
+            Shader.SetGlobalFloat(WetnessId, preset.Wetness);
+            FxBudget.GroundTone = preset.GroundTone;
 
-            if (kind == TrackKind.Swamp)
+            SetSun(preset.SunIntensity, preset.SunTemperature,
+                Quaternion.Euler(preset.SunPitch, preset.SunYaw, 0f));
+            SetSky(preset.SkyTint, preset.Atmosphere, preset.SkyExposure);
+            SetFog(preset.FogColor, preset.FogStart, preset.FogEnd);
+            SetAmbient(preset.AmbientSky, preset.AmbientEquator, preset.AmbientGround);
+            SetGrade(preset.GradeFilter, preset.Saturation, preset.Vignette);
+            SetAmbientFx(preset);
+
+            // The ambient probe and the default reflection are derived from the
+            // environment settings just written; without this, lit materials keep
+            // reflecting the sky the scene was saved with.
+            DynamicGI.UpdateEnvironment();
+            ScheduleProbeRender();
+        }
+
+        /// <summary>
+        /// Applies the quality tier. Everything here trades looks for frame time
+        /// and nothing else: no tier touches physics, policies or the race.
+        /// </summary>
+        private void ApplyQuality()
+        {
+            int tier = _quality != null ? _quality.Tier : QualityModel.TIER_HIGH;
+            if (_pipeline != null)
             {
-                SetSun(intensity: 1.05f, temperature: 6800f, rotation: Quaternion.Euler(55f, -20f, 0f));
-                SetSky(new Color(0.42f, 0.52f, 0.45f), 1.4f);
-                SetFog(new Color(0.45f, 0.52f, 0.4f), 25f, 90f);
-                SetAmbient(new Color(0.42f, 0.5f, 0.42f), new Color(0.34f, 0.38f, 0.3f), new Color(0.16f, 0.18f, 0.12f));
-                SetGrade(new Color(0.88f, 1f, 0.86f), saturation: -2f, vignetteIntensity: 0.32f);
-                // Fireflies: slow-rising green motes that wander.
-                SetAmbientFx(new Color(0.75f, 0.95f, 0.4f, 0.5f), rate: 26f,
-                    sizeMin: 0.04f, sizeMax: 0.1f, riseSpeed: 0.25f, windX: 0f, wander: 0.6f);
+                _pipeline.renderScale = _authoredRenderScale * TierRenderScale[tier];
             }
-            else if (kind == TrackKind.Lumpy)
+            if (_cameraData != null)
             {
-                SetSun(intensity: 1.2f, temperature: 4300f, rotation: Quaternion.Euler(24f, -55f, 0f));
-                SetSky(new Color(0.75f, 0.55f, 0.42f), 1.6f);
-                SetFog(new Color(0.78f, 0.62f, 0.5f), 40f, 130f);
-                SetAmbient(new Color(0.66f, 0.52f, 0.42f), new Color(0.5f, 0.42f, 0.38f), new Color(0.26f, 0.2f, 0.17f));
-                SetGrade(new Color(1f, 0.94f, 0.85f), saturation: 14f, vignetteIntensity: 0.26f);
-                // Wind-blown dust streaking across the valley.
-                SetAmbientFx(new Color(0.85f, 0.7f, 0.5f, 0.28f), rate: 18f,
-                    sizeMin: 0.15f, sizeMax: 0.5f, riseSpeed: 0.05f, windX: 3f, wander: 0.2f);
+                // SMAA reads thin legs and the lane grid best; FXAA is a fraction of
+                // its cost and is what a struggling phone can still afford.
+                _cameraData.antialiasing = tier >= QualityModel.TIER_LOW
+                    ? AntialiasingMode.FastApproximateAntialiasing
+                    : AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+                _cameraData.antialiasingQuality = tier == QualityModel.TIER_HIGH
+                    ? AntialiasingQuality.High
+                    : AntialiasingQuality.Medium;
             }
-            else
+            _dofAllowed = tier == QualityModel.TIER_HIGH;
+            if (_motionBlur != null)
             {
-                SetSun(intensity: 1.35f, temperature: 5600f, rotation: Quaternion.Euler(42f, -35f, 0f));
-                SetSky(new Color(0.45f, 0.65f, 0.95f), 0.9f);
-                SetFog(new Color(0.62f, 0.7f, 0.82f), 45f, 140f);
-                SetAmbient(new Color(0.55f, 0.62f, 0.75f), new Color(0.42f, 0.42f, 0.45f), new Color(0.22f, 0.2f, 0.19f));
-                SetGrade(Color.white, saturation: 10f, vignetteIntensity: 0.22f);
-                // Sparse drifting pollen catches the sunlight.
-                SetAmbientFx(new Color(1f, 1f, 0.9f, 0.3f), rate: 10f,
-                    sizeMin: 0.03f, sizeMax: 0.08f, riseSpeed: -0.1f, windX: 0.6f, wander: 0.3f);
+                _motionBlur.active = tier == QualityModel.TIER_HIGH;
+            }
+            if (_bloom != null)
+            {
+                _bloom.active = tier < QualityModel.TIER_MINIMUM;
+            }
+            if (_sun != null)
+            {
+                _sun.shadows = tier >= QualityModel.TIER_MINIMUM ? LightShadows.None
+                    : tier >= QualityModel.TIER_LOW ? LightShadows.Hard
+                    : LightShadows.Soft;
+            }
+
+            FxBudget.Detail = TierDetail[tier];
+            // A blob wherever the shadow map cannot ground a creature on its own:
+            // the phone asset's hard, low-resolution shadows, or the low tiers.
+            bool softShadowsAvailable = _pipeline != null && _pipeline.supportsSoftShadows;
+            FxBudget.ContactShadows = !softShadowsAvailable || tier >= QualityModel.TIER_LOW;
+
+            if (_ambientFx != null)
+            {
+                ParticleSystem.EmissionModule emission = _ambientFx.emission;
+                emission.rateOverTime = _airBaseRate * TierAirRate[tier];
             }
         }
 
@@ -388,7 +494,7 @@ namespace PoRacer.Views
             }
         }
 
-        private void SetSky(Color tint, float atmosphere)
+        private void SetSky(Color tint, float atmosphere, float exposure)
         {
             if (_skyboxMaterial == null)
             {
@@ -396,6 +502,7 @@ namespace PoRacer.Views
             }
             _skyboxMaterial.SetColor("_SkyTint", tint);
             _skyboxMaterial.SetFloat("_AtmosphereThickness", atmosphere);
+            _skyboxMaterial.SetFloat("_Exposure", exposure);
         }
 
         private static void SetFog(Color color, float start, float end)
@@ -426,52 +533,122 @@ namespace PoRacer.Views
             _mapContrast = WIDE_CONTRAST;
         }
 
-        private void SetAmbientFx(Color color, float rate, float sizeMin, float sizeMax,
-            float riseSpeed, float windX, float wander)
+        private void SetAmbientFx(SkyPreset preset)
         {
             if (_ambientFx == null)
             {
                 return;
             }
             ParticleSystem.MainModule main = _ambientFx.main;
-            main.startColor = color;
-            main.startSize = new ParticleSystem.MinMaxCurve(sizeMin, sizeMax);
+            main.startColor = preset.AirColor;
+            main.startSize = new ParticleSystem.MinMaxCurve(preset.AirSizeMin, preset.AirSizeMax);
+            main.startLifetime = preset.AirStreaks
+                ? new ParticleSystem.MinMaxCurve(AIR_STREAK_LIFETIME_MIN, AIR_STREAK_LIFETIME_MAX)
+                : new ParticleSystem.MinMaxCurve(AIR_MOTE_LIFETIME_MIN, AIR_MOTE_LIFETIME_MAX);
+            _airBaseRate = preset.AirRate;
+            int tier = _quality != null ? _quality.Tier : QualityModel.TIER_HIGH;
             ParticleSystem.EmissionModule emission = _ambientFx.emission;
-            emission.rateOverTime = rate;
+            emission.rateOverTime = _airBaseRate * TierAirRate[tier];
             ParticleSystem.VelocityOverLifetimeModule velocity = _ambientFx.velocityOverLifetime;
             velocity.enabled = true;
             // All three axes must use the same curve mode (TwoConstants here).
-            velocity.x = new ParticleSystem.MinMaxCurve(windX * 0.5f, windX);
-            velocity.y = new ParticleSystem.MinMaxCurve(riseSpeed * 0.5f, riseSpeed);
+            velocity.x = new ParticleSystem.MinMaxCurve(preset.AirWindX * 0.5f, preset.AirWindX);
+            velocity.y = new ParticleSystem.MinMaxCurve(preset.AirRise * 0.5f, preset.AirRise);
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             ParticleSystem.NoiseModule noise = _ambientFx.noise;
-            noise.enabled = wander > 0f;
-            noise.strength = wander;
+            noise.enabled = preset.AirWander > 0f;
+            noise.strength = preset.AirWander;
             noise.frequency = 0.2f;
+            if (_ambientRenderer != null)
+            {
+                // Drizzle is streaks stretched along their fall; everything else is
+                // a soft round mote.
+                _ambientRenderer.renderMode = preset.AirStreaks
+                    ? ParticleSystemRenderMode.Stretch
+                    : ParticleSystemRenderMode.Billboard;
+                _ambientRenderer.velocityScale = 0.05f;
+                _ambientRenderer.lengthScale = 1f;
+            }
             _ambientFx.Clear();
         }
 
-        private static void SetupCamera()
+        /// <summary>
+        /// Keeps the air particle box over the part of the track being watched. The
+        /// particles simulate in world space, so moving the box moves where new
+        /// ones appear without dragging the ones already in the air.
+        /// </summary>
+        private void FollowCameraWithAir()
         {
-            Camera mainCamera = Camera.main;
-            if (mainCamera == null)
+            if (_ambientTransform == null || _mainCamera == null)
             {
                 return;
             }
-            UniversalAdditionalCameraData cameraData = mainCamera.GetUniversalAdditionalCameraData();
-            cameraData.renderPostProcessing = true;
-            cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-            cameraData.antialiasingQuality = AntialiasingQuality.High;
+            Transform cameraTransform = _mainCamera.transform;
+            // Along the view ray rather than level with the camera: the cameras look
+            // down at the racers, so this lands the box between lens and subject.
+            _ambientTransform.position =
+                cameraTransform.position + cameraTransform.forward * AIR_BOX_AHEAD;
+        }
+
+        private void ScheduleProbeRender()
+        {
+            _probeFramesUntilRender = PROBE_RENDER_DELAY_FRAMES;
+        }
+
+        private void RenderProbeWhenDue()
+        {
+            if (_probeFramesUntilRender <= 0)
+            {
+                return;
+            }
+            _probeFramesUntilRender--;
+            if (_probeFramesUntilRender == 0 && _environmentProbe != null)
+            {
+                if (_mainCamera != null)
+                {
+                    _environmentProbe.transform.position = _mainCamera.transform.position;
+                }
+                _environmentProbe.RenderProbe();
+            }
+        }
+
+        /// <summary>
+        /// The probe is authored in the scene for its placement and box; the modes
+        /// it must run in are enforced here, because a probe left on "every frame"
+        /// re-renders the whole scene six times per frame.
+        /// </summary>
+        private void SetupEnvironmentProbe()
+        {
+            if (_environmentProbe == null)
+            {
+                return;
+            }
+            _environmentProbe.mode = ReflectionProbeMode.Realtime;
+            _environmentProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
+            _environmentProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.NoTimeSlicing;
+        }
+
+        private void SetupCamera()
+        {
+            if (_mainCamera == null)
+            {
+                return;
+            }
+            _cameraData = _mainCamera.GetUniversalAdditionalCameraData();
+            _cameraData.renderPostProcessing = true;
+            // The tier refines this in ApplyQuality; this is the full-quality start.
+            _cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            _cameraData.antialiasingQuality = AntialiasingQuality.High;
         }
 
         private void SetupVolume()
         {
             _profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
-            Bloom bloom = _profile.Add<Bloom>(true);
-            bloom.threshold.value = 0.85f;
-            bloom.intensity.value = 0.75f;
-            bloom.scatter.value = 0.65f;
+            _bloom = _profile.Add<Bloom>(true);
+            _bloom.threshold.value = 0.85f;
+            _bloom.intensity.value = 0.75f;
+            _bloom.scatter.value = 0.65f;
 
             Tonemapping tonemapping = _profile.Add<Tonemapping>(true);
             tonemapping.mode.value = TonemappingMode.ACES;
@@ -492,8 +669,8 @@ namespace PoRacer.Views
             // Starts at zero radius: the opening shot is wide, so no blur at all.
             _depthOfField.gaussianMaxRadius.value = 0f;
 
-            MotionBlur motionBlur = _profile.Add<MotionBlur>(true);
-            motionBlur.intensity.value = 0.22f;
+            _motionBlur = _profile.Add<MotionBlur>(true);
+            _motionBlur.intensity.value = 0.22f;
 
             _colorAdjustments = _profile.Add<ColorAdjustments>(true);
             _colorAdjustments.postExposure.value = BASE_EXPOSURE;
@@ -665,8 +842,8 @@ namespace PoRacer.Views
             }
             var go = new GameObject("AmbientFx");
             go.transform.SetParent(transform, false);
-            // Hangs over the whole track area regardless of camera motion.
-            go.transform.position = new Vector3(0f, 4f, 10f);
+            // Starts over the grid; FollowCameraWithAir keeps it with the race.
+            go.transform.position = new Vector3(0f, AIR_BOX_START_HEIGHT, 10f);
             var ps = go.AddComponent<ParticleSystem>();
 
             ParticleSystem.MainModule main = ps.main;
@@ -702,6 +879,8 @@ namespace PoRacer.Views
             ambientRenderer.shadowCastingMode = ShadowCastingMode.Off;
             ambientRenderer.receiveShadows = false;
             _ambientFx = ps;
+            _ambientRenderer = ambientRenderer;
+            _ambientTransform = go.transform;
         }
     }
 }

@@ -14,7 +14,8 @@
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "Mujoco.Runtime",
-        "Creature"
+        "Creature",
+        "Lofelt.NiceVibrations"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

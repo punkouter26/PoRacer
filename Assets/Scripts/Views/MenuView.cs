@@ -46,6 +46,9 @@ namespace PoRacer.Views
         private RaceConfigModel _config;
         private EloModel _eloModel;
         private Systems_Spawn _spawn;
+        private HapticsModel _haptics;
+        private Systems_Haptics _hapticsSystem;
+        private Button _hapticsButton;
         private VisualElement _root;
         private VisualElement _content;
         private Label _totalLabel;
@@ -68,12 +71,15 @@ namespace PoRacer.Views
         private bool _playEntrance = true;
 
         [Inject]
-        public void Construct(CreatureCatalog catalog, RaceConfigModel config, EloModel eloModel, Systems_Spawn spawn)
+        public void Construct(CreatureCatalog catalog, RaceConfigModel config, EloModel eloModel, Systems_Spawn spawn,
+            HapticsModel haptics, Systems_Haptics hapticsSystem)
         {
             _catalog = catalog;
             _config = config;
             _eloModel = eloModel;
             _spawn = spawn;
+            _haptics = haptics;
+            _hapticsSystem = hapticsSystem;
         }
 
         private void Start()
@@ -81,6 +87,7 @@ namespace PoRacer.Views
             _root = GetComponent<UIDocument>().rootVisualElement;
             BuildMenu();
             _config.Changed += OnConfigChanged;
+            _haptics.Changed += RefreshHapticsButton;
             OnConfigChanged();
         }
 
@@ -89,6 +96,10 @@ namespace PoRacer.Views
             if (_config != null)
             {
                 _config.Changed -= OnConfigChanged;
+            }
+            if (_haptics != null)
+            {
+                _haptics.Changed -= RefreshHapticsButton;
             }
         }
 
@@ -260,11 +271,26 @@ namespace PoRacer.Views
             title.style.flexShrink = 0f;
             titleRow.Add(title);
 
-            // Nothing else sits on this line. Top-centre is a reserved anchor - the
-            // FPS readout owns it on every screen - and the brain-source toggle
-            // that used to sit top-right was removed: it only reached the six
-            // ML-Agents creatures, because the other four run their own inference
-            // and carry no BehaviorParameters for it to switch.
+            // Top-centre is a reserved anchor - the FPS readout owns it on every
+            // screen. Top-right carries the vibration toggle, on the platforms that
+            // can vibrate. It is positioned absolutely and centred on the title, so
+            // its 48 dp touch height does not make the row, and with it the whole
+            // menu, any taller.
+            if (Application.platform == RuntimePlatform.Android || Application.isEditor)
+            {
+                _hapticsButton = new Button(_hapticsSystem.Toggle);
+                _hapticsButton.style.position = Position.Absolute;
+                _hapticsButton.style.right = 0f;
+                _hapticsButton.style.top = new Length(50f, LengthUnit.Percent);
+                _hapticsButton.style.translate = new Translate(0f, new Length(-50f, LengthUnit.Percent));
+                _hapticsButton.style.height = UiTheme.CONTROL_SM;
+                _hapticsButton.style.minWidth = UiTheme.CONTROL_SM;
+                _hapticsButton.style.fontSize = UiTheme.FONT_XS;
+                UiTheme.StyleButton(_hapticsButton);
+                UiTheme.AddHover(_hapticsButton);
+                titleRow.Add(_hapticsButton);
+                RefreshHapticsButton();
+            }
             // Accent underline gives the title a logo feel.
             var titleBar = new VisualElement { pickingMode = PickingMode.Ignore };
             titleBar.style.height = 3;
@@ -272,6 +298,18 @@ namespace PoRacer.Views
             titleBar.style.backgroundColor = UiTheme.Accent;
             UiTheme.SetRadius(titleBar, 2f);
             header.Add(titleBar);
+        }
+
+        private void RefreshHapticsButton()
+        {
+            if (_hapticsButton == null)
+            {
+                return;
+            }
+            // Short on purpose: the button's left edge must stay clear of the FPS
+            // readout centred on the same band, down to a 360 dp handset.
+            _hapticsButton.text = _haptics.Enabled ? "BUZZ ON" : "BUZZ OFF";
+            _hapticsButton.style.color = _haptics.Enabled ? UiTheme.Text : UiTheme.TextDim;
         }
 
         /// <summary>
@@ -390,7 +428,15 @@ namespace PoRacer.Views
             _content.Add(row);
 
             Label rosterLabel = UiTheme.MakeSectionHeader("PICK YOUR RACERS");
+            // Shrink into an ellipsis rather than run under the map button: on a
+            // narrow handset the two do not both fit, and flexShrink alone does
+            // nothing in UI Toolkit while minWidth is left at its content size.
             rosterLabel.style.flexShrink = 1f;
+            rosterLabel.style.minWidth = 0f;
+            rosterLabel.style.marginRight = UiTheme.SPACE_SM;
+            rosterLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            rosterLabel.style.overflow = Overflow.Hidden;
+            rosterLabel.style.textOverflow = TextOverflow.Ellipsis;
             row.Add(rosterLabel);
 
             Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
@@ -658,13 +704,19 @@ namespace PoRacer.Views
             _ratingCreatureIds.Add(entry.id);
             _rowElements.Add(card);
 
+            int[] options = RaceConfigModel.COUNT_OPTIONS;
             var segments = new VisualElement();
             UiTheme.StyleSegmentGroup(segments);
             segments.style.width = Length.Percent(56f);
+            // 56% only holds four 48 dp cells at the reference width. CONTROL_SM
+            // grows on narrower handsets to keep the touch target, and without this
+            // floor the last cell ("100") was pushed clean off the right edge -
+            // measured on the simulator device. The name column gives way instead;
+            // it already ellipsizes.
+            segments.style.minWidth = options.Length * (UiTheme.CONTROL_SM + 2f);
             segments.style.flexShrink = 0f;
             card.Add(segments);
 
-            int[] options = RaceConfigModel.COUNT_OPTIONS;
             var countButtons = new Button[options.Length];
             for (int optionIndex = 0; optionIndex < options.Length; optionIndex++)
             {

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0384146f56bc17c4495c0ba8ee846175, type: 3}
+  m_Name: SKY_Daylight
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Models.SkyPreset
+  <DisplayName>k__BackingField: Daylight
+  <Kinds>k__BackingField: 09000000i
+  <SunIntensity>k__BackingField: 1.35
+  <SunTemperature>k__BackingField: 5600
+  <SunPitch>k__BackingField: 42
+  <SunYaw>k__BackingField: -35
+  <SkyTint>k__BackingField: {r: 0.45, g: 0.65, b: 0.95, a: 1}
+  <Atmosphere>k__BackingField: 0.9
+  <SkyExposure>k__BackingField: 1.25
+  <FogColor>k__BackingField: {r: 0.62, g: 0.7, b: 0.82, a: 1}
+  <FogStart>k__BackingField: 45
+  <FogEnd>k__BackingField: 140
+  <AmbientSky>k__BackingField: {r: 0.55, g: 0.62, b: 0.75, a: 1}
+  <AmbientEquator>k__BackingField: {r: 0.42, g: 0.42, b: 0.45, a: 1}
+  <AmbientGround>k__BackingField: {r: 0.22, g: 0.2, b: 0.19, a: 1}
+  <GradeFilter>k__BackingField: {r: 1, g: 1, b: 1, a: 1}
+  <Saturation>k__BackingField: 10
+  <Vignette>k__BackingField: 0.22
+  <Wetness>k__BackingField: 0
+  <AirColor>k__BackingField: {r: 1, g: 1, b: 0.9, a: 0.3}
+  <AirRate>k__BackingField: 10
+  <AirSizeMin>k__BackingField: 0.03
+  <AirSizeMax>k__BackingField: 0.08
+  <AirRise>k__BackingField: -0.1
+  <AirWindX>k__BackingField: 0.6
+  <AirWander>k__BackingField: 0.3
+  <AirStreaks>k__BackingField: 0
+  <GroundTone>k__BackingField: {r: 0.62, g: 0.55, b: 0.45, a: 1}

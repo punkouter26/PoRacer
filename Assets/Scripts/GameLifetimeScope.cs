@@ -12,11 +12,13 @@ namespace PoRacer
     {
         [SerializeField] private CreatureCatalog _catalog;
         [SerializeField] private FruitCatalog _fruitCatalog;
+        [SerializeField] private SkyCatalog _skyCatalog;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(_catalog);
             builder.RegisterInstance(_fruitCatalog);
+            builder.RegisterInstance(_skyCatalog);
 
             builder.Register<RaceModel>(Lifetime.Singleton);
             builder.Register<EloModel>(Lifetime.Singleton);
@@ -24,6 +26,9 @@ namespace PoRacer
             builder.Register<AudioMixModel>(Lifetime.Singleton);
             builder.Register<RaceTelemetryModel>(Lifetime.Singleton);
             builder.Register<SimWarsModel>(Lifetime.Singleton);
+            builder.Register<QualityModel>(Lifetime.Singleton);
+            builder.Register<SkyModel>(Lifetime.Singleton);
+            builder.Register<HapticsModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
             // Entry point so it starts warming the moment the menu appears, which is the
@@ -46,6 +51,12 @@ namespace PoRacer
             builder.RegisterEntryPoint<Systems_RacerTelemetry>().AsSelf();
             // Entry point: its Tick watches for the final stretch to re-aim the shot.
             builder.RegisterEntryPoint<Systems_CameraDirector>().AsSelf();
+            // Entry point: its Tick measures race frames to pick the quality tier.
+            builder.RegisterEntryPoint<Systems_QualityGovernor>();
+            // Entry point: its Start shows the selected map's sky behind the menu.
+            builder.RegisterEntryPoint<Systems_Sky>();
+            // Entry point: its Start loads the vibration setting. AsSelf for the menu toggle.
+            builder.RegisterEntryPoint<Systems_Haptics>().AsSelf();
             builder.Register(container =>
             {
                 var track = container.Resolve<Views.RaceTrackView>();
@@ -65,6 +76,7 @@ namespace PoRacer
             builder.RegisterComponentInHierarchy<TelemetryCardView>();
             builder.RegisterComponentInHierarchy<ShotCaptionView>();
             builder.RegisterComponentInHierarchy<SimWarsView>();
+            builder.RegisterComponentInHierarchy<HapticsView>();
 
             MessagePipeOptions options = builder.RegisterMessagePipe();
             builder.RegisterMessageBroker<RaceStartedMessage>(options);
@@ -80,6 +92,7 @@ namespace PoRacer
             builder.RegisterMessageBroker<RacerOvertakeMessage>(options);
             builder.RegisterMessageBroker<PhotoFinishMessage>(options);
             builder.RegisterMessageBroker<CameraShotChangedMessage>(options);
+            builder.RegisterMessageBroker<TrackBuiltMessage>(options);
 
             // Systems_Elo has no tick/start interface; force eager construction so
             // its RaceFinishedMessage subscription exists before the first race ends.
