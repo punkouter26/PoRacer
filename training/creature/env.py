@@ -73,6 +73,7 @@ class CreatureConfig:
     mass_range: tuple[float, float] = (0.9, 1.1)
     kp_range: tuple[float, float] = (0.8, 1.2)
     randomized_bodies: Sequence[str] | None = None   # None = every body of the creature
+    friction_randomized_geoms: Sequence[str] | None = None   # None = every geom incl. the floor
     push_speed: float = 0.0                # m/s, 0 disables pushes
     push_interval: tuple[float, float] = (10.0, 15.0)   # s of episode time
     floor_geom: str = "floor"
@@ -184,6 +185,9 @@ class CreatureEnv:
                   else [b for b in range(1, self.mjm.nbody) if self.mjm.body_rootid[b] == root])
         self.randomized_bodies = torch.tensor(bodies, device=self.device)
         self.floor_geom = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_GEOM, cfg.floor_geom)
+        names = cfg.friction_randomized_geoms
+        self.friction_geoms = (torch.tensor([self.geom_id(g) for g in names], device=self.device)
+                               if names is not None else None)
         from .contacts import FloorContactTracker
         self.contact_tracker = None
         if cfg.tracked_contact_geoms:
@@ -476,7 +480,10 @@ class CreatureEnv:
         g, dev, cfg = self.generator, self.device, self.cfg
         f = uniform(g, (n,), *cfg.friction_range, dev)
         friction = self.nominal_friction[index].clone()
-        friction[:, :, 0] *= f.unsqueeze(1)                 # sliding coefficient, every geom
+        if self.friction_geoms is None:
+            friction[:, :, 0] *= f.unsqueeze(1)             # sliding coefficient, every geom
+        else:
+            friction[:, self.friction_geoms, 0] *= f.unsqueeze(1)   # only the listed geoms
         self.friction[index] = friction
 
         bodies = self.randomized_bodies

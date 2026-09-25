@@ -96,6 +96,30 @@ stand height 0.8999 → 0.8995 → 0.8992 m. At 0.03 s the reference gait's shar
 stances ≥ 0.15 s rises from 65 % to 75 % (debounced; raw contact 22 % → 70 %). With rigid 0.01 s feet the ≤ 4 body-weight target is
 below what even a 2 cm drop produces.
 
+## Round 9: soft feet, stronger reference, new stop rule (MuJoCo side)
+
+- **Body: soft ground.** The **floor** geom gets solref (0.03, 1) (a paw-pad-like contact, 3× the
+  rigid 0.01) and **priority 1**, so every floor contact uses the floor's solref, solimp and
+  friction. All body geoms stay at solref 0.01 / priority 0, so leg-on-leg contacts stay rigid.
+  `quad_rig.json` has a top-level `floor` block (solref, solimp, priority, friction) because Unity
+  builds its own floor, and lists solref, solimp, solmix, priority and margin for every geom.
+  Checks (CPU MuJoCo): 2 cm spawn drop peaks at **1.334 body weights** on one foot (4.3 with the
+  rigid floor), stand height 0.8992 m (0.66 mm lower; steady foot sink 0.83 mm, 7 mm for a moment
+  after the drop), leg-on-leg overlap under random actions 19 mm (rigid, as before).
+  Rejected on the way: soft feet (lower legs at priority 1; soft against each other too, legs
+  overlapped 40–65 mm) and explicit floor/foot `<pair>`s (do not pass through USD or the Unity
+  builder, and the randomised friction would not reach the feet).
+- **Randomisation change:** because the floor supplies the friction of every floor contact, the
+  per-episode friction factor U(0.85, 1.15) now scales **the floor geom's** friction only
+  (0.9 × U); body geoms stay at 0.9.
+- **Reward:** contact phase **2.0** per second (was 0.5); gait reference σ **0.2 rad** (was 0.3).
+  Everything else as round 8.
+- **Stop rule for the 30-minute run** (all must hold, 10 × 20 s deterministic evaluation):
+  speed ≥ 1.0 m/s (4-minute smoke), falls ≤ 5 %, flight (debounced, all feet up) ≤ 40 %, foot slip
+  in stance ≤ 0.3 m/s, peak foot impact ≤ ~4 body weights (after the first 0.5 s), 50-Hz-equivalent
+  action rate ≤ 0.1, and — replacing "stance per footfall ≥ 0.15 s", which counts toe scuffs —
+  **debounced duty factor ≥ 0.35 and time-weighted stance (Σd² ÷ Σd over debounced stances) ≥ 0.15 s**.
+
 ## Episodes
 
 20 s = 400 policy steps at 20 Hz. **Stage 1 (this pilot): a fall ends the episode as terminal**. A fall is **the torso or any upper leg touching the floor** (round 5: catches kneeling and sitting; round 4 knelt on its front thighs at 0.55 m, which the old rule missed), or torso
@@ -104,7 +128,8 @@ health guard (worm item 12) applies. The get-up stage comes later (plan step 5).
 
 Reset: the rest pose at 0.90 m + 2 cm, yaw uniform ±45°, joint noise ±0.05 rad, zero
 velocity. Randomised per reset: friction ×U(0.85, 1.15), body masses ×U(0.9, 1.1),
-kp ×U(0.8, 1.2), plus a 0.5 m/s push in a random horizontal direction every 10–15 s.
+kp ×U(0.8, 1.2), plus a 0.5 m/s push in a random horizontal direction every 10–15 s. From round 9 the friction factor
+applies to the floor only (it has contact priority; body geoms stay 0.9).
 
 ## PPO and budget
 

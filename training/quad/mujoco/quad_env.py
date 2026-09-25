@@ -31,7 +31,8 @@ read as "torso"; the torso is the root body `Quad_v01`, its origin is its CoM):
       has no fall penalty). If a world falls on its timeout step it counts as a fall.
   Q8  Reset: torso at (0, 0, 0.92), yaw U(+-45 deg) about the torso, each joint U(+-0.05)
       rad, zero velocity. Randomised at every reset: friction x U(0.85, 1.15), one factor
-      per world on every geom incl. the floor; mass x U(0.9, 1.1) independently for ALL 9
+      per world, on the FLOOR geom only from round 9 (the floor has priority 1 and supplies
+      the friction of every floor contact; body geoms stay 0.9; rounds 1-8: every geom); mass x U(0.9, 1.1) independently for ALL 9
       bodies (torso, 4 upper, 4 lower) with inertia scaled alike; kp x U(0.8, 1.2) per
       actuator (force limit, damping unchanged).
   Q9  Pushes (training only): per world, a timer U(10, 15) s drawn at reset and after each
@@ -134,7 +135,7 @@ REFERENCE_GAIT = {
     "foot_hips": _HIP_IDX,                                  # lowerLegs order RL, FL, RR, FR
     "stance_signal": "neg_cos",
 }
-GAIT_REF_SIGMA = 0.3     # rad
+GAIT_REF_SIGMA = 0.2     # rad (round 8: 0.3; round 9: 0.2)
 
 # Observation scales.
 SCALE_LIN_VEL = 0.5
@@ -157,7 +158,7 @@ REWARD_WEIGHTS = {
     "vertical_bounce": -2.0, # (torso world v_z)^2, round 3: stops the bounding gait
     "flight": -1.0,          # round 7: fraction of the step's substeps with all feet up (debounced)
     "gait_ref": 2.0,         # round 8: exp(-mean_i (q_i - q_ref_i)^2 / 0.3^2)
-    "contact_phase": 0.5,    # round 8: share of feet whose debounced contact matches the reference
+    "contact_phase": 2.0,    # share of feet whose debounced contact matches the reference (round 8: 0.5; round 9: 2.0)
     "feet_air_time": 0.5,    # PER FOOTFALL: sum of (min(t_air, 0.5) - 0.25) at debounced
                              # touchdowns, only while v_x > 0.3 (round 5; round 4: 1.0, uncapped)
 }
@@ -191,6 +192,7 @@ def quad_config() -> CreatureConfig:
         episode_seconds=float(RIG["task"]["episodeSeconds"]),             # 20 s = 400 steps
         reset_yaw=math.radians(45.0), reset_joint_noise=0.05,
         friction_range=(0.85, 1.15), mass_range=(0.9, 1.1), kp_range=(0.8, 1.2),
+        friction_randomized_geoms=("floor",),   # round 9: the floor (priority 1) supplies the friction
         randomized_bodies=None, push_speed=PUSH_SPEED, push_interval=PUSH_INTERVAL,
         nconmax=NCONMAX, njmax=NJMAX, divergence_qvel=500.0, speed_term="speed_x",
         tracked_contact_geoms=FOOT_GEOMS, air_time_target=AIR_TIME_TARGET,

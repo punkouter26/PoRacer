@@ -7,6 +7,7 @@
  "changesFromSource": [
   "actuator forcerange +-300 N*m (source 900)",
   "actuator kp 1500 N*m/rad (source 4500) and joint damping 100 N*m*s/rad (source 300): scaled by 1/3 with the force limit (QUAD_SPEC)",
+  "soft ground (round 9): floor geom solref 0.03 1 (source 0.01 1) and priority 1, so the floor's solref/solimp/friction are used in every floor contact; body geoms unchanged (0.01 1, priority 0)",
   "friction 0.9 on every geom incl. floor (source 0.6)",
   "solver Newton, iterations 10, ls_iterations 8 written explicitly (as worm.xml)",
   "keyframe 'spawn' at 0.92 m (rest + 2 cm)",
@@ -40,6 +41,7 @@
   "tolerance": 1e-08,
   "frictionCombine": "max (MuJoCo); every geom and the floor are 0.9, so the combine rule does not matter",
   "restitution": 0.0,
+  "contactParameterRule": "MuJoCo: if two geoms' priorities differ, the higher-priority geom's solref/solimp/friction are used; if equal, solref/solimp are averaged (solmix weights) and friction is the max. The floor has priority 1 and solref 0.03 1; every body geom priority 0 and solref 0.01 1. So every floor contact uses the floor's 0.03 1 / solimp / friction, and every body-body contact uses 0.01 1.",
   "selfCollision": "all body pairs collide except parent-child (MuJoCo filterparent default); no <exclude> pairs"
  },
  "totalMass": 90.0,
@@ -125,6 +127,30 @@
   "obsSize": 36,
   "actionSize": 8
  },
+ "floor": {
+  "geom": "floor",
+  "solref": [
+   0.03,
+   1.0
+  ],
+  "solimp": [
+   0.9,
+   0.95,
+   0.001,
+   0.5,
+   2.0
+  ],
+  "priority": 1,
+  "friction": [
+   0.9,
+   0.005,
+   0.0001
+  ],
+  "restitution": 0.0,
+  "note": "Unity builds its own floor: give it these contact parameters. Training randomises the floor's sliding friction per episode (0.9 x U(0.85, 1.15)); body geoms stay at 0.9."
+ },
+ "contactPairs": [],
+ "contactExcludes": [],
  "bodies": [
   {
    "name": "Quad_v01",
@@ -616,7 +642,7 @@
    "contype": 1,
    "conaffinity": 1,
    "solref": [
-    0.01,
+    0.03,
     1.0
    ],
    "solimp": [
@@ -626,6 +652,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 1,
+   "margin": 0.0,
    "unity": {
     "center": [
      0.0,
@@ -673,6 +702,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "unity": {
     "center": [
      0.0,
@@ -725,6 +757,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -786,6 +821,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -847,6 +885,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -908,6 +949,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -969,6 +1013,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -1030,6 +1077,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -1091,6 +1141,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,
@@ -1152,6 +1205,9 @@
     0.5,
     2.0
    ],
+   "solmix": 1.0,
+   "priority": 0,
+   "margin": 0.0,
    "fromto": [
     0.0,
     0.0,

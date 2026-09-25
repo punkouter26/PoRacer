@@ -66,12 +66,25 @@ landings are hard, and stances are short. The history of every round is in
 The last reports from the two agents say how far the regeneration got. Check `git status` for
 uncommitted files under `training/quad`, `training/creature` and `ISAAC/quad_tasks_v3`.
 
-- [ ] Check `training/quad/quad.xml` and `quad_rig.json` have the soft **floor**, and that the
-      body geoms are back to solref 0.01 / priority 0. Run
-      `.venv-mjwarp\Scripts\python.exe training\quad\check_quad.py`. Expect:
-      - stand at about 0.90 m;
-      - a 2 cm drop peaking at about 1.3 body weights;
-      - leg-leg overlap back to about 1–2 cm.
+- [x] Soft-floor body built and checked (MuJoCo side, 2026-09-24):
+      - spawn drop 1.334 body weights;
+      - stand 0.8992 m;
+      - leg-leg overlap 19 mm (rigid again);
+      - friction randomised on the floor only;
+      - QUAD_SPEC round 9 written.
+
+      `check_quad.py` still prints FAIL, but only from its own 1 cm random-action threshold,
+      which rigid legs have exceeded (14–23 mm) since round 3.
+- [ ] **Resolve the reference/target conflict first.** The open-loop reference trot can't
+      reach the 1.49 m/s target with a realistic stance: the best variant manages 0.39 m/s
+      at duty 0.41. So the policy ignores it, runs about 4× faster, and slides (contact
+      phase near chance, 0.57). Options:
+      1. scale the reference's stride and frequency with the commanded speed;
+      2. lower the target speed, for example Froude 0.1 ≈ 0.94 m/s;
+      3. drop the reference once a gait forms.
+
+      The soft-floor round-9 smoke trained to 1.50 m/s with 0 % falls but was **not
+      evaluated** (paused). Rerun it before deciding.
 - [x] Isaac side: done 2026-09-24. Re-converted the soft-floor quad.xml (21:31:03); 79/79
       checks pass:
       - every foot–floor contact uses the floor's 0.03 and per-world friction 0.9·s
