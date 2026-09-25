@@ -4,9 +4,9 @@ using UnityEngine;
 namespace PoRacer.Systems
 {
     /// <summary>
-    /// Optional hazards layered on top of a TrackKind. Swamp's built-in mud and
-    /// gates stay implicit; these flags add extras to any kind (Gale map,
-    /// Roulette rolls).
+    /// Hazard flags an authored track entry is matched on. No map sets any today and
+    /// the builder no longer makes hazards; the values stay because SCN_RACE_FLAT
+    /// serializes them by number.
     /// </summary>
     [Flags]
     public enum TrackFeatures
@@ -76,9 +76,7 @@ namespace PoRacer.Systems
         private const float ROUGH_DETAIL_SCALE = 0.95f;   // ~1 m secondary bumps
         private const float ROUGH_SPAWN_PAD_END_Z = 6f;   // full roughness from here on
         private const float ROUGH_SPAWN_PAD_FLAT_Z = 2f;  // flat until here (racers spawn stable)
-        // High enough above the ground that decal quads never z-fight it.
-        private const float MARKER_HEIGHT_OFFSET = 0.04f;
-        // Flat-based props (forest/tent tiles) get the same lift for the same reason.
+        // Flat-based props (forest/tent tiles) sit this far up so they never z-fight the ground.
         private const float PROP_HEIGHT_OFFSET = 0.02f;
         // Visual-only side aprons that hold trees, tents, and bushes.
         private const float DECOR_MARGIN = 14f;
@@ -88,12 +86,6 @@ namespace PoRacer.Systems
         // the flat ground plate, which no camera can clip into.
         private const float ARCH_KEEPOUT_HALF_DEPTH = 1.6f;
 
-        private static Material _mudMaterial;
-        private static Material _mudRimMaterial;
-        private static Material _boostMaterial;
-        private static Material _boostRimMaterial;
-        private const float BOOST_PAD_SIZE_X = 3.2f;
-        private const float BOOST_PAD_SIZE_Z = 2.4f;
         private static readonly System.Collections.Generic.Dictionary<TrackKind, Material> GroundMaterials = new();
         private static bool _propsLoaded;
         private static GameObject _bushPrefab;
@@ -104,12 +96,6 @@ namespace PoRacer.Systems
         // with them, so they render white; these replacements are built in code.
         private static Material _propAtlasMaterial;
         private static Material _archMaterial;
-
-        /// <summary>
-        /// Curriculum knob (0..1+): scales rough-terrain height. Training sets this
-        /// from the mlagents environment_parameters lesson; gameplay leaves it at 1.
-        /// </summary>
-        public static float RoughAmplitudeScale = 1f;
 
         // Scenery carries no colliders by design, so a physics-based camera
         // collision test cannot see the finish arch. The build publishes the
@@ -204,8 +190,7 @@ namespace PoRacer.Systems
         /// finish arch (gameplay scene only; training keeps the bare track).
         /// </summary>
         public void Build(TrackKind kind, Transform parent, float width, float length, System.Random rng,
-            bool decorate = false, float finishZ = -1f, TrackFeatures features = TrackFeatures.None,
-            float backMargin = 7f)
+            bool decorate = false, float finishZ = -1f, float backMargin = 7f)
         {
             for (int childIndex = parent.childCount - 1; childIndex >= 0; childIndex--)
             {
@@ -245,28 +230,6 @@ namespace PoRacer.Systems
                 ScatterBoxes(kind, parent, width, length, rng, ScaleCount(14, length),
                     minSize: new Vector3(0.5f, 0.3f, 0.5f), maxSize: new Vector3(1.8f, 0.9f, 1.8f));
             }
-            else if (kind == TrackKind.Swamp)
-            {
-                BuildMudPits(parent, width, length, rng, ScaleCount(5, length));
-                BuildGates(parent, width, length, rng, ScaleCount(2, length));
-            }
-
-            if ((features & TrackFeatures.MudPits) != 0 && kind != TrackKind.Swamp)
-            {
-                BuildMudPits(parent, width, length, rng, ScaleCount(3, length));
-            }
-            if ((features & TrackFeatures.Gates) != 0 && kind != TrackKind.Swamp)
-            {
-                BuildGates(parent, width, length, rng, ScaleCount(1, length));
-            }
-            if ((features & TrackFeatures.BoostPads) != 0)
-            {
-                BuildBoostPads(kind, parent, width, length, rng, ScaleCount(3, length));
-            }
-            if ((features & TrackFeatures.Gusts) != 0)
-            {
-                BuildGustZones(parent, width, length, rng, ScaleCount(2, length));
-            }
 
             _hasFinishArchBounds = false;
             if (decorate)
@@ -305,7 +268,7 @@ namespace PoRacer.Systems
                 // Flat spawn pad: zero roughness behind the grid and through the first
                 // metres, ramping to full so racers are born on stable ground.
                 float ramp = Mathf.InverseLerp(ROUGH_SPAWN_PAD_FLAT_Z, ROUGH_SPAWN_PAD_END_Z, z);
-                return signedHeight * ramp * RoughAmplitudeScale;
+                return signedHeight * ramp;
             }
             return 0f;
         }
@@ -493,196 +456,6 @@ namespace PoRacer.Systems
             normalMap.SetPixels(pixels);
             normalMap.Apply(true);
             return normalMap;
-        }
-
-        /// <summary>
-        /// Mud pits: a flat translucent brown quad on the ground plus a trigger
-        /// box with a MudZoneView that drags every creature body inside.
-        /// </summary>
-        private static void BuildMudPits(Transform parent, float width, float length, System.Random rng, int count)
-        {
-            if (_mudMaterial == null && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
-            {
-                Shader mudShader = Shader.Find("Sprites/Default");
-                if (mudShader != null)
-                {
-                    // Dark, near-opaque goop plus a darker rim ring so pits read as
-                    // a hazard from the race camera, not a faint stain.
-                    _mudMaterial = new Material(mudShader)
-                    {
-                        color = new Color(0.26f, 0.17f, 0.07f, 0.88f)
-                    };
-                    _mudRimMaterial = new Material(mudShader)
-                    {
-                        color = new Color(0.12f, 0.08f, 0.03f, 0.9f)
-                    };
-                }
-            }
-
-            for (int pitIndex = 0; pitIndex < count; pitIndex++)
-            {
-                float sizeX = 4f + (float)rng.NextDouble() * 3f;
-                float sizeZ = 2.5f + (float)rng.NextDouble() * 1.5f;
-                // Keep the first metres after the start clear so racers are not born in mud.
-                float z = 4f + (float)rng.NextDouble() * (length - 6f);
-                float x = ((float)rng.NextDouble() - 0.5f) * (width - sizeX);
-
-                var pit = new GameObject("MudPit");
-                pit.transform.SetParent(parent, false);
-                pit.transform.localPosition = new Vector3(x, 0f, z);
-
-                var trigger = pit.AddComponent<BoxCollider>();
-                trigger.isTrigger = true;
-                // Tall enough to catch every limb, sunk half below ground.
-                trigger.size = new Vector3(sizeX, 1.2f, sizeZ);
-                trigger.center = new Vector3(0f, 0.3f, 0f);
-                pit.AddComponent<Views.MudZoneView>();
-
-                if (_mudMaterial != null)
-                {
-                    BuildMudQuad(pit.transform, "MudRim", _mudRimMaterial,
-                        new Vector3(sizeX * 1.14f, sizeZ * 1.14f, 1f), MARKER_HEIGHT_OFFSET);
-                    BuildMudQuad(pit.transform, "MudVisual", _mudMaterial,
-                        new Vector3(sizeX, sizeZ, 1f), MARKER_HEIGHT_OFFSET * 2f);
-                }
-            }
-        }
-
-        private static void BuildMudQuad(Transform parent, string name, Material material,
-            Vector3 scale, float heightOffset)
-        {
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            visual.name = name;
-            DestroyNow(visual.GetComponent<Collider>());
-            visual.transform.SetParent(parent, false);
-            visual.transform.localPosition = new Vector3(0f, heightOffset, 0f);
-            visual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            visual.transform.localScale = scale;
-            var mudRenderer = visual.GetComponent<MeshRenderer>();
-            mudRenderer.sharedMaterial = material;
-            mudRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            mudRenderer.receiveShadows = false;
-        }
-
-        /// <summary>
-        /// Boost pads: a bright green quad on the ground plus a trigger box with a
-        /// BoostPadView that pushes every creature body inside toward the finish.
-        /// </summary>
-        private static void BuildBoostPads(TrackKind kind, Transform parent, float width, float length,
-            System.Random rng, int count)
-        {
-            if (_boostMaterial == null && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
-            {
-                Shader boostShader = Shader.Find("Sprites/Default");
-                if (boostShader != null)
-                {
-                    _boostMaterial = new Material(boostShader)
-                    {
-                        color = new Color(0.15f, 0.85f, 0.45f, 0.75f)
-                    };
-                    _boostRimMaterial = new Material(boostShader)
-                    {
-                        color = new Color(0.05f, 0.45f, 0.22f, 0.85f)
-                    };
-                }
-            }
-
-            for (int padIndex = 0; padIndex < count; padIndex++)
-            {
-                // Spread pads down the track, one per segment, jittered inside it.
-                float segment = (length - 9f) / count;
-                float z = 5f + segment * padIndex + (float)rng.NextDouble() * segment * 0.7f;
-                float x = ((float)rng.NextDouble() - 0.5f) * (width - BOOST_PAD_SIZE_X);
-
-                var pad = new GameObject("BoostPad");
-                pad.transform.SetParent(parent, false);
-                pad.transform.localPosition = new Vector3(x, SurfaceHeight(kind, x, z), z);
-
-                var trigger = pad.AddComponent<BoxCollider>();
-                trigger.isTrigger = true;
-                trigger.size = new Vector3(BOOST_PAD_SIZE_X, 1.2f, BOOST_PAD_SIZE_Z);
-                trigger.center = new Vector3(0f, 0.3f, 0f);
-                pad.AddComponent<Views.BoostPadView>();
-
-                if (_boostMaterial != null)
-                {
-                    BuildMudQuad(pad.transform, "BoostRim", _boostRimMaterial,
-                        new Vector3(BOOST_PAD_SIZE_X * 1.12f, BOOST_PAD_SIZE_Z * 1.12f, 1f), MARKER_HEIGHT_OFFSET);
-                    BuildMudQuad(pad.transform, "BoostVisual", _boostMaterial,
-                        new Vector3(BOOST_PAD_SIZE_X, BOOST_PAD_SIZE_Z, 1f), MARKER_HEIGHT_OFFSET * 2f);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gust zones: full-width trigger stripes whose GustZoneView shoves the
-        /// field sideways in waves. Direction and phase are rolled per zone.
-        /// </summary>
-        private static void BuildGustZones(Transform parent, float width, float length, System.Random rng, int count)
-        {
-            for (int zoneIndex = 0; zoneIndex < count; zoneIndex++)
-            {
-                // Keep the spawn pad calm; spread zones along the rest of the track.
-                float z = 6f + (length - 8f) * (zoneIndex + 0.5f) / count
-                    + ((float)rng.NextDouble() - 0.5f) * 3f;
-
-                var zone = new GameObject("GustZone");
-                zone.transform.SetParent(parent, false);
-                zone.transform.localPosition = new Vector3(0f, 0f, z);
-
-                var trigger = zone.AddComponent<BoxCollider>();
-                trigger.isTrigger = true;
-                trigger.size = new Vector3(width, 1.6f, 4f);
-                trigger.center = new Vector3(0f, 0.5f, 0f);
-
-                var view = zone.AddComponent<Views.GustZoneView>();
-                view.Initialize(
-                    rng.Next(2) == 0 ? -1f : 1f,
-                    (float)rng.NextDouble() * 6f,
-                    width);
-            }
-        }
-
-        /// <summary>
-        /// Gates: a pair of low walls spanning the track with one random gap,
-        /// so the field has to funnel or climb.
-        /// </summary>
-        private void BuildGates(Transform parent, float width, float length, System.Random rng, int count)
-        {
-            const float gapWidth = 9f;
-            const float wallHeight = 0.35f;
-            const float wallDepth = 0.4f;
-            for (int gateIndex = 0; gateIndex < count; gateIndex++)
-            {
-                float z = length * (gateIndex + 1f) / (count + 1f);
-                float gapCenter = ((float)rng.NextDouble() - 0.5f) * (width - gapWidth) * 0.5f;
-
-                float leftEdge = -width * 0.5f;
-                float leftWallWidth = (gapCenter - gapWidth * 0.5f) - leftEdge;
-                float rightWallWidth = width * 0.5f - (gapCenter + gapWidth * 0.5f);
-
-                if (leftWallWidth > 0.1f)
-                {
-                    BuildWall(parent, new Vector3(leftEdge + leftWallWidth * 0.5f, wallHeight * 0.5f, z),
-                        new Vector3(leftWallWidth, wallHeight, wallDepth));
-                }
-                if (rightWallWidth > 0.1f)
-                {
-                    BuildWall(parent, new Vector3(width * 0.5f - rightWallWidth * 0.5f, wallHeight * 0.5f, z),
-                        new Vector3(rightWallWidth, wallHeight, wallDepth));
-                }
-            }
-        }
-
-        private void BuildWall(Transform parent, Vector3 localPosition, Vector3 size)
-        {
-            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wall.name = "Gate";
-            wall.transform.SetParent(parent, false);
-            wall.transform.localPosition = localPosition;
-            wall.transform.localScale = size;
-            wall.GetComponent<MeshRenderer>().sharedMaterial = _obstacleMaterial;
-            wall.GetComponent<BoxCollider>().sharedMaterial = _physicsMaterial;
         }
 
         /// <summary>

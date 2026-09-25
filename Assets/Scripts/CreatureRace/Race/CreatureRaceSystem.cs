@@ -191,7 +191,7 @@ namespace PoRacer.CreatureRace
             }
             if (_racerCount == 0)
             {
-                error = $"the settings have no racers. Run {_config.RebuildCommand} to seed the racer list.";
+                error = "the settings have no racers. Add them to the Racers list of the race settings asset.";
                 return false;
             }
             if (Mathf.Abs(Time.fixedDeltaTime - layout.Rig.PhysicsDt) > TIMESTEP_TOLERANCE)
@@ -207,8 +207,7 @@ namespace PoRacer.CreatureRace
                     CreatureRacerDefinition definition = _config.Racers[lane];
                     CreaturePolicy policy = CreaturePolicy.Create(definition.Brain, definition.Name,
                                                                   _config.ExpectedBrainPath(definition),
-                                                                  layout.ObservationSize, layout.ActionSize,
-                                                                  _config.RebuildCommand);
+                                                                  layout.ObservationSize, layout.ActionSize);
                     _policies[lane] = policy;
                     _pilots[lane] = new CreaturePilot(policy, definition.Name, _config.PreviousActionClipped, layout);
                     CreatureRacerModel racer = _model.Racers[lane];

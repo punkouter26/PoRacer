@@ -69,7 +69,6 @@ namespace PoRacer.Agents
         [SerializeField] private float[] _gaitOffsets;
 
         private readonly Reward_WormLoco _reward = new();
-        private System.Action _areaReset;
         private ICourseProgress _course;
         private bool _failed;
         private Sensor_LimbContact[] _limbContacts;
@@ -136,8 +135,6 @@ namespace PoRacer.Agents
         /// </summary>
         public void SetCourse(ICourseProgress course) => _course = course;
 
-        public void SetAreaResetCallback(System.Action areaReset) => _areaReset = areaReset;
-
         public void NotifyDrivesChanged()
         {
             _driveBaselineCaptured = false;
@@ -179,7 +176,6 @@ namespace PoRacer.Agents
             {
                 System.Array.Clear(_previousActions, 0, _previousActions.Length);
             }
-            _areaReset?.Invoke();
             _failed = false;
             _reward.Reset(DistanceToGoal());
         }

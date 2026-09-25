@@ -46,9 +46,7 @@ namespace PoRacer.Views
             + "When the selected map matches an entry's kind, length and features, "
             + "Systems_Spawn enables that subtree and skips the runtime builder entirely, "
             + "so it can be tuned by hand here and what you see in the Scene view is what "
-            + "races. Roulette re-rolls every race and is always generated. Rebuild the "
-            + "builder-map entries with Editor_BakeAuthoredTrack.Bake() (that discards hand "
-            + "edits); course entries come from Editor_BuildCourseTrack.")]
+            + "races. Roulette re-rolls every race and is always generated.")]
         [SerializeField] private AuthoredTrack[] _authoredTracks = Array.Empty<AuthoredTrack>();
 
         public IReadOnlyList<Transform> SpawnPoints => _spawnPoints;

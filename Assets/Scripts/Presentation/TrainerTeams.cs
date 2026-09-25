@@ -42,6 +42,34 @@ namespace PoRacer.Presentation
             }
         }
 
+        /// <summary>
+        /// Two-letter tag every racer name starts with, so a viewer can tell at a glance
+        /// what trained its brain: MU (MuJoCo), IL (Isaac Lab), ML (ML-Agents), HC (hand-coded).
+        /// </summary>
+        public static string Tag(TrainingSource team)
+        {
+            switch (team)
+            {
+                case TrainingSource.MuJoCo:
+                    return "MU";
+                case TrainingSource.IsaacLab:
+                    return "IL";
+                case TrainingSource.MlAgents:
+                    return "ML";
+                case TrainingSource.Heuristic:
+                    return "HC";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        /// <summary>A creature name with its trainer tag in front, e.g. "IL IsaacBox".</summary>
+        public static string Tagged(TrainingSource team, string name)
+        {
+            string tag = Tag(team);
+            return tag.Length == 0 ? name : tag + " " + name;
+        }
+
         public static Color ColorOf(TrainingSource team)
         {
             switch (team)

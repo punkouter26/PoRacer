@@ -18,8 +18,6 @@ namespace PoRacer.Systems
             public readonly float LengthMeters;
             // Extra hazards layered on the kind (boost pads, gusts, mud, gates).
             public readonly TrackFeatures Features;
-            // Roulette: the spawn system rolls a random kind + features per race.
-            public readonly bool Randomize;
             // Full-time clock for this map; the race is decided by distance when it runs out.
             public readonly float TimeLimitSeconds;
 
@@ -42,7 +40,7 @@ namespace PoRacer.Systems
             public readonly float GridColumnSpacing;
 
             public MapEntry(string displayName, TrackKind kind, bool available, string blurb = "",
-                float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None, bool randomize = false,
+                float lengthMeters = 32f, TrackFeatures features = TrackFeatures.None,
                 float timeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS,
                 float gridColumnSpacing = DEFAULT_GRID_COLUMN_SPACING)
             {
@@ -53,7 +51,6 @@ namespace PoRacer.Systems
                 Blurb = blurb;
                 LengthMeters = lengthMeters;
                 Features = features;
-                Randomize = randomize;
                 TimeLimitSeconds = timeLimitSeconds;
             }
         }
@@ -73,8 +70,8 @@ namespace PoRacer.Systems
         /// put the outside racers off the ground.
         /// </summary>
         public const float FLAT_GRID_COLUMN_SPACING = 3f;
-        // The Acrobat course is ~212 m of climbing switchbacks at
-        // Editor_BuildCourseTrack.COURSE_SCALE 1.0: about ten times a builder map.
+        // The Acrobat course is ~212 m of climbing switchbacks at scale 1.0:
+        // about ten times a builder map.
         // Its length is read off the authored centreline at race time; this is
         // only the catalogue's display figure.
         public const float ACROBAT_LENGTH_METERS = 212f;
@@ -123,39 +120,21 @@ namespace PoRacer.Systems
             // lane visually. Re-measure these whenever the brains are retrained.
             new MapEntry("Flat", TrackKind.Flat, available: true, "Clean open ground — a pure speed test", 22f,
                 gridColumnSpacing: FLAT_GRID_COLUMN_SPACING),
-            // REMOVED 2026-09-11: Lumpy, Swamp, Gale and Roulette. The roster is Flat
-            // plus the two authored courses. Three things did NOT go with them, and
-            // each would break something if it were tidied away later:
-            //
-            //  * `TrackKind.Lumpy` (6) and `TrackKind.Swamp` (7) stay in the enum.
-            //    They are TRAINING track kinds: SCN_TRAIN_ALL / _HUMANOIDS / _FOCUSED
-            //    serialize `_trackKind: 6`, and five Config/*.yaml curricula drive
-            //    `track_kind` to 6 and 7. Deleting or renumbering them re-resolves
-            //    those scenes to whatever value lands at 6 -- silently, because
-            //    Systems_TrainingArea's Enum.IsDefined guard would still pass.
-            //  * All four `TrackFeatures` flags stay, for the same reason:
-            //    Systems_TrainingArea maps hazard_level 1 -> MudPits|BoostPads and
-            //    2 -> Gusts|Gates.
-            //  * `Systems_TrackBuilder`, `GustZoneView`, `BoostPadView` and
-            //    `MudZoneView` stay. The builder still bakes Flat and still builds
-            //    every training area; the hazard views are added at runtime by the
-            //    training curriculum even though no scene instance survives.
-            //
-            // What genuinely died with them: the Roulette randomise roll in
-            // Systems_Spawn, and PostFxView's Lumpy/Swamp mood branches.
+            // REMOVED 2026-09-11: Lumpy, Swamp, Gale and Roulette; the ML-Agents training
+            // scenes that still used them went on 2026-09-25. TrackKind and TrackFeatures
+            // keep every value: both are serialized by number in SCN_RACE_FLAT's
+            // AuthoredTrack entries, so renumbering would silently re-resolve them.
             // Authored in Blender (Assets/Art/Models/AcrobatTrack.glb): a mountain
             // road of switchbacks and a tunnel, 50 m of climb. Raced along its
-            // centreline, not down +Z, so it needs the course entry
-            // Editor_BuildCourseTrack writes into SCN_RACE_FLAT. Brains trained on
-            // the flat builder maps mostly cannot finish it - it is the reason the
-            // course training scene exists.
+            // centreline, not down +Z, so it needs its authored course entry in
+            // SCN_RACE_FLAT. Brains trained on the flat builder maps mostly cannot
+            // finish it.
             new MapEntry("Acrobat", TrackKind.Course, available: true,
                 "Mountain switchbacks and a tunnel; 50 m of climb", ACROBAT_LENGTH_METERS,
                 timeLimitSeconds: ACROBAT_TIME_LIMIT_SECONDS),
             // A photo reconstruction of a flat with a toy track built through it
             // (Assets/Art/Models/ApartmentTrack.glb), raced along its twelve
-            // Checkpoint_ knots. Placed at Editor_BuildApartmentTrack.APARTMENT_SCALE
-            // 5.0, which turns a 16.1 m toy lap into a 73 m one on a 3.2 m road -
+            // Checkpoint_ knots. Placed at scale 5.0, which turns a 16.1 m toy lap into a 73 m one on a 3.2 m road -
             // the scale is set by road width, since the racers on it cannot be
             // resized without breaking their brains. Like Acrobat this is a display
             // figure; the real length is read off the checkpoints at race time.

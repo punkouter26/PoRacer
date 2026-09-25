@@ -34,26 +34,13 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 |---|---|
 | PoRacer/Build Android APK | `PoRacer.EditorTools.Editor_BuildAndroid.Build` |
 | PoRacer/Build Android AAB (Play release) | `PoRacer.EditorTools.Editor_BuildAndroidAAB.Build` |
-| PoRacer/Configure Android Release Settings | `PoRacer.EditorTools.Editor_ConfigureAndroidRelease.Apply` |
-| PoRacer/Build FX Particle Materials | `PoRacer.EditorTools.Editor_BuildFxMaterials.Build` |
-| PoRacer/Configure Rendering | `PoRacer.EditorTools.Editor_ConfigureRendering.Configure` |
-| PoRacer/Sync Agent Observation Sizes | `PoRacer.EditorTools.Editor_SyncObservationSizes.Sync` |
+| (no menu) async APK/AAB build | `PoRacer.EditorTools.Editor_BuildAsync.Start("apk" \| "aab")` / `.Status()` |
 | PoRacer/Report Orphaned Creature Brains | `PoRacer.EditorTools.Editor_ReportOrphanedBrains.Report` |
-| PoRacer/Creatures/Register IsaacBox Racer | `PoRacer.EditorTools.Editor_RegisterIsaacBoxRacer.Register` |
-| PoRacer/Creatures/Register MojucuBoy Racer | `PoRacer.EditorTools.Editor_RegisterMojucuBoyRacer.Register` |
-| PoRacer/Creatures/Build Boy Race Scene | `CreatureEditor.MojucuBoySetup.Build` |
-| PoRacer/Build Shared Training Scene (SCN_TRAIN_ALL) | `PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildScene` |
-| PoRacer/Build Focused Training Scene (SCN_TRAIN_FOCUSED) | `…Editor_BuildSharedTrainingScene.BuildFocusedScene` |
-| PoRacer/Bake Authored Tracks into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BakeAuthoredTrack.Bake` |
 | PoRacer/Smoke-race every map in play mode | `PoRacer.EditorTools.Editor_SmokeRace.Start` / `.Status` |
 | PoRacer/Smoke-play one scene | `PoRacer.EditorTools.Editor_SmokeRace.StartScene` |
-| PoRacer/Place the Acrobat course into SCN_RACE_FLAT | `PoRacer.EditorTools.Editor_BuildCourseTrack.Build` |
-| PoRacer/Build Acrobat Training Scene (SCN_TRAIN_ACROBAT) | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.Build` |
-| PoRacer/Build Acrobat Training Env | `PoRacer.EditorTools.Editor_BuildCourseTrainingScene.BuildEnv` (player build: queue it, do not eval it) |
-| PoRacer/Build Fruit Catalog (produce shower) | `PoRacer.EditorTools.Editor_BuildFruitCatalog.Build` |
-| PoRacer/Build All-Creatures Training Env | `…Editor_BuildSharedTrainingScene.BuildEnv` |
-| PoRacer/Training/Enable Demo Recorders In Open Scene | `…Editor_RecordDemos.EnableRecorders` |
-| PoRacer/Training/Disable Demo Recorders In Open Scene | `…Editor_RecordDemos.DisableRecorders` |
+| (no menu) walking exam (rule J standard) | `PoRacer.EditorTools.Editor_WalkExam.Start` / `.Status` |
+| (no menu) quad / worm race from the CLI | `PoRacer.QuadRace.EditorTools.Editor_QuadRace` / `PoRacer.WormRace.EditorTools.Editor_WormRace` |
+| (no menu) MojucuBoy parity + eval | `CreatureEditor.MojucuBoyParityHarness.Run` / `CreatureEditor.MojucuBoyEvalHarness.Evaluate` |
 | IsaacBox/Rebuild Rig Asset From JSON | `IsaacBox.EditorTools.IsaacBoxSetup.RebuildRigAsset` |
 | IsaacBox/Build Prefab | `…IsaacBoxSetup.BuildPrefab` |
 | IsaacBox/Rebuild Materials From GLB Textures | `…IsaacBoxMaterials.RebuildMenu` |
@@ -65,9 +52,16 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 | IsaacH1/Import Decimated Meshes | `…IsaacH1MeshImporter.ImportDecimatedMeshes` |
 | IsaacH1/Restore Full-Detail Meshes | `…IsaacH1MeshImporter.RestoreFullDetailMeshes` |
 | IsaacH1/Run Reference Check | `…IsaacH1Setup.RunReferenceCheckMenu` |
-| MujocoBiped/Rebuild Rig Asset From JSON | `…MujocoBipedSetup.RebuildRigAsset` |
-| MujocoBiped/Build Prefab | `…MujocoBipedSetup.BuildPrefab` |
-| MujocoBiped/Run Reference Check | `…MujocoBipedSetup.RunReferenceCheck` |
+
+Every scene is authored and saved (AGENTS rule G): there are no scene or track
+builders. Tune a scene in the Editor, or with the CLI commands below, and save it.
+Race rosters live in `Assets/WormRace/WormRaceSettings.asset` and
+`Assets/QuadRace/QuadRaceSettings.asset`; a new brain is an `.onnx` copied into the
+race's `Brains/` folder and assigned to its racer in the Inspector.
+
+**Scene smoke test:** Test Runner → EditMode → `PoRacer.Tests.SceneSmokeTests` plays
+every non-training scene for 45 s, fails on any logged error, and appends a row per
+scene to `Logs/SmokeRun/summary.md` (per-frame CSVs sit beside it).
 
 ¹ Reads the Project-window selection. Set it first with `unity cmd find_assets`
 plus a selection call, or call the method from `eval` with an explicit list.
@@ -76,10 +70,8 @@ plus a selection call, or call the method from `eval` with an explicit list.
 interactive wrapper — it prompts to save the open scene and reports in a dialog,
 so **do not** drive `BuildFromMenu` from the CLI.
 
-`IsaacH1/Spawn Into Open Scene` and `MujocoBiped/Spawn Into Open Scene` open an
-`EditorWindow` and have no headless equivalent yet; IsaacBox has one
-(`SpawnIntoOpenSceneDefaults`). Add matching `…Defaults` entry points if those two
-ever need to run unattended.
+`IsaacH1/Spawn Into Open Scene` opens an `EditorWindow` and has no headless
+equivalent yet; IsaacBox has one (`SpawnIntoOpenSceneDefaults`).
 
 ## Authoring a scene by hand, from the CLI
 

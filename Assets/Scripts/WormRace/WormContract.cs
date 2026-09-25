@@ -21,7 +21,7 @@ namespace PoRacer.WormRace
     /// B is segment 2, the middle segment, in MuJoCo's convention: x forward (toward the
     /// head), y left, z up. The observation itself is assembled by the creature template
     /// (CreatureObservation) from the settings' observation definition, which
-    /// Editor_BuildWormRaceScene writes to exactly this layout.
+    /// WormRaceSettings.asset holds in exactly this layout.
     /// </summary>
     internal static class WormContract
     {

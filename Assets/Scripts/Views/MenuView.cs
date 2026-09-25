@@ -565,7 +565,7 @@ namespace PoRacer.Views
             nameColumn.style.overflow = Overflow.Hidden;
             titleRow.Add(nameColumn);
 
-            var name = new Label(entry.displayName);
+            var name = new Label(TrainerTeams.Tagged(entry.trainingSource, entry.displayName));
             name.style.color = UiTheme.Text;
             name.style.fontSize = UiTheme.FONT_SM;
             name.style.overflow = Overflow.Hidden;

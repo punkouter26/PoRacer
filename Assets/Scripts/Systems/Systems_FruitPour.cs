@@ -389,9 +389,9 @@ namespace PoRacer.Systems
             // and a player build discards that after the GPU upload unless the model is
             // imported read/write. Assigning a non-readable mesh here does not throw -
             // it yields a collider with no cooked geometry, so the piece has NO
-            // COLLISION and falls through the road. Editor_BuildFruitCatalog sets the
-            // flag on the whole pack; this is the guard for anything that slipped
-            // through, because a silent hole in the floor is the worst way to find out.
+            // COLLISION and falls through the road. Every model in the pack is imported
+            // read/write; this is the guard for anything that slipped through, because
+            // a silent hole in the floor is the worst way to find out.
             MeshFilter[] filters = piece.GetComponentsInChildren<MeshFilter>();
             int hulls = 0;
             for (int filterIndex = 0; filterIndex < filters.Length; filterIndex++)
@@ -472,8 +472,8 @@ namespace PoRacer.Systems
             _warnedUnreadable = true;
             Debug.LogWarning(
                 "FruitPour: a produce mesh is not read/write, so no convex hull could be " +
-                "cooked for it and it fell back to a sphere. Re-run " +
-                "Editor_BuildFruitCatalog.Build() to restore the flag on the pack.");
+                "cooked for it and it fell back to a sphere. Tick Read/Write on that model's " +
+                "import settings in the KIRI fruit pack.");
         }
     }
 }

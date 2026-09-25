@@ -20,27 +20,18 @@ the trained speed in Unity. PhysX-trained brains kept about 10 %.
 
 ## 0. Things only you can do
 
-- [ ] **Delete the 24 superseded worm-race files** (the agent's delete was blocked). They are
-      compiled out behind `PORACER_WORMRACE_LEGACY` and marked `// SUPERSEDED`. Delete these
-      in `Assets/Scripts/WormRace/`, each with its `.meta`:
-      - `Models/`: all 6 files
-      - `Systems/WormRaceSystem.cs`
-      - `Physics/`: `MujocoWorldBuilder.cs`, `MujocoWormBuilder.cs`, `WormCapsuleMesh.cs`
-      - `Views/`: `MujocoWormView.cs`, `WormRaceHudView.cs`, `WormRaceCameraView.cs`
-      - `WormBodyState`, `WormFrames`, `WormObservation`, `WormPhysicsKind`, `WormPilot`,
-        `WormPolicy`, `WormProbe`, `WormRaceReport`, `WormRaceRequest`, `WormRacerDefinition`,
-        `WormReportWriter` (all `.cs`)
-
-      Then run `unity cmd recompile` and check the console has no errors.
-- [ ] **Stop the two leftover TensorBoard processes** holding port 6006:
-      `Stop-Process -Id 22304, 32980` (the PIDs change after a reboot; find them with
-      `Get-NetTCPConnection -LocalPort 6006`). The trainers refuse a busy port, so
-      use `--tensorboard-port 6008` or similar until 6006 is free.
+- [ ] **Stop the eight leftover TensorBoard processes** from 2026-09-24 (the agent's stop
+      was blocked). Two hold port 6006, and one runs from the Isaac Lab v2 install:
+      `Stop-Process -Id 32980,22304,8708,22268,38908,34836,13028,26996` (the PIDs change
+      after a reboot; find them with `Get-NetTCPConnection -LocalPort 6006,6007`). The
+      trainers refuse a busy port, so use `--tensorboard-port 6008` until 6006 is free.
+- [ ] **Delete the Isaac Lab v2 install** (15.7 GB; the agent's delete was blocked). Only
+      Isaac Lab 3 and MuJoCo are used from now on. Stop the TensorBoard processes above
+      first, then: `Remove-Item ISAAC\isaaclab -Recurse -Force`. The v2 task code
+      (`ISAAC/boy_tasks`, `ISAAC/worm_tasks`, `ISAAC/scripts/train*.py`) stays as the record
+      of how IsaacBox, Isaac H1 and the Isaac worm were trained.
 - [ ] Optional: delete `C:\Users\punko\.ai-game-dev` (the removed IvanMurzak plug-in's
       downloaded server and credentials).
-- [ ] Optional: decide on `Assets/Temp/SCN_RACE_FLAT_unsaved_backup.unity`. It is an in-memory
-      copy of the race scene that was flagged as changed with nothing visibly different;
-      it's git-ignored.
 
 ---
 

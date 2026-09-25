@@ -17,7 +17,7 @@ namespace PoRacer.WormRace
     /// </summary>
     public sealed class WormRaceLifetimeScope : LifetimeScope
     {
-        [Tooltip("Assets/WormRace/WormRaceSettings.asset, wired by Editor_BuildWormRaceScene.")]
+        [Tooltip("Assets/WormRace/WormRaceSettings.asset.")]
         [SerializeField] private WormRaceSettings _settings;
 
         protected override void Configure(IContainerBuilder builder)
@@ -28,7 +28,7 @@ namespace PoRacer.WormRace
                 // Build anyway so the HUD can say what is wrong; the empty settings carry
                 // no rig, and the race system reports that as its error.
                 Debug.LogError("[WormRace] WormRaceLifetimeScope has no WormRaceSettings. "
-                             + "Run PoRacer.WormRace.EditorTools.Editor_BuildWormRaceScene.Build().", this);
+                             + "Assign " + WormRacePaths.SETTINGS + " in the Inspector.", this);
                 settings = ScriptableObject.CreateInstance<WormRaceSettings>();
             }
             builder.RegisterInstance(settings);

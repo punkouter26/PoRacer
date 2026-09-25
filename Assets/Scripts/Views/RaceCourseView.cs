@@ -7,9 +7,9 @@ namespace PoRacer.Views
     /// <summary>
     /// Scene data for an authored course such as the Acrobat track: the
     /// centreline the racers follow, where they start, and the footprint the
-    /// runaway guard uses. Written once by Editor_BuildCourseTrack from the
-    /// markers inside the GLB; read by Systems_Spawn and the course training
-    /// area. Pure data exposure — no logic beyond building the path object.
+    /// runaway guard uses. Authored in the scene from the markers inside the
+    /// GLB; read by Systems_Spawn. Pure data exposure — no logic beyond building
+    /// the path object.
     /// </summary>
     public sealed class RaceCourseView : MonoBehaviour
     {

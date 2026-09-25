@@ -152,7 +152,7 @@ namespace PoRacer.WormRace
             if (rigJson == null)
             {
                 return $"no worm_rig.json assigned. Copy training/worm/worm_rig.json to {WormRacePaths.RIG_JSON} "
-                     + $"and re-run {_config.RebuildCommand}.";
+                     + "and assign it as Rig Json in the race settings asset.";
             }
             if (!WormRig.TryParse(rigJson.text, out _rig, out string error))
             {

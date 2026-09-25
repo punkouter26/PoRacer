@@ -39,13 +39,6 @@ namespace PoRacer.EditorTools
     {
         private const string APK_PATH = "Builds/Android/PoRacer.apk";
         private const string AAB_PATH = "Builds/Android/PoRacer.aab";
-        // Training envs. These MUST go through Editor_BuildSharedTrainingScene, which names
-        // its scene explicitly - the CLI's generic `build` command silently ignores --scenes
-        // and ships whatever EditorBuildSettings holds. That produced an "env" running
-        // SCN_RACE_FLAT: no agents, so the Academy never initialised, so mlagents-learn sat
-        // there until it timed out with UnityTimeOutException and no clue in any log.
-        private const string ALLENV_PATH = "Builds/AllEnv/AllEnv.exe";
-        private const string FOCUSEDENV_PATH = "Builds/FocusedEnv/FocusedEnv.exe";
 
         private static string _state = "idle";
         private static string _detail = string.Empty;
@@ -62,10 +55,9 @@ namespace PoRacer.EditorTools
             }
 
             string kind = (target ?? string.Empty).Trim().ToLowerInvariant();
-            if (kind != "apk" && kind != "aab" && kind != "allenv" && kind != "focusedenv")
+            if (kind != "apk" && kind != "aab")
             {
-                return "REFUSED: target must be \"apk\", \"aab\", \"allenv\" or \"focusedenv\", got \""
-                       + target + "\"";
+                return "REFUSED: target must be \"apk\" or \"aab\", got \"" + target + "\"";
             }
 
             // Both builders abort on this, but they do it minutes of Gradle later in the
@@ -75,20 +67,8 @@ namespace PoRacer.EditorTools
                 return "REFUSED: exit play mode first";
             }
 
-            string path = kind == "apk" ? APK_PATH
-                        : kind == "aab" ? AAB_PATH
-                        : kind == "allenv" ? ALLENV_PATH
-                        : FOCUSEDENV_PATH;
-            // Same file Run() will judge by - see the note there on env scene data.
-            string watch = path;
-            if (kind == "allenv" || kind == "focusedenv")
-            {
-                string d = Path.GetDirectoryName(path);
-                string stem = Path.GetFileNameWithoutExtension(path);
-                string lvl = Path.Combine(d, stem + "_Data", "level0");
-                if (File.Exists(lvl)) watch = lvl;
-            }
-            DateTime before = File.Exists(watch) ? File.GetLastWriteTimeUtc(watch) : DateTime.MinValue;
+            string path = kind == "apk" ? APK_PATH : AAB_PATH;
+            DateTime before = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
 
             _state = "running";
             _detail = kind + " queued at " + DateTime.Now.ToString("HH:mm:ss");
@@ -119,20 +99,13 @@ namespace PoRacer.EditorTools
             var started = DateTime.Now;
             try
             {
-                switch (kind)
+                if (kind == "apk")
                 {
-                    case "apk":
-                        Editor_BuildAndroid.Build();
-                        break;
-                    case "aab":
-                        Editor_BuildAndroidAAB.Build();
-                        break;
-                    case "allenv":
-                        PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildEnv();
-                        break;
-                    default:
-                        PoRacer.EditorTools.Editor_BuildSharedTrainingScene.BuildFocusedEnv();
-                        break;
+                    Editor_BuildAndroid.Build();
+                }
+                else
+                {
+                    Editor_BuildAndroidAAB.Build();
                 }
             }
             catch (Exception e)
@@ -145,24 +118,11 @@ namespace PoRacer.EditorTools
 
             // The artifact is the evidence. An unchanged timestamp means the builder
             // returned without writing - an early abort it already logged the reason for.
-            //
-            // For an env, watch the SCENE DATA, not the .exe: the player executable is a
-            // launcher stub that comes out byte-identical every time, so its timestamp does
-            // not move and a correct build reported "failed". The scene lands in
-            // <Name>_Data/level0, which does change.
-            string watched = path;
-            if (kind == "allenv" || kind == "focusedenv")
-            {
-                string dir = Path.GetDirectoryName(path);
-                string stem = Path.GetFileNameWithoutExtension(path);
-                string level0 = Path.Combine(dir, stem + "_Data", "level0");
-                if (File.Exists(level0)) watched = level0;
-            }
-            var info = new FileInfo(watched);
-            if (!info.Exists || File.GetLastWriteTimeUtc(watched) <= before)
+            var info = new FileInfo(path);
+            if (!info.Exists || File.GetLastWriteTimeUtc(path) <= before)
             {
                 _state = "failed";
-                _detail = kind + " wrote no new artifact at " + watched +
+                _detail = kind + " wrote no new artifact at " + path +
                           " — check the console for the builder's abort reason";
                 Debug.LogError("ASYNC BUILD RESULT: " + _detail);
                 return;

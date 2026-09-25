@@ -41,14 +41,14 @@ namespace PoRacer.CreatureRace
         public bool IsReady => _worker != null && !_faulted && !_disposed;
         public string Error { get; private set; }
 
-        /// <param name="rebuildHint">The command that re-wires brains, for the missing-brain message.</param>
         public static CreaturePolicy Create(ModelAsset asset, string label, string expectedAssetPath,
-                                            int observationSize, int actionSize, string rebuildHint)
+                                            int observationSize, int actionSize)
         {
             if (asset == null)
             {
                 return new CreaturePolicy(
-                    $"{label}: no brain assigned. Copy the exported ONNX to {expectedAssetPath} and re-run {rebuildHint}.");
+                    $"{label}: no brain assigned. Copy the exported ONNX to {expectedAssetPath} and assign it as "
+                    + "this racer's Brain in the race settings asset.");
             }
 
             Model model;

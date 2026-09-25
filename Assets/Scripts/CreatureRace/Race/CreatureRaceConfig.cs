@@ -68,8 +68,6 @@ namespace PoRacer.CreatureRace
         [SerializeField] private string _holdLabel = "holds its rest pose";
         [Tooltip("Where brains are expected, for the missing-brain message.")]
         [SerializeField] private string _brainsFolder = "Assets";
-        [Tooltip("The command that re-builds the scene and re-wires brains, for error messages.")]
-        [SerializeField] private string _rebuildCommand = "the scene builder";
 
         public TextAsset RigJson => _rigJson;
         public string LeadBody => _leadBody ?? string.Empty;
@@ -105,7 +103,6 @@ namespace PoRacer.CreatureRace
         public string FinishRule => _finishRule ?? string.Empty;
         public string HoldLabel => _holdLabel ?? string.Empty;
         public string BrainsFolder => _brainsFolder ?? string.Empty;
-        public string RebuildCommand => _rebuildCommand ?? string.Empty;
         /// <summary>File name under Application.temporaryCachePath for the generated MJCF, or empty.</summary>
         public string MjcfDumpFile => _dumpMujocoMjcf ? ReportPrefix + "_mujoco_scene.xml" : string.Empty;
 

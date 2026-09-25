@@ -243,10 +243,6 @@ namespace PoRacer.Agents
             }
         }
 
-        public void SetAreaResetCallback(Action areaReset)
-        {
-        }
-
         /// <summary>
         /// No-op: joint power is MuJoCo actuator gain, not an ArticulationDrive, so the
         /// fatigue system has nothing to re-baseline here.

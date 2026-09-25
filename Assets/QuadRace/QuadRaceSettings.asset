@@ -26,14 +26,14 @@ MonoBehaviour:
       _targetSpeedDivisor: 2
     _previousActionClipped: 1
     _racers:
-    - _name: Quad (MuJoCo)
+    - _name: MU Quad
       _method: MuJoCo
       _physics: 0
       _brain: {fileID: 0}
       _brainFile: quad_mujoco.onnx
       _material: {fileID: 2100000, guid: 64e8416d6bfa1e24cbacfc655be45c56, type: 2}
       _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
-    - _name: Quad (Isaac Lab 3)
+    - _name: IL Quad
       _method: Isaac Lab 3
       _physics: 0
       _brain: {fileID: 0}
@@ -122,4 +122,3 @@ MonoBehaviour:
     _finishRule: first torso front past the finish line; time limit ranks by distance; a fallen quad is never stood up (rule H)
     _holdLabel: stands at rest
     _brainsFolder: Assets/QuadRace/Brains
-    _rebuildCommand: PoRacer.QuadRace.EditorTools.Editor_BuildQuadRaceScene.Build()

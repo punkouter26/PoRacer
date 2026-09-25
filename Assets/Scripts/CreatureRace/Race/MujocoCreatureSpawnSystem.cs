@@ -110,8 +110,8 @@ namespace PoRacer.CreatureRace
             TextAsset rigJson = _config.RigJson;
             if (rigJson == null)
             {
-                return $"no rig JSON assigned in the settings. Copy the trainer's rig JSON under Assets/ and re-run "
-                     + $"{_config.RebuildCommand}.";
+                return "no rig JSON assigned in the settings. Copy the trainer's rig JSON under Assets/ and assign it "
+                     + "as Rig Json in the race settings asset.";
             }
             if (!CreatureRigParser.TryParse(rigJson.text, out CreatureRig rig, out string error))
             {

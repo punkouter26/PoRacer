@@ -31,7 +31,6 @@ namespace PoRacer.Agents
 
         private IsaacH1Agent _agent;
         private IsaacH1RingTargetSampler _sampler;
-        private Action _areaReset;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
         private bool _held;
         private bool _startHeld;
@@ -167,8 +166,6 @@ namespace PoRacer.Agents
                 _sampler.enabled = false;
             }
         }
-
-        public void SetAreaResetCallback(Action areaReset) => _areaReset = areaReset;
 
         /// <summary>
         /// Deliberately does nothing. The ML-Agents creatures re-capture a fatigue baseline here;

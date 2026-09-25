@@ -26,21 +26,21 @@ MonoBehaviour:
       _targetSpeedDivisor: 2
     _previousActionClipped: 1
     _racers:
-    - _name: MuJoCo worm
+    - _name: MU Worm
       _method: MuJoCo
       _physics: 0
       _brain: {fileID: 5022602860645237092, guid: a8d4795e145d31548a1949f0181767e2, type: 3}
       _brainFile: worm_mujoco.onnx
       _material: {fileID: 2100000, guid: 8e970f731f31e3d4581b2af5e7bad8cc, type: 2}
       _color: {r: 0.16, g: 0.45, b: 0.95, a: 1}
-    - _name: Isaac worm
+    - _name: IL Worm (PhysX)
       _method: Isaac Lab
       _physics: 1
       _brain: {fileID: 5022602860645237092, guid: 8ce9c330ed127f143a2d1cb153601308, type: 3}
       _brainFile: worm_isaac.onnx
       _material: {fileID: 2100000, guid: 4a65561d81fe899489931add2903fac2, type: 2}
       _color: {r: 1, g: 0.55, b: 0.1, a: 1}
-    - _name: Isaac3Worm
+    - _name: IL Worm (Newton)
       _method: Isaac Lab 3
       _physics: 0
       _brain: {fileID: 5022602860645237092, guid: 87a51fb8deea72d43a17c21ac26bef5e, type: 3}
@@ -129,7 +129,6 @@ MonoBehaviour:
     _finishRule: first segment-0 nose past the finish line; time limit ranks by distance
     _holdLabel: holds straight
     _brainsFolder: Assets/WormRace/Brains
-    _rebuildCommand: PoRacer.WormRace.EditorTools.Editor_BuildWormRaceScene.Build()
   _wormPhysicsMaterial: {fileID: 13400000, guid: 94e3dd543c95fe14aae1d52ad1c94e85, type: 2}
   _passiveDamping: 1
   _solverIterations: 16

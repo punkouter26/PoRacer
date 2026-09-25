@@ -26,7 +26,6 @@ namespace PoRacer.Agents
 
         private IsaacBoxAgent _agent;
         private IsaacBoxTargetSampler _sampler;
-        private Action _areaReset;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
         private bool _held;
         private bool _startHeld;
@@ -161,8 +160,6 @@ namespace PoRacer.Agents
                 _sampler.enabled = false;
             }
         }
-
-        public void SetAreaResetCallback(Action areaReset) => _areaReset = areaReset;
 
         /// <summary>
         /// Deliberately does nothing. The IsaacBox has no fatigue system. Calling

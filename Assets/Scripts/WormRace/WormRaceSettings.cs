@@ -14,7 +14,7 @@ namespace PoRacer.WormRace
     /// follows it is the worm's own addition, the PhysX ArticulationBody lane and the
     /// cross-simulator stand-ins.
     ///
-    /// Built and wired by Editor_BuildWormRaceScene, which writes every field.
+    /// Authored in the Inspector; SCN_WORM_RACE's LifetimeScope references it.
     /// </summary>
     [CreateAssetMenu(menuName = "PoRacer/Worm Race Settings", fileName = "WormRaceSettings")]
     public sealed class WormRaceSettings : ScriptableObject

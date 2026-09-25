@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using MessagePipe;
 using PoRacer.Agents;
 using PoRacer.Models;
+using PoRacer.Presentation;
 using PoRacer.Views;
 using System.Threading;
 using Unity.MLAgents.Policies;
@@ -57,11 +58,6 @@ namespace PoRacer.Systems
             new("FEATHER", 1f, 0.9f, 0.14f, new Color(0.95f, 0.95f, 0.85f))
         };
 
-        // Roulette map: kinds the trained brains already know from the curriculum.
-        private static readonly TrackKind[] RouletteKinds =
-        {
-            TrackKind.Flat, TrackKind.Bumps, TrackKind.Walls, TrackKind.Lumpy, TrackKind.Swamp
-        };
         // Golden-ratio hue stepping spreads racer tints evenly around the wheel.
         private const float TINT_HUE_STEP = 0.61803f;
 
@@ -291,13 +287,11 @@ namespace PoRacer.Systems
 
         /// <summary>
         /// The scene's baked geometry for exactly this map, or null. Length and
-        /// features are part of the test, not just the kind: Flat, Gale and
-        /// Roulette are all TrackKind.Flat and differ only by length and hazards,
-        /// so matching on kind alone would race the wrong track on two of them.
-        /// Roulette re-rolls its features every race and so never matches.
+        /// features are part of the test, not just the kind, so two builder maps
+        /// that share a TrackKind can never race each other's geometry.
         /// </summary>
         private RaceTrackView.AuthoredTrack FindAuthoredTrack(
-            Systems_MapCatalog.MapEntry map, TrackFeatures rolledFeatures)
+            Systems_MapCatalog.MapEntry map, TrackFeatures features)
         {
             IReadOnlyList<RaceTrackView.AuthoredTrack> authored = _track.AuthoredTracks;
             for (int authoredIndex = 0; authoredIndex < authored.Count; authoredIndex++)
@@ -313,7 +307,7 @@ namespace PoRacer.Systems
                 {
                     return candidate;
                 }
-                if (candidate.features == rolledFeatures
+                if (candidate.features == features
                     && Mathf.Approximately(candidate.lengthMeters, map.LengthMeters))
                 {
                     return candidate;
@@ -427,34 +421,9 @@ namespace PoRacer.Systems
 
             float stageClock = Time.realtimeSinceStartup;
             Systems_MapCatalog.MapEntry map = Systems_MapCatalog.Get(_config.SelectedMapIndex);
-            TrackKind rolledKind = map.Kind;
-            TrackFeatures rolledFeatures = map.Features;
-            string trackName = map.DisplayName;
-            if (map.Randomize)
-            {
-                // Roulette: roll terrain and hazards fresh for every race.
-                rolledKind = RouletteKinds[_rng.Next(RouletteKinds.Length)];
-                rolledFeatures = TrackFeatures.None;
-                if (rolledKind != TrackKind.Swamp && _rng.Next(2) == 0)
-                {
-                    rolledFeatures |= TrackFeatures.MudPits;
-                }
-                if (_rng.Next(2) == 0)
-                {
-                    rolledFeatures |= TrackFeatures.BoostPads;
-                }
-                if (_rng.Next(3) == 0)
-                {
-                    rolledFeatures |= TrackFeatures.Gusts;
-                }
-                if (rolledKind != TrackKind.Swamp && _rng.Next(3) == 0)
-                {
-                    rolledFeatures |= TrackFeatures.Gates;
-                }
-                trackName = $"Roulette: {rolledKind}";
-            }
-            _currentTrack = rolledKind;
-            _raceModel.TrackName = trackName;
+            TrackFeatures features = map.Features;
+            _raceModel.TrackName = map.DisplayName;
+            _currentTrack = map.Kind;
             // The finish line (trigger + agent goal) moves to the map's length so
             // race distance is a per-map design knob, not a scene constant.
             if (_track.FinishLine != null)
@@ -480,18 +449,18 @@ namespace PoRacer.Systems
                 // Scene view is what races. Everything else is still generated.
                 // The match is on kind, length and features together, because three
                 // maps share TrackKind.Flat and differ only in those two.
-                RaceTrackView.AuthoredTrack authoredTrack = FindAuthoredTrack(map, rolledFeatures);
+                RaceTrackView.AuthoredTrack authoredTrack = FindAuthoredTrack(map, features);
                 _course = authoredTrack != null ? authoredTrack.course : null;
                 if (_currentTrack.IsCourse() && _course == null)
                 {
                     // The builder cannot make a course; without the scene entry the
                     // race would run on nothing. Fall back to the first map, loudly.
                     Debug.LogError($"Map '{map.DisplayName}' needs an authored course in the scene " +
-                        "(run Editor_BuildCourseTrack.Build()); racing Flat instead.");
+                        "(an AuthoredTrack entry under RaceTrackView); racing Flat instead.");
                     map = Systems_MapCatalog.Get(0);
                     _currentTrack = map.Kind;
                     _raceModel.TrackName = map.DisplayName;
-                    authoredTrack = FindAuthoredTrack(map, rolledFeatures);
+                    authoredTrack = FindAuthoredTrack(map, features);
                 }
                 ShowAuthoredTrack(authoredTrack);
                 // The scene's z-line finish gate has no meaning on a course, which
@@ -517,7 +486,7 @@ namespace PoRacer.Systems
                 else
                 {
                     _trackBuilder.Build(_currentTrack, _track.TrackRoot, width: TRACK_WIDTH, length: map.LengthMeters, _rng,
-                        decorate: true, finishZ: finishZ, features: rolledFeatures, backMargin: backMargin);
+                        decorate: true, finishZ: finishZ, backMargin: backMargin);
                 }
 
                 // The finish arch has no collider, so the camera cannot discover
@@ -889,7 +858,7 @@ namespace PoRacer.Systems
                     {
                         RacerId = racerId,
                         CreatureId = entry.id,
-                        DisplayName = $"{entry.displayName} #{racerIndex + 1}",
+                        DisplayName = $"{TrainerTeams.Tagged(trainedBy, entry.displayName)} #{racerIndex + 1}",
                         Status = RacerStatus.Racing,
                         Tint = tint,
                         TintHex = ColorUtility.ToHtmlStringRGB(tint),
