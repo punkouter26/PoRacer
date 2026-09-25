@@ -1,0 +1,537 @@
+#usda 1.0
+(
+    defaultPrim = "quad"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "quad" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI"]
+)
+{
+    custom bool newton:selfCollisionEnabled = 1
+    custom bool physxArticulation:enabledSelfCollisions = 1
+
+    def Xform "Quad_v01" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (4.5, 6.5, 10.1)
+        float physics:mass = 60
+        quatf physics:principalAxes = (1, 0, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0, 0, 0.9)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Cube "Quad_v01_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double size = 2
+            quatf xformOp:orient = (1, 0, 0, 0)
+            float3 xformOp:scale = (0.55, 0.45, 0.15)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def "Looks"
+    {
+        def Material "physicsMaterial_0" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            custom float newton:rollingFriction = 0.0001
+            custom float newton:torsionalFriction = 0.005
+            float physics:dynamicFriction = 0.9
+            float physics:restitution = 0
+            float physics:staticFriction = 0.9
+        }
+    }
+
+    def Xform "Upper_m1_m1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.039204, 0.039204, 0.014904)
+        float physics:mass = 4
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.451, 0.495, 0.54)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Upper_m1_m1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.18
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.09
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Lower_m1_m1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.033636186, 0.033636186, 0.0085137235)
+        float physics:mass = 3.5
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.451, 0.495, 0.18000000000000005)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Lower_m1_m1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.216
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.072
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Upper_m1_1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.039204, 0.039204, 0.014904)
+        float physics:mass = 4
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0.451, 0.495, 0.54)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Upper_m1_1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.18
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.09
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Lower_m1_1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.033636186, 0.033636186, 0.0085137235)
+        float physics:mass = 3.5
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0.451, 0.495, 0.18000000000000005)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Lower_m1_1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.216
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.072
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Upper_1_m1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.039204, 0.039204, 0.014904)
+        float physics:mass = 4
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.451, -0.495, 0.54)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Upper_1_m1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.18
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.09
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Lower_1_m1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.033636186, 0.033636186, 0.0085137235)
+        float physics:mass = 3.5
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (-0.451, -0.495, 0.18000000000000005)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Lower_1_m1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.216
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.072
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Upper_1_1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.039204, 0.039204, 0.014904)
+        float physics:mass = 4
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0.451, -0.495, 0.54)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Upper_1_1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.18
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.09
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Xform "Lower_1_1" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        point3f physics:centerOfMass = (0, 0, 0)
+        float3 physics:diagonalInertia = (0.033636186, 0.033636186, 0.0085137235)
+        float physics:mass = 3.5
+        quatf physics:principalAxes = (6.123234e-17, 1, 0, 0)
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0.451, -0.495, 0.18000000000000005)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Capsule "Lower_1_1_geom" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.216
+            rel material:binding:physics = </quad/Looks/physicsMaterial_0> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+            custom int mjc:condim = 3
+            custom float newton:contact_kd = 200
+            custom float newton:contact_ke = 10000
+            custom float newton:contactMargin = 0
+            color3f[] primvars:displayColor = [(0.3, 0.8, 0.35)]
+            double radius = 0.072
+            quatf xformOp:orient = (6.123234e-17, 1, 0, 0)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+        }
+    }
+
+    def Scope "joints"
+    {
+        def PhysicsRevoluteJoint "Upper_m1_m1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Quad_v01>
+            rel physics:body1 = </quad/Upper_m1_m1>
+            point3f physics:localPos0 = (-0.451, 0.495, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Lower_m1_m1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Upper_m1_m1>
+            rel physics:body1 = </quad/Lower_m1_m1>
+            point3f physics:localPos0 = (0, 0, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -60.00014
+            float physics:upperLimit = 60.00014
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Upper_m1_1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Quad_v01>
+            rel physics:body1 = </quad/Upper_m1_1>
+            point3f physics:localPos0 = (0.451, 0.495, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Lower_m1_1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Upper_m1_1>
+            rel physics:body1 = </quad/Lower_m1_1>
+            point3f physics:localPos0 = (0, 0, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -60.00014
+            float physics:upperLimit = 60.00014
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Upper_1_m1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Quad_v01>
+            rel physics:body1 = </quad/Upper_1_m1>
+            point3f physics:localPos0 = (-0.451, -0.495, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Lower_1_m1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Upper_1_m1>
+            rel physics:body1 = </quad/Lower_1_m1>
+            point3f physics:localPos0 = (0, 0, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -60.00014
+            float physics:upperLimit = 60.00014
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Upper_1_1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Quad_v01>
+            rel physics:body1 = </quad/Upper_1_1>
+            point3f physics:localPos0 = (0.451, -0.495, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -44.999992
+            float physics:upperLimit = 44.999992
+            custom float physxJoint:armature = 0
+        }
+
+        def PhysicsRevoluteJoint "Lower_1_1" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = -0
+            float drive:angular:physics:maxForce = 300
+            float drive:angular:physics:stiffness = 26.17994
+            float drive:angular:physics:targetPosition = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float mjc:damping = 100
+            custom float newton:angular:limitDamping = 3.4906585
+            custom float newton:angular:limitStiffness = 174.53293
+            custom float newton:armature = 0
+            custom float newton:friction = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </quad/Upper_1_1>
+            rel physics:body1 = </quad/Lower_1_1>
+            point3f physics:localPos0 = (0, 0, -0.18)
+            point3f physics:localPos1 = (0, 0, 0.18)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physics:lowerLimit = -60.00014
+            float physics:upperLimit = 60.00014
+            custom float physxJoint:armature = 0
+        }
+    }
+}
+

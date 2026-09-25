@@ -1,0 +1,56 @@
+{
+ "mjcf": "../../../training/quad/quad.xml",
+ "root": "quad",
+ "bodies": {
+  "Quad_v01": "Quad_v01",
+  "Upper_-1_-1": "Upper_m1_m1",
+  "Lower_-1_-1": "Lower_m1_m1",
+  "Upper_-1_1": "Upper_m1_1",
+  "Lower_-1_1": "Lower_m1_1",
+  "Upper_1_-1": "Upper_1_m1",
+  "Lower_1_-1": "Lower_1_m1",
+  "Upper_1_1": "Upper_1_1",
+  "Lower_1_1": "Lower_1_1"
+ },
+ "joints": {
+  "Upper_-1_-1": "Upper_m1_m1",
+  "Lower_-1_-1": "Lower_m1_m1",
+  "Upper_-1_1": "Upper_m1_1",
+  "Lower_-1_1": "Lower_m1_1",
+  "Upper_1_-1": "Upper_1_m1",
+  "Lower_1_-1": "Lower_1_m1",
+  "Upper_1_1": "Upper_1_1",
+  "Lower_1_1": "Lower_1_1"
+ },
+ "geoms": {
+  "Quad_v01_geom": "Quad_v01/Quad_v01_geom",
+  "Upper_-1_-1_geom": "Upper_m1_m1/Upper_m1_m1_geom",
+  "Lower_-1_-1_geom": "Lower_m1_m1/Lower_m1_m1_geom",
+  "Upper_-1_1_geom": "Upper_m1_1/Upper_m1_1_geom",
+  "Lower_-1_1_geom": "Lower_m1_1/Lower_m1_1_geom",
+  "Upper_1_-1_geom": "Upper_1_m1/Upper_1_m1_geom",
+  "Lower_1_-1_geom": "Lower_1_m1/Lower_1_m1_geom",
+  "Upper_1_1_geom": "Upper_1_1/Upper_1_1_geom",
+  "Lower_1_1_geom": "Lower_1_1/Lower_1_1_geom"
+ },
+ "actuatorOrder": [
+  "Upper_-1_-1",
+  "Lower_-1_-1",
+  "Upper_-1_1",
+  "Lower_-1_1",
+  "Upper_1_-1",
+  "Lower_1_-1",
+  "Upper_1_1",
+  "Lower_1_1"
+ ],
+ "actuatorJointsUsd": [
+  "Upper_m1_m1",
+  "Lower_m1_m1",
+  "Upper_m1_1",
+  "Lower_m1_1",
+  "Upper_1_m1",
+  "Lower_1_m1",
+  "Upper_1_1",
+  "Lower_1_1"
+ ]
+}

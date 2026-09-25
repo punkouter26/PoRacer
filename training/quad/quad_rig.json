@@ -1,0 +1,1662 @@
+{
+ "model": "quad",
+ "source": "training/bugs/Quad_v01.xml (from Assets/Prefabs/Quad_v01.prefab)",
+ "generator": "training/quad/build_quad.py",
+ "mjcf": "training/quad/quad.xml",
+ "spec": "training/quad/QUAD_SPEC.md",
+ "changesFromSource": [
+  "actuator forcerange +-300 N*m (source 900)",
+  "actuator kp 1500 N*m/rad (source 4500) and joint damping 100 N*m*s/rad (source 300): scaled by 1/3 with the force limit (QUAD_SPEC)",
+  "friction 0.9 on every geom incl. floor (source 0.6)",
+  "solver Newton, iterations 10, ls_iterations 8 written explicitly (as worm.xml)",
+  "keyframe 'spawn' at 0.92 m (rest + 2 cm)",
+  "visual-only texture/material/light/camera/site removed; body colour neutral grey (rule D reserves red/green)"
+ ],
+ "frames": {
+  "mujoco": "right-handed, Z-up, +X forward, +Y left",
+  "unity": "left-handed, Y-up, +X right, +Z forward",
+  "position": "Unity (x, y, z) = MuJoCo (-y, z, x)   [MuJoCo = (z_u, -x_u, y_u)]",
+  "axis": "Unity axis a -> MuJoCo (-a.z, a.x, -a.y); MuJoCo m -> Unity (m.y, -m.z, -m.x). MuJoCo hinge axis +Y (pitch) is Unity +X",
+  "quat": "Unity (x, y, z, w) -> MuJoCo (w, -z, x, -y); MuJoCo (w, a, b, c) -> Unity (b, -c, -a, w)",
+  "boxHalfSizes": "Unity (sx, sy, sz) -> MuJoCo (sz, sx, sy)",
+  "jointSign": "a positive Unity jointPosition / xDrive.target equals a positive MuJoCo qpos / ctrl for the same physical motion (the axis map carries the handedness flip). Same map as training/bugs/README.md and WORM_SPEC.md. Hip +20 deg swings the foot backward (MuJoCo -x, Unity -z).",
+  "unityBlocks": "each body/geom/joint carries a 'unity' block already converted with these maps"
+ },
+ "units": "SI: m, kg, s, rad, N*m. kp in N*m/rad, damping in N*m*s/rad",
+ "physics": {
+  "timestep": 0.005,
+  "decimation": 10,
+  "policyDt": 0.05,
+  "gravity": [
+   0.0,
+   0.0,
+   -9.81
+  ],
+  "integrator": "implicitfast",
+  "cone": "pyramidal",
+  "solver": "Newton",
+  "iterations": 10,
+  "lsIterations": 8,
+  "tolerance": 1e-08,
+  "frictionCombine": "max (MuJoCo); every geom and the floor are 0.9, so the combine rule does not matter",
+  "restitution": 0.0,
+  "selfCollision": "all body pairs collide except parent-child (MuJoCo filterparent default); no <exclude> pairs"
+ },
+ "totalMass": 90.0,
+ "torso": "Quad_v01",
+ "restRootHeight": 0.9,
+ "spawnRootHeight": 0.92,
+ "actionScaleRad": 0.785398,
+ "actionToCtrl": "ctrl[i] = rest[i] + clip(action[i], -1, 1) * actionScaleRad; rest = 0 for every joint",
+ "restPose": {
+  "Upper_-1_-1": 0.0,
+  "Lower_-1_-1": 0.0,
+  "Upper_-1_1": 0.0,
+  "Lower_-1_1": 0.0,
+  "Upper_1_-1": 0.0,
+  "Lower_1_-1": 0.0,
+  "Upper_1_1": 0.0,
+  "Lower_1_1": 0.0
+ },
+ "actionOrder": [
+  "Upper_-1_-1",
+  "Lower_-1_-1",
+  "Upper_-1_1",
+  "Lower_-1_1",
+  "Upper_1_-1",
+  "Lower_1_-1",
+  "Upper_1_1",
+  "Lower_1_1"
+ ],
+ "forceLimit": 300.0,
+ "lowerLegs": [
+  "Lower_-1_-1",
+  "Lower_-1_1",
+  "Lower_1_-1",
+  "Lower_1_1"
+ ],
+ "footGeoms": [
+  "Lower_-1_-1_geom",
+  "Lower_-1_1_geom",
+  "Lower_1_-1_geom",
+  "Lower_1_1_geom"
+ ],
+ "footPointsLocal": {
+  "Lower_-1_-1": [
+   0.0,
+   0.0,
+   -0.108
+  ],
+  "Lower_-1_1": [
+   0.0,
+   0.0,
+   -0.108
+  ],
+  "Lower_1_-1": [
+   0.0,
+   0.0,
+   -0.108
+  ],
+  "Lower_1_1": [
+   0.0,
+   0.0,
+   -0.108
+  ]
+ },
+ "footSlip": "sum over lower legs in ground contact of the horizontal (world x, y) speed of the foot point (footPointsLocal, the bottom end-cap centre of the lower capsule): v_foot = v_body + w x (R p). 'In ground contact' = MuJoCo lists a floor contact for that lower-leg geom with dist < 0 (a force-carrying contact); an Isaac/PhysX contact sensor equivalent is ground normal force on the lower leg > 1 N",
+ "legNames": {
+  "Upper_-1_-1": "rear-left hip",
+  "Lower_-1_-1": "rear-left knee",
+  "Upper_-1_1": "front-left hip",
+  "Lower_-1_1": "front-left knee",
+  "Upper_1_-1": "rear-right hip",
+  "Lower_1_-1": "rear-right knee",
+  "Upper_1_1": "front-right hip",
+  "Lower_1_1": "front-right knee"
+ },
+ "task": {
+  "goal": "world +x (MuJoCo) = Unity +z",
+  "targetSpeed": 1.49,
+  "targetSpeedFormula": "sqrt(0.25 * 9.81 * 0.9) = 1.486, rounded to 1.49 as QUAD_SPEC prints it (Froude 0.25)",
+  "targetSpeedObs": "target speed / 2 (obs index 35)",
+  "speedKernel": "exp(-((v_x - targetSpeed) / 0.5)^2), two-sided",
+  "episodeSeconds": 20.0,
+  "fall": "torso up . world up < 0.5 or torso z < 0.45 m",
+  "obsSize": 36,
+  "actionSize": 8
+ },
+ "bodies": [
+  {
+   "name": "Quad_v01",
+   "parent": null,
+   "pos": [
+    0.0,
+    0.0,
+    0.9
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 60.0,
+   "inertiaDiag": [
+    4.5,
+    6.5,
+    10.1
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": true,
+   "unity": {
+    "pos": [
+     0.0,
+     0.9,
+     0.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Upper_-1_-1",
+   "parent": "Quad_v01",
+   "pos": [
+    -0.451,
+    0.495,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 4.0,
+   "inertiaDiag": [
+    0.039204,
+    0.039204,
+    0.014904
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     -0.495,
+     -0.36,
+     -0.451
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Lower_-1_-1",
+   "parent": "Upper_-1_-1",
+   "pos": [
+    0.0,
+    0.0,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.5,
+   "inertiaDiag": [
+    0.033636185,
+    0.033636185,
+    0.008513723
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.0,
+     -0.36,
+     0.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Upper_-1_1",
+   "parent": "Quad_v01",
+   "pos": [
+    0.451,
+    0.495,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 4.0,
+   "inertiaDiag": [
+    0.039204,
+    0.039204,
+    0.014904
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     -0.495,
+     -0.36,
+     0.451
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Lower_-1_1",
+   "parent": "Upper_-1_1",
+   "pos": [
+    0.0,
+    0.0,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.5,
+   "inertiaDiag": [
+    0.033636185,
+    0.033636185,
+    0.008513723
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.0,
+     -0.36,
+     0.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Upper_1_-1",
+   "parent": "Quad_v01",
+   "pos": [
+    -0.451,
+    -0.495,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 4.0,
+   "inertiaDiag": [
+    0.039204,
+    0.039204,
+    0.014904
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.495,
+     -0.36,
+     -0.451
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Lower_1_-1",
+   "parent": "Upper_1_-1",
+   "pos": [
+    0.0,
+    0.0,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.5,
+   "inertiaDiag": [
+    0.033636185,
+    0.033636185,
+    0.008513723
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.0,
+     -0.36,
+     0.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Upper_1_1",
+   "parent": "Quad_v01",
+   "pos": [
+    0.451,
+    -0.495,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 4.0,
+   "inertiaDiag": [
+    0.039204,
+    0.039204,
+    0.014904
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.495,
+     -0.36,
+     0.451
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Lower_1_1",
+   "parent": "Upper_1_1",
+   "pos": [
+    0.0,
+    0.0,
+    -0.36
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mass": 3.5,
+   "inertiaDiag": [
+    0.033636185,
+    0.033636185,
+    0.008513723
+   ],
+   "ipos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "iquat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "freejoint": false,
+   "unity": {
+    "pos": [
+     0.0,
+     -0.36,
+     0.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "centerOfMass": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  }
+ ],
+ "geoms": [
+  {
+   "name": "floor",
+   "body": "world",
+   "type": "plane",
+   "size": [
+    50.0,
+    50.0,
+    0.1
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Quad_v01_geom",
+   "body": "Quad_v01",
+   "type": "box",
+   "size": [
+    0.55,
+    0.45,
+    0.15
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "halfExtents": [
+     0.45,
+     0.15,
+     0.55
+    ]
+   }
+  },
+  {
+   "name": "Upper_-1_-1_geom",
+   "body": "Upper_-1_-1",
+   "type": "capsule",
+   "size": [
+    0.09,
+    0.09,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.09,
+    0.0,
+    0.0,
+    0.09
+   ],
+   "radius": 0.09,
+   "halfLength": 0.09,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.09,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Lower_-1_-1_geom",
+   "body": "Lower_-1_-1",
+   "type": "capsule",
+   "size": [
+    0.072,
+    0.108,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.108,
+    0.0,
+    0.0,
+    0.108
+   ],
+   "radius": 0.072,
+   "halfLength": 0.108,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.072,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Upper_-1_1_geom",
+   "body": "Upper_-1_1",
+   "type": "capsule",
+   "size": [
+    0.09,
+    0.09,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.09,
+    0.0,
+    0.0,
+    0.09
+   ],
+   "radius": 0.09,
+   "halfLength": 0.09,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.09,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Lower_-1_1_geom",
+   "body": "Lower_-1_1",
+   "type": "capsule",
+   "size": [
+    0.072,
+    0.108,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.108,
+    0.0,
+    0.0,
+    0.108
+   ],
+   "radius": 0.072,
+   "halfLength": 0.108,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.072,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Upper_1_-1_geom",
+   "body": "Upper_1_-1",
+   "type": "capsule",
+   "size": [
+    0.09,
+    0.09,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.09,
+    0.0,
+    0.0,
+    0.09
+   ],
+   "radius": 0.09,
+   "halfLength": 0.09,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.09,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Lower_1_-1_geom",
+   "body": "Lower_1_-1",
+   "type": "capsule",
+   "size": [
+    0.072,
+    0.108,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.108,
+    0.0,
+    0.0,
+    0.108
+   ],
+   "radius": 0.072,
+   "halfLength": 0.108,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.072,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Upper_1_1_geom",
+   "body": "Upper_1_1",
+   "type": "capsule",
+   "size": [
+    0.09,
+    0.09,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.09,
+    0.0,
+    0.0,
+    0.09
+   ],
+   "radius": 0.09,
+   "halfLength": 0.09,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.09,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  },
+  {
+   "name": "Lower_1_1_geom",
+   "body": "Lower_1_1",
+   "type": "capsule",
+   "size": [
+    0.072,
+    0.108,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quat": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   "friction": [
+    0.9,
+    0.005,
+    0.0001
+   ],
+   "condim": 3,
+   "contype": 1,
+   "conaffinity": 1,
+   "solref": [
+    0.01,
+    1.0
+   ],
+   "solimp": [
+    0.9,
+    0.95,
+    0.001,
+    0.5,
+    2.0
+   ],
+   "fromto": [
+    0.0,
+    0.0,
+    -0.108,
+    0.0,
+    0.0,
+    0.108
+   ],
+   "radius": 0.072,
+   "halfLength": 0.108,
+   "unity": {
+    "center": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.072,
+    "height": 0.36,
+    "direction": 1,
+    "directionNote": "CapsuleCollider.direction: 0 = X, 1 = Y, 2 = Z"
+   }
+  }
+ ],
+ "joints": [
+  {
+   "name": "Upper_-1_-1",
+   "body": "Upper_-1_-1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -0.785398,
+    0.785398
+   ],
+   "rangeDeg": [
+    -45.0,
+    45.0
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Lower_-1_-1",
+   "body": "Lower_-1_-1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -1.0472,
+    1.0472
+   ],
+   "rangeDeg": [
+    -60.0001,
+    60.0001
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Upper_-1_1",
+   "body": "Upper_-1_1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -0.785398,
+    0.785398
+   ],
+   "rangeDeg": [
+    -45.0,
+    45.0
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Lower_-1_1",
+   "body": "Lower_-1_1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -1.0472,
+    1.0472
+   ],
+   "rangeDeg": [
+    -60.0001,
+    60.0001
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Upper_1_-1",
+   "body": "Upper_1_-1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -0.785398,
+    0.785398
+   ],
+   "rangeDeg": [
+    -45.0,
+    45.0
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Lower_1_-1",
+   "body": "Lower_1_-1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -1.0472,
+    1.0472
+   ],
+   "rangeDeg": [
+    -60.0001,
+    60.0001
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Upper_1_1",
+   "body": "Upper_1_1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -0.785398,
+    0.785398
+   ],
+   "rangeDeg": [
+    -45.0,
+    45.0
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  },
+  {
+   "name": "Lower_1_1",
+   "body": "Lower_1_1",
+   "type": "hinge",
+   "axis": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "pos": [
+    0.0,
+    0.0,
+    0.18
+   ],
+   "range": [
+    -1.0472,
+    1.0472
+   ],
+   "rangeDeg": [
+    -60.0001,
+    60.0001
+   ],
+   "damping": 100.0,
+   "armature": 0.0,
+   "frictionloss": 0.0,
+   "solreflimit": [
+    0.01,
+    1.0
+   ],
+   "unity": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "anchor": [
+     0.0,
+     0.18,
+     0.0
+    ],
+    "angleSign": "Unity jointPosition (rad) == MuJoCo qpos, same sign"
+   }
+  }
+ ],
+ "actuators": [
+  {
+   "index": 0,
+   "name": "Upper_-1_-1",
+   "joint": "Upper_-1_-1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 1,
+   "name": "Lower_-1_-1",
+   "joint": "Lower_-1_-1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 2,
+   "name": "Upper_-1_1",
+   "joint": "Upper_-1_1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 3,
+   "name": "Lower_-1_1",
+   "joint": "Lower_-1_1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 4,
+   "name": "Upper_1_-1",
+   "joint": "Upper_1_-1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 5,
+   "name": "Lower_1_-1",
+   "joint": "Lower_1_-1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 6,
+   "name": "Upper_1_1",
+   "joint": "Upper_1_1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  },
+  {
+   "index": 7,
+   "name": "Lower_1_1",
+   "joint": "Lower_1_1",
+   "type": "position",
+   "kp": 1500.0,
+   "kv": 0.0,
+   "ctrlrange": [
+    -0.785398,
+    0.785398
+   ],
+   "forcerange": [
+    -300.0,
+    300.0
+   ],
+   "law": "force = clip(kp * (ctrl - qpos), forcerange); joint damping acts separately (passive, not capped)"
+  }
+ ]
+}
