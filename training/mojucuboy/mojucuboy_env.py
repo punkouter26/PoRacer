@@ -84,6 +84,18 @@ SPEED_SIGMA = 1.0         # width of the tracking kernel, m/s
 
 TARGET_SPEED = 1.5
 
+# Lane following (--lane-follow). The race gives every racer a lane: a line from its
+# spawn point toward its own point on the finish line, and the game steers him back
+# onto it by aiming LANE_LOOKAHEAD metres ahead on the line, with the correction
+# capped at LANE_MAX_TURN from where he faces (MojucuBoyController / Agent_MojucuBoy).
+# Training with the same steering, and pricing net distance off the line rather
+# than every sideways step, is what the K5 dead end in rl_optimization_log.md
+# (M35-M37: per-step lateral velocity is what walking is made of) recommended.
+LANE_LOOKAHEAD = 3.0      # metres ahead on the lane the heading command aims at
+LANE_MAX_TURN = math.radians(30.0)
+W_XTRACK = 0.5            # distance off the lane, saturating
+SCALE_XTRACK = 1.0        # metres; tanh(1) of the weight at 1 m off
+
 # How far, as a fraction of each joint's half-range, a saturated action moves the
 # target away from the stance. Below 1.0 so the policy cannot slam a joint into its
 # limit in a single step from the stance.
@@ -111,7 +123,9 @@ class MojucuBoyEnv:
                  ctrl_weight: float = W_CTRL,
                  drift_yaw_weight: float = 1.0,
                  heading_weight: float = W_HEADING,
-                 drift_weight: float = W_DRIFT):
+                 drift_weight: float = W_DRIFT,
+                 lane_follow: bool = False,
+                 xtrack_weight: float = W_XTRACK):
         self.num_worlds = num_worlds
         self.device = torch.device(device)
         # W_UPRIGHT is the only positive term NOT gated on `standing`, so while
@@ -180,6 +194,9 @@ class MojucuBoyEnv:
         # scale_drift: that saturates the tanh early and flattens the gradient, which is
         # how f21a/m25a collapsed. Scaling the weight keeps the gradient's shape.
         self.drift_weight = float(drift_weight)
+        # See LANE_LOOKAHEAD. Off reproduces every earlier run exactly.
+        self.lane_follow = bool(lane_follow)
+        self.xtrack_weight = float(xtrack_weight)
         # See _reward. The shipped brain runs at 2.04 m/s against a 1.5 m/s
         # command because the tracking kernel clamps positive error away, so
         # overshoot is free. Setting this makes the kernel symmetric, which is
@@ -247,6 +264,11 @@ class MojucuBoyEnv:
         self.episode_step = torch.zeros(num_worlds, device=self.device, dtype=torch.long)
         self.command_heading = torch.zeros(num_worlds, device=self.device)
         self.command_speed = torch.full((num_worlds,), TARGET_SPEED, device=self.device)
+        # The lane: a start point and a direction per world, and the signed distance
+        # off it, refreshed every step. Unused unless lane_follow.
+        self.lane_origin = torch.zeros(num_worlds, 2, device=self.device)
+        self.lane_heading = torch.zeros(num_worlds, device=self.device)
+        self.cross_track = torch.zeros(num_worlds, device=self.device)
 
         self.reset(torch.arange(num_worlds, device=self.device))
 
@@ -399,6 +421,12 @@ class MojucuBoyEnv:
         # scene, a 90 degree correction put him on the floor in under 5 seconds.
         self.command_heading[index] = yaw + (
             torch.rand(n, generator=self.generator, device=self.device) * 2 - 1) * torch.pi
+        # The lane starts where he stands and runs along the sampled heading, which
+        # may be anywhere up to 180 degrees from his facing: the capped steering then
+        # turns him onto it a stride at a time, as the race would.
+        self.lane_heading[index] = self.command_heading[index]
+        self.lane_origin[index] = self.qpos[index, 0:2].float()
+        self.cross_track[index] = 0
         # Commanded speed, sampled per episode when a band is configured.
         #
         # It was a hardcoded TARGET_SPEED on every reset, which made observation
@@ -421,6 +449,9 @@ class MojucuBoyEnv:
             ).to(self.command_speed.dtype)
 
         self._randomise(index)
+        if self.lane_follow:
+            # So the very first observation after a reset is already capped.
+            self._steer_to_lane()
 
     def _randomise(self, index: torch.Tensor) -> None:
         """Domain randomisation: actuator gains, link masses, ground friction.
@@ -473,6 +504,8 @@ class MojucuBoyEnv:
         for _ in range(DECIMATION):
             mjw.step(self.wm, self.wd)
 
+        if self.lane_follow:
+            self._steer_to_lane()
         obs = self.observation()
         reward, terms = self._reward(prev_qvel, torch.zeros(self.num_worlds, device=self.device))
 
@@ -517,6 +550,21 @@ class MojucuBoyEnv:
         terms["fallen"] = fallen.float()
         terms["timeout"] = timeout.float()
         return obs, reward, done, terms
+
+    def _steer_to_lane(self) -> None:
+        """Pure pursuit onto the lane, exactly as the game steers him: aim
+        LANE_LOOKAHEAD metres ahead on the line, then cap the heading error handed
+        to the policy at LANE_MAX_TURN from his current facing."""
+        lane_dir = torch.stack([torch.cos(self.lane_heading), torch.sin(self.lane_heading)], dim=1)
+        offset = self.qpos[:, 0:2].float() - self.lane_origin
+        # Signed distance off the line, positive to the LEFT of the lane direction.
+        self.cross_track = lane_dir[:, 0] * offset[:, 1] - lane_dir[:, 1] * offset[:, 0]
+        aim = self.lane_heading + torch.atan2(-self.cross_track,
+                                              torch.full_like(self.cross_track, LANE_LOOKAHEAD))
+        forward = self.root_rotation()[:, :, FORWARD_AXIS]
+        facing = torch.atan2(forward[:, 1], forward[:, 0])
+        error = (aim - facing + torch.pi) % (2 * torch.pi) - torch.pi
+        self.command_heading = facing + error.clamp(-LANE_MAX_TURN, LANE_MAX_TURN)
 
     def _reward(self, prev_joint_qvel: torch.Tensor, fallen_now: torch.Tensor):
         rot = self.root_rotation()
@@ -610,6 +658,9 @@ class MojucuBoyEnv:
             - W_IMPACT * torch.tanh(impact)
             - W_ACTION_RATE * action_rate
         )
+        xtrack = self.cross_track.abs()
+        if self.lane_follow:
+            reward = reward - self.xtrack_weight * torch.tanh(xtrack / SCALE_XTRACK)
         # Everything the reward actually charges for is reported, so the ten
         # weights above can be tuned against evidence instead of against the
         # single scalar return. ctrl/action_rate/lateral/upright/height were
@@ -622,7 +673,7 @@ class MojucuBoyEnv:
             # The honest control-effort measure; see the note beside torque_cost.
             "torque": torque_cost, "torque_abs": torque.abs().mean(dim=1),
             "lateral": lateral.abs(), "upright": obs_gravity_z.clamp(min=0.0),
-            "height": height,
+            "height": height, "xtrack": xtrack,
         }
         return reward, terms
 

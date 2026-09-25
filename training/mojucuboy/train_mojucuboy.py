@@ -43,6 +43,8 @@ HIDDEN = (128, 128, 128)
 KPI_TERMS = (
     "track", "facing", "speed_along", "drift", "lateral",
     "accel", "impact", "ctrl", "action_rate", "upright", "standing", "height",
+    # Metres off the lane; only meaningful with --lane-follow (0 otherwise).
+    "xtrack",
     # `torque`/`torque_abs` are the APPLIED-TORQUE measures. `ctrl` is the commanded
     # joint angle and is not the same quantity -- see mojucuboy_env.py.
     "torque", "torque_abs",
@@ -283,6 +285,13 @@ def main() -> int:
                              "opposed to --scale-drift which is the normaliser inside its "
                              "tanh. At 0.15 the term is under 7%% of the reward even "
                              "saturated; this is the direct lever for K5.")
+    parser.add_argument("--lane-follow", action="store_true",
+                        help="steer every world along a lane with the game's own pursuit "
+                             "(aim LANE_LOOKAHEAD m ahead, correction capped at 30 deg) and "
+                             "charge net distance off the lane instead of relying on the "
+                             "per-step lateral penalty. See LANE_LOOKAHEAD in mojucuboy_env.")
+    parser.add_argument("--xtrack-weight", type=float, default=mojucuboy_env.W_XTRACK,
+                        help="Weight on tanh(distance off the lane / 1 m). --lane-follow only.")
     parser.add_argument("--two-sided-speed", action="store_true",
                         help="penalise overshooting the commanded speed as well as "
                              "undershooting it. The shipped one-sided kernel clamps "
@@ -313,7 +322,9 @@ def main() -> int:
                        ctrl_weight=args.ctrl_weight,
                        drift_yaw_weight=args.drift_yaw_weight,
                        heading_weight=args.heading_weight,
-                       drift_weight=args.drift_weight)
+                       drift_weight=args.drift_weight,
+                       lane_follow=args.lane_follow,
+                       xtrack_weight=args.xtrack_weight)
     policy = ActorCritic().to(device)
     if args.init_from:
         # Curriculum stage two: carry stage one's weights over rather than
@@ -513,6 +524,7 @@ def main() -> int:
                   f"vel {(kpi_sum['speed_along']/kpi_steps).item():5.2f} m/s  "
                   f"hdg {(kpi_sum['heading_err_deg']/kpi_steps).item():5.1f}deg  "
                   f"lat {(kpi_sum['lateral']/kpi_steps).item():4.2f}  "
+                  f"xtk {(kpi_sum['xtrack']/kpi_steps).item():4.2f}m  "
                   f"upr {(kpi_sum['upright']/kpi_steps).item():4.2f}  "
                   f"std {(kpi_sum['standing']/kpi_steps).item():4.2f}  "
                   f"{total_steps/elapsed/1e3:5.0f}k steps/s", flush=True)

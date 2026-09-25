@@ -32,10 +32,10 @@ namespace PoRacer.Agents
     ///   * <see cref="SetGoal"/> is NOT a no-op. His observation carries a heading
     ///     command, so he can be steered toward the finish line. Fido cannot.
     ///
-    /// Known limit, and it is a real one: the policy was trained with commanded
-    /// headings within +/-0.6 rad of the racer's own facing, so his usable steering
-    /// envelope is about +/-34 degrees. He holds a lane down a straight track well;
-    /// he cannot take a sharp turn. Widening that needs a retrain, not a code change.
+    /// Steering: on a lane he aims LANE_LOOKAHEAD metres ahead on the line from his
+    /// start to his goal, and MojucuBoyController caps each correction at 30 degrees
+    /// from where he faces. The lane-follow brains are trained on exactly that loop
+    /// (mojucuboy_env.py --lane-follow); the older brains saw only a fixed heading.
     /// </summary>
     [RequireComponent(typeof(MojucuBoyController))]
     [DisallowMultipleComponent]
@@ -60,12 +60,25 @@ namespace PoRacer.Agents
         // down, so the hit is the ground he was placed on rather than a lower switchback.
         private const float SURFACE_PROBE_UP = 1f;
         private const float SURFACE_PROBE_DISTANCE = 6f;
+
+        /// <summary>
+        /// Lane steering: metres ahead on his lane that the heading command aims at.
+        /// MUST equal LANE_LOOKAHEAD in training/mojucuboy/mojucuboy_env.py, which trains
+        /// him on exactly this pursuit; the correction cap lives in MojucuBoyController.
+        /// </summary>
+        private const float LANE_LOOKAHEAD = 3f;
+        // A goal that has moved further than this since SetGoal is a course carrot, not
+        // a fixed lane point, and is aimed at directly.
+        private const float STATIC_GOAL_TOLERANCE = 0.05f;
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
 
 
         private MojucuBoyController _controller;
         private Transform _hips;
         private Transform _goal;
+        // The lane: from where he stood when the goal was set to where the goal was.
+        private Vector3 _laneStart;
+        private Vector3 _laneEnd;
         private bool _failed;
         private bool _startHeld;
 
@@ -209,7 +222,7 @@ namespace PoRacer.Agents
             // moved. Cheap -- it is an atan2.
             if (_goal != null)
             {
-                _controller.SetGoal(_goal.position, _hips.position);
+                _controller.SetGoal(AimPoint(), _hips.position);
             }
 
             // Being on the floor is NOT a failure. He is trained to get back up and
@@ -234,13 +247,45 @@ namespace PoRacer.Agents
         public void SetGoal(Transform goal)
         {
             _goal = goal;
+            if (goal == null)
+            {
+                return;
+            }
+            _laneStart = Body.position;
+            _laneEnd = goal.position;
             // Apply it immediately rather than waiting for the next FixedUpdate: the
             // policy's first observation must already carry a sane heading, or he spends
             // his opening strides correcting a course error he was never trained for.
-            if (goal != null && _controller != null)
+            if (_controller != null)
             {
-                _controller.SetGoal(goal.position, _hips != null ? _hips.position : transform.position);
+                _controller.SetGoal(AimPoint(), Body.position);
             }
+        }
+
+        /// <summary>
+        /// Where the heading command points. On a fixed lane goal: LANE_LOOKAHEAD metres
+        /// ahead of him ON THE LANE, so a racer who has drifted off it is steered back
+        /// onto the line rather than merely toward the far goal (pure pursuit, as he was
+        /// trained). A moving goal - a course carrot, which already rides the road ahead
+        /// of him - is aimed at directly.
+        /// </summary>
+        private Vector3 AimPoint()
+        {
+            Vector3 goal = _goal.position;
+            if ((goal - _laneEnd).sqrMagnitude > STATIC_GOAL_TOLERANCE * STATIC_GOAL_TOLERANCE)
+            {
+                return goal;
+            }
+            Vector3 lane = _laneEnd - _laneStart;
+            lane.y = 0f;
+            if (lane.sqrMagnitude < 0.0001f)
+            {
+                return goal;
+            }
+            Vector3 direction = lane.normalized;
+            Vector3 offset = Body.position - _laneStart;
+            float along = offset.x * direction.x + offset.z * direction.z;
+            return _laneStart + direction * (along + LANE_LOOKAHEAD);
         }
 
         /// <summary>
