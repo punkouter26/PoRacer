@@ -22,6 +22,8 @@ namespace PoRacer
             builder.Register<EloModel>(Lifetime.Singleton);
             builder.Register<RaceConfigModel>(Lifetime.Singleton);
             builder.Register<AudioMixModel>(Lifetime.Singleton);
+            builder.Register<RaceTelemetryModel>(Lifetime.Singleton);
+            builder.Register<SimWarsModel>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<Systems_AppBootstrap>();
             // Entry point so it starts warming the moment the menu appears, which is the
@@ -38,6 +40,10 @@ namespace PoRacer
             builder.RegisterEntryPoint<Systems_FruitPour>().AsSelf();
             builder.Register<Systems_Persistence>(Lifetime.Singleton);
             builder.Register<Systems_Elo>(Lifetime.Singleton);
+            builder.Register<Systems_SimWars>(Lifetime.Singleton);
+            // Entry point: FixedTick integrates joint power per physics step, Tick reads
+            // pose and policy outputs per frame. AsSelf so the spawner can register racers.
+            builder.RegisterEntryPoint<Systems_RacerTelemetry>().AsSelf();
             // Entry point: its Tick watches for the final stretch to re-aim the shot.
             builder.RegisterEntryPoint<Systems_CameraDirector>().AsSelf();
             builder.Register(container =>
@@ -56,6 +62,9 @@ namespace PoRacer
             builder.RegisterComponentInHierarchy<CameraFxView>();
             builder.RegisterComponentInHierarchy<DebugOverlayView>();
             builder.RegisterComponentInHierarchy<PostFxView>();
+            builder.RegisterComponentInHierarchy<TelemetryCardView>();
+            builder.RegisterComponentInHierarchy<ShotCaptionView>();
+            builder.RegisterComponentInHierarchy<SimWarsView>();
 
             MessagePipeOptions options = builder.RegisterMessagePipe();
             builder.RegisterMessageBroker<RaceStartedMessage>(options);
@@ -70,10 +79,13 @@ namespace PoRacer
             builder.RegisterMessageBroker<RacerWipeoutMessage>(options);
             builder.RegisterMessageBroker<RacerOvertakeMessage>(options);
             builder.RegisterMessageBroker<PhotoFinishMessage>(options);
+            builder.RegisterMessageBroker<CameraShotChangedMessage>(options);
 
             // Systems_Elo has no tick/start interface; force eager construction so
             // its RaceFinishedMessage subscription exists before the first race ends.
             builder.RegisterBuildCallback(container => container.Resolve<Systems_Elo>());
+            // Same for the league: it must be listening before the first race ends.
+            builder.RegisterBuildCallback(container => container.Resolve<Systems_SimWars>());
         }
     }
 }

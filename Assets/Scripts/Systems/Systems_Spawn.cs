@@ -121,6 +121,7 @@ namespace PoRacer.Systems
         private readonly Systems_TrackBuilder _trackBuilder;
         private readonly Systems_AudioMix _audioMix;
         private readonly Systems_Warmup _warmup;
+        private readonly Systems_RacerTelemetry _telemetry;
         private readonly System.Random _rng = new();
         private CancellationTokenSource _cts = new();
         private readonly List<GameObject> _spawned = new();
@@ -146,7 +147,8 @@ namespace PoRacer.Systems
             RaceModel raceModel,
             Systems_TrackBuilder trackBuilder,
             Systems_AudioMix audioMix,
-            Systems_Warmup warmup)
+            Systems_Warmup warmup,
+            Systems_RacerTelemetry telemetry)
         {
             _catalog = catalog;
             _config = config;
@@ -157,6 +159,7 @@ namespace PoRacer.Systems
             _trackBuilder = trackBuilder;
             _audioMix = audioMix;
             _warmup = warmup;
+            _telemetry = telemetry;
         }
 
         /// <summary>The authored course being raced, or null on builder maps.</summary>
@@ -840,6 +843,15 @@ namespace PoRacer.Systems
                     creatureRoot.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     creatureRoot.AddComponent<SkidMarkView>().Initialize(_currentTrack);
 
+                    // Its team in the Sim Wars league. An ML-Agents racer whose model went
+                    // missing races on its coded gait above, which makes it a heuristic bot.
+                    TrainingSource trainedBy = behavior != null && entry.model == null
+                        ? TrainingSource.Heuristic
+                        : entry.trainingSource;
+                    // Registered while it still stands in its spawn pose, which is what
+                    // telemetry measures "upright" against.
+                    _telemetry.Register(racerId, agent, trainedBy);
+
                     _spawned.Add(instance);
                     _racerRoots.Add(creatureRoot.transform);
                     racers.Add(new RacerState
@@ -851,7 +863,8 @@ namespace PoRacer.Systems
                         Tint = tint,
                         TintHex = ColorUtility.ToHtmlStringRGB(tint),
                         QuirkTag = quirk.Tag,
-                        QuirkColor = quirk.Badge
+                        QuirkColor = quirk.Badge,
+                        TrainedBy = trainedBy
                     });
                     gridIndex++;
                 }
@@ -1088,6 +1101,7 @@ namespace PoRacer.Systems
             _spawned.Clear();
             _racerRoots.Clear();
             _spawnedAgents.Clear();
+            _telemetry.Clear();
             // After the racers, not before: MjScene.OnDestroy frees the native model that
             // any surviving CreatureAgent would still be stepping.
             Systems_MujocoWorld.Teardown();

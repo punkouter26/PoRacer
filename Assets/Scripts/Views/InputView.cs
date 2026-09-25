@@ -2,6 +2,7 @@ using PoRacer.Models;
 using PoRacer.Systems;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 using VContainer;
 
 namespace PoRacer.Views
@@ -17,7 +18,7 @@ namespace PoRacer.Views
     /// racer, tap = overview. That is still View work — it reads input and calls a
     /// System, and Systems_CameraDirector never learns where the call came from.
     /// &lt;Pointer&gt; covers touchscreen and mouse alike, so a desktop click-drag
-    /// cycles racers too.
+    /// cycles racers too. A tap near a racer picks it and opens its telemetry card.
     /// </summary>
     public sealed class InputView : MonoBehaviour
     {
@@ -27,6 +28,10 @@ namespace PoRacer.Views
         private const float SWIPE_MIN_WIDTH_FRACTION = 0.12f;
         private const float TAP_MAX_WIDTH_FRACTION = 0.03f;
         private const float TAP_MAX_SECONDS = 0.4f;
+
+        [Tooltip("The HUD's document. A tap on one of its controls (the telemetry card's close " +
+                 "button, the results panel) belongs to the control, not to the camera.")]
+        [SerializeField] private UIDocument _hudDocument;
 
         private PlayerControls _controls;
         private Systems_CameraDirector _cameraDirector;
@@ -105,6 +110,10 @@ namespace PoRacer.Views
             {
                 return;
             }
+            if (IsOverHudControl(_pressPosition))
+            {
+                return;
+            }
             Vector2 travel = _controls.Camera.Point.ReadValue<Vector2>() - _pressPosition;
             float width = Mathf.Max(1f, Screen.width);
             float swipeMin = width * SWIPE_MIN_WIDTH_FRACTION;
@@ -126,8 +135,33 @@ namespace PoRacer.Views
             }
             if (travel.magnitude <= tapMax && Time.unscaledTime - _pressTime <= TAP_MAX_SECONDS)
             {
-                _cameraDirector.ShowOverview();
+                // A tap on a racer picks it (orbit + telemetry card); a tap on empty
+                // track asks for the wide shot, as it always has.
+                if (!_cameraDirector.TryPickAt(_pressPosition))
+                {
+                    _cameraDirector.ShowOverview();
+                }
             }
+        }
+
+        /// <summary>
+        /// True when the press landed on an interactive HUD element. Every piece of HUD
+        /// furniture that is only decoration is PickingMode.Ignore, so the panel's pick
+        /// only ever returns a button or a panel that takes its own clicks.
+        /// </summary>
+        private bool IsOverHudControl(Vector2 screenPosition)
+        {
+            IPanel panel = _hudDocument != null && _hudDocument.rootVisualElement != null
+                ? _hudDocument.rootVisualElement.panel
+                : null;
+            if (panel == null)
+            {
+                return false;
+            }
+            // Input System screen space has its origin bottom-left; the panel's is top-left.
+            var flipped = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
+            Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(panel, flipped);
+            return panel.Pick(panelPosition) != null;
         }
     }
 }

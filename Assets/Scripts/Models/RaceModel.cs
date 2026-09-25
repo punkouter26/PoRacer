@@ -33,6 +33,9 @@ namespace PoRacer.Models
         public string QuirkTag { get; set; } = string.Empty;
         // HUD badge color for the quirk; alpha 0 hides the badge.
         public UnityEngine.Color QuirkColor { get; set; }
+        // Team in the Sim Wars league: the catalog's trainer, or Heuristic when the
+        // racer fell back to its coded gait for want of a model.
+        public TrainingSource TrainedBy { get; set; }
     }
 
     public sealed class RaceModel

@@ -146,6 +146,9 @@ namespace PoRacer.Views
         // because CinemachineBrain copies the active vcam's lens onto the Camera in
         // its own LateUpdate and would overwrite it.
         private CinemachineCamera _lensOwner;
+        // Extra pull-back set by the director: 1 for a single racer, more for a duel
+        // shot whose two racers have drifted apart.
+        private float _framingScale = 1f;
 
         private void Awake()
         {
@@ -200,6 +203,9 @@ namespace PoRacer.Views
             }
             return Mathf.Clamp(AUTHORED_HORIZONTAL_TAN / horizontalTan, MIN_FRAME_SCALE, MAX_FRAME_SCALE);
         }
+
+        /// <summary>Multiplies every shot distance; the director widens duel shots with it.</summary>
+        public void SetFramingScale(float scale) => _framingScale = Mathf.Max(0.5f, scale);
 
         public void SetTarget(Transform target)
         {
@@ -294,7 +300,7 @@ namespace PoRacer.Views
             // Written once per frame, before either shot path places the lens: the
             // FOV goes onto the vcam and the returned factor rescales the authored
             // distances for the aspect actually on screen.
-            float frameScale = ApplyLensAndGetFrameScale();
+            float frameScale = ApplyLensAndGetFrameScale() * _framingScale;
             if (_course != null)
             {
                 ApplyCourseShot(frameScale);

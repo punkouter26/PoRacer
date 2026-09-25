@@ -223,6 +223,7 @@ namespace PoRacer.Views
             // them fall through to whatever is behind it.
             _podiumPanel.pickingMode = PickingMode.Position;
             _podiumPanel.style.display = DisplayStyle.None;
+            _podiumPanel.name = UiTheme.RESULTS_PANEL;
             var podiumTitle = new Label("RESULTS") { pickingMode = PickingMode.Ignore };
             podiumTitle.style.color = UiTheme.TextDim;
             podiumTitle.style.fontSize = UiTheme.FONT_XS;

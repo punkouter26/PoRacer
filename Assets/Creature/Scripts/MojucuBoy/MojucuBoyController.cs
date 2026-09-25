@@ -64,10 +64,30 @@ namespace Creature.MojucuBoy
         private float _commandHeading;
         private float _commandSpeed = 1.5f;
 
+        // Telemetry: MuJoCo actuator ids and force limits, resolved at bind time so the
+        // per-step effort read is a flat loop over mjData.
+        private int[] _actuatorIds;
+        private float[] _forceLimit;
+
 #if CREATURE_HAS_INFERENCE
         private Worker _worker;
         private Tensor<float> _input;
 #endif
+
+        /// <summary>The policy's last output, one per actuator in rig order; null until bound.</summary>
+        public IReadOnlyList<float> LastAction => _action;
+
+        /// <summary>True once the controller has bound to the compiled model.</summary>
+        public bool HasTelemetry => _bound;
+
+        /// <summary>Sum over actuators of |actuator force x actuator velocity| at the last step, in watts.</summary>
+        public float MechanicalPowerWatts { get; private set; }
+
+        /// <summary>Mean |actuator force| / forcerange over the force-limited actuators, 0..1.</summary>
+        public float EffortFraction { get; private set; }
+
+        /// <summary>Total mass of this racer's MuJoCo bodies, in kilograms, from the compiled model.</summary>
+        public float TotalMassKg { get; private set; }
 
         /// <summary>Steer the racer toward a world-space point. Unlike Fido, whose
         /// 33 observations describe only his own body, Boy carries a heading command
@@ -143,6 +163,31 @@ namespace Creature.MojucuBoy
             }
             _stepCounter++;
             WriteAction();
+            MeasureEffort(e.data);
+        }
+
+        /// <summary>
+        /// Reads the effort the telemetry card shows. Actuator force and velocity are the
+        /// previous step's, which is as current as mjData gets inside the control callback.
+        /// </summary>
+        private unsafe void MeasureEffort(MujocoLib.mjData_* data)
+        {
+            float power = 0f;
+            float effort = 0f;
+            int limited = 0;
+            for (int i = 0; i < _actuatorIds.Length; i++)
+            {
+                int id = _actuatorIds[i];
+                float force = (float)data->actuator_force[id];
+                power += Mathf.Abs(force * (float)data->actuator_velocity[id]);
+                if (_forceLimit[i] > 0f)
+                {
+                    effort += Mathf.Min(1f, Mathf.Abs(force) / _forceLimit[i]);
+                    limited++;
+                }
+            }
+            MechanicalPowerWatts = float.IsFinite(power) ? power : 0f;
+            EffortFraction = limited > 0 && float.IsFinite(effort) ? effort / limited : 0f;
         }
 
         /// <summary>
@@ -230,6 +275,25 @@ namespace Creature.MojucuBoy
                 _actuators.Add(actuator);
                 _joints.Add(joint);
             }
+
+            _actuatorIds = new int[n];
+            _forceLimit = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                int id = _actuators[i].MujocoId;
+                _actuatorIds[i] = id;
+                bool limitedForce = model->actuator_forcelimited[id] != 0;
+                _forceLimit[i] = limitedForce ? (float)model->actuator_forcerange[2 * id + 1] : 0f;
+            }
+            double mass = 0.0;
+            for (int i = 0; i < bodies.Length; i++)
+            {
+                if (bodies[i].MujocoId >= 0)
+                {
+                    mass += model->body_mass[bodies[i].MujocoId];
+                }
+            }
+            TotalMassKg = (float)mass;
 
             _stance = rig.Stance;
             _rangeLo = rig.RangeLo;

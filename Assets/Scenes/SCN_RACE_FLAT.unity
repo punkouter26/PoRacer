@@ -1630,6 +1630,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a65794044f0db834e8b2e2a7cff6eb6e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Views.InputView
+  _hudDocument: {fileID: 582110982}
 --- !u!4 &426818638
 Transform:
   m_ObjectHideFlags: 0
@@ -2032,6 +2033,9 @@ GameObject:
   - component: {fileID: 582110983}
   - component: {fileID: 582110982}
   - component: {fileID: 582110981}
+  - component: {fileID: 582110984}
+  - component: {fileID: 582110985}
+  - component: {fileID: 582110986}
   m_Layer: 0
   m_Name: RaceHud
   m_TagString: Untagged
@@ -2089,6 +2093,42 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &582110984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 582110980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ec6c48e00b9bbf44bf86f4b9171cdda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Views.TelemetryCardView
+--- !u!114 &582110985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 582110980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9860bf036ec0a5242a2742cf6de16a9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Views.ShotCaptionView
+--- !u!114 &582110986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 582110980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d0fc440b46bfba4cbf40ba2e77cb85d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PoRacer.Runtime::PoRacer.Views.SimWarsView
 --- !u!64 &593135640
 MeshCollider:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Creature.MojucuBoy;
 using Mujoco;
 using UnityEngine;
@@ -38,7 +39,8 @@ namespace PoRacer.Agents
     /// </summary>
     [RequireComponent(typeof(MojucuBoyController))]
     [DisallowMultipleComponent]
-    public sealed class Agent_MojucuBoy : MonoBehaviour, ICreatureAgent, IMujocoCreature, IAuthoredAppearance
+    public sealed class Agent_MojucuBoy : MonoBehaviour, ICreatureAgent, IMujocoCreature, IAuthoredAppearance,
+        IPolicyReadout, IEffortReadout
     {
         /// <summary>
         /// Identity, deliberately. The MJCF is authored with a 180 degree facing yaw so
@@ -100,6 +102,16 @@ namespace PoRacer.Agents
         public int MaxStep { get; set; }
 
         public Quaternion RestRotation => Rest;
+
+        public IReadOnlyList<float> LastActions => _controller != null ? _controller.LastAction : null;
+
+        public bool HasEffort => _controller != null && _controller.HasTelemetry;
+
+        public float MechanicalPowerWatts => _controller != null ? _controller.MechanicalPowerWatts : 0f;
+
+        public float EffortFraction => _controller != null ? _controller.EffortFraction : 0f;
+
+        public float TotalMassKg => _controller != null ? _controller.TotalMassKg : 0f;
 
         private void Awake()
         {

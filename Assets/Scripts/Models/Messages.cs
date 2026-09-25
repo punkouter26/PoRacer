@@ -102,6 +102,23 @@ namespace PoRacer.Models
         }
     }
 
+    /// <summary>
+    /// The broadcast director cut to a new shot. RivalId is set only for a duel.
+    /// </summary>
+    public readonly struct CameraShotChangedMessage
+    {
+        public readonly ShotReason Reason;
+        public readonly string SubjectId;
+        public readonly string RivalId;
+
+        public CameraShotChangedMessage(ShotReason reason, string subjectId, string rivalId)
+        {
+            Reason = reason;
+            SubjectId = subjectId;
+            RivalId = rivalId;
+        }
+    }
+
     public readonly struct PhotoFinishMessage
     {
         public readonly string WinnerId;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using IsaacBox;
 using UnityEngine;
 
@@ -15,7 +16,7 @@ namespace PoRacer.Agents
     [RequireComponent(typeof(IsaacBoxAgent))]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(100)]
-    public sealed class Agent_IsaacBox : MonoBehaviour, ICreatureAgent, IAuthoredAppearance
+    public sealed class Agent_IsaacBox : MonoBehaviour, ICreatureAgent, IPolicyReadout, IAuthoredAppearance
     {
         [Tooltip("Pin the root until something solid is under it. SCN_RACE_FLAT has no ground " +
                  "in edit mode - Systems_TrackBuilder raises the track when the race starts.")]
@@ -67,6 +68,9 @@ namespace PoRacer.Agents
         public Transform Body => Root != null ? Root.transform : transform;
 
         public int MaxStep { get; set; }
+
+        /// <summary>The Isaac policy's raw output from its last decision; unclamped, so it can overshoot 1.</summary>
+        public IReadOnlyList<float> LastActions => _agent != null ? _agent.LatestAction : null;
 
         /// <summary>Authored upright (T-pose zero, world-aligned links), so the rest pose is the identity.</summary>
         public Quaternion RestRotation => Quaternion.identity;

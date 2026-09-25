@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PoRacer.Rewards;
 using PoRacer.Sensors;
 using Unity.MLAgents;
@@ -27,7 +28,7 @@ namespace PoRacer.Agents
     /// when its actions barely move. Identical in training and races, so the
     /// policy learns to pace itself.
     /// </summary>
-    public sealed class Agent_Creature : Agent, ICreatureAgent
+    public sealed class Agent_Creature : Agent, ICreatureAgent, IPolicyReadout
     {
         private const float MAX_JOINT_VELOCITY = 10f; // rad/s (or m/s), normalization only
         private const float MAX_ROOT_SPEED = 2f;      // m/s, normalization only
@@ -119,6 +120,9 @@ namespace PoRacer.Agents
         }
 
         public ArticulationBody Root => _root;
+
+        /// <summary>The clamped drive commands applied at the last physics step, one per joint.</summary>
+        public IReadOnlyList<float> LastActions => _previousActions;
 
         /// <summary>Articulation root's transform; the prefab root only when there is no articulation.</summary>
         public Transform Body => _root != null ? _root.transform : transform;

@@ -69,6 +69,8 @@ namespace PoRacer.Presentation
         public const string FURNITURE_MENU = "Furniture.Menu";
         public const string FURNITURE_DBG = "Furniture.Dbg";
         public const string FURNITURE_VERSION = "Furniture.Version";
+        // The between-races results modal; SimWarsView adds its league table inside it.
+        public const string RESULTS_PANEL = "Results.Panel";
         private const float FONT_XS_BASE = 15f;
         private const float FONT_SM_BASE = 16f;
         private const float FONT_MD_BASE = 18f;

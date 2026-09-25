@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using IsaacH1;
 using UnityEngine;
 
@@ -19,7 +20,7 @@ namespace PoRacer.Agents
     [RequireComponent(typeof(IsaacH1Agent))]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(100)]
-    public sealed class Agent_IsaacH1 : MonoBehaviour, ICreatureAgent
+    public sealed class Agent_IsaacH1 : MonoBehaviour, ICreatureAgent, IPolicyReadout
     {
         [Tooltip("Pin the root until something solid is under it. SCN_RACE_FLAT has no ground " +
                  "in edit mode - Systems_TrackBuilder raises the track when the race starts - so " +
@@ -73,6 +74,9 @@ namespace PoRacer.Agents
         public Transform Body => Root != null ? Root.transform : transform;
 
         public int MaxStep { get; set; }
+
+        /// <summary>The Isaac policy's raw output from its last decision; unclamped, so it can overshoot 1.</summary>
+        public IReadOnlyList<float> LastActions => _agent != null ? _agent.LatestAction : null;
 
         /// <summary>The H1 is authored upright, so its rest pose is the identity.</summary>
         public Quaternion RestRotation => Quaternion.identity;

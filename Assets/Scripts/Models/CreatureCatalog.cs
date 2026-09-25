@@ -26,6 +26,12 @@ namespace PoRacer.Models
             public bool brainInPrefab;
 
             /// <summary>
+            /// Which tool trained this brain: the racer's team in the Sim Wars league and
+            /// the badge on its telemetry card.
+            /// </summary>
+            public TrainingSource trainingSource;
+
+            /// <summary>
             /// True when this entry has a brain to race at all, from either source.
             /// </summary>
             public bool HasBrain => model != null || brainInPrefab;

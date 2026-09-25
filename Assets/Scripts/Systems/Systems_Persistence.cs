@@ -100,6 +100,21 @@ namespace PoRacer.Systems
 
         public void Dispose() { }
 
+        /// <summary>
+        /// Loads another save file from the same folder with the same guarantees as the
+        /// ratings: missing gives a fresh instance, corrupt is backed up and recreated.
+        /// </summary>
+        public T Load<T>(string fileName) where T : class, new()
+        {
+            return LoadOrRecreate<T>(Path.Combine(_directory, fileName));
+        }
+
+        /// <summary>Writes another save file atomically, beside elo.json.</summary>
+        public void Save(string fileName, object data)
+        {
+            WriteAtomic(Path.Combine(_directory, fileName), JsonUtility.ToJson(data, true));
+        }
+
         private T LoadOrRecreate<T>(string path) where T : class, new()
         {
             if (!File.Exists(path))
