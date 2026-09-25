@@ -6,8 +6,8 @@ namespace PoRacer.WormRace
     /// </summary>
     public static class WormRacePaths
     {
-        public const string SETTINGS = "Assets/WormRace/WormRaceSettings.asset";
-        public const string RIG_JSON = "Assets/WormRace/worm_rig.json";
+        public const string SETTINGS = "Assets/Races/WormRace/WormRaceSettings.asset";
+        public const string RIG_JSON = "Assets/Races/WormRace/worm_rig.json";
         public const string SCENE = "Assets/Scenes/SCN_WORM_RACE.unity";
     }
 }

@@ -77,7 +77,7 @@ Assets/Scripts/Systems/Systems_CameraDirector.cs  Cinemachine 3.x priority switc
 Assets/Scripts/Systems/Systems_TrainingArea.cs    training-scene-only reset/goal (also used per-area)
 Assets/Scripts/Agents/Agent_Worm.cs           ArticulationBody obs/actions; root-local goal dir,
                                               normalized joint pos/vel, root up-vector + height
-Assets/Scripts/Rewards/Reward_WormLoco.cs     plain C# (D3), EditMode-tested
+Assets/Scripts/Agents/Reward_WormLoco.cs     plain C# (D3), EditMode-tested
 Assets/Scripts/Views/RaceHudView.cs           UI Toolkit hierarchy in C#; leaderboard + version stamp
                                               (non-pickable, top-left)
 Assets/Scripts/Views/InputView.cs             PlayerControls (generated) — Camera map only

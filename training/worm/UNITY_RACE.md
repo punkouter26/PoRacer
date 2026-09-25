@@ -26,18 +26,18 @@ there are or which lane runs in which simulator.
 Run from the project root in PowerShell.
 
 ```powershell
-# 1. Code: copy the staged scripts into Assets/ (creates Assets/Scripts/WormRace and
-#    Assets/Scripts/Editor/WormRace; touches no existing file).
+# 1. Code: copy the staged scripts into Assets/ (creates Assets/Scripts/Races/WormRace and
+#    Assets/Scripts/Editor/Races/WormRace; touches no existing file).
 robocopy training\worm\unity_staging\Assets Assets /E
 
 # 2. The body: both worms are built from this file at race start.
-New-Item -ItemType Directory -Force Assets\WormRace\Brains | Out-Null
-Copy-Item training\worm\worm_rig.json Assets\WormRace\worm_rig.json
+New-Item -ItemType Directory -Force Assets\Races\WormRace\Brains | Out-Null
+Copy-Item training\worm\worm_rig.json Assets\Races\WormRace\worm_rig.json
 
 # 3. The brains (once the training runs have exported them).
-Copy-Item training\worm\export\worm_mujoco.onnx     Assets\WormRace\Brains\worm_mujoco.onnx
-Copy-Item training\worm\export\worm_isaac.onnx      Assets\WormRace\Brains\worm_isaac.onnx
-Copy-Item training\worm\export\worm_isaaclab3.onnx  Assets\WormRace\Brains\worm_isaaclab3.onnx
+Copy-Item training\worm\export\worm_mujoco.onnx     Assets\Races\WormRace\Brains\worm_mujoco.onnx
+Copy-Item training\worm\export\worm_isaac.onnx      Assets\Races\WormRace\Brains\worm_isaac.onnx
+Copy-Item training\worm\export\worm_isaaclab3.onnx  Assets\Races\WormRace\Brains\worm_isaaclab3.onnx
 ```
 
 After copying a brain, run the scene builder again (section 2) so the settings pick it up.
@@ -47,9 +47,9 @@ Then let Unity import and compile. The console must show **no errors**. Unity cr
 
 What the copy adds:
 
-- `Assets/Scripts/WormRace/` - runtime code, its own assembly `PoRacer.WormRace`
+- `Assets/Scripts/Races/WormRace/` - runtime code, its own assembly `PoRacer.WormRace`
   (`allowUnsafeCode` is on, because the MuJoCo worm reads MuJoCo's state directly).
-- `Assets/Scripts/Editor/WormRace/` - the scene builder and the CLI driver, assembly
+- `Assets/Scripts/Editor/Races/WormRace/` - the scene builder and the CLI driver, assembly
   `PoRacer.WormRace.Editor` (editor only).
 
 Re-copy `worm_rig.json` every time `build_worm.py` is re-run. The rig changed on
@@ -74,13 +74,13 @@ Expected output, roughly:
 
 ```
 materials: blue (MuJoCo), orange (Isaac), purple (Isaac Lab 3), ground, line white/black
-physics material: Assets/WormRace/PM_WormRace.physicMaterial (0.90 static/dynamic, no bounce)
-panel settings: Assets/WormRace/UI/WormRacePanelSettings.asset
-settings: Assets/WormRace/WormRaceSettings.asset
-  rig: Assets/WormRace/worm_rig.json
-  lane 0: MuJoCo worm (MuJoCo, MuJoCo plug-in) brain: Assets/WormRace/Brains/worm_mujoco.onnx
-  lane 1: Isaac worm (Isaac Lab, PhysX ArticulationBody) brain: Assets/WormRace/Brains/worm_isaac.onnx
-  lane 2: Isaac3Worm (Isaac Lab 3, MuJoCo plug-in) brain: MISSING - copy training/worm/export/worm_isaaclab3.onnx to Assets/WormRace/Brains/worm_isaaclab3.onnx (the worm lies still, HUD says NO BRAIN)
+physics material: Assets/Races/WormRace/PM_WormRace.physicMaterial (0.90 static/dynamic, no bounce)
+panel settings: Assets/Races/WormRace/UI/WormRacePanelSettings.asset
+settings: Assets/Races/WormRace/WormRaceSettings.asset
+  rig: Assets/Races/WormRace/worm_rig.json
+  lane 0: MuJoCo worm (MuJoCo, MuJoCo plug-in) brain: Assets/Races/WormRace/Brains/worm_mujoco.onnx
+  lane 1: Isaac worm (Isaac Lab, PhysX ArticulationBody) brain: Assets/Races/WormRace/Brains/worm_isaac.onnx
+  lane 2: Isaac3Worm (Isaac Lab 3, MuJoCo plug-in) brain: MISSING - copy training/worm/export/worm_isaaclab3.onnx to Assets/Races/WormRace/Brains/worm_isaaclab3.onnx (the worm lies still, HUD says NO BRAIN)
 scene objects: WormRaceLifetimeScope, Directional Light, Main Camera, Track (3 lanes), WormRaceHud
 saved Assets/Scenes/SCN_WORM_RACE.unity (checked on disk: scope -> settings, HUD -> panel settings)
 ```
@@ -212,7 +212,7 @@ Shape:
           "averageSpeedMps": 0.018, "...": "..." },
         { "lane": 2, "name": "Isaac3Worm", "method": "Isaac Lab 3",
           "physics": "MuJoCo (org.mujoco plug-in)", "brain": "missing", "brainLoaded": false,
-          "brainError": "Isaac3Worm: no brain assigned. Copy the exported ONNX to Assets/WormRace/Brains/worm_isaaclab3.onnx and re-run ...",
+          "brainError": "Isaac3Worm: no brain assigned. Copy the exported ONNX to Assets/Races/WormRace/Brains/worm_isaaclab3.onnx and re-run ...",
           "status": "TimedOut", "place": 3, "distanceMeters": -0.01, "...": "..." } ] } ],
   "summary": [
     { "lane": 0, "name": "MuJoCo worm", "method": "MuJoCo", "physics": "MuJoCo (org.mujoco plug-in)",
@@ -280,7 +280,7 @@ position.
 - Extra, and expected: the floor plane and five `mocap="true"` bodies per PhysX worm,
   named `MocapProxy_L<lane>_Seg<n>` (their collision stand-ins, section 7).
 
-## 6. The knobs (`Assets/WormRace/WormRaceSettings.asset`)
+## 6. The knobs (`Assets/Races/WormRace/WormRaceSettings.asset`)
 
 Since the creature template (section 10) everything except the PhysX knobs sits under the
 asset's **Race** block (the template's `CreatureRaceConfig`): racers, track, race timing,
@@ -296,13 +296,13 @@ The body itself (masses, gains, limits, friction) is **not** here; it comes from
 |---|---|
 | Name / Method | HUD and results labels ("Isaac3Worm" / "Isaac Lab 3") |
 | **Physics** | **`Mujoco Plugin`** or **`Physx Articulation`**: the simulator that steps this worm in Unity |
-| Brain / Brain File | the ONNX, and its expected file name under `Assets/WormRace/Brains/` (used to find it and for the missing-brain message) |
+| Brain / Brain File | the ONNX, and its expected file name under `Assets/Races/WormRace/Brains/` (used to find it and for the missing-brain message) |
 | Material / Color | the segment material and the HUD swatch (never red or green, rule D) |
 
 **Choosing lane 2's physics.** The Isaac3Worm defaults to **Mujoco Plugin**, because
 it trains on Isaac Lab 3's Newton backend with the MuJoCo-Warp solver, whose contact and
 joint model is MuJoCo's. If that trainer falls back to PhysX, set lane 2's Physics to
-**Physx Articulation** (Inspector: `Assets/WormRace/WormRaceSettings.asset > Race >
+**Physx Articulation** (Inspector: `Assets/Races/WormRace/WormRaceSettings.asset > Race >
 Racers > Element 2 > Physics`). It takes effect on the next play; the scene builder keeps the choice
 on re-runs. Any lane can be switched the same way. PhysX racers use the PhysX settings
 below (passive damping, solver iterations); MuJoCo racers use the MuJoCo ones.
@@ -337,7 +337,7 @@ MessagePipe messages, UniTask for the countdown and the race loop.
 | Kind | Types |
 |---|---|
 Since 2026-09-24 the worm runs on the creature template (section 10); only the worm-specific
-pieces are still in `Assets/Scripts/WormRace`.
+pieces are still in `Assets/Scripts/Races/WormRace`.
 
 | Kind | Types |
 |---|---|
@@ -459,7 +459,7 @@ torn down. Nothing ever stands it up or moves it.
 
 ## 9. Removing it
 
-Delete `Assets/Scripts/WormRace`, `Assets/Scripts/Editor/WormRace`, `Assets/WormRace` and
+Delete `Assets/Scripts/Races/WormRace`, `Assets/Scripts/Editor/Races/WormRace`, `Assets/Races/WormRace` and
 `Assets/Scenes/SCN_WORM_RACE.unity` (with their `.meta` files) in the Unity editor.
 Nothing else in the project refers to them.
 
@@ -468,8 +468,8 @@ Nothing else in the project refers to them.
 ## 10. The creature template, and the quad race
 
 The worm race was turned into a template any MuJoCo-Warp-trained creature can race on
-(`Assets/Scripts/CreatureRace`, assembly `PoRacer.CreatureRace`; editor side
-`Assets/Scripts/Editor/CreatureRace`). A creature brings a rig JSON in the trainers' format
+(`Assets/Scripts/Races/CreatureRace`, assembly `PoRacer.CreatureRace`; editor side
+`Assets/Scripts/Editor/Races/CreatureRace`). A creature brings a rig JSON in the trainers' format
 (`training/quad/quad_rig.json`: bodies with parent/pos/quat/mass/inertiaDiag/ipos/iquat,
 geoms capsule|box|sphere with size and pos/quat or fromto and contact, hinge joints with
 axis/pos/range/damping/armature/solreflimit, position actuators with kp/ctrlrange/forcerange,
@@ -480,11 +480,11 @@ optional target speed / divisor; worm 35, quad 36), the pilot (target = rest + a
 decimation from the rig), the race system, HUD, camera, reports and a data-driven self-test
 list. `CreatureRaceSceneKit` and `CreatureRaceHarness` are the shared builder and CLI pieces.
 
-**Quad race** (`Assets/Scenes/SCN_QUAD_RACE.unity`, `Assets/QuadRace/`): two lanes 3 m apart,
+**Quad race** (`Assets/Scenes/SCN_QUAD_RACE.unity`, `Assets/Races/QuadRace/`): two lanes 3 m apart,
 30 m, 60 s. "Quad (MuJoCo)" BLUE with `quad_mujoco.onnx`, "Quad (Isaac Lab 3)" PURPLE with
 `quad_isaaclab3.onnx`, both on the MuJoCo plug-in. The builder copies
 `training/quad/quad_rig.json` and any `training/quad/export/quad_*.onnx` into
-`Assets/QuadRace/` when they change, so re-run it after the trainers export. No righting
+`Assets/Races/QuadRace/` when they change, so re-run it after the trainers export. No righting
 (rule H): a fallen quad keeps its own policy; the HUD shows `RACING (DOWN)` and the report
 `fellOver` / `falls`.
 

@@ -55,8 +55,8 @@ Editor. Prefer this when you want a return value or need to pass arguments.
 
 Every scene is authored and saved (AGENTS rule G): there are no scene or track
 builders. Tune a scene in the Editor, or with the CLI commands below, and save it.
-Race rosters live in `Assets/WormRace/WormRaceSettings.asset` and
-`Assets/QuadRace/QuadRaceSettings.asset`; a new brain is an `.onnx` copied into the
+Race rosters live in `Assets/Races/WormRace/WormRaceSettings.asset` and
+`Assets/Races/QuadRace/QuadRaceSettings.asset`; a new brain is an `.onnx` copied into the
 race's `Brains/` folder and assigned to its racer in the Inspector.
 
 **Scene smoke test:** Test Runner → EditMode → `PoRacer.Tests.SceneSmokeTests` plays

@@ -128,7 +128,7 @@ MonoBehaviour:
     _reportPrefix: wormrace
     _finishRule: first segment-0 nose past the finish line; time limit ranks by distance
     _holdLabel: holds straight
-    _brainsFolder: Assets/WormRace/Brains
+    _brainsFolder: Assets/Races/WormRace/Brains
   _wormPhysicsMaterial: {fileID: 13400000, guid: 94e3dd543c95fe14aae1d52ad1c94e85, type: 2}
   _passiveDamping: 1
   _solverIterations: 16

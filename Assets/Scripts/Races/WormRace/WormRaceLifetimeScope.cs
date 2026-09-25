@@ -17,7 +17,7 @@ namespace PoRacer.WormRace
     /// </summary>
     public sealed class WormRaceLifetimeScope : LifetimeScope
     {
-        [Tooltip("Assets/WormRace/WormRaceSettings.asset.")]
+        [Tooltip("Assets/Races/WormRace/WormRaceSettings.asset.")]
         [SerializeField] private WormRaceSettings _settings;
 
         protected override void Configure(IContainerBuilder builder)

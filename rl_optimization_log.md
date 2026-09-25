@@ -2487,7 +2487,7 @@ its commit can be identified by which flags are ABSENT. That set matches
    **the shipped brain trained with 30 % fallen starts, TWICE E15's 15 %**, and still
    reached ctrl 0.087. Fallen starts are not the cause.
 2. **There is no "M9 uprightness sign fix" in this reward.** I had it on the candidate
-   list. That fix was in `Assets/Scripts/Rewards/Reward_WormLoco.cs` — the ML-Agents
+   list. That fix was in `Assets/Scripts/Agents/Reward_WormLoco.cs` — the ML-Agents
    shared locomotion reward for the twelve PhysX creatures — and has nothing to do with
    MojucuBoy's MuJoCo reward, which is a different file and was never changed. I
    conflated two rewards because both were touched in the same session.

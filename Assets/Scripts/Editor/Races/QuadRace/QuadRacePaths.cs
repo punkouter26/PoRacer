@@ -8,7 +8,7 @@ namespace PoRacer.QuadRace.EditorTools
     /// </summary>
     public static class QuadRacePaths
     {
-        public const string SETTINGS = "Assets/QuadRace/QuadRaceSettings.asset";
+        public const string SETTINGS = "Assets/Races/QuadRace/QuadRaceSettings.asset";
         public const string SCENE = "Assets/Scenes/SCN_QUAD_RACE.unity";
     }
 }

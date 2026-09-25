@@ -121,4 +121,4 @@ MonoBehaviour:
     _reportPrefix: quadrace
     _finishRule: first torso front past the finish line; time limit ranks by distance; a fallen quad is never stood up (rule H)
     _holdLabel: stands at rest
-    _brainsFolder: Assets/QuadRace/Brains
+    _brainsFolder: Assets/Races/QuadRace/Brains

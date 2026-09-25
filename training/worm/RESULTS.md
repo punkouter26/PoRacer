@@ -95,9 +95,9 @@ nearly all the time, so the effort penalty may be too weak to shape an efficient
 ## Files
 
 - Brains: `export/worm_mujoco.onnx`, `export/worm_isaac.onnx` (copied to
-  `Assets/WormRace/Brains/`).
+  `Assets/Races/WormRace/Brains/`).
 - Reports: `export/worm_mujoco_report.json`, `export/worm_isaac_report.json`,
   `export/worm_isaac_in_mujoco_report.json`.
 - Race logs: `Logs/wormrace_*.json` (not in git).
-- Scene: `Assets/Scenes/SCN_WORM_RACE.unity`; code in `Assets/Scripts/WormRace/` and
-  `Assets/Scripts/Editor/WormRace/`.
+- Scene: `Assets/Scenes/SCN_WORM_RACE.unity`; code in `Assets/Scripts/Races/WormRace/` and
+  `Assets/Scripts/Editor/Races/WormRace/`.
