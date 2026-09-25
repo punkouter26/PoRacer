@@ -475,7 +475,7 @@ Visual Scripting was never installed.</div>
         <td>grep the log for <code>AAB BUILD RESULT:</code></td></tr>
       <tr><td class="name">PoRacer ▸ Build Android APK</td><td>Sideloadable APK on the <b>same key</b>, so it installs over a Play build</td>
         <td><code>BUILD RESULT:</code></td></tr>
-      <tr><td class="name"><code>Tools/play_publish.py</code></td><td>Uploads a built AAB. Defaults to the <code>internal</code> track as a <code>draft</code></td>
+      <tr><td class="name"><code>scripts/play_publish.py</code></td><td>Uploads a built AAB. Defaults to the <code>internal</code> track as a <code>draft</code></td>
         <td><code>--dry-run</code> rehearses and discards</td></tr>
     </tbody>
   </table>
@@ -489,8 +489,8 @@ both Android builders read <code>PORACER_KEYSTORE_PASS</code> first and fall bac
 <code>poracer-upload.pass</code>. With neither, the build <b>aborts</b> rather than producing an
 unsigned artifact.</div>
 
-<div class="note"><b><code>Tools/play_publish.py</code> needs its own venv</b>
-(<code>Tools/publish-venv</code>). Do not install it into <code>.venv</code> — that one carries
+<div class="note"><b><code>scripts/play_publish.py</code> needs its own venv</b>
+(<code>scripts/publish-venv</code>). Do not install it into <code>.venv</code> — that one carries
 load-bearing ml-agents and torch pins, and the C#/Python ml-agents versions must stay in exact parity.</div>
 
 <h4>Headless build invocation</h4>

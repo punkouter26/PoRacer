@@ -4,6 +4,7 @@
     "references": [
         "PoRacer.Runtime",
         "MessagePipe",
+        "VContainer",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

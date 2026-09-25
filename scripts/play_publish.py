@@ -46,9 +46,9 @@ SETUP (one time, and it needs a human in a browser):
 
 USAGE
 
-  python Tools/play_publish.py --dry-run
-  python Tools/play_publish.py --track internal --status completed
-  python Tools/play_publish.py --track production --status draft
+  python scripts/play_publish.py --dry-run
+  python scripts/play_publish.py --track internal --status completed
+  python scripts/play_publish.py --track production --status draft
 """
 
 import argparse
@@ -94,9 +94,9 @@ def access_token(credentials_path):
     except ImportError:
         fail(
             "google-auth is not installed. Create the isolated tooling venv:\n"
-            "  py -3 -m venv Tools/publish-venv\n"
-            "  Tools/publish-venv/Scripts/python.exe -m pip install "
-            "-r Tools/requirements-publish.txt\n"
+            "  py -3 -m venv scripts/publish-venv\n"
+            "  scripts/publish-venv/Scripts/python.exe -m pip install "
+            "-r scripts/requirements-publish.txt\n"
             "then re-run this script with that interpreter. Do NOT install it "
             "into .venv — that venv's pins are load-bearing for ML-Agents training."
         )

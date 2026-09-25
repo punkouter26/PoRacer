@@ -1,9 +1,9 @@
-# Dependencies for Tools/play_publish.py ONLY.
+# Dependencies for scripts/play_publish.py ONLY.
 #
 # Install into a DEDICATED venv, never into the project's .venv:
 #
-#   py -3 -m venv Tools/publish-venv
-#   Tools/publish-venv/Scripts/python.exe -m pip install -r Tools/requirements-publish.txt
+#   py -3 -m venv scripts/publish-venv
+#   scripts/publish-venv/Scripts/python.exe -m pip install -r scripts/requirements-publish.txt
 #
 # .venv carries load-bearing pins (mlagents 1.1.0, torch 2.4.1, numpy 1.23.5,
 # protobuf 3.20.3) that a stray resolve would happily walk over, and the C#/Python

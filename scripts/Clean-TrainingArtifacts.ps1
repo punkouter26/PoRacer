@@ -1,91 +1,85 @@
-# Reports (and optionally deletes) stale results/ run folders from ML-Agents
-# training. A run is "stale" only when nothing still depends on it.
+# Reports (and optionally deletes) superseded training checkpoints from the MuJoCo and
+# Isaac Lab run folders (AGENTS.md rules C and J).
 #
-# Protection is deliberately conservative, because the cost of a false positive
-# here is an unrecoverable 8-hour run:
-#   - the newest run folder for each run-id prefix (e.g. the latest all8h_*)
-#   - anything named *_backup_* (staged brains and demos)
-#   - any run-id a Config/*.yaml pairs to under the old <Name><Phase><NN> scheme
+# Scanned:
+#   training/<creature>/mujoco/runs/<run>/   MuJoCo Warp + torch PPO
+#   ISAAC/logs/<rsl_rl|rsl_rl_v3>/<task>/<run>/   Isaac Lab / RSL-RL (model_<N>.pt)
 #
-# The previous version protected ONLY that last category plus runs named by
-# scripts/evolve.ps1. Unattended runs are timestamped (all8h_20260826_2244), so
-# they matched no config, evolve.ps1 has been deleted, and the protected set came
-# out empty - which would have listed every run including the shipped brains as a
-# deletion candidate.
+# Kept, always:
+#   - every TensorBoard event file, config and summary (the curves stay readable)
+#   - the newest model_<N>.pt in each run, so the run can be resumed
+#   - any checkpoint a shipped brain was exported from: every path named by a
+#     "checkpoint" field in training/*/export/*_report.json
+#
+# Everything else - intermediate model_<N>.pt snapshots - is a candidate.
+# Empty run folders are candidates too.
 #
 # Usage:
 #   .\scripts\Clean-TrainingArtifacts.ps1            # dry run: lists candidates only
-#   .\scripts\Clean-TrainingArtifacts.ps1 -Delete     # deletes the listed candidates
+#   .\scripts\Clean-TrainingArtifacts.ps1 -Delete    # deletes the listed candidates
 #
-# Never touches Assets/Agents/ or the CreatureCatalog - old-but-still-racing
-# brain versions are kept on purpose so ELO can compare them.
-#
-# Stop TensorBoard before using -Delete: Windows file handles silently fail
-# the wipe otherwise (per project rules).
+# Stop TensorBoard before using -Delete: Windows file handles silently fail the wipe.
 param(
     [switch]$Delete
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$resultsDir = Join-Path $root "results"
-$configDir = Join-Path $root "Config"
-if (-not (Test-Path $resultsDir)) {
-    Write-Host "No results/ directory found; nothing to clean."
-    exit 0
+
+$exported = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
+Get-ChildItem (Join-Path $root "training") -Recurse -Filter "*_report.json" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Directory.Name -eq "export" } | ForEach-Object {
+        $report = Get-Content $_.FullName -Raw | ConvertFrom-Json
+        if ($report.checkpoint) {
+            [void]$exported.Add([IO.Path]::GetFullPath((Join-Path $root $report.checkpoint)))
+        }
+    }
+
+$runDirs = @()
+$runDirs += Get-ChildItem (Join-Path $root "training") -Directory -ErrorAction SilentlyContinue |
+    ForEach-Object { Join-Path $_.FullName "mujoco\runs" } | Where-Object { Test-Path $_ } |
+    ForEach-Object { Get-ChildItem $_ -Directory }
+$isaacLogs = Join-Path $root "ISAAC\logs"
+if (Test-Path $isaacLogs) {
+    $runDirs += Get-ChildItem $isaacLogs -Directory | ForEach-Object { Get-ChildItem $_.FullName -Directory } |
+        ForEach-Object { $_; Get-ChildItem $_.FullName -Directory }
 }
 
-$protected = New-Object System.Collections.Generic.List[string]
-
-$runDirs = Get-ChildItem $resultsDir -Directory
-
-# Newest run per prefix. "all8h_20260826_2244" -> prefix "all8h". A folder with
-# no underscore is its own prefix, so it always protects itself.
-$runDirs | Group-Object { ($_.Name -split '_')[0] } | ForEach-Object {
-    $newest = $_.Group | Sort-Object Name -Descending | Select-Object -First 1
-    $protected.Add($newest.Name)
-}
-
-# Staged brains and demos.
-$runDirs | Where-Object { $_.Name -like "*_backup_*" } | ForEach-Object {
-    $protected.Add($_.Name)
-}
-
-Get-ChildItem $configDir -Filter "*.yaml" | ForEach-Object {
-    # <Name><Phase><NN>.yaml -> <name>_<phase><nn>, per the project's own
-    # Config/run-id pairing rule. Kept for any run still using that scheme.
-    if ($_.BaseName -cmatch '^([A-Z][a-z]*)([A-Z].*)$') {
-        $protected.Add(("{0}_{1}" -f $Matches[1], $Matches[2]).ToLowerInvariant())
+$candidates = New-Object System.Collections.Generic.List[System.IO.FileSystemInfo]
+foreach ($run in $runDirs) {
+    $contents = @(Get-ChildItem $run.FullName -Force)
+    if ($contents.Count -eq 0) {
+        $candidates.Add($run)
+        continue
+    }
+    $snapshots = @($contents | Where-Object { $_.Name -match '^model_(\d+)\.pt$' } |
+        Sort-Object { [int]($_.Name -replace '\D', '') })
+    if ($snapshots.Count -le 1) {
+        continue
+    }
+    $newest = $snapshots[-1]
+    foreach ($snapshot in $snapshots) {
+        if ($snapshot -ne $newest -and -not $exported.Contains($snapshot.FullName)) {
+            $candidates.Add($snapshot)
+        }
     }
 }
-$protected = $protected | Select-Object -Unique
 
-Write-Host "Protected run-ids (newest per prefix / backups / Config baseline):"
-$protected | ForEach-Object { Write-Host "  $_" }
-Write-Host ""
-
-$candidates = Get-ChildItem $resultsDir -Directory | Where-Object { $protected -notcontains $_.Name }
-
-if (-not $candidates) {
-    Write-Host "Nothing to clean - every results/ run is protected or already gone."
+if ($candidates.Count -eq 0) {
+    Write-Host "Nothing to clean - every run holds only its newest and exported checkpoints."
     exit 0
 }
 
-$rows = $candidates | ForEach-Object {
-    $sizeMb = "{0:N1}" -f ((Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue |
-        Measure-Object Length -Sum).Sum / 1MB)
-    [pscustomobject]@{ RunId = $_.Name; SizeMB = $sizeMb }
-}
-
-Write-Host "Stale run candidates (superseded, not a backup, unreferenced by any Config):"
-$rows | Format-Table RunId, SizeMB -AutoSize
+$totalMb = ($candidates | Where-Object { -not $_.PSIsContainer } | Measure-Object Length -Sum).Sum / 1MB
+Write-Host ("Superseded checkpoints / empty runs ({0} items, {1:N1} MB):" -f $candidates.Count, $totalMb)
+$candidates | ForEach-Object { Write-Host ("  " + $_.FullName.Substring($root.Length + 1)) }
 
 if ($Delete) {
     Write-Host "Deleting..." -ForegroundColor Yellow
     foreach ($candidate in $candidates) {
         Remove-Item $candidate.FullName -Recurse -Force
-        Write-Host "  deleted $($candidate.Name)"
     }
+    Write-Host "Done."
 } else {
-    Write-Host "Dry run only - re-run with -Delete to remove these folders."
+    Write-Host "Dry run only - re-run with -Delete to remove these."
 }

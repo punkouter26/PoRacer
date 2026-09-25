@@ -23,7 +23,7 @@ $Proj = Split-Path $PSScriptRoot -Parent
 # path this used to carry (…\PlayStoreUploads\publish-venv) does not exist here, so
 # the script died on its own Test-Path guard before it could build anything. It is
 # deliberately separate from .venv, which carries load-bearing ml-agents/torch pins.
-$Python = Join-Path $Proj 'Tools\publish-venv\Scripts\python.exe'
+$Python = Join-Path $Proj 'scripts\publish-venv\Scripts\python.exe'
 $Creds = 'C:\Users\punko\Downloads\PoRacer-Release\play-service-account.json'
 $Aab = Join-Path $Proj "Builds\Android\$App.aab"
 
@@ -81,7 +81,7 @@ if (-not $SkipBuild) {
 }
 
 if (-not (Test-Path $Aab)) { Write-Error "No AAB at $Aab - run without -SkipBuild first" }
-$pyArgs = @((Join-Path $Proj 'Tools\play_publish.py'),
+$pyArgs = @((Join-Path $Proj 'scripts\play_publish.py'),
             '--credentials', $Creds, '--track', $Track, '--status', $Status)
 if ($DryRun) { $pyArgs += '--dry-run' }
 & $Python @pyArgs
