@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mujoco;
 using UnityEngine;
 
@@ -37,23 +38,42 @@ namespace PoRacer.Systems
         private const int GROUND_CONDIM = 3;
 
         private static GameObject _world;
+
+        // Fruit stand-ins (see TrackFruit): built with the world, borrowed per piece.
+        private static readonly float[] FruitProxyRadii = { 0.15f, 0.25f, 0.35f };
+        private const int FRUIT_PROXIES_PER_SIZE = 100;
+        private const float FRUIT_SLIDING_FRICTION = 0.3f;
+        private static readonly Vector3 FruitParking = new(0f, -200f, 0f);
+        private static readonly List<Views.MujocoFruitProxyView> FruitProxies = new();
         private static bool _suspended;
         private static bool _startHeld;
         private static Views.RaceCourseView _pendingCourse;
 
-        /// <summary>
-        /// How thick each road slab is. Only the top face is stood on; the depth exists so
-        /// a foot landing slightly inside a slab is pushed out rather than passing through.
-        /// </summary>
-        private const float ROAD_SLAB_THICKNESS = 0.6f;
+        // The course, mirrored into MuJoCo by probing the course's own PhysX colliders
+        // (see BuildCourseRoad): floor strips under the whole road width, walls where the
+        // barriers and tunnel walls are.
+        private const float ROAD_STEP = 1.5f;             // metres of centreline per row of strips
+        private const float ROAD_STRIP_WIDTH = 0.8f;      // metres across per floor strip
+        private const float ROAD_FLOOR_MARGIN = 1.5f;     // probed beyond the half-width: kerbs, verges
+        private const float ROAD_SLAB_THICKNESS = 0.3f;   // depth under the surface; pushes a sunk foot out
+        private const float ROAD_PROBE_UP = 1.2f;         // down-rays start this far above the centreline
+        private const float ROAD_PROBE_DOWN = 3f;
+        private const float ROAD_MAX_STEP = 0.6f;         // a hit further than this from the centreline height is another level
+        // Sideways rays find barriers: first just above the road, then stepping up to find
+        // each barrier's real top, so the wall is as tall as the barrier a PhysX racer
+        // meets and no taller. The Apartment's barriers are only 0.2-0.3 m, and a single
+        // ray at knee height (0.35 m) flew over every one of them.
+        private const float WALL_PROBE_HEIGHT = 0.05f;
+        private const float WALL_PROBE_STEP = 0.05f;
+        private const float WALL_MAX_HEIGHT = 2f;
+        private const float WALL_PROBE_REACH = 3f;        // beyond the half-width
+        private const float WALL_THICKNESS = 0.25f;
+        private const float WALL_MAX_NORMAL_Y = 0.5f;     // steeper than 60 degrees is a wall, not floor
 
         /// <summary>
-        /// Each slab is stretched this much past its centreline segment.
-        ///
-        /// Butted end to end, slabs leave a wedge of gap on the OUTSIDE of every bend -
-        /// at Acrobat's 26 deg per segment and a 3 m half-width that is about
-        /// 3 * tan(13 deg) = 0.7 m of hole, which is plenty for a foot to drop through.
-        /// Overlapping costs nothing: MuJoCo static geoms do not collide with each other.
+        /// Every strip and wall is stretched this much past its segment. Butted end to end
+        /// they leave a wedge of gap on the outside of every bend; overlapping costs
+        /// nothing, because MuJoCo static geoms do not collide with each other.
         /// </summary>
         private const float ROAD_SLAB_OVERLAP = 1.25f;
 
@@ -155,6 +175,7 @@ namespace PoRacer.Systems
             {
                 BuildGround(_world.transform, 0f);
             }
+            BuildFruitProxies(_world.transform);
 
             // MjScene.Start compiles the model at the end of this frame, by which time the
             // options, the ground and the racers are all in place. Racers added later still
@@ -240,6 +261,7 @@ namespace PoRacer.Systems
             Suspend();
             Object.Destroy(_world);
             _world = null;
+            FruitProxies.Clear();
             _suspended = false;
             _startHeld = false;
         }
@@ -278,25 +300,31 @@ namespace PoRacer.Systems
         }
 
         /// <summary>
-        /// Mirrors an authored course's centreline into MuJoCo as a chain of box geoms,
-        /// one per centreline segment, so a MuJoCo racer has a road to stand on.
+        /// Mirrors an authored course into MuJoCo as box geoms, measured off the course's
+        /// OWN PhysX colliders, so a MuJoCo racer stands, and is stopped, exactly where a
+        /// PhysX racer is.
         ///
-        /// WHY BOXES AND NOT THE COURSE'S OWN COLLIDERS. MuJoCo cannot see a Unity
-        /// Collider at all, so the geometry has to be rebuilt on its side. Mirroring the
-        /// GLB's COL_* proxies as MjMeshShape does not work: MuJoCo convex-hulls mesh
-        /// geoms, and the course ships THREE proxies for the whole road, so the hulls
-        /// would fill the valley solid and bury the track. MjHeightFieldShape is no good
-        /// either - it needs a Unity Terrain, which this project does not use, and a
-        /// heightfield cannot express a tunnel or stacked switchbacks anyway, because
-        /// those are not a height function of (x, z).
+        /// WHY NOT THE COURSE'S MESH COLLIDERS DIRECTLY. MuJoCo cannot see a Unity Collider,
+        /// and it convex-hulls mesh geoms: one hull per road, kerb or barrier mesh would
+        /// fill the course solid. MjHeightFieldShape needs a Unity Terrain, and a heightfield
+        /// cannot express a tunnel or stacked switchbacks anyway.
         ///
-        /// Boxes are exact primitives, cheap, native to MuJoCo, and the centreline the
-        /// course already carries (55 knots on Acrobat, with a half-width) is all the
-        /// data needed to lay them out. Only the floor is built - a racer has no use for
-        /// a tunnel ceiling.
+        /// WHY PROBED, NOT LAID ALONG THE CENTRELINE. The first version was one 2 m slab per
+        /// centreline segment, as wide as the course's half-width and at the centreline's
+        /// height. Measured on the Apartment track: the road plus kerbs is wider than that,
+        /// so a racer near the edge stood half on the slab and half over nothing and hung
+        /// there, sunk to the hips; the kerb and barrier meshes were not mirrored at all, so
+        /// MuJoCo racers walked through them; and the centreline sits up to 0.21 m off the
+        /// real surface. Now, every ROAD_STEP metres:
         ///
-        /// Must run BEFORE MjScene compiles its model at the end of the frame, which is
-        /// why it is called from <see cref="Build"/> rather than after the racers exist.
+        ///   * down-rays across the half-width plus ROAD_FLOOR_MARGIN give the surface
+        ///     height strip by strip, kerbs included, and a floor strip is laid on it;
+        ///   * sideways rays at knee height find the barriers and tunnel walls either side,
+        ///     and a wall box is stood where they are.
+        ///
+        /// Only static colliders count (never a racer), and a down-ray hit far from the
+        /// centreline's height is ignored as another level of the course.
+        /// Must run BEFORE MjScene compiles its model at the end of the frame.
         /// </summary>
         private static void BuildCourseRoad(Transform parent, Views.RaceCourseView course)
         {
@@ -307,46 +335,146 @@ namespace PoRacer.Systems
                                + "MuJoCo racers will have no road.");
                 return;
             }
+            // The track was just switched on by the spawner; make sure PhysX sees it.
+            Physics.SyncTransforms();
 
             var road = new GameObject("MuJoCoCourseRoad");
             road.transform.SetParent(parent, false);
 
-            // Sampled along the centreline rather than read off the knot array, so the
-            // slab length is uniform and independent of how densely the course was
-            // authored. One slab per ~2 m keeps a 26 deg bend inside half a slab.
-            const float slabStep = 2f;
-            int slabCount = Mathf.Max(1, Mathf.CeilToInt(path.Length / slabStep));
-            float step = path.Length / slabCount;
-            int built = 0;
-            for (int slabIndex = 0; slabIndex < slabCount; slabIndex++)
+            float reach = course.HalfWidth + ROAD_FLOOR_MARGIN;
+            int strips = Mathf.Max(1, Mathf.CeilToInt(2f * reach / ROAD_STRIP_WIDTH));
+            float stripWidth = 2f * reach / strips;
+            int rows = Mathf.Max(1, Mathf.CeilToInt(path.Length / ROAD_STEP));
+            float step = path.Length / rows;
+            var hits = new RaycastHit[16];
+            int floors = 0;
+            int walls = 0;
+            for (int row = 0; row < rows; row++)
             {
-                float from = slabIndex * step;
-                Vector3 a = path.PointAt(from);
-                Vector3 b = path.PointAt(from + step);
+                Vector3 a = path.PointAt(row * step);
+                Vector3 b = path.PointAt((row + 1) * step);
                 Vector3 along = b - a;
+                along.y = 0f;
                 if (along.sqrMagnitude < 0.0001f)
                 {
                     continue;
                 }
+                along.Normalize();
+                Vector3 right = Vector3.Cross(Vector3.up, along);
 
-                var slab = new GameObject($"RoadSlab_{slabIndex:000}");
-                slab.transform.SetParent(road.transform, false);
-                // Centred on the segment and sunk by half its thickness, so the TOP face
-                // sits on the centreline the racers' progress is measured along.
-                slab.transform.position = (a + b) * 0.5f - Vector3.up * (ROAD_SLAB_THICKNESS * 0.5f);
-                slab.transform.rotation = Quaternion.LookRotation(along.normalized, Vector3.up);
+                for (int strip = 0; strip < strips; strip++)
+                {
+                    float offset = -reach + (strip + 0.5f) * stripWidth;
+                    if (!ProbeFloor(a + right * offset, a.y, hits, out Vector3 start)
+                        || !ProbeFloor(b + right * offset, b.y, hits, out Vector3 end))
+                    {
+                        continue;
+                    }
+                    Vector3 run = end - start;
+                    if (run.sqrMagnitude < 0.0001f)
+                    {
+                        continue;
+                    }
+                    Quaternion rotation = Quaternion.LookRotation(run.normalized, Vector3.up);
+                    Vector3 centre = (start + end) * 0.5f - rotation * Vector3.up * (ROAD_SLAB_THICKNESS * 0.5f);
+                    AddBox(road.transform, "Floor_" + row + "_" + strip, centre, rotation,
+                        new Vector3(stripWidth * 0.5f * ROAD_SLAB_OVERLAP, ROAD_SLAB_THICKNESS * 0.5f,
+                                    run.magnitude * 0.5f * ROAD_SLAB_OVERLAP));
+                    floors++;
+                }
 
-                var geom = slab.AddComponent<MjGeom>();
-                geom.ShapeType = MjShapeComponent.ShapeTypes.Box;
-                geom.Box.Extents = new Vector3(
-                    course.HalfWidth,
-                    ROAD_SLAB_THICKNESS * 0.5f,
-                    along.magnitude * 0.5f * ROAD_SLAB_OVERLAP);
-                ApplyGroundFriction(geom);
-                built++;
+                Vector3 middle = (a + b) * 0.5f;
+                if (!ProbeFloor(middle, middle.y, hits, out Vector3 surface))
+                {
+                    surface = middle;
+                }
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    Vector3 direction = right * side;
+                    if (!ProbeWall(surface + Vector3.up * WALL_PROBE_HEIGHT, direction,
+                                   course.HalfWidth + WALL_PROBE_REACH, hits, out Vector3 wallPoint))
+                    {
+                        continue;
+                    }
+                    // Step up until the rays pass over it: that is the barrier's top.
+                    float reachToWall = Vector3.Distance(surface + Vector3.up * WALL_PROBE_HEIGHT, wallPoint) + WALL_THICKNESS;
+                    float height = WALL_PROBE_HEIGHT;
+                    while (height < WALL_MAX_HEIGHT
+                           && ProbeWall(surface + Vector3.up * (height + WALL_PROBE_STEP), direction,
+                                        reachToWall, hits, out _))
+                    {
+                        height += WALL_PROBE_STEP;
+                    }
+                    height += WALL_PROBE_STEP * 0.5f;
+                    Vector3 centre = new Vector3(wallPoint.x, surface.y, wallPoint.z)
+                                   + direction * (WALL_THICKNESS * 0.5f) + Vector3.up * (height * 0.5f);
+                    AddBox(road.transform, "Wall_" + row + (side < 0 ? "_L" : "_R"), centre,
+                        Quaternion.LookRotation(along, Vector3.up),
+                        new Vector3(WALL_THICKNESS * 0.5f, height * 0.5f, step * 0.5f * ROAD_SLAB_OVERLAP));
+                    walls++;
+                }
             }
-            Log($"MuJoCo course road: {built} slab(s) over {path.Length:0.0} m "
-                    + $"at half-width {course.HalfWidth:0.0} m.");
+            Log($"MuJoCo course road: {floors} floor strip(s), {walls} wall(s) over {path.Length:0.0} m "
+              + $"({rows} rows x {strips} strips of {stripWidth:0.00} m).");
+        }
+
+        /// <summary>The course surface under <paramref name="point"/>: the static hit nearest
+        /// the centreline's height, so a tunnel roof or a lower switchback is not taken.</summary>
+        private static bool ProbeFloor(Vector3 point, float centreHeight, RaycastHit[] hits, out Vector3 surface)
+        {
+            Vector3 origin = new(point.x, centreHeight + ROAD_PROBE_UP, point.z);
+            int count = Physics.RaycastNonAlloc(origin, Vector3.down, hits, ROAD_PROBE_UP + ROAD_PROBE_DOWN,
+                                                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            surface = default;
+            float best = float.PositiveInfinity;
+            for (int index = 0; index < count; index++)
+            {
+                RaycastHit hit = hits[index];
+                if (!IsStatic(hit.collider) || hit.normal.y <= WALL_MAX_NORMAL_Y)
+                {
+                    continue;
+                }
+                float distance = Mathf.Abs(hit.point.y - centreHeight);
+                if (distance <= ROAD_MAX_STEP && distance < best)
+                {
+                    best = distance;
+                    surface = hit.point;
+                }
+            }
+            return best < float.PositiveInfinity;
+        }
+
+        /// <summary>The nearest steep static surface along <paramref name="direction"/>.</summary>
+        private static bool ProbeWall(Vector3 origin, Vector3 direction, float reach, RaycastHit[] hits, out Vector3 point)
+        {
+            int count = Physics.RaycastNonAlloc(origin, direction, hits, reach,
+                                                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            point = default;
+            float best = float.PositiveInfinity;
+            for (int index = 0; index < count; index++)
+            {
+                RaycastHit hit = hits[index];
+                if (IsStatic(hit.collider) && Mathf.Abs(hit.normal.y) < WALL_MAX_NORMAL_Y && hit.distance < best)
+                {
+                    best = hit.distance;
+                    point = hit.point;
+                }
+            }
+            return best < float.PositiveInfinity;
+        }
+
+        private static bool IsStatic(Collider collider) =>
+            collider.attachedRigidbody == null && collider.attachedArticulationBody == null;
+
+        private static void AddBox(Transform parent, string name, Vector3 position, Quaternion rotation, Vector3 extents)
+        {
+            var box = new GameObject(name);
+            box.transform.SetParent(parent, false);
+            box.transform.SetPositionAndRotation(position, rotation);
+            var geom = box.AddComponent<MjGeom>();
+            geom.ShapeType = MjShapeComponent.ShapeTypes.Box;
+            geom.Box.Extents = extents;
+            ApplyGroundFriction(geom);
         }
 
         /// <summary>
@@ -411,6 +539,72 @@ namespace PoRacer.Systems
         private static void Log(string message) => Debug.Log(message);
 
         private static Vector3 Abs(Vector3 value) => new(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
+
+        /// <summary>
+        /// Lets MuJoCo racers bump into a piece of fruit (AGENTS rule M): the free pooled
+        /// stand-in nearest its size follows it until the piece is destroyed. A no-op when
+        /// no MuJoCo racer is on the grid. The fruit stays a PhysX rigidbody, so every PhysX
+        /// racer collides with it natively; MuJoCo racers reach it through this, and it
+        /// reaches them through their MujocoPhysxProxyView.
+        /// </summary>
+        internal static void TrackFruit(Transform piece, float radius)
+        {
+            if (!Exists)
+            {
+                return;
+            }
+            Views.MujocoFruitProxyView best = null;
+            float bestGap = float.PositiveInfinity;
+            for (int proxyIndex = 0; proxyIndex < FruitProxies.Count; proxyIndex++)
+            {
+                Views.MujocoFruitProxyView proxy = FruitProxies[proxyIndex];
+                float gap = Mathf.Abs(proxy.Radius - radius);
+                if (proxy != null && proxy.IsFree && gap < bestGap)
+                {
+                    best = proxy;
+                    bestGap = gap;
+                }
+            }
+            if (best != null)
+            {
+                best.Bind(piece);
+            }
+        }
+
+        /// <summary>
+        /// The fruit stand-in pool: mocap spheres parked far below the world. Built with the
+        /// world because a body added after the model compiles makes the plug-in recreate
+        /// the scene, which resets every MuJoCo racer. Parked stand-ins make no contacts:
+        /// MuJoCo skips pairs of static bodies, and a mocap body counts as one.
+        /// </summary>
+        private static void BuildFruitProxies(Transform parent)
+        {
+            FruitProxies.Clear();
+            var pool = new GameObject("MuJoCoFruitProxies");
+            pool.transform.SetParent(parent, false);
+            for (int sizeIndex = 0; sizeIndex < FruitProxyRadii.Length; sizeIndex++)
+            {
+                float radius = FruitProxyRadii[sizeIndex];
+                for (int proxyIndex = 0; proxyIndex < FRUIT_PROXIES_PER_SIZE; proxyIndex++)
+                {
+                    var body = new GameObject($"Fruit_{sizeIndex}_{proxyIndex:000}");
+                    body.transform.SetParent(pool.transform, false);
+                    body.transform.position = FruitParking;
+                    body.AddComponent<MjMocapBody>();
+                    var geomObject = new GameObject("geom");
+                    geomObject.transform.SetParent(body.transform, false);
+                    MjGeom geom = geomObject.AddComponent<MjGeom>();
+                    geom.ShapeType = MjShapeComponent.ShapeTypes.Sphere;
+                    geom.Sphere.Radius = radius;
+                    MjGeomSettings settings = geom.Settings;
+                    settings.Friction.Sliding = FRUIT_SLIDING_FRICTION;
+                    geom.Settings = settings;
+                    var view = body.AddComponent<Views.MujocoFruitProxyView>();
+                    view.Initialize(radius, FruitParking);
+                    FruitProxies.Add(view);
+                }
+            }
+        }
 
         /// <summary>
         /// The MuJoCo ground. At y = 0 for a builder map — exactly where

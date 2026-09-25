@@ -429,6 +429,8 @@ namespace PoRacer.Systems
             body.linearVelocity = velocity;
             body.angularVelocity = new Vector3(Jitter(DROP_SPIN), Jitter(DROP_SPIN), Jitter(DROP_SPIN));
             _live.Add(piece);
+            // MuJoCo racers cannot see a PhysX rigidbody; lend it a MuJoCo stand-in.
+            Systems_MujocoWorld.TrackFruit(piece.transform, 0.5f * targetSize);
         }
 
         /// <summary>

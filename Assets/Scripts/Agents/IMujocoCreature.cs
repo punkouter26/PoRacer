@@ -15,9 +15,18 @@ namespace PoRacer.Agents
     ///     the world but contained no Fido would never have built it at all.
     ///   * they are "bare": BodyLinkView draws links between ArticulationBodies,
     ///     and a MuJoCo racer has none to link.
+    ///
+    /// And a third, for RacerView: a MuJoCo racer is never switched off mid-race.
+    /// Disabling any MjComponent makes the plug-in recreate the whole MuJoCo scene; on a
+    /// course that recreation fails, and every MuJoCo racer in the race froze on its
+    /// start line with an error per physics step. A ruled-out MuJoCo racer is held
+    /// still where it lies instead (<see cref="HoldStill"/>).
     /// </summary>
     public interface IMujocoCreature
     {
+        /// <summary>Stop the policy and hold the standing-stance targets: out of the race,
+        /// left lying where it fell, and no MuJoCo component disabled.</summary>
+        void HoldStill();
     }
 
     /// <summary>

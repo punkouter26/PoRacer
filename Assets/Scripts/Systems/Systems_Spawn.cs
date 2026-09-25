@@ -776,6 +776,11 @@ namespace PoRacer.Systems
                     pendingQuirks.Add((instance, quirkPower, quirk.MassScale));
 
                     bool isMujoco = instance.GetComponent<IMujocoCreature>() != null;
+                    if (isMujoco)
+                    {
+                        // MuJoCo racers have no PhysX body; give fruit and PhysX racers one to hit.
+                        instance.AddComponent<MujocoPhysxProxyView>();
+                    }
 
                     // Fido is bare: BodyLinkView draws links between
                     // ArticulationBodies, and he has none to link.

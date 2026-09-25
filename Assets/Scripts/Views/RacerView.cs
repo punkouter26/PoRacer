@@ -277,6 +277,12 @@ namespace PoRacer.Views
                 _race.NotifyWipeout(_racerId, position, true);
                 _race.NotifyFailure(_racerId, KnockoutReason.KnockedDown);
                 enabled = false;
+                if (_agent is Agents.IMujocoCreature mujocoCreature)
+                {
+                    // Never switched off: see IMujocoCreature. Left lying where he fell.
+                    mujocoCreature.HoldStill();
+                    return;
+                }
                 gameObject.SetActive(false);
                 return;
             }

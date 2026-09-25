@@ -267,6 +267,16 @@ namespace PoRacer.Agents
             }
         }
 
+        /// <summary>Out of the race: the goal is dropped and the controller holds still.</summary>
+        public void HoldStill()
+        {
+            _goal = null;
+            if (_controller != null)
+            {
+                _controller.Hold();
+            }
+        }
+
         /// <summary>
         /// Points him at <paramref name="aim"/>. A heading brain is given the direction; a
         /// joystick brain is given a body-frame velocity: turn toward the aim point,

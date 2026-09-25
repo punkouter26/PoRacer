@@ -104,6 +104,13 @@ namespace Creature.MojucuBoy
         /// <summary>Total mass of this racer's MuJoCo bodies, in kilograms, from the compiled model.</summary>
         public float TotalMassKg { get; private set; }
 
+        /// <summary>
+        /// Stops the policy for good and holds the standing-stance targets. For a racer
+        /// that is out of the race: it stays in the MuJoCo scene, because disabling any
+        /// MuJoCo component would make the plug-in recreate the whole world.
+        /// </summary>
+        public void Hold() => _passive = true;
+
         /// <summary>True when the loaded brain is a joystick brain: steer it with
         /// <see cref="SetJoystick"/>, not <see cref="SetGoal"/>.</summary>
         public bool IsJoystick => _joystick;
