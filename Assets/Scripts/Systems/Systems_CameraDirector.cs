@@ -166,7 +166,18 @@ namespace PoRacer.Systems
             bool sameShot = best.RacerId == _subjectId && rivalId == _rivalId;
             // The same pair seen from the other side is still the same duel.
             bool samePair = rivalId != null && best.RacerId == _rivalId && rivalId == _subjectId;
-            if (sameShot || samePair)
+            // Same subject, different framing: the racer being followed has just got into
+            // (or out of) a battle. Its score is the same either way, so the margins below
+            // can never pick it; switch between solo and duel once the shot has matured.
+            bool reframe = !sameShot && !samePair
+                && (best.RacerId == _subjectId || best.RacerId == _rivalId)
+                && (rivalId == null) != (_rivalId == null);
+            if (reframe && now - _shotStartedAt >= MIN_SHOT_SECONDS)
+            {
+                CutTo(best.RacerId, rivalId, reason, now);
+                return;
+            }
+            if (sameShot || samePair || reframe)
             {
                 if (reason != _captionReason && reason != ShotReason.Leader
                     && now - _captionAt >= MIN_CAPTION_SECONDS)
@@ -448,7 +459,9 @@ namespace PoRacer.Systems
                     reason = ShotReason.FinalMetres;
                 }
 
-                if (racer.RacerId == _newLeaderId && now < _newLeaderUntil)
+                // Only while it really is in front: the lead watcher's cooldown can leave a
+                // "new leader" standing for a racer that has already been passed again.
+                if (racer.RacerId == _newLeaderId && now < _newLeaderUntil && rank == 0)
                 {
                     score += NEW_LEADER_WEIGHT;
                     if (NEW_LEADER_WEIGHT > strongest)

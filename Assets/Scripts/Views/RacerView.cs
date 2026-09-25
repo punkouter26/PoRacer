@@ -92,6 +92,8 @@ namespace PoRacer.Views
         private Transform _transform;
         private float _flippedSeconds;
         private float _lastZ;
+        // Progress when the current spell on its back began.
+        private float _downStartZ;
         private float _finishDistance;
         private bool _finished;
         private int _rescuesUsed;
@@ -239,8 +241,28 @@ namespace PoRacer.Views
             }
 
             // Knockdown referee: on its back and going nowhere = knocked out.
-            bool flipped = _transform.up.y < 0f && Mathf.Abs(z - _lastZ) / Time.deltaTime < KNOCKDOWN_SPEED;
-            _flippedSeconds = flipped ? _flippedSeconds + Time.deltaTime : 0f;
+            //
+            // "Going nowhere" is judged over the whole spell on its back, not per frame.
+            // The per-frame speed test it replaced reset the timer on any single frame the
+            // body moved faster than KNOCKDOWN_SPEED, and a racer flailing on its back
+            // jiggles past that every second or so: a Quadruped lay legs-up on the Acrobat
+            // course for 175 s with the timer never passing 0.8 s. Now the window only
+            // restarts when the racer has actually covered the ground KNOCKDOWN_SPEED
+            // allows over it, so crawling somewhere on its back still counts as racing.
+            if (_transform.up.y < 0f)
+            {
+                if (_flippedSeconds <= 0f
+                    || Mathf.Abs(z - _downStartZ) > KNOCKDOWN_SPEED * KNOCKDOWN_SECONDS)
+                {
+                    _flippedSeconds = 0f;
+                    _downStartZ = z;
+                }
+                _flippedSeconds += Time.deltaTime;
+            }
+            else
+            {
+                _flippedSeconds = 0f;
+            }
             _lastZ = z;
             if (_flippedSeconds >= KNOCKDOWN_SECONDS)
             {
