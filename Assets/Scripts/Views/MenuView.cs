@@ -11,7 +11,7 @@ namespace PoRacer.Views
     /// <summary>
     /// Start menu, UI Toolkit hierarchy built in C#. One portrait screen, no second
     /// step: the maps as a row of tabs, the count presets, then one line per catalog
-    /// slot with the counts (0/1/10/50/100) as a segmented control, and RACE pinned
+    /// slot with the counts (0/1/2/5) as a segmented control, and RACE pinned
     /// above the bottom furniture. Slots without a trained brain are omitted and
     /// counted in the footer as "soon". Start hands off to Systems_Spawn.
     ///
@@ -32,16 +32,13 @@ namespace PoRacer.Views
     [RequireComponent(typeof(UIDocument))]
     public sealed class MenuView : MonoBehaviour
     {
-        private const float AVATAR_SIZE = 24f;
+        // Trainer badge at the head of each roster row: "MU", "IL", "ML" or "HC" on
+        // the trainer's team colour, so the name keeps its full width.
+        private const float BADGE_WIDTH = 30f;
+        private const float BADGE_HEIGHT = 20f;
+        private const float SEGMENTS_WIDTH_PERCENT = 42f;
         // Past this many racers the frame rate on a phone starts to give.
         private const int LARGE_FIELD = 100;
-        // Avatar hues skip the two bands the racer legend owns (AGENTS.md rule D):
-        // red for heuristic bots, green for the baseline RL policy. What is left is
-        // orange-yellow [0.06, 0.20] and cyan-through-magenta [0.47, 0.92].
-        private const float HUE_WARM_START = 0.06f;
-        private const float HUE_WARM_SPAN = 0.14f;
-        private const float HUE_COOL_START = 0.47f;
-        private const float HUE_COOL_SPAN = 0.45f;
 
         /// <summary>Horizontal room a bottom corner anchor (DBG, version) takes from the band.</summary>
         private static float CornerClearance => UiTheme.CONTROL_LG + UiTheme.SPACE_LG;
@@ -401,9 +398,7 @@ namespace PoRacer.Views
         {
             for (int labelIndex = 0; labelIndex < _ratingLabels.Count; labelIndex++)
             {
-                // Same bare-number format BuildRow uses; re-adding the "ELO " prefix
-                // here would put the truncation back the first time a race finished.
-                _ratingLabels[labelIndex].text = $"{_eloModel.GetRating(_ratingCreatureIds[labelIndex]):0}";
+                _ratingLabels[labelIndex].text = RatingText(_ratingCreatureIds[labelIndex]);
             }
             ReorderRowsByRating();
         }
@@ -440,8 +435,8 @@ namespace PoRacer.Views
             row.style.flexDirection = FlexDirection.Row;
             row.style.flexShrink = 0f;
             row.style.marginBottom = UiTheme.SPACE_XS;
-            string[] labels = { "All x1", "All x10", "Clear" };
-            int[] counts = { 1, 10, 0 };
+            string[] labels = { "All ×1", "All ×2", "Clear" };
+            int[] counts = { 1, 2, 0 };
             for (int presetIndex = 0; presetIndex < labels.Length; presetIndex++)
             {
                 int count = counts[presetIndex];
@@ -534,29 +529,28 @@ namespace PoRacer.Views
             titleRow.style.minWidth = 0f;
             card.Add(titleRow);
 
-            // Round avatar chip: creature initial on a per-creature hue, so rows
-            // read as cards even without portrait art.
-            var avatar = new VisualElement { pickingMode = PickingMode.Ignore };
-            avatar.style.width = AVATAR_SIZE;
-            avatar.style.height = AVATAR_SIZE;
-            avatar.style.marginRight = UiTheme.SPACE_XS;
-            avatar.style.justifyContent = Justify.Center;
-            avatar.style.alignItems = Align.Center;
-            avatar.style.flexShrink = 0f;
-            avatar.style.backgroundColor = Color.HSVToRGB(AvatarHue(entry.id), 0.55f, 0.75f);
-            UiTheme.SetRadius(avatar, AVATAR_SIZE * 0.5f);
-            var initial = new Label(entry.displayName.Substring(0, 1));
-            initial.style.color = Color.white;
-            initial.style.fontSize = UiTheme.FONT_XS;
-            initial.style.unityFontStyleAndWeight = FontStyle.Bold;
-            avatar.Add(initial);
-            titleRow.Add(avatar);
+            // Trainer badge in place of an avatar: what trained the brain is the one
+            // thing a viewer needs before the name. Team colours never use the rule-D
+            // legend colours except red, which the heuristic team owns anyway.
+            var badge = new Label(TrainerTeams.Tag(entry.trainingSource)) { pickingMode = PickingMode.Ignore };
+            badge.style.width = BADGE_WIDTH;
+            badge.style.height = BADGE_HEIGHT;
+            badge.style.marginRight = UiTheme.SPACE_SM;
+            badge.style.flexShrink = 0f;
+            badge.style.unityTextAlign = TextAnchor.MiddleCenter;
+            badge.style.color = Color.white;
+            badge.style.fontSize = UiTheme.FONT_XS;
+            badge.style.unityFontStyleAndWeight = FontStyle.Bold;
+            badge.style.backgroundColor = TrainerTeams.ColorOf(entry.trainingSource);
+            UiTheme.SetPadding(badge, 0f, 0f);
+            UiTheme.SetRadius(badge, UiTheme.RADIUS_SM);
+            titleRow.Add(badge);
 
-            // Name and ELO on one line: a second text line per row is what pushed the
-            // eighth creature under the START panel on 9:20 phones.
+            // Name over rating, stacked inside the row's own height: side by side, the
+            // count cells' touch-target floor left the name a few letters wide.
             var nameColumn = new VisualElement();
-            nameColumn.style.flexDirection = FlexDirection.Row;
-            nameColumn.style.alignItems = Align.Center;
+            nameColumn.style.flexDirection = FlexDirection.Column;
+            nameColumn.style.justifyContent = Justify.Center;
             nameColumn.style.flexGrow = 1f;
             nameColumn.style.flexShrink = 1f;
             nameColumn.style.minWidth = 0f;
@@ -565,7 +559,7 @@ namespace PoRacer.Views
             nameColumn.style.overflow = Overflow.Hidden;
             titleRow.Add(nameColumn);
 
-            var name = new Label(TrainerTeams.Tagged(entry.trainingSource, entry.displayName));
+            var name = new Label(entry.displayName);
             name.style.color = UiTheme.Text;
             name.style.fontSize = UiTheme.FONT_SM;
             name.style.overflow = Overflow.Hidden;
@@ -576,16 +570,15 @@ namespace PoRacer.Views
             // cut off ("Quadruped ELO 121"). Verified on device.
             name.style.flexShrink = 1f;
             name.style.minWidth = 0f;
+            UiTheme.SetMargin(name, 0f, 0f);
+            UiTheme.SetPadding(name, 0f, 0f);
             nameColumn.Add(name);
 
-            // Bare number, not "ELO 1201". The four characters the prefix costs are
-            // what pushed "Quadruped" and "Isaac Spider" into an ellipsis on a
-            // 427 dp phone, and the rows are ordered by this number anyway.
-            var eloLabel = new Label($"{_eloModel.GetRating(entry.id):0}");
+            var eloLabel = new Label(RatingText(entry.id));
             eloLabel.style.color = UiTheme.TextDim;
             eloLabel.style.fontSize = UiTheme.FONT_XS;
-            eloLabel.style.marginLeft = UiTheme.SPACE_XS;
-            eloLabel.style.flexShrink = 0f;
+            UiTheme.SetMargin(eloLabel, 0f, 0f);
+            UiTheme.SetPadding(eloLabel, 0f, 0f);
             nameColumn.Add(eloLabel);
             _ratingLabels.Add(eloLabel);
             _ratingCreatureIds.Add(entry.id);
@@ -594,13 +587,13 @@ namespace PoRacer.Views
             int[] options = RaceConfigModel.COUNT_OPTIONS;
             var segments = new VisualElement();
             UiTheme.StyleSegmentGroup(segments);
-            segments.style.width = Length.Percent(56f);
-            // 56% only holds four 48 dp cells at the reference width. CONTROL_SM
+            segments.style.width = Length.Percent(SEGMENTS_WIDTH_PERCENT);
+            // Half the row only holds four 48 dp cells at the reference width. CONTROL_SM
             // grows on narrower handsets to keep the touch target, and without this
-            // floor the last cell ("100") was pushed clean off the right edge -
+            // floor the last cell was pushed clean off the right edge -
             // measured on the simulator device. The name column gives way instead;
             // it already ellipsizes.
-            segments.style.minWidth = options.Length * (UiTheme.CONTROL_SM + 2f);
+            segments.style.minWidth = options.Length * UiTheme.CONTROL_SM;
             segments.style.flexShrink = 0f;
             card.Add(segments);
 
@@ -621,19 +614,7 @@ namespace PoRacer.Views
             return card;
         }
 
-        /// <summary>
-        /// A stable per-creature hue that is never red or green. The hash spreads over
-        /// the allowed bands only, so a chip can no longer land on a legend colour and
-        /// read as "this one is a heuristic bot" or "this is the baseline policy".
-        /// </summary>
-        private static float AvatarHue(string creatureId)
-        {
-            float fraction = (creatureId.GetHashCode() & 255) / 255f;
-            float along = fraction * (HUE_WARM_SPAN + HUE_COOL_SPAN);
-            return along < HUE_WARM_SPAN
-                ? HUE_WARM_START + along
-                : HUE_COOL_START + (along - HUE_WARM_SPAN);
-        }
+        private string RatingText(string creatureId) => $"ELO {_eloModel.GetRating(creatureId):0}";
 
         private void RefreshRowButtons(Button[] buttons, int[] options, string creatureId)
         {

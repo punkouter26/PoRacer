@@ -19,12 +19,12 @@ namespace PoRacer.Models
         /// is. Four shares is 48 dp and clears the minimum with the name and ELO
         /// columns intact.
         ///
-        /// 50 is the one dropped because it is the one nothing needs: 10 and 100
-        /// bracket it, and the presets row above the roster ("All x1", "All x10")
-        /// already covers bulk selection. Adding a fifth option back means finding
+        /// Small counts since 2026-09-25: a field of a few of each creature is the
+        /// race people watch, and the presets row above the roster ("All x1",
+        /// "All x2") covers bulk selection. Adding a fifth option back means finding
         /// it 48 dp somewhere else on the row first.
         /// </summary>
-        public static readonly int[] COUNT_OPTIONS = { 0, 1, 10, 100 };
+        public static readonly int[] COUNT_OPTIONS = { 0, 1, 2, 5 };
 
         private readonly Dictionary<string, int> _counts = new();
 

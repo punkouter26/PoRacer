@@ -78,7 +78,6 @@ namespace PoRacer.Views
 
         // --- Quality tiers, indexed by QualityModel tier ------------------------
         private static readonly float[] TierRenderScale = { 1f, 0.9f, 0.75f, 0.6f };
-        private static readonly float[] TierDetail = { 1f, 0.75f, 0.5f, 0.3f };
         private static readonly float[] TierAirRate = { 1f, 0.7f, 0.4f, 0f };
 
         // --- Shot-driven look ---------------------------------------------------
@@ -406,7 +405,6 @@ namespace PoRacer.Views
             // track builder spawns its ground chunks at race time, so there is no
             // single material instance to write to up front.
             Shader.SetGlobalFloat(WetnessId, preset.Wetness);
-            FxBudget.GroundTone = preset.GroundTone;
 
             SetSun(preset.SunIntensity, preset.SunTemperature,
                 Quaternion.Euler(preset.SunPitch, preset.SunYaw, 0f));
@@ -461,7 +459,6 @@ namespace PoRacer.Views
                     : LightShadows.Soft;
             }
 
-            FxBudget.Detail = TierDetail[tier];
             // A blob wherever the shadow map cannot ground a creature on its own:
             // the phone asset's hard, low-resolution shadows, or the low tiers.
             bool softShadowsAvailable = _pipeline != null && _pipeline.supportsSoftShadows;

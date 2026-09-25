@@ -57,9 +57,5 @@ namespace PoRacer.Models
         [field: SerializeField] public float AirWander { get; private set; } = 0.3f;
         /// <summary>Falling streaks (drizzle) instead of drifting motes.</summary>
         [field: SerializeField] public bool AirStreaks { get; private set; }
-
-        [field: Header("Ground")]
-        /// <summary>Colour of footprints and the dust a footfall kicks up.</summary>
-        [field: SerializeField] public Color GroundTone { get; private set; } = new(0.62f, 0.55f, 0.45f);
     }
 }

@@ -837,7 +837,6 @@ namespace PoRacer.Systems
                         view.SetCourse(courseGoal, coursePath, _course.Bounds);
                     }
                     creatureRoot.AddComponent<SpeedRibbonView>().Initialize(tint);
-                    creatureRoot.AddComponent<DustTrailView>();
                     // Handed the buses at spawn: the view has no scope to inject from.
                     creatureRoot.AddComponent<CreatureAudioView>().Initialize(_audioMix);
                     creatureRoot.AddComponent<SkidMarkView>().Initialize(_currentTrack);

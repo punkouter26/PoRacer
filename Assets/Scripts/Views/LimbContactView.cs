@@ -1,4 +1,3 @@
-using PoRacer.Presentation;
 using UnityEngine;
 
 namespace PoRacer.Views
@@ -19,49 +18,11 @@ namespace PoRacer.Views
     ///   * This creature's own limbs — a body whose relay reports the same owner.
     ///     Dropped, or an articulated creature would rattle constantly against
     ///     itself as its own segments jostle.
-    ///
-    /// The same contact also drives the visuals: a footprint and a dust puff where
-    /// a limb meets the ground, sparks on a hard landing, and a dust ring when a
-    /// racer bodychecks another or slams into the ground. Those keep their own
-    /// gates rather than borrowing the audio ones: a print is worth laying for a
-    /// step too soft to hear, and the visual budget is spent on the racers near the
-    /// camera rather than on the ones that happen to hold an audio voice.
     /// </summary>
     [DisallowMultipleComponent]
     internal sealed class LimbContactView : MonoBehaviour
     {
-        // Sparks want a harder landing than a thud does; below this it is a scuff.
-        private const float MIN_SPARK_SPEED = 2.6f;
-        private const float FULL_SPARK_SPEED = 7f;
-        private const float MIN_SPARK_INTERVAL = 0.12f;
-        // Footprints. Softer than the audible thud on purpose: a quiet step still
-        // leaves a mark, and the prints are the gait readout.
-        private const float MIN_FOOTFALL_SPEED = 0.5f;
-        private const float FULL_FOOTFALL_SPEED = 4.5f;
-        private const float MIN_FOOTFALL_INTERVAL = 0.12f;
-        // Ground faces up; a wall or a box side is not somewhere to leave a print.
-        private const float MIN_GROUND_NORMAL_Y = 0.55f;
-        // Dust rings: a clash between racers, or a limb slamming into the ground
-        // (a fall, not a step).
-        private const float MIN_CLASH_RING_SPEED = 3f;
-        private const float MIN_SLAM_RING_SPEED = 6f;
-        private const float FULL_RING_SPEED = 10f;
-        private const float MIN_RING_INTERVAL = 0.3f;
-        // Past this every effect is a few pixels and not worth the emit call.
-        private const float FX_VISIBLE_RANGE = 45f;
-        private const float CAMERA_SAMPLE_INTERVAL = 0.25f;
-
-        // Camera.main runs a tagged object lookup, and this class sits in the
-        // collision path of every limb of every racer. The position is cached and
-        // refreshed on a timer instead, shared by every relay in the scene.
-        private static Vector3 _cameraPosition;
-        private static float _nextCameraSampleTime;
-        private static Transform _cameraTransform;
-
         private CreatureAudioView _owner;
-        private float _nextSparkTime;
-        private float _nextFootfallTime;
-        private float _nextRingTime;
 
         internal void Bind(CreatureAudioView owner)
         {
@@ -84,9 +45,7 @@ namespace PoRacer.Views
             float impactSpeed = collision.relativeVelocity.magnitude;
 
             // Ground and scenery are static: no rigidbody, no articulation body.
-            bool staticGeometry =
-                other.attachedRigidbody == null && other.attachedArticulationBody == null;
-            if (staticGeometry)
+            if (other.attachedRigidbody == null && other.attachedArticulationBody == null)
             {
                 _owner.ReportLimbImpact(impactSpeed, contact.point);
             }
@@ -94,22 +53,6 @@ namespace PoRacer.Views
             {
                 _owner.ReportRivalImpact(impactSpeed, contact.point);
             }
-            else
-            {
-                // Our own limb. Silent, and not worth any effect either.
-                return;
-            }
-            // One range test covers every effect below: each is invisible past it.
-            if (!IsNearCamera(contact.point))
-            {
-                return;
-            }
-            if (staticGeometry)
-            {
-                TryFootfall(impactSpeed, contact);
-            }
-            TrySparks(impactSpeed, contact);
-            TryImpactRing(impactSpeed, contact.point, staticGeometry);
         }
 
         /// <summary>
@@ -131,73 +74,6 @@ namespace PoRacer.Views
             CreatureAudioView owner = other.GetComponentInParent<CreatureAudioView>();
             // No owner at all is scenery with a body — a loose prop. Not a rival.
             return owner != null && owner != _owner;
-        }
-
-        private void TryFootfall(float impactSpeed, ContactPoint contact)
-        {
-            if (impactSpeed < MIN_FOOTFALL_SPEED || Time.time < _nextFootfallTime
-                || contact.normal.y < MIN_GROUND_NORMAL_Y)
-            {
-                return;
-            }
-            _nextFootfallTime = Time.time + MIN_FOOTFALL_INTERVAL;
-            float strength = Mathf.InverseLerp(MIN_FOOTFALL_SPEED, FULL_FOOTFALL_SPEED, impactSpeed);
-            FootfallFx.Footfall(contact.point, contact.normal, strength);
-        }
-
-        private void TrySparks(float impactSpeed, ContactPoint contact)
-        {
-            if (impactSpeed < MIN_SPARK_SPEED || Time.time < _nextSparkTime)
-            {
-                return;
-            }
-            _nextSparkTime = Time.time + MIN_SPARK_INTERVAL;
-            float strength = Mathf.InverseLerp(MIN_SPARK_SPEED, FULL_SPARK_SPEED, impactSpeed);
-            FxUtil.ImpactSparks(contact.point, contact.normal, strength);
-        }
-
-        private void TryImpactRing(float impactSpeed, Vector3 point, bool staticGeometry)
-        {
-            float threshold = staticGeometry ? MIN_SLAM_RING_SPEED : MIN_CLASH_RING_SPEED;
-            if (impactSpeed < threshold || Time.time < _nextRingTime)
-            {
-                return;
-            }
-            _nextRingTime = Time.time + MIN_RING_INTERVAL;
-            FxUtil.ImpactRing(point, Mathf.InverseLerp(threshold, FULL_RING_SPEED, impactSpeed));
-        }
-
-        private static bool IsNearCamera(Vector3 point)
-        {
-            if (!TryGetCameraPosition(out Vector3 cameraPosition))
-            {
-                return false;
-            }
-            // Squared compare: a distance check per contact is not worth a sqrt.
-            return (point - cameraPosition).sqrMagnitude <= FX_VISIBLE_RANGE * FX_VISIBLE_RANGE;
-        }
-
-        /// <summary>
-        /// Camera position for the range test, re-read a few times a second. The
-        /// camera moves smoothly and the test has 45 m of slack, so a stale sample
-        /// can only ever mis-judge a racer sitting exactly on the boundary.
-        /// </summary>
-        private static bool TryGetCameraPosition(out Vector3 position)
-        {
-            if (Time.time >= _nextCameraSampleTime || _cameraTransform == null)
-            {
-                _nextCameraSampleTime = Time.time + CAMERA_SAMPLE_INTERVAL;
-                Camera camera = Camera.main;
-                _cameraTransform = camera != null ? camera.transform : null;
-            }
-            if (_cameraTransform == null)
-            {
-                position = default;
-                return false;
-            }
-            _cameraPosition = _cameraTransform.position;
-            position = _cameraPosition;
-            return true;
         }
     }
 }
