@@ -29,6 +29,7 @@ In order: gravity in the torso frame (3), torso linear velocity (3, ×0.5), tors
 velocity (3, ×0.25), joint positions (8, ÷ action scale), joint velocities (8, ×0.1),
 previous action (8), goal direction in the torso frame, horizontal and normalised (2),
 **target speed ÷ 2 (1)**. 36 floats. Action order is `Quad_v01_rig.json`'s `actuator_order`.
+**Round 8 (MuJoCo side):** + the reference-gait clock (sin φ, cos φ) → **38 floats**; see "Round 8" below.
 
 ## Action
 
@@ -58,6 +59,43 @@ The goal is world +x. The target speed is the Froude-0.25 speed: v = √(0.25 ·
 
 **Round 4** (after round 3's 20 ms foot taps on the MuJoCo side and a policy that stood still on the Isaac side): adds progress and feet air time, lowers upright, heading and action rate. Judge smokes on **4 minutes**, not 2.
 
+## Round 8: reference trot — MuJoCo side validated (Isaac copies once proven)
+
+All round-7 terms stay. Added (MuJoCo side only, `training/quad/mujoco/quad_env.py` Q16 and
+`training/creature/env.py` `CreatureConfig.reference_gait`):
+
+- **The prefab's coded gait is not usable as the reference.** Replayed open-loop on this body
+  (kp 1500, damping 100, 300 N·m, 20 Hz, friction 0.9, 20 s) at 1.0 / 1.5 / 2.0 Hz with
+  amplitude ×1.0 / 0.7 / 0.5, it goes nowhere (−0.02 to +0.02 m/s in all 9 variants). Its knee
+  sine flexes equally both ways a quarter period after the hip, so the foot lifts twice per
+  cycle and ground contact is not tied to the hip phase (stance probability 0.23 vs 0.23 for
+  hip sine < 0 vs ≥ 0).
+- **Reference used instead:** the prefab's diagonal trot pairs (hip phases 0, π, π, 0 for RL,
+  FL, RR, FR), hip = 0.3 × sin(φ + ph), knee = 0.5 × max(0, −cos(φ + ph)) (a one-sided lift during
+  the forward swing), both × 0.785398 rad, **f = 1.5 Hz**. Open-loop it walks 0.39 m/s with no
+  falls, 15 % flight, slip 0.40 m/s, 13 % saturation, and its stance is tied to the phase
+  (stance probability 0.63 when −cos < 0, 0.10 otherwise). Its real stances are 0.20–0.25 s;
+  the short "stances" in the statistics are toe scuffs during the swing.
+- **Clock:** per-world φ ~ U(0, 2π) at reset, φ += 2π · 1.5 · 0.05 after the physics of each
+  policy step; the observation gets (sin φ, cos φ) at indices 36–37.
+- **gait reference** +2.0 per second × exp(−mean over the 8 joints of (q − q_ref)² / 0.3²).
+- **contact phase** +0.5 per second × the share of the 4 feet whose debounced contact state
+  equals "stance expected" (−cos(φ + ph_hip) < 0).
+- No annealing yet.
+
+**Round 8 smoke (MuJoCo, 4 min, 2048 envs, 21 M steps), 10 × 20 s deterministic evaluation:**
+1.33 m/s, 0 % falls (0.1 % in training at the end), flight 28.5 %, 50-Hz-equivalent action rate
+0.057, slip 0.47 m/s, debounced stance 0.061 s per footfall but 0.131 s time-weighted with 45 %
+of stance time in stances ≥ 0.15 s, peak foot impact 15 body weights, gait-reference term 0.73,
+contact-phase term 0.64. **Stop rule: still fails on slip, stance and impacts.**
+
+**Foot compliance (measured, not applied):** giving only the lower-leg geoms a softer contact
+(solref time constant, with `priority` so the foot's value wins over the floor's): spawn-drop
+peak 4.3 → 2.0 → 1.4 body weights for 0.01 → 0.02 → 0.03 s, reference-gait peak 5.6 → 2.7 → 2.2,
+stand height 0.8999 → 0.8995 → 0.8992 m. At 0.03 s the reference gait's share of stance time in
+stances ≥ 0.15 s rises from 65 % to 75 % (debounced; raw contact 22 % → 70 %). With rigid 0.01 s feet the ≤ 4 body-weight target is
+below what even a 2 cm drop produces.
+
 ## Episodes
 
 20 s = 400 policy steps at 20 Hz. **Stage 1 (this pilot): a fall ends the episode as terminal**. A fall is **the torso or any upper leg touching the floor** (round 5: catches kneeling and sitting; round 4 knelt on its front thighs at 0.55 m, which the old rule missed), or torso
@@ -78,7 +116,7 @@ collapse.
 
 ## Export and tests
 
-ONNX `obs[1,36]` → `actions[1,8]`, normaliser baked in: `training/quad/export/quad_mujoco.onnx`
+ONNX `obs[1,36]` → `actions[1,8]` (**`obs[1,38]` from round 8**, the gait clock appended), normaliser baked in: `training/quad/export/quad_mujoco.onnx`
 and `quad_isaaclab3.onnx`, each with a report.
 - 100 × 20 s evaluation: speed, distance, fall rate, and worm-style realism metrics.
 - Cross-check each brain in plain MuJoCo.
