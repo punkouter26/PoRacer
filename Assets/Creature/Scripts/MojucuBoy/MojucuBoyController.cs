@@ -30,6 +30,8 @@ namespace Creature.MojucuBoy
     public sealed class MojucuBoyController : MonoBehaviour
     {
         public const int DECIMATION = 4;
+        // Largest heading correction handed to the policy, inside its +/-34 degree training envelope.
+        private const float MAX_TURN_DEGREES = 30f;
 
         /// <summary>Fraction of each joint's half-range a saturated action spans,
         /// measured from the standing stance. Must match ACTION_SCALE in
@@ -89,15 +91,19 @@ namespace Creature.MojucuBoy
         /// <summary>Total mass of this racer's MuJoCo bodies, in kilograms, from the compiled model.</summary>
         public float TotalMassKg { get; private set; }
 
-        /// <summary>Steer the racer toward a world-space point. Unlike Fido, whose
-        /// 33 observations describe only his own body, Boy carries a heading command
-        /// in his observation and can actually be steered to a finish line.</summary>
-        public void SetGoal(Vector3 worldTarget)
+        /// <summary>Steer the racer from <paramref name="worldFrom"/> toward a world-space
+        /// point. Unlike Fido, whose 33 observations describe only his own body, Boy
+        /// carries a heading command in his observation and can be steered to a finish line.
+        ///
+        /// <paramref name="worldFrom"/> must be where his body IS: MuJoCo moves his body
+        /// transforms, never this component's, so measuring from <c>transform</c> aimed
+        /// him from the spawn point forever and any sideways drift was never corrected -
+        /// he walked on "straight ahead" into the side barrier.</summary>
+        public void SetGoal(Vector3 worldTarget, Vector3 worldFrom)
         {
             // Unity +Z is MuJoCo +Y and Unity +X is MuJoCo +X, so a planar heading
             // maps across as atan2(unityZ, unityX). See MjEngineTool.UnityVector3.
-            Vector3 here = transform.position;
-            _commandHeading = Mathf.Atan2(worldTarget.z - here.z, worldTarget.x - here.x);
+            _commandHeading = Mathf.Atan2(worldTarget.z - worldFrom.z, worldTarget.x - worldFrom.x);
         }
 
         private void OnEnable()
@@ -158,12 +164,27 @@ namespace Creature.MojucuBoy
             if (_stepCounter % DECIMATION == 0)
             {
                 MojucuBoyObservation.Build(e.data, _rootBodyId, _qposAddr, _dofAddr,
-                                     _commandHeading, _commandSpeed, _action, _obs);
+                                     CommandWithinTrainedTurn(e.data), _commandSpeed, _action, _obs);
                 Evaluate();
             }
             _stepCounter++;
             WriteAction();
             MeasureEffort(e.data);
+        }
+
+        /// <summary>
+        /// The heading command, limited to within <see cref="MAX_TURN_DEGREES"/> of where
+        /// he faces now. He was trained on heading errors of about +/-34 degrees; a racer
+        /// that has drifted a few metres off his lane is otherwise asked to turn 50-70
+        /// degrees at once, which was measured to spin him round and put him down. Capped,
+        /// he turns back toward the goal a stride at a time, inside what he knows.
+        /// </summary>
+        private unsafe float CommandWithinTrainedTurn(MujocoLib.mjData_* data)
+        {
+            double* xmat = data->xmat + 9 * _rootBodyId;
+            float error = MojucuBoyObservation.HeadingError(xmat, _commandHeading);
+            float limit = MAX_TURN_DEGREES * Mathf.Deg2Rad;
+            return _commandHeading - error + Mathf.Clamp(error, -limit, limit);
         }
 
         /// <summary>

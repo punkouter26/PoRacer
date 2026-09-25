@@ -209,7 +209,7 @@ namespace PoRacer.Agents
             // moved. Cheap -- it is an atan2.
             if (_goal != null)
             {
-                _controller.SetGoal(_goal.position);
+                _controller.SetGoal(_goal.position, _hips.position);
             }
 
             // Being on the floor is NOT a failure. He is trained to get back up and
@@ -239,7 +239,7 @@ namespace PoRacer.Agents
             // his opening strides correcting a course error he was never trained for.
             if (goal != null && _controller != null)
             {
-                _controller.SetGoal(goal.position);
+                _controller.SetGoal(goal.position, _hips != null ? _hips.position : transform.position);
             }
         }
 
