@@ -139,6 +139,10 @@ if ($install -notmatch "Success") {
 }
 
 # --- Launch, with a clean log ---
+# An open notification shade sits over the app: every tap below then lands on the
+# shade (and from there in the Play Store) and every screenshot is of the shade.
+Adb shell cmd statusbar collapse | Out-Null
+Adb shell input keyevent KEYCODE_HOME | Out-Null
 Adb logcat -c | Out-Null
 Adb shell monkey -p $PackageName -c android.intent.category.LAUNCHER 1 | Out-Null
 Start-Sleep -Seconds 12
