@@ -25,3 +25,20 @@ class QuadArticulation(NewtonArticulation):
                 spec.UPPER_LEGS,
             )
             NewtonManager.register_post_actuator_callback(self.contact_tracker.graph_step)
+            if spec.GROUND_PRIORITY:
+                self._set_ground_priority(spec.GROUND_PRIORITY)
+
+    @staticmethod
+    def _set_ground_priority(priority: int) -> None:
+        """Round 9 soft feet: give the ground MuJoCo priority so its (pair) contact parameters win (see spec.py).
+        Written into the Newton model's ``mujoco.geom_priority`` on PHYSICS_READY, i.e. before SolverMuJoCo builds
+        the MuJoCo model from it, so the value also survives Newton's later shape-property updates."""
+        model = NewtonManager.get_model()
+        body = model.shape_body.numpy()
+        ground = [i for i in range(model.shape_count) if body[i] == -1]
+        if len(ground) != 1:
+            raise RuntimeError(f"expected one static (ground) shape, found {ground}")
+        prio = model.mujoco.geom_priority
+        vals = prio.numpy()
+        vals[ground[0]] = priority
+        prio.assign(vals)

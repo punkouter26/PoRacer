@@ -72,7 +72,12 @@ OBS_LIN_VEL_SCALE = 0.5
 OBS_ANG_VEL_SCALE = 0.25
 OBS_JOINT_POS_SCALE = 1.0 / ACTION_SCALE
 OBS_JOINT_VEL_SCALE = 0.1
-NUM_OBS = 36
+# Contract round. 7 = the 36-float task of rounds 5-7; 8 / 9 add the reference trot (clock obs -> 38 floats,
+# gait_ref, contact_phase; see mdp/gait.py). Default 9 (prepared, not yet smoked); override with QUAD_V3_ROUND.
+ROUND = int(os.environ.get("QUAD_V3_ROUND", "9"))
+assert ROUND in (7, 8, 9), ROUND
+GAIT = ROUND >= 8
+NUM_OBS = 38 if GAIT else 36
 GOAL_DIR_W = (1.0, 0.0)  # world +x
 TARGET_SPEED = float(RIG["task"]["targetSpeed"])  # 1.49 m/s (Froude 0.25), observed as / 2
 OBS_TARGET_SPEED = TARGET_SPEED / 2.0
@@ -95,6 +100,14 @@ W_BOUNCE = -2.0          # (torso world v_z)^2; round 3, stops the bounding gait
 W_FLIGHT = -1.0          # per second x fraction of the step's substeps with all 4 debounced feet airborne; round 7
 W_AIR_TIME = 0.5         # PER FOOTFALL (not per second): debounced touchdown, min(swing, 0.5) - 0.25, only if v_x > 0.3; round 5 (was 1.0)
 AIR_TIME_OFFSET = 0.25   # s
+# reference trot (rounds 8-9, training/quad/mujoco/quad_env.py Q16)
+GAIT_FREQ = 1.5          # Hz
+GAIT_AMP_HIP = 0.3       # action units (x 0.785398 rad)
+GAIT_AMP_KNEE = 0.5
+GAIT_KNEE_SIGN = 1.0     # knee = s * A_k * max(0, -cos psi), s = +1
+W_GAIT_REF = 2.0         # per second x exp(-mean (q - q_ref)^2 / sigma^2)
+GAIT_REF_SIGMA = 0.2 if ROUND >= 9 else 0.3   # rad (round 9: 0.2)
+W_CONTACT_PHASE = 2.0 if ROUND >= 9 else 0.5  # per second (round 9: 2.0)
 AIR_VX_MIN = 0.3         # m/s: a step's touchdown sum pays only if the post-step torso v_x > 0.3 (round 6)
 
 # ------------------------------------------------------------------------ episodes --
@@ -125,10 +138,49 @@ MJ_TOLERANCE = float(RIG["physics"]["tolerance"])       # 1e-8 (MuJoCo default; 
 # when fallen or tangled. 64 contacts x 4 pyramid rows + 8 limits fits in 320 constraint rows.
 MJ_NCONMAX = 64
 MJ_NJMAX = 320
-# geom solref (0.01, 1) as Newton contact gains, for shapes without authored values (the ground)
-CONTACT_KE = 1.0e4
-CONTACT_KD = 200.0
-# The ground is one shape shared by all worlds, so it cannot be scaled per world. MuJoCo combines two
-# geoms' friction with max(); keeping the ground below the smallest body value (0.9 * 0.85 = 0.765) makes
-# every body-floor contact use exactly the body's 0.9 * s (WORM_SPEC item 14).
-GROUND_FRICTION = 0.5
+# Ground contact. Two regimes, chosen by quad.xml:
+#
+# * no floor <pair>s (rounds 1-8): the ground has MuJoCo's default geom solref (0.01, 1) as Newton gains and
+#   priority 0. It is one shape shared by all worlds, so it cannot be scaled per world; MuJoCo combines two
+#   geoms' friction with max(), so keeping the ground below the smallest body value (0.9 * 0.85 = 0.765) makes
+#   every body-floor contact use exactly the body's 0.9 * s (WORM_SPEC item 14).
+# * floor <pair>s (round 9 soft feet: floor <-> each lower leg, solref 0.03 1, friction 0.9, and an <exclude> of
+#   the automatic world/lower-leg contact). USD cannot carry <pair>, so the GROUND takes the pair parameters
+#   (solref -> Newton ke/kd, friction, solimp default) and MuJoCo priority 1 (QuadArticulation writes it into the
+#   Newton model before the solver is built). Then every floor contact uses the pair's parameters: the foot-floor
+#   contacts exactly as quad.xml; the torso / upper-leg floor contacts too (in quad.xml those keep solref 0.01 and
+#   friction 0.9 * s), but such a contact ends the episode as a fall on that step. Body-body contacts are unchanged.
+#
+# * floor priority (round 9 final): quad.xml's FLOOR geom itself is soft (solref 0.03, 1), priority 1, friction 0.9;
+#   every body geom stays 0.01 / priority 0 / friction 0.9. The floor's parameters then win in every floor contact.
+#   The ground takes exactly those parameters, and the per-episode friction randomisation moves to the floor:
+#   per world, floor friction = 0.9 * U(0.85, 1.15), written straight into MuJoCo-Warp's per-world geom_friction
+#   (randomize_floor_friction); body friction fixed 0.9. Newton has one ground shape for all worlds, so nothing
+#   may notify SHAPE_PROPERTIES afterwards (it would rewrite every world's floor friction from that one shape).
+FLOOR_CONTACT = NAMES.get("floorContact")  # from the converter sidecar; None without floor pairs
+FLOOR_GEOM = NAMES.get("floorGeom")        # quad.xml's floor geom parameters
+FLOOR_PRIORITY = bool(FLOOR_GEOM and FLOOR_GEOM["priority"] > 0 and not FLOOR_CONTACT)
+
+
+def _gains(solref):
+    tc, dr = solref
+    return 1.0 / (tc * tc * dr * dr), 2.0 / tc   # Newton ke/kd that SolverMuJoCo.convert_solref maps back
+
+
+if FLOOR_PRIORITY:
+    CONTACT_KE, CONTACT_KD = _gains(FLOOR_GEOM["solref"])      # (0.03, 1) -> 1111.1, 66.67
+    GROUND_FRICTION = float(FLOOR_GEOM["friction"][0])         # 0.9 nominal; x U(0.85, 1.15) per world per reset
+    GROUND_PRIORITY = int(FLOOR_GEOM["priority"])
+    assert FLOOR_GEOM["condim"] == 3 and FLOOR_GEOM["solimp"] == [0.9, 0.95, 0.001, 0.5, 2.0]
+    assert FLOOR_GEOM["margin"] == 0.0 and FLOOR_GEOM["gap"] == 0.0 and FLOOR_GEOM["solmix"] == 1.0
+    assert abs(FLOOR_GEOM["friction"][1] - 0.005) < 1e-9 and abs(FLOOR_GEOM["friction"][2] - 0.0001) < 1e-9
+elif FLOOR_CONTACT:
+    CONTACT_KE, CONTACT_KD = _gains(FLOOR_CONTACT["solref"])   # (0.03, 1) -> 1111.1, 66.67
+    GROUND_FRICTION = float(FLOOR_CONTACT["friction"][0])        # 0.9, fixed (quad.xml's pair friction)
+    GROUND_PRIORITY = 1
+    assert FLOOR_CONTACT["condim"] == 3 and FLOOR_CONTACT["solimp"] == [0.9, 0.95, 0.001, 0.5, 2.0]
+    assert abs(FLOOR_CONTACT["friction"][2] - 0.005) < 1e-9 and abs(FLOOR_CONTACT["friction"][3] - 0.0001) < 1e-9
+else:
+    CONTACT_KE, CONTACT_KD = 1.0e4, 200.0   # geom solref (0.01, 1)
+    GROUND_FRICTION = 0.5
+    GROUND_PRIORITY = 0

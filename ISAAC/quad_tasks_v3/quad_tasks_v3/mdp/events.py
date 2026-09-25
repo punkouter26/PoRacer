@@ -8,10 +8,52 @@ from typing import TYPE_CHECKING
 
 import torch
 
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import ManagerTermBase, SceneEntityCfg
 
 if TYPE_CHECKING:
+    from isaaclab.managers import EventTermCfg
     from isaaclab.envs import ManagerBasedEnv
+
+
+class randomize_floor_friction(ManagerTermBase):
+    """Per world, floor sliding friction = base * s, s ~ U(lo, hi), drawn at every reset (floor-priority regime).
+
+    Newton has ONE ground shape shared by all worlds, but MuJoCo-Warp's geom_friction is batched per world, so the
+    value is written straight into ``mjw_model.geom_friction[world, floor, 0]`` of the reset worlds (the lean-writer
+    pattern of the worm's mass / kp randomisers). No SHAPE_PROPERTIES notification is sent - Newton would answer it
+    by rewriting every world's floor friction from the one shape. The floor has priority 1, so every floor contact
+    (feet included) uses exactly this friction. Bound lazily on the first call (the solver does not exist when the
+    event manager is built).
+    """
+
+    def __init__(self, cfg: "EventTermCfg", env: "ManagerBasedEnv"):
+        super().__init__(cfg, env)
+        self._bound = False
+        self.scale = torch.ones(env.num_envs, device=env.device)
+
+    def _bind(self, env):
+        import isaaclab_newton.physics.newton_manager as nm  # noqa: PLC0415
+        import warp as wp  # noqa: PLC0415
+
+        solver = nm.NewtonManager._solver
+        mm = solver.mj_model
+        floor = [g for g in range(mm.ngeom) if mm.geom_bodyid[g] == 0]
+        if len(floor) != 1:
+            raise RuntimeError(f"expected one floor geom, found {floor}")
+        self.floor = floor[0]
+        self.gf = wp.to_torch(solver.mjw_model.geom_friction)  # (nworld, ngeom, 3)
+        if self.gf.dim() != 3 or self.gf.shape[0] != env.num_envs:
+            raise RuntimeError("MuJoCo-Warp geom_friction is not batched per world")
+        self._bound = True
+
+    def __call__(self, env: "ManagerBasedEnv", env_ids: torch.Tensor | None, base: float,
+                 scale_range: tuple[float, float]):
+        if not self._bound:
+            self._bind(env)
+        ids = torch.arange(env.num_envs, device=env.device) if env_ids is None else env_ids.to(env.device).long()
+        s = torch.empty(len(ids), device=env.device).uniform_(*scale_range)
+        self.scale[ids] = s
+        self.gf[ids, self.floor, 0] = (base * s).to(self.gf.dtype)
 
 
 def push_horizontal(env: "ManagerBasedEnv", env_ids: torch.Tensor, speed: float,

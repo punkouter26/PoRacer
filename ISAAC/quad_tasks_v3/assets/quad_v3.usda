@@ -33,6 +33,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -81,6 +84,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -114,6 +120,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -147,6 +156,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -180,6 +192,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -213,6 +228,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -246,6 +264,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -279,6 +300,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0
@@ -312,6 +336,9 @@ def Xform "quad" (
                 bindMaterialAs = "weakerThanDescendants"
             )
             custom int mjc:condim = 3
+            custom int mjc:priority = 0
+            custom float[] mjc:solimp = [0.9, 0.95, 0.001, 0.5, 2]
+            custom float mjc:solmix = 1
             custom float newton:contact_kd = 200
             custom float newton:contact_ke = 10000
             custom float newton:contactMargin = 0

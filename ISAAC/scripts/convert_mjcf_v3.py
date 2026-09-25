@@ -25,6 +25,9 @@ defaults silently differ from MuJoCo's):
                               exactly; Newton's own default is a different, softer contact)
       newton:contactMargin  = geom margin (0)
       mjc:condim            = geom condim
+      mjc:priority / mjc:solimp / mjc:solmix = geom priority, solimp, solmix (Newton's defaults are
+                              MuJoCo's 0 / (0.9, 0.95, 0.001, 0.5, 2) / 1, written anyway so a per-geom change -
+                              e.g. soft, high-priority feet - reaches the solver)
   * physics materials (one per distinct friction triple): static = dynamic = sliding friction,
     restitution 0, newton:torsionalFriction / newton:rollingFriction = MuJoCo's 2nd/3rd friction.
   * RevoluteJoint per hinge (limits in degrees) with:
@@ -40,6 +43,9 @@ defaults silently differ from MuJoCo's):
       DriveAPI angular (force): stiffness kp, damping kv (per degree), maxForce = the actuator force
                               range. The task's ImplicitActuatorCfg sets these again at runtime.
   * FilteredPairsAPI on the collider prims for <exclude> pairs (Newton reads shape-level filters only).
+  * Floor <pair>s (quad round 9 soft feet: floor <-> lower leg with solref 0.03, plus an <exclude> of the automatic
+    world contact) cannot be expressed in USD. They are accepted only in that form, left out of the USD, and their
+    parameters are written to the sidecar ("floorContact"); the task gives them to the ground plane.
     Parent-child pairs are filtered by Newton's joint builder and again by MuJoCo's filterparent.
   * articulation root on the asset root Xform, self-collision enabled.
 
@@ -164,6 +170,49 @@ def collidable_body_pairs(m: mujoco.MjModel) -> set[tuple[str, str]]:
     return out
 
 
+def floor_geom_params(m: mujoco.MjModel) -> dict | None:
+    """The world plane's contact parameters (the USD leaves the floor out; the task builds the ground from these)."""
+    world_geoms = [g for g in range(m.ngeom) if m.geom_bodyid[g] == 0]
+    if not world_geoms:
+        return None
+    g = world_geoms[0]
+    return {"name": m.geom(g).name, "solref": [float(v) for v in m.geom_solref[g]],
+            "solimp": [float(v) for v in m.geom_solimp[g]], "friction": [float(v) for v in m.geom_friction[g]],
+            "priority": int(m.geom_priority[g]), "condim": int(m.geom_condim[g]), "solmix": float(m.geom_solmix[g]),
+            "margin": float(m.geom_margin[g]), "gap": float(m.geom_gap[g])}
+
+
+def floor_contact_pairs(m: mujoco.MjModel) -> list[dict]:
+    """Explicit <pair>s are accepted only in the form "floor <-> one body geom, with an <exclude> of that body's
+    automatic world contact" and only if every pair has the same parameters. Returns [{geom, params}]."""
+    if m.npair == 0:
+        return []
+    world_geoms = [g for g in range(m.ngeom) if m.geom_bodyid[g] == 0]
+    if len(world_geoms) != 1:
+        raise SystemExit("floor <pair>s need exactly one world geom (the floor)")
+    floor = world_geoms[0]
+    excl = {tuple(sorted(p)) for p in excluded_body_pairs(m)}
+    out, ref = [], None
+    for i in range(m.npair):
+        g1, g2 = int(m.pair_geom1[i]), int(m.pair_geom2[i])
+        if floor not in (g1, g2):
+            raise SystemExit(f"pair {i}: only floor pairs are supported")
+        g = g2 if g1 == floor else g1
+        if (0, int(m.geom_bodyid[g])) not in excl:
+            raise SystemExit(f"pair {i}: the automatic floor contact of {m.geom(g).name} must be excluded as well")
+        fr = [float(v) for v in m.pair_friction[i]]
+        params = {"condim": int(m.pair_dim[i]), "friction": fr, "solref": [float(v) for v in m.pair_solref[i]],
+                  "solimp": [float(v) for v in m.pair_solimp[i]], "margin": float(m.pair_margin[i]),
+                  "gap": float(m.pair_gap[i])}
+        if fr[0] != fr[1] or fr[3] != fr[4] or params["margin"] != 0.0 or params["gap"] != 0.0:
+            raise SystemExit(f"pair {i}: anisotropic friction / margin / gap is not supported")
+        if ref is not None and params != ref:
+            raise SystemExit("floor pairs with different parameters are not supported")
+        ref = params
+        out.append({"geom": m.geom(g).name, "params": params})
+    return out
+
+
 def position_actuators(m: mujoco.MjModel) -> dict[int, dict]:
     """joint id -> {kp, kv, force range} for the model's position actuators."""
     out = {}
@@ -202,9 +251,10 @@ def main() -> int:
     mujoco.mj_forward(m, d)  # world poses at qpos0
 
     # ---------------------------------------------------------------- supported-feature gate --
-    for feat, n in (("equality constraints", m.neq), ("tendons", m.ntendon), ("explicit <pair> contacts", m.npair)):
+    for feat, n in (("equality constraints", m.neq), ("tendons", m.ntendon)):
         if n:
             raise SystemExit(f"{args.mjcf}: {feat} are not supported by this converter")
+    floor_pairs = floor_contact_pairs(m)  # [] or the floor <pair>s (the task puts their parameters on the ground)
     roots = [b for b in range(1, m.nbody) if m.body_parentid[b] == 0]
     if len(roots) != 1:
         raise SystemExit(f"expected one root body under the world, found {[m.body(b).name for b in roots]}")
@@ -223,8 +273,6 @@ def main() -> int:
             continue
         if abs(m.geom_gap[gid]) > 0.0:
             raise SystemExit(f"geom {m.geom(gid).name}: gap is not supported")
-        if not np.allclose(m.geom_solimp[gid], [0.9, 0.95, 0.001, 0.5, 2.0]):
-            raise SystemExit(f"geom {m.geom(gid).name}: non-default solimp is not written by this converter")
     hinges = [j for j in range(m.njnt) if m.jnt_type[j] == mujoco.mjtJoint.mjJNT_HINGE]
     for j in hinges:
         if not np.allclose(m.jnt_solimp[j], [0.9, 0.95, 0.001, 0.5, 2.0]) or m.jnt_margin[j] != 0.0:
@@ -326,6 +374,10 @@ def main() -> int:
             gp.CreateAttribute("newton:contact_kd", Sdf.ValueTypeNames.Float).Set(kd)
             gp.CreateAttribute("newton:contactMargin", Sdf.ValueTypeNames.Float).Set(float(m.geom_margin[gid]))
             gp.CreateAttribute("mjc:condim", Sdf.ValueTypeNames.Int).Set(int(m.geom_condim[gid]))
+            # per-geom contact mixing (round 9 soft feet): priority wins over the floor's params in MuJoCo
+            gp.CreateAttribute("mjc:priority", Sdf.ValueTypeNames.Int).Set(int(m.geom_priority[gid]))
+            gp.CreateAttribute("mjc:solimp", Sdf.ValueTypeNames.FloatArray).Set([float(v) for v in m.geom_solimp[gid]])
+            gp.CreateAttribute("mjc:solmix", Sdf.ValueTypeNames.Float).Set(float(m.geom_solmix[gid]))
             if not (m.geom_contype[gid] or m.geom_conaffinity[gid]):
                 UsdPhysics.CollisionAPI(gp).CreateCollisionEnabledAttr(False)
             UsdShade.MaterialBindingAPI.Apply(gp).Bind(
@@ -385,7 +437,7 @@ def main() -> int:
 
     # <exclude> -> FilteredPairsAPI between every collider of the two bodies (shape level: Newton's USD
     # importer ignores body-level filters).
-    excl = excluded_body_pairs(m)
+    excl = [pr for pr in excluded_body_pairs(m) if 0 not in pr]  # world excludes go with the floor pairs
     for b1, b2 in excl:
         for g1 in (g for g in range(m.ngeom) if m.geom_bodyid[g] == b1):
             for g2 in (g for g in range(m.ngeom) if m.geom_bodyid[g] == b2):
@@ -402,6 +454,13 @@ def main() -> int:
         "geoms": names["geoms"],
         "actuatorOrder": [m.actuator(a).name for a in range(m.nu)],
         "actuatorJointsUsd": [names["joints"][m.joint(int(m.actuator_trnid[a][0])).name] for a in range(m.nu)],
+        "floorGeom": floor_geom_params(m),
+        "floorContact": floor_pairs[0]["params"] if floor_pairs else None,
+        "floorContactGeoms": [fp["geom"] for fp in floor_pairs],
+        "floorContactNote": ("quad.xml gives these geoms' floor contacts explicit <pair> parameters and excludes their "
+                             "automatic world contact. The USD cannot carry <pair>; the Isaac task reproduces it by giving "
+                             "the GROUND these parameters and MuJoCo priority 1 (see quad_tasks_v3 spec / quad_articulation)."
+                             if floor_pairs else None),
     }
     with open(args.out + ".names.json", "w", encoding="utf-8") as f:
         json.dump(sidecar, f, indent=1)
@@ -461,11 +520,14 @@ def verify(path, m, names, joint_info, excl) -> int:
         qq = np.array([q.GetReal(), *q.GetImaginary()])
         ok &= np.allclose(qq, m.geom_quat[gid], atol=1e-6) or np.allclose(qq, -np.asarray(m.geom_quat[gid]), atol=1e-6)
         ke, kd = geom_gains(m, gid)
+        ok &= prim.GetAttribute("mjc:priority").Get() == int(m.geom_priority[gid])
+        ok &= np.allclose(prim.GetAttribute("mjc:solimp").Get(), m.geom_solimp[gid], atol=1e-7)
         ok &= abs(prim.GetAttribute("newton:contact_ke").Get() - ke) < 1e-3 * ke and abs(prim.GetAttribute("newton:contact_kd").Get() - kd) < 1e-6 * kd
         mat = UsdShade.MaterialBindingAPI(prim).GetDirectBinding(materialPurpose="physics").GetMaterial()
         mapi = UsdPhysics.MaterialAPI(mat.GetPrim())
         ok &= abs(mapi.GetStaticFrictionAttr().Get() - m.geom_friction[gid][0]) < 1e-6 and mapi.GetRestitutionAttr().Get() == 0.0
-        check(f"{m.geom(gid).name:18s} {desc}, pose, solref->ke/kd, friction {m.geom_friction[gid][0]:.3f}", ok)
+        check(f"{m.geom(gid).name:18s} {desc}, pose, solref {np.round(m.geom_solref[gid], 4).tolist()}->ke/kd, "
+              f"priority {m.geom_priority[gid]}, friction {m.geom_friction[gid][0]:.3f}", ok)
 
     for j, jn, tok, q1, lke, lkd, act in joint_info:
         prim = stage.GetPrimAtPath(f"/{stage.GetDefaultPrim().GetName()}/joints/{jn}")

@@ -1,8 +1,8 @@
 """Isaac Lab 3 manager-based env for the quad on Newton + MuJoCo-Warp, built to training/quad/QUAD_SPEC.md.
 
-Observation (36 floats, this order - it is the ONNX input layout):
+Observation (36 floats, + 2 from round 8, this order - it is the ONNX input layout):
     gravity_b(3) lin_vel_b(3)*0.5 ang_vel_b(3)*0.25 joint_pos(8)/0.785398 joint_vel(8)*0.1
-    last_action(8) goal_dir_b(2) target_speed/2(1)
+    last_action(8) goal_dir_b(2) target_speed/2(1) [sin phi, cos phi of the reference-gait clock (2)]
     (all in the torso frame; goal = world +x rotated into the torso frame, (x, y) renormalised)
 Action: 8 joint targets in quad_rig.json actuator order, target = rest(0) + a * 0.785398 rad, a clipped to
 [-1, 1] by the RSL-RL wrapper (agent cfg clip_actions=1.0). Physics 0.005 s, decimation 10 -> 20 Hz (QUAD_SPEC
@@ -41,7 +41,7 @@ LOWER_LEGS = SceneEntityCfg("robot", body_names=spec.LOWER_LEGS, preserve_order=
 @configclass
 class QuadShapeCfg(NewtonShapeCfg):
     """Newton per-shape defaults for shapes WITHOUT authored values (the ground plane): MuJoCo geom solref
-    (0.01, 1) as ke/kd (quad.xml's floor), margin 0."""
+    (0.01, 1), or the round-9 floor-pair solref (0.03, 1), as ke/kd; margin 0. See spec.py "Ground contact"."""
 
     ke: float = spec.CONTACT_KE
     kd: float = spec.CONTACT_KD
@@ -73,7 +73,7 @@ class QuadSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="plane",
         collision_group=-1,
-        # below the smallest body friction (0.765): MuJoCo's max() then picks the body's 0.9 * s
+        # spec.GROUND_FRICTION: 0.5 (below every body, max() -> body 0.9*s) or the floor-pair friction (priority 1)
         physics_material=sim_utils.RigidBodyMaterialCfg(
             static_friction=spec.GROUND_FRICTION, dynamic_friction=spec.GROUND_FRICTION, restitution=0.0
         ),
@@ -106,6 +106,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
         goal_dir_b = ObsTerm(func=mdp.goal_dir_b, params={"asset_cfg": TORSO})
         target_speed = ObsTerm(func=mdp.target_speed_obs, params={"value": spec.OBS_TARGET_SPEED})
+        gait_clock = ObsTerm(func=mdp.gait_clock_obs) if spec.GAIT else None  # rounds 8-9: obs[36:38] = sin, cos phi
 
         def __post_init__(self):
             self.enable_corruption = False  # no observation noise
@@ -133,10 +134,14 @@ class EventsCfg:
         },
     )
     # -- per-episode randomisation (every reset): lean per-world writers (see worm_tasks_v3/mdp/events.py)
-    friction = EventTerm(
-        func=mdp.randomize_friction_scale,
-        mode="reset",
-        params={"asset_cfg": SceneEntityCfg("robot"), "base": spec.FRICTION, "scale_range": spec.FRICTION_SCALE},
+    # floor-priority regime (round 9 final): the FLOOR's friction is randomised per world, the body stays 0.9;
+    # otherwise the body shapes carry 0.9 * s and the ground sits below them (see spec.py "Ground contact")
+    friction = (
+        EventTerm(func=mdp.randomize_floor_friction, mode="reset",
+                  params={"base": spec.GROUND_FRICTION, "scale_range": spec.FRICTION_SCALE})
+        if spec.FLOOR_PRIORITY else
+        EventTerm(func=mdp.randomize_friction_scale, mode="reset",
+                  params={"asset_cfg": SceneEntityCfg("robot"), "base": spec.FRICTION, "scale_range": spec.FRICTION_SCALE})
     )
     body_mass = EventTerm(
         func=mdp.randomize_body_mass_lean,
@@ -148,6 +153,8 @@ class EventsCfg:
         mode="reset",
         params={"asset_cfg": JOINTS, "scale_range": spec.KP_SCALE},
     )
+    # -- rounds 8-9: the reference-gait clock, phi ~ U(0, 2 pi) at every reset (training and evaluation)
+    gait_clock = EventTerm(func=mdp.reset_gait_clock, mode="reset") if spec.GAIT else None
     # -- a 0.5 m/s horizontal push, per-env timer U(10, 15) s redrawn at every reset and after each push
     push = EventTerm(
         func=mdp.push_horizontal,
@@ -175,6 +182,9 @@ class RewardsCfg:
     feet_air_time = RewTerm(func=mdp.feet_air_time, weight=spec.W_AIR_TIME,
                             params={"asset_cfg": SceneEntityCfg("robot"), "torso_cfg": TORSO, "vx_min": spec.AIR_VX_MIN})
     flight = RewTerm(func=mdp.flight, weight=spec.W_FLIGHT, params={"decimation": spec.DECIMATION})
+    gait_ref = (RewTerm(func=mdp.gait_ref, weight=spec.W_GAIT_REF, params={"asset_cfg": JOINTS, "sigma": spec.GAIT_REF_SIGMA})
+                if spec.GAIT else None)
+    contact_phase = RewTerm(func=mdp.contact_phase, weight=spec.W_CONTACT_PHASE) if spec.GAIT else None
     vertical_bounce = RewTerm(func=mdp.vertical_bounce, weight=spec.W_BOUNCE, params={"asset_cfg": TORSO})
     foot_slip = RewTerm(func=mdp.foot_slip, weight=spec.W_FOOT_SLIP,
                         params={"asset_cfg": LOWER_LEGS, "foot_points": spec.FOOT_POINTS})

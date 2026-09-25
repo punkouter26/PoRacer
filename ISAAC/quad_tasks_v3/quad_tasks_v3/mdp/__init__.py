@@ -23,7 +23,8 @@ from worm_tasks_v3.mdp.observations import (  # noqa: F401
 from worm_tasks_v3.mdp.rewards import action_rate_mean, effort_mean, heading, lateral_drift  # noqa: F401
 from worm_tasks_v3.mdp.terminations import diverged_mask, sim_diverged  # noqa: F401
 
-from .events import push_horizontal  # noqa: F401
+from .events import push_horizontal, randomize_floor_friction  # noqa: F401
+from .gait import contact_phase, gait_clock_obs, gait_ref, reset_gait_clock  # noqa: F401
 from .observations import joint_pos_rel_ordered, target_speed_obs  # noqa: F401
 from .rewards import alive, feet_air_time, flight, foot_slip, progress, speed_tracking, upright, vertical_bounce  # noqa: F401
 from .terminations import fallen, fallen_mask, floor_touch_mask, time_out_healthy_standing, touch_this_step  # noqa: F401

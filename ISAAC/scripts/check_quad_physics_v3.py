@@ -123,7 +123,7 @@ def run(cfg):
     check("action term joint order == quad_rig.json actionOrder", mapped == spec.ACTION_ORDER
           and [usd2mj_joint[n] for n in mapped] == [a["joint"] for a in spec.RIG["actuators"]], str(mapped))
     obs_dims = env.observation_manager.group_obs_dim["policy"]
-    check("observation size 36", tuple(obs_dims) == (36,), str(obs_dims))
+    check(f"observation size {spec.NUM_OBS} (round {spec.ROUND})", tuple(obs_dims) == (spec.NUM_OBS,), str(obs_dims))
 
     print("\n== solver options vs quad.xml <option>")
     o, r = mm.opt, ref.opt
@@ -143,8 +143,13 @@ def run(cfg):
     want_w = {"alive": 1.0, "speed": 2.0, "progress": 1.0, "heading": 0.1, "upright": 0.2, "lateral_drift": -0.5,
               "effort": -0.2, "action_rate": -0.2, "feet_air_time": 0.5, "flight": -1.0, "vertical_bounce": -2.0,
               "foot_slip": -1.0}
+    if spec.GAIT:
+        want_w.update({"gait_ref": 2.0, "contact_phase": 2.0 if spec.ROUND >= 9 else 0.5})
     sig = env.reward_manager.get_term_cfg("speed").params["sigma"]
-    check("reward terms and weights == QUAD_SPEC round 7 (speed sigma 1.0)", rw == want_w and sig == 1.0, f"{rw}, sigma {sig}")
+    gsig = env.reward_manager.get_term_cfg("gait_ref").params["sigma"] if spec.GAIT else None
+    check(f"reward terms and weights == QUAD_SPEC round {spec.ROUND} (speed sigma 1.0"
+          + (f", gait_ref sigma {0.2 if spec.ROUND >= 9 else 0.3})" if spec.GAIT else ")"),
+          rw == want_w and sig == 1.0 and (not spec.GAIT or gsig == (0.2 if spec.ROUND >= 9 else 0.3)), f"{rw}, sigma {sig}, {gsig}")
     from quad_tasks_v3.agents.capped_ppo import CappedPPO
     from quad_tasks_v3.agents.rsl_rl_ppo_cfg import QuadFlatPPORunnerCfg
 
@@ -217,14 +222,47 @@ def run(cfg):
         ok &= np.allclose(mm.geom_solref[g], ref.geom_solref[rg]) and np.allclose(mm.geom_solimp[g], ref.geom_solimp[rg])
         ok &= mm.geom_condim[g] == ref.geom_condim[rg] and mm.geom_margin[g] == ref.geom_margin[rg] == 0.0
         ok &= mm.geom_gap[g] == ref.geom_gap[rg] == 0.0
+        ok &= int(mm.geom_priority[g]) == int(ref.geom_priority[rg]) and abs(mm.geom_solmix[g] - ref.geom_solmix[rg]) < 1e-9
+        ok &= np.allclose(mw.geom_solref.numpy()[0][g], ref.geom_solref[rg], atol=1e-6)  # the batched model too
         check(f"{usd:12s} {['plane', 'hfield', 'sphere', 'capsule', 'ellipsoid', 'cylinder', 'box'][mm.geom_type[g]]:7s} "
               f"size {np.round(mm.geom_size[g], 4).tolist()} friction {gf[g].round(5).tolist()} solref {mm.geom_solref[g].tolist()} "
-              f"condim {mm.geom_condim[g]}", ok)
+              f"condim {mm.geom_condim[g]} priority {mm.geom_priority[g]}", ok)
     fl = ref.geom("floor").id
-    check(f"floor friction {gf[ground][0]:.3f} < 0.765 (max() -> body 0.9*s); solref {mm.geom_solref[ground].tolist()} "
-          f"== quad.xml {ref.geom_solref[fl].tolist()}",
-          gf[ground][0] < 0.9 * spec.FRICTION_SCALE[0] and np.allclose(mm.geom_solref[ground], ref.geom_solref[fl])
-          and np.allclose(mm.geom_solimp[ground], ref.geom_solimp[fl]) and mm.geom_condim[ground] == ref.geom_condim[fl])
+    if spec.FLOOR_PRIORITY:  # round 9 final: the floor geom itself is soft with priority 1
+        fg = spec.FLOOR_GEOM
+        check(f"quad.xml floor: solref {ref.geom_solref[fl].tolist()}, priority {ref.geom_priority[fl]}, friction "
+              f"{ref.geom_friction[fl].tolist()} == sidecar floorGeom; every body geom priority 0",
+              np.allclose(ref.geom_solref[fl], fg["solref"]) and int(ref.geom_priority[fl]) == fg["priority"] >= 1
+              and np.allclose(ref.geom_friction[fl], fg["friction"])
+              and all(int(ref.geom_priority[g]) == 0 for g in range(ref.ngeom) if ref.geom_bodyid[g] != 0))
+        check(f"ground: priority {mm.geom_priority[ground]}, solref {np.round(mm.geom_solref[ground], 4).tolist()}, "
+              f"friction {np.round(gf[ground], 5).tolist()} == quad.xml floor",
+              int(mm.geom_priority[ground]) == fg["priority"] and np.allclose(mm.geom_solref[ground], fg["solref"], atol=1e-6)
+              and np.allclose(mw.geom_solref.numpy()[0][ground], fg["solref"], atol=1e-6)
+              and np.allclose(gf[ground], fg["friction"], atol=1e-6) and np.allclose(mm.geom_solimp[ground], fg["solimp"])
+              and mm.geom_condim[ground] == fg["condim"])
+    elif ref.npair:  # round 9 (superseded): floor <pair>s (feet) reproduced as ground parameters + priority 1
+        fp = spec.FLOOR_CONTACT
+        excl_w = {int(x) & 0xFFFF for x in ref.exclude_signature if (int(x) >> 16) == 0}
+        pair_geoms = sorted(int(ref.pair_geom2[i]) if ref.pair_geom1[i] == fl else int(ref.pair_geom1[i]) for i in range(ref.npair))
+        check(f"quad.xml floor pairs {[ref.geom(g).name for g in pair_geoms]} (solref {ref.pair_solref[0].tolist()}, friction "
+              f"{ref.pair_friction[0].tolist()}) + world excludes == the sidecar's floorContact",
+              [ref.geom(g).name for g in pair_geoms] == sorted(spec.NAMES["floorContactGeoms"])
+              and excl_w == {int(ref.geom_bodyid[g]) for g in pair_geoms}
+              and all(np.allclose(ref.pair_solref[i], fp["solref"]) and np.allclose(ref.pair_friction[i], fp["friction"])
+                      and np.allclose(ref.pair_solimp[i], fp["solimp"]) and ref.pair_dim[i] == fp["condim"] for i in range(ref.npair)))
+        check(f"ground: priority {mm.geom_priority[ground]}, solref {np.round(mm.geom_solref[ground], 4).tolist()}, friction "
+              f"{np.round(gf[ground], 5).tolist()} == the floor pair's (priority 1 > every body geom's 0)",
+              int(mm.geom_priority[ground]) == 1 and all(int(mm.geom_priority[g]) == 0 for g in body_geoms.values())
+              and np.allclose(mm.geom_solref[ground], fp["solref"], atol=1e-6)
+              and np.allclose(mw.geom_solref.numpy()[0][ground], fp["solref"], atol=1e-6)
+              and abs(gf[ground][0] - fp["friction"][0]) < 1e-6 and np.allclose(gf[ground][1:], fp["friction"][2:4], atol=1e-7)
+              and np.allclose(mm.geom_solimp[ground], fp["solimp"]) and mm.geom_condim[ground] == fp["condim"])
+    else:
+        check(f"floor friction {gf[ground][0]:.3f} < 0.765 (max() -> body 0.9*s); solref {mm.geom_solref[ground].tolist()} "
+              f"== quad.xml {ref.geom_solref[fl].tolist()}",
+              gf[ground][0] < 0.9 * spec.FRICTION_SCALE[0] and np.allclose(mm.geom_solref[ground], ref.geom_solref[fl])
+              and np.allclose(mm.geom_solimp[ground], ref.geom_solimp[fl]) and mm.geom_condim[ground] == ref.geom_condim[fl])
 
     print("\n== self-collision rules (rule M): collidable body pairs, Newton-built mjModel vs quad.xml")
 
@@ -291,6 +329,50 @@ def run(cfg):
 
     step(1)
     check("MuJoCo-Warp timestep == 0.005 s during stepping", abs(float(mw.opt.timestep.numpy().reshape(-1)[0]) - 0.005) < 1e-9)
+
+    print("\n== soft feet: 2 cm spawn drop (0.92 m, rest pose, zero targets), peak single-foot floor normal force, 1 s")
+    foot_sr = ([float(spec.FLOOR_GEOM['solref'][0])] if spec.FLOOR_PRIORITY
+               else [float(spec.FLOOR_CONTACT['solref'][0])] if ref.npair
+               else [float(ref.geom_solref[ref.geom(g).id][0]) for g in spec.RIG['footGeoms']])
+    import mujoco_warp as mjw
+
+    naconmax = int(solver.mjw_data.contact.dist.shape[0])
+    cf_ids = wp.array(np.arange(naconmax, dtype=np.int32), dtype=wp.int32, device=str(dev))
+    cf_out = wp.zeros(naconmax, dtype=wp.spatial_vector, device=str(dev))
+    feet_mj = [[g for g in range(mm.ngeom) if mm.geom_bodyid[g] == mj_body(n)][0] for n in spec.LOWER_LEGS]
+    place(all_ids, torch.zeros(env.num_envs, nj, device=dev), z=spec.SPAWN_Z)
+    peak_n = np.zeros(env.num_envs)
+    for _ in range(200):
+        step(1)
+        mjw.contact_force(mw, solver.mjw_data, cf_ids, False, cf_out)
+        k_ = int(solver.mjw_data.nacon.numpy()[0])
+        g_, w_, f_ = solver.mjw_data.contact.geom.numpy()[:k_], solver.mjw_data.contact.worldid.numpy()[:k_], cf_out.numpy()[:k_, 0]
+        per = np.zeros((env.num_envs, 4))
+        for (a_, b_), ww, ff in zip(g_, w_, f_):
+            o_ = b_ if a_ == ground else (a_ if b_ == ground else -1)
+            if o_ in feet_mj:
+                per[ww, feet_mj.index(o_)] += ff
+        peak_n = np.maximum(peak_n, per.max(axis=1))
+    m2 = cpu_model()
+    d2 = mujoco.MjData(m2)
+    mujoco.mj_resetDataKeyframe(m2, d2, m2.key("spawn").id)
+    fl2 = m2.geom("floor").id
+    feet2 = [m2.geom(g).id for g in spec.RIG["footGeoms"]]
+    cpu_peak, f6 = 0.0, np.zeros(6)
+    for _ in range(200):
+        mujoco.mj_step(m2, d2)
+        per = np.zeros(4)
+        for ci in range(d2.ncon):
+            c = d2.contact[ci]
+            o_ = c.geom[1] if c.geom[0] == fl2 else (c.geom[0] if c.geom[1] == fl2 else -1)
+            if o_ in feet2:
+                mujoco.mj_contactForce(m2, d2, ci, f6)
+                per[feet2.index(o_)] += f6[0]
+        cpu_peak = max(cpu_peak, per.max())
+    bw = spec.TOTAL_MASS * 9.81
+    check(f"spawn-drop peak foot force == CPU MuJoCo on quad.xml (foot solref {foot_sr[0]})",
+          bool(np.all(np.abs(peak_n - cpu_peak) < 0.02 * cpu_peak)),
+          f"Newton {np.round(peak_n / bw, 3).tolist()} BW, CPU MuJoCo {cpu_peak / bw:.3f} BW")
 
     print("\n== kinematics: random joint angles, one substep in free fall, every body pose vs CPU MuJoCo quad.xml")
     rng = np.random.default_rng(0)
@@ -461,6 +543,11 @@ def run(cfg):
     check("obs: gravity_b ~ (0,0,-1), goal_dir_b ~ (cos yaw, -sin yaw), target speed 0.745",
           float(ob[2]) < -0.99 and abs(float(ob[33]) - math.cos(yaw)) < 0.05 and abs(float(ob[34]) + math.sin(yaw)) < 0.05
           and abs(float(ob[35]) - 0.745) < 1e-6, f"yaw {math.degrees(yaw):+.1f} deg")
+    if spec.GAIT:
+        ph = env._quad_gait_clock.phase
+        check("obs[36:38] = (sin phi, cos phi) of a per-env random clock",
+              torch.allclose(obs["policy"][:, 36], torch.sin(ph), atol=1e-6) and torch.allclose(obs["policy"][:, 37], torch.cos(ph), atol=1e-6)
+              and len(set(np.round(ph.cpu().numpy(), 5))) == env.num_envs, str(np.round(ph.cpu().numpy(), 3).tolist()))
     check("reset: torso at 0.92 m, joints within +/-0.05 rad of rest",
           bool(torch.all((d.root_link_pos_w.torch[:, 2] - spec.SPAWN_Z).abs() < 1e-3))
           and bool(torch.all(d.joint_pos.torch.abs() <= spec.RESET_JOINT_NOISE + 1e-5)),
@@ -491,24 +578,68 @@ def run(cfg):
           bool(fs.contact.all()) and float(torch.linalg.norm(fs.foot_velocity_w()[..., :2], dim=-1).max()) < 0.01)
 
     print("\n== friction: per-env randomised scale s, pair friction in every live foot-floor contact")
-    fcfg = EventTermCfg(func=qmdp.randomize_friction_scale, mode="reset",
-                        params={"asset_cfg": SceneEntityCfg("robot"), "base": spec.FRICTION, "scale_range": spec.FRICTION_SCALE})
-    fterm = qmdp.randomize_friction_scale(fcfg, env)
+    if spec.FLOOR_PRIORITY:  # the floor's friction is randomised per world (lean writer, no notify)
+        fcfg = EventTermCfg(func=qmdp.randomize_floor_friction, mode="reset",
+                            params={"base": spec.GROUND_FRICTION, "scale_range": spec.FRICTION_SCALE})
+        fterm = qmdp.randomize_floor_friction(fcfg, env)
+    else:
+        fcfg = EventTermCfg(func=qmdp.randomize_friction_scale, mode="reset",
+                            params={"asset_cfg": SceneEntityCfg("robot"), "base": spec.FRICTION, "scale_range": spec.FRICTION_SCALE})
+        fterm = qmdp.randomize_friction_scale(fcfg, env)
     fterm(env, torch.arange(env.num_envs, device=dev, dtype=torch.int32), **fcfg.params)
-    step(8)  # flush the SHAPE_PROPERTIES notification into mjw; still standing
+    step(8)  # flush any notification into mjw; still standing
     s_drawn = fterm.scale.cpu().numpy()
     con = solver.mjw_data.contact
     n = int(solver.mjw_data.nacon.numpy()[0])
     cw, cg, cf, cdim = con.worldid.numpy()[:n], con.geom.numpy()[:n], con.friction.numpy()[:n], con.dim.numpy()[:n]
+    csr = con.solref.numpy()[:n]
+    foot_sr = ([float(spec.FLOOR_GEOM["solref"][0])] if spec.FLOOR_PRIORITY
+               else [float(spec.FLOOR_CONTACT["solref"][0])] if ref.npair
+               else [float(ref.geom_solref[ref.geom(g).id][0]) for g in spec.RIG["footGeoms"]])
+    gfw = mw.geom_friction.numpy()
     for w in all_ids:
         sel = (cw == w) & ((cg[:, 0] == ground) | (cg[:, 1] == ground))
-        want = spec.FRICTION * float(s_drawn[w])
+        # floor pairs: foot-floor friction is the pair's (fixed, as quad.xml); body geoms still carry 0.9 * s
+        if spec.FLOOR_PRIORITY:  # floor 0.9 * s per world (priority 1 -> used by every floor contact); body fixed 0.9
+            want = spec.GROUND_FRICTION * float(s_drawn[w])
+            body_want = spec.FRICTION
+        else:
+            want = float(spec.FLOOR_CONTACT["friction"][0]) if ref.npair else spec.FRICTION * float(s_drawn[w])
+            body_want = spec.FRICTION * float(s_drawn[w])
+        body_mu = np.array([gfw[w][g][0] for g in body_geoms.values()])
+        ok_body = np.allclose(body_mu, body_want, atol=1e-5)
         mus = cf[sel, 0]
         ok = sel.sum() >= 4 and np.allclose(mus, want, atol=1e-5) and bool(np.all(cdim[sel] == 3)) and np.allclose(cf[sel, 1], mus)
-        check(f"env{w}: s={s_drawn[w]:.4f} -> {int(sel.sum())} floor contacts, mu {np.unique(mus.round(5)).tolist()} == 0.9*s = {want:.5f}", ok)
-    mu = wp.to_torch(fterm._mu)
-    mu[:] = spec.FRICTION
-    NewtonManager.add_model_change(SolverNotifyFlags.SHAPE_PROPERTIES)
+        # priority: a foot-floor contact takes the FOOT's solref (0.03, 1 in round 9), not MuJoCo's mix
+        ok &= np.allclose(csr[sel][:, 0], foot_sr[0], atol=1e-6) and np.allclose(csr[sel][:, 1], 1.0, atol=1e-6)
+        ok &= bool(ok_body) and int(sel.sum()) == 4  # one contact per foot, no duplicate automatic contact
+        check(f"env{w}: s={s_drawn[w]:.4f} -> {int(sel.sum())} floor contacts, mu {np.unique(mus.round(5)).tolist()} == {want:.5f}, "
+              f"contact solref {np.unique(csr[sel].round(4), axis=0).tolist()} (expected {foot_sr[0]}), body geoms mu "
+              f"{np.unique(body_mu.round(5)).tolist()}", ok)
+    if spec.FLOOR_PRIORITY:
+        # the per-world floor values must survive env.reset / env.step (the Play env has no friction event, so a
+        # reset must leave them alone), and a redraw of some worlds must touch only those worlds
+        env.reset()
+        for _ in range(3):
+            env.step(torch.zeros(env.num_envs, 8, device=dev))
+        gf_now = mw.geom_friction.numpy()[:, ground, 0]
+        fterm(env, torch.tensor([1, 3], device=dev), spec.GROUND_FRICTION, spec.FRICTION_SCALE)
+        step(1)
+        gf_re = mw.geom_friction.numpy()[:, ground, 0]
+        s_re = fterm.scale.cpu().numpy()
+        tcfg_f = load_cfg_from_registry("Isaac-Quad-Flat-Newton-v0", "env_cfg_entry_point").events.friction
+        check("floor friction per world persists through env.reset/env.step; a redraw touches only its worlds; the "
+              "training env uses randomize_floor_friction",
+              np.allclose(gf_now, spec.GROUND_FRICTION * s_drawn, atol=1e-6)
+              and np.allclose(gf_re, spec.GROUND_FRICTION * s_re, atol=1e-6) and np.allclose(gf_re[[0, 2]], gf_now[[0, 2]])
+              and not np.allclose(gf_re[[1, 3]], gf_now[[1, 3]]) and tcfg_f.func is qmdp.randomize_floor_friction
+              and tcfg_f.params["base"] == 0.9,
+              f"after reset+steps {np.round(gf_now, 4).tolist()}, after redraw of worlds 1,3 {np.round(gf_re, 4).tolist()}")
+        fterm(env, None, spec.GROUND_FRICTION, (1.0, 1.0))  # back to nominal 0.9 for the remaining tests
+    else:
+        mu = wp.to_torch(fterm._mu)
+        mu[:] = spec.FRICTION
+        NewtonManager.add_model_change(SolverNotifyFlags.SHAPE_PROPERTIES)
 
     print("\n== push event: +0.5 m/s horizontal, random direction, whole body (in the air: no contact eats it)")
     place(all_ids, torch.zeros(env.num_envs, nj, device=dev), z=1.5)
@@ -638,7 +769,8 @@ def run(cfg):
     env.reset()
     torch.manual_seed(0)
     a = torch.zeros(env.num_envs, 8, device=dev)
-    worst_self, worst_floor, falls_terminal = 0.0, 0.0, 0
+    worst_self, worst_foot, worst_body, falls_terminal = 0.0, 0.0, 0.0, 0
+    foot_ids = [[g for g in range(mm.ngeom) if mm.geom_bodyid[g] == mj_body(n_)][0] for n_ in spec.LOWER_LEGS]
     for k in range(int(round(10.0 / env.step_dt))):
         a = torch.clamp(a + 0.5 * torch.randn_like(a), -1, 1)
         obs, rew, term, trunc, extras = env.step(a)
@@ -646,19 +778,31 @@ def run(cfg):
         n = int(solver.mjw_data.nacon.numpy()[0])
         cg, cd = con.geom.numpy()[:n], con.dist.numpy()[:n]
         fl_ = (cg[:, 0] == ground) | (cg[:, 1] == ground)
+        ft_ = fl_ & (np.isin(cg[:, 0], foot_ids) | np.isin(cg[:, 1], foot_ids))
         if (~fl_).any():
             worst_self = max(worst_self, float(-cd[~fl_].min()))
-        if fl_.any():
-            worst_floor = max(worst_floor, float(-cd[fl_].min()))
+        if ft_.any():
+            worst_foot = max(worst_foot, float(-cd[ft_].min()))
+        if (fl_ & ~ft_).any():
+            worst_body = max(worst_body, float(-cd[fl_ & ~ft_].min()))
         bad = ~torch.isfinite(obs["policy"]).all()
         if bad:
             break
-    # Soft contacts (solref 0.01) sink a little when legs driven at 300 N*m hit each other or a 60 kg torso
-    # lands: CPU MuJoCo on quad.xml itself reaches ~14 mm leg-leg in training/quad/check_quad.py's random
-    # test. Passing THROUGH would mean depths of the order of a capsule radius (72-90 mm) or no contact.
-    check("random actions 10 s x 4 envs: finite, self-penetration < 3 cm (legs collide, no pass-through), floor < 5 cm",
-          not bool(bad) and worst_self < 0.03 and worst_floor < 0.05,
-          f"max self {worst_self * 1000:.1f} mm, max floor {worst_floor * 1000:.1f} mm, falls (terminal) {falls_terminal}")
+    # Soft contacts sink a little when legs driven at 300 N*m hit each other or a 60 kg torso lands: CPU MuJoCo on
+    # quad.xml itself reaches ~14 mm leg-leg (training/quad/check_quad.py). Passing THROUGH would mean depths of the
+    # order of a capsule radius (72-90 mm) or no contact. Round 9: the feet's floor contacts are soft (0.03 s), and so
+    # are the torso / upper-leg floor contacts here (ground priority; in quad.xml they stay 0.01, but such a contact
+    # is a fall that ends the episode on that step), so the non-foot floor bound is looser.
+    # Round 9 per-geom soft feet (solref 0.03, priority 1) are soft in ALL their contacts, foot-foot included: CPU
+    # MuJoCo on this quad.xml reaches 65 mm lower-leg/lower-leg and 71 mm foot-floor overlap under the same kind of
+    # random actions (combined capsule radii 144 mm), so the self bound follows it.
+    soft = bool(ref.npair == 0 and any(ref.geom_solref[ref.geom(g).id][0] > 0.011 for g in spec.RIG["footGeoms"]))
+    self_max = 0.07 if soft else 0.03
+    check(f"random actions 10 s x 4 envs: finite; self-penetration < {self_max * 100:.0f} cm; foot-floor < 8 cm; "
+          "torso/thigh-floor < 12 cm",
+          not bool(bad) and worst_self < self_max and worst_foot < 0.08 and worst_body < 0.12,
+          f"max self {worst_self * 1000:.1f} mm, foot-floor {worst_foot * 1000:.1f} mm, torso/thigh-floor "
+          f"{worst_body * 1000:.1f} mm (terminal contacts), falls (terminal) {falls_terminal}")
 
     print("\n" + ("ALL RUNTIME CHECKS PASSED" if not FAILS else f"FAILED: {FAILS}"))
     env.close()
