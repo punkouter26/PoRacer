@@ -41,17 +41,23 @@ MIN_UPRIGHT = 0.30
 ACTION_SCALE = 0.6
 # Trained heading band is spawn_yaw +/- 0.6 rad; stay inside it.
 TURN_LIMIT = 0.5
+# Joystick brains: the same steering Agent_MojucuBoy.Steer uses in the race.
+GAIT_FREQUENCY = 1.15
+YAW_GAIN = 1.5
+SIDESTEP_GAIN = 0.5
+RELOAD_SECONDS = 60.0
 
 
-def load_policy(run: str):
+def load_policy(run: str, checkpoint_name: str = "policy.pt"):
     """Rebuild the network on CPU. train_mojucuboy imports the Warp env, which would
     initialise CUDA and compile kernels for nothing, so the classes are rebuilt
     here instead of imported."""
     import torch.nn as nn
 
-    checkpoint = torch.load(HERE / "runs" / run / "policy.pt",
+    checkpoint = torch.load(HERE / "runs" / run / checkpoint_name,
                             map_location="cpu", weights_only=False)
     state = checkpoint["model"]
+    obs_size = int(state["norm.mean"].shape[0])
     hidden = (128, 128, 128)
 
     def mlp(in_size, out_size):
@@ -64,9 +70,9 @@ def load_policy(run: str):
     class Policy(nn.Module):
         def __init__(self):
             super().__init__()
-            self.actor = mlp(mojucuboy_obs.OBS_SIZE, mojucuboy_obs.ACTION_SIZE)
-            self.register_buffer("mean", torch.zeros(mojucuboy_obs.OBS_SIZE))
-            self.register_buffer("var", torch.ones(mojucuboy_obs.OBS_SIZE))
+            self.actor = mlp(obs_size, mojucuboy_obs.ACTION_SIZE)
+            self.register_buffer("mean", torch.zeros(obs_size))
+            self.register_buffer("var", torch.ones(obs_size))
 
         def forward(self, obs):
             normed = torch.clamp((obs - self.mean) / torch.sqrt(self.var + 1e-8), -10, 10)
@@ -78,7 +84,9 @@ def load_policy(run: str):
     policy.actor.load_state_dict(
         {k[len("actor."):]: v for k, v in state.items() if k.startswith("actor.")})
     policy.eval()
-    print(f"policy: {run}, iteration {checkpoint.get('iteration', '?')}")
+    policy.joystick = obs_size == mojucuboy_obs.JOYSTICK_OBS_SIZE
+    print(f"policy: {run}, iteration {checkpoint.get('iteration', '?')}, "
+          f"{'joystick' if policy.joystick else 'heading'} ({obs_size} inputs)")
     return policy
 
 
@@ -87,11 +95,17 @@ def main() -> int:
     parser.add_argument("--run", type=str, default="boy_chase01")
     parser.add_argument("--speed", type=float, default=1.0,
                         help="playback rate; 1.0 is real time")
+    parser.add_argument("--checkpoint", default="policy.pt")
+    parser.add_argument("--reload", action="store_true",
+                        help=f"re-read the checkpoint every {RELOAD_SECONDS:.0f} s, to watch a run "
+                             "that is still training (AGENTS rule E)")
     args = parser.parse_args()
 
     model = mujoco.MjModel.from_xml_path(str(HERE / "mojucuboy_roundtrip.xml"))
     data = mujoco.MjData(model)
-    policy = load_policy(args.run)
+    policy = load_policy(args.run, args.checkpoint)
+    next_reload = time.perf_counter() + RELOAD_SECONDS
+    phase = 0.0
 
     import json
     rig = json.loads((HERE / "mojucuboy_rig.json").read_text())
@@ -151,8 +165,26 @@ def main() -> int:
                 delta = target - here
             heading = float(np.arctan2(delta[1], delta[0]))
 
-            obs = mojucuboy_obs.build(data, root, qpos_addr, dof_addr,
-                                heading, TARGET_SPEED, action)
+            if args.reload and time.perf_counter() > next_reload:
+                next_reload = time.perf_counter() + RELOAD_SECONDS
+                try:
+                    policy = load_policy(args.run, args.checkpoint)
+                except Exception as exc:  # mid-write by the trainer; try next time
+                    print(f"reload skipped: {exc}")
+            if policy.joystick:
+                forward = data.xmat[root].reshape(3, 3)[:, mojucuboy_obs.FORWARD_AXIS]
+                facing = float(np.arctan2(forward[1], forward[0]))
+                error = (heading - facing + np.pi) % (2 * np.pi) - np.pi
+                left = np.array([-np.sin(facing), np.cos(facing)])
+                command = np.array([TARGET_SPEED * max(0.0, np.cos(error)),
+                                    np.clip(SIDESTEP_GAIN * float(delta @ left), -0.5, 0.5),
+                                    np.clip(YAW_GAIN * error, -1.0, 1.0)], dtype=np.float32)
+                obs = mojucuboy_obs.build_joystick(data, root, qpos_addr, dof_addr,
+                                                   command, phase, action)
+                phase = (phase + 2 * np.pi * GAIT_FREQUENCY * model.opt.timestep * DECIMATION) % (2 * np.pi)
+            else:
+                obs = mojucuboy_obs.build(data, root, qpos_addr, dof_addr,
+                                    heading, TARGET_SPEED, action)
             with torch.no_grad():
                 action = policy(torch.from_numpy(obs)).numpy()
             data.ctrl[act_addr] = np.clip(joint_stance + ACTION_SCALE * half * action, lo, hi)

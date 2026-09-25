@@ -22,6 +22,7 @@ import numpy as np
 
 JOINT_COUNT = 21
 OBS_SIZE = 9 + 3 + 3 * JOINT_COUNT  # 75
+JOYSTICK_OBS_SIZE = 9 + 3 + 2 + 3 * JOINT_COUNT  # 77, see mojucuboy_joystick_env.py
 ACTION_SIZE = JOINT_COUNT
 FORWARD_AXIS = 1
 ROOT_BODY = "hips"
@@ -53,6 +54,25 @@ def build(data, root_body_id: int, qpos_addr, dof_addr,
     obs[12:12 + JOINT_COUNT] = data.qpos[qpos_addr]
     obs[12 + JOINT_COUNT:12 + 2 * JOINT_COUNT] = data.qvel[dof_addr]
     obs[12 + 2 * JOINT_COUNT:] = last_action
+    return obs
+
+
+def build_joystick(data, root_body_id: int, qpos_addr, dof_addr,
+                   command, phase: float, last_action) -> np.ndarray:
+    """The joystick layout: body block, velocity command (forward, left, yaw rate),
+    cos/sin of the left foot's gait phase, joint block. Contract with
+    mojucuboy_joystick_env.py and MojucuBoyObservation.BuildJoystick."""
+    obs = np.zeros(JOYSTICK_OBS_SIZE, dtype=np.float32)
+    rot = data.xmat[root_body_id].reshape(3, 3)
+    obs[0:3] = rot.T @ np.array([0.0, 0.0, -1.0])
+    obs[3:6] = rot.T @ data.qvel[0:3]
+    obs[6:9] = data.qvel[3:6]
+    obs[9:12] = command
+    obs[12] = np.cos(phase)
+    obs[13] = np.sin(phase)
+    obs[14:14 + JOINT_COUNT] = data.qpos[qpos_addr]
+    obs[14 + JOINT_COUNT:14 + 2 * JOINT_COUNT] = data.qvel[dof_addr]
+    obs[14 + 2 * JOINT_COUNT:] = last_action
     return obs
 
 

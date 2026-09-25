@@ -36,20 +36,10 @@ from mojucuboy_env import ACTION_SIZE, OBS_SIZE, MojucuBoyEnv  # noqa: E402
 RESULTS = HERE / "runs"
 HIDDEN = (128, 128, 128)
 
-# Reward terms and stability measures logged per iteration. Every quantity the
-# reward charges for appears here, plus the derived heading angle, so the ten
-# weights in mojucuboy_env.py can be tuned against evidence rather than against
-# the single scalar return. "heading_err_deg" is derived in the rollout loop.
-KPI_TERMS = (
-    "track", "facing", "speed_along", "drift", "lateral",
-    "accel", "impact", "ctrl", "action_rate", "upright", "standing", "height",
-    # Metres off the lane; only meaningful with --lane-follow (0 otherwise).
-    "xtrack",
-    # `torque`/`torque_abs` are the APPLIED-TORQUE measures. `ctrl` is the commanded
-    # joint angle and is not the same quantity -- see mojucuboy_env.py.
-    "torque", "torque_abs",
-)
-KPI_LOGGED = KPI_TERMS + ("heading_err_deg",)
+# Every reward term the environment reports is logged per iteration (kpi/<name>), so the
+# weights can be tuned against evidence rather than against the single scalar return.
+# The heading task also gets the derived heading angle, from its "facing" term.
+NOT_LOGGED = ("fallen", "timeout")
 
 
 class RunningNorm(nn.Module):
@@ -94,11 +84,11 @@ def mlp(sizes, out_size, gain_last):
 
 
 class ActorCritic(nn.Module):
-    def __init__(self):
+    def __init__(self, obs_size: int = OBS_SIZE):
         super().__init__()
-        self.norm = RunningNorm(OBS_SIZE)
-        self.actor = mlp((OBS_SIZE,) + HIDDEN, ACTION_SIZE, 0.01)
-        self.critic = mlp((OBS_SIZE,) + HIDDEN, 1, 1.0)
+        self.norm = RunningNorm(obs_size)
+        self.actor = mlp((obs_size,) + HIDDEN, ACTION_SIZE, 0.01)
+        self.critic = mlp((obs_size,) + HIDDEN, 1, 1.0)
         # Start quiet. At log_std = -0.5 (sigma 0.61) the initial policy knocked the
         # racer over in 0.7 s on every world, when a zero action holds the stance for
         # 3 s -- so the first rollouts carried almost no signal about walking, only
@@ -126,7 +116,8 @@ def port_free(port: int) -> bool:
 
 def start_tensorboard(logdir: Path, port: int):
     """CLAUDE.md makes this non-optional, and makes it the launcher's job."""
-    exe = HERE.parents[1] / ".venv-mjwarp" / "Scripts" / "tensorboard.exe"
+    # Beside whichever interpreter runs this, so the venv's folder name is not baked in.
+    exe = Path(sys.executable).parent / "tensorboard.exe"
     if not exe.exists():
         print(f"!! tensorboard not found at {exe} -- install it; refusing to train blind")
         return None
@@ -214,6 +205,10 @@ def prune_runs(keep: int = 3) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--task", choices=("heading", "joystick"), default="heading",
+                        help="heading: the original face-this-way task (75 obs). joystick: "
+                             "velocity commands + gait clock after MuJoCo Playground's G1 "
+                             "(77 obs, see mojucuboy_joystick_env.py).")
     parser.add_argument("--iterations", type=int, default=900)
     parser.add_argument("--worlds", type=int, default=8192)
     parser.add_argument("--rollout", type=int, default=24)
@@ -310,22 +305,27 @@ def main() -> int:
     from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter(str(logdir))
 
-    env = MojucuBoyEnv(args.worlds, seed=args.seed,
-                       two_sided_speed=args.two_sided_speed,
-                       upright_weight=args.upright_weight,
-                       reset_fallen_fraction=args.reset_fallen,
-                       terminate_on_fall=args.terminate_on_fall,
-                       sprawl_max_tilt=math.radians(args.sprawl_tilt_start),
-                       command_speed_range=(tuple(args.command_speed_range)
-                                            if args.command_speed_range else None),
-                       scale_drift=args.scale_drift,
-                       ctrl_weight=args.ctrl_weight,
-                       drift_yaw_weight=args.drift_yaw_weight,
-                       heading_weight=args.heading_weight,
-                       drift_weight=args.drift_weight,
-                       lane_follow=args.lane_follow,
-                       xtrack_weight=args.xtrack_weight)
-    policy = ActorCritic().to(device)
+    if args.task == "joystick":
+        from mojucuboy_joystick_env import MojucuBoyJoystickEnv
+        env = MojucuBoyJoystickEnv(args.worlds, seed=args.seed)
+    else:
+        env = MojucuBoyEnv(args.worlds, seed=args.seed,
+                           two_sided_speed=args.two_sided_speed,
+                           upright_weight=args.upright_weight,
+                           reset_fallen_fraction=args.reset_fallen,
+                           terminate_on_fall=args.terminate_on_fall,
+                           sprawl_max_tilt=math.radians(args.sprawl_tilt_start),
+                           command_speed_range=(tuple(args.command_speed_range)
+                                                if args.command_speed_range else None),
+                           scale_drift=args.scale_drift,
+                           ctrl_weight=args.ctrl_weight,
+                           drift_yaw_weight=args.drift_yaw_weight,
+                           heading_weight=args.heading_weight,
+                           drift_weight=args.drift_weight,
+                           lane_follow=args.lane_follow,
+                           xtrack_weight=args.xtrack_weight)
+    obs_size = env.obs_size
+    policy = ActorCritic(obs_size).to(device)
     if args.init_from:
         # Curriculum stage two: carry stage one's weights over rather than
         # restarting. The observation normaliser statistics travel with the
@@ -341,7 +341,7 @@ def main() -> int:
     optimiser = torch.optim.Adam(policy.parameters(), lr=args.lr)
 
     (logdir / "config.json").write_text(json.dumps({
-        **vars(args), "obs": OBS_SIZE, "act": ACTION_SIZE, "hidden": list(HIDDEN),
+        **vars(args), "obs": obs_size, "act": ACTION_SIZE, "hidden": list(HIDDEN),
         "policy_dt": env.dt, "decimation": mojucuboy_env.DECIMATION,
         "episode_steps": mojucuboy_env.EPISODE_STEPS, "target_speed": mojucuboy_env.TARGET_SPEED,
     }, indent=2))
@@ -371,7 +371,7 @@ def main() -> int:
             env.sprawl_max_tilt = math.radians(
                 args.sprawl_tilt_start
                 + (args.sprawl_tilt_end - args.sprawl_tilt_start) * ramp_frac)
-        buf_obs = torch.zeros(args.rollout, args.worlds, OBS_SIZE, device=device)
+        buf_obs = torch.zeros(args.rollout, args.worlds, obs_size, device=device)
         buf_act = torch.zeros(args.rollout, args.worlds, ACTION_SIZE, device=device)
         buf_logp = torch.zeros(args.rollout, args.worlds, device=device)
         buf_rew = torch.zeros(args.rollout, args.worlds, device=device)
@@ -383,7 +383,7 @@ def main() -> int:
         # and are read once at logging time -- a .item() per step would cost more
         # than the physics, which is the same reason the env keeps its rollout
         # host-free.
-        kpi_sum = {k: torch.zeros((), device=device) for k in KPI_LOGGED}
+        kpi_sum = {}
         kpi_steps = 0
 
         with torch.no_grad():
@@ -399,12 +399,14 @@ def main() -> int:
                 buf_rew[t] = torch.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)
                 buf_done[t] = done.float()
 
-                for key in KPI_TERMS:
-                    kpi_sum[key] += terms[key].float().mean()
-                # Accumulated as an angle per world, not as arccos of the mean
-                # cosine -- those differ, and the angle is the one with units.
-                kpi_sum["heading_err_deg"] += torch.rad2deg(
-                    terms["facing"].float().clamp(-1.0, 1.0).arccos()).mean()
+                for key, value in terms.items():
+                    if key not in NOT_LOGGED:
+                        kpi_sum[key] = kpi_sum.get(key, 0.0) + value.float().mean()
+                if "facing" in terms:
+                    # Accumulated as an angle per world, not as arccos of the mean
+                    # cosine -- those differ, and the angle is the one with units.
+                    kpi_sum["heading_err_deg"] = kpi_sum.get("heading_err_deg", 0.0) + torch.rad2deg(
+                        terms["facing"].float().clamp(-1.0, 1.0).arccos()).mean()
                 kpi_steps += 1
 
                 ep_return += reward
@@ -442,7 +444,7 @@ def main() -> int:
             advantages[t] = gae
         returns = advantages + buf_val
 
-        flat_obs = buf_obs.reshape(-1, OBS_SIZE)
+        flat_obs = buf_obs.reshape(-1, obs_size)
         flat_act = buf_act.reshape(-1, ACTION_SIZE)
         flat_logp = buf_logp.reshape(-1)
         flat_adv = advantages.reshape(-1)
@@ -495,7 +497,7 @@ def main() -> int:
             writer.add_scalar("loss/value", vl, total_steps)
             writer.add_scalar("loss/entropy", ent, total_steps)
             writer.add_scalar("perf/steps_per_second", total_steps / elapsed, total_steps)
-            for key in KPI_LOGGED:
+            for key in kpi_sum:
                 writer.add_scalar(f"kpi/{key}", (kpi_sum[key] / kpi_steps).item(), total_steps)
 
             ep = ""
@@ -519,15 +521,13 @@ def main() -> int:
                 ep = (f"ret {rets.mean():7.2f}  len {lens.mean():6.1f}  "
                       f"spd {spds.mean():5.2f} m/s  fall {falls.mean():4.2f}  ")
                 done_returns, done_lengths, done_speeds, done_falls = [], [], [], []
-            print(f"iter {iteration:4d}  steps {total_steps/1e6:7.2f}M  " + ep +
-                  f"trk {(kpi_sum['track']/kpi_steps).item():4.2f}  "
-                  f"vel {(kpi_sum['speed_along']/kpi_steps).item():5.2f} m/s  "
-                  f"hdg {(kpi_sum['heading_err_deg']/kpi_steps).item():5.1f}deg  "
-                  f"lat {(kpi_sum['lateral']/kpi_steps).item():4.2f}  "
-                  f"xtk {(kpi_sum['xtrack']/kpi_steps).item():4.2f}m  "
-                  f"upr {(kpi_sum['upright']/kpi_steps).item():4.2f}  "
-                  f"std {(kpi_sum['standing']/kpi_steps).item():4.2f}  "
-                  f"{total_steps/elapsed/1e3:5.0f}k steps/s", flush=True)
+            shown = ("track", "track_lin", "track_ang", "speed_along", "heading_err_deg",
+                     "lateral", "vel_left_err", "yaw_rate_err", "xtrack", "feet_phase",
+                     "upright", "standing")
+            kpis = "  ".join(f"{key} {(kpi_sum[key] / kpi_steps).item():.2f}"
+                             for key in shown if key in kpi_sum)
+            print(f"iter {iteration:4d}  steps {total_steps/1e6:7.2f}M  " + ep + kpis +
+                  f"  {total_steps/elapsed/1e3:5.0f}k steps/s", flush=True)
 
         if iteration % 50 == 0 or iteration == args.iterations:
             torch.save({"model": policy.state_dict(), "iteration": iteration},
@@ -548,7 +548,9 @@ def main() -> int:
             # return mixes ten weighted terms and a reward change makes runs
             # incomparable, whereas `standing` means the same thing across every
             # experiment in this project.
-            score = (kpi_sum["standing"] / kpi_steps).item()
+            # Joystick episodes end on a fall, so velocity tracking averaged over every
+            # world-step already charges for falling; heading keeps `standing`.
+            score = (kpi_sum["standing" if "standing" in kpi_sum else "track_lin"] / kpi_steps).item()
             if score > best_score:
                 best_score = score
                 torch.save({"model": policy.state_dict(), "iteration": iteration,

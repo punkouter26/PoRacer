@@ -1,6 +1,6 @@
 """Export the trained policy to ONNX, and emit the reference trajectory.
 
-  .venv-mjwarp\\Scripts\\python.exe training/mojucuboy/export_onnx.py --run boy_chase01
+  .venv-mujoco\\Scripts\\python.exe training/mojucuboy/export_onnx.py --run boy_chase01
 
 Two artefacts:
 
@@ -43,16 +43,24 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", type=str, required=True)
     parser.add_argument("--opset", type=int, default=15)
+    parser.add_argument("--task", choices=("heading", "joystick"), default="heading")
+    parser.add_argument("--checkpoint", default="policy.pt",
+                        help="policy.pt (last) or policy_best.pt")
     args = parser.parse_args()
+    if args.task == "joystick":
+        from mojucuboy_joystick_env import OBS_SIZE as obs_size, MojucuBoyJoystickEnv as EnvClass
+    else:
+        from mojucuboy_env import MojucuBoyEnv as EnvClass
+        obs_size = OBS_SIZE
 
     run_dir = RESULTS / args.run
-    checkpoint = torch.load(run_dir / "policy.pt", map_location="cpu", weights_only=False)
-    policy = ActorCritic()
+    checkpoint = torch.load(run_dir / args.checkpoint, map_location="cpu", weights_only=False)
+    policy = ActorCritic(obs_size)
     policy.load_state_dict(checkpoint["model"])
     policy.eval()
 
     onnx_path = run_dir / "MojucuBoy_v01.onnx"
-    dummy = torch.zeros(1, OBS_SIZE)
+    dummy = torch.zeros(1, obs_size)
     torch.onnx.export(
         policy, (dummy,), str(onnx_path),
         input_names=["obs"], output_names=["action"],
@@ -85,10 +93,8 @@ def main() -> int:
     # Reference trajectory: closed loop in the real environment so the states are
     # ones the policy actually visits, not synthetic noise.
     import onnxruntime as ort
-    from mojucuboy_env import MojucuBoyEnv
-
     session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
-    env = MojucuBoyEnv(1, seed=12345)
+    env = EnvClass(1, seed=12345)
     obs = env.observation()
 
     records, max_delta = [], 0.0
@@ -110,7 +116,8 @@ def main() -> int:
     reference = {
         "run": args.run,
         "iteration": int(checkpoint.get("iteration", -1)),
-        "obs_size": OBS_SIZE,
+        "obs_size": obs_size,
+        "task": args.task,
         "action_size": ACTION_SIZE,
         "opset": args.opset,
         "policy_dt": env.dt,

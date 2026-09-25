@@ -88,6 +88,10 @@ ISAAC/logs/
 # MuJoCo Warp training venv for the Boy_Character rig (Windows, Python 3.11.9).
 # Kept out of .venv on purpose: that one carries the ml-agents/torch pins.
 .venv-mjwarp/
+# Its replacement (2026-09-25): same role, rebuilt with uv - torch cu128 for the
+# RTX 50-series GPU, mujoco-warp, tensorboard, onnx. The old folder is held open by
+# leaked TensorBoard processes.
+.venv-mujoco/
 
 # Training run binaries. The gate evidence JSON in runs/ is small and worth
 # keeping; the checkpoints and TFEvents are large, reproducible, and were being

@@ -112,6 +112,8 @@ PUSH_VELOCITY = 1.1       # m/s impulse applied to the root
 
 
 class MojucuBoyEnv:
+    obs_size = OBS_SIZE
+
     def __init__(self, num_worlds: int, device: str = "cuda:0", seed: int = 0,
                  two_sided_speed: bool = False,
                  upright_weight: float = W_UPRIGHT,
