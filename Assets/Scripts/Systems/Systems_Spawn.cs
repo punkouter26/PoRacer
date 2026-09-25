@@ -22,6 +22,9 @@ namespace PoRacer.Systems
     public sealed class Systems_Spawn : IStartable, IDisposable
     {
         private const int DECISION_PERIOD = 5;
+        // Long enough for the HUD's 250 ms refresh to paint "getting racers ready"
+        // before the spawn's heavy frames, which otherwise froze on a blank screen.
+        private const float LOADING_PAINT_SECONDS = 0.3f;
 
         // Visible quirks: same brain, mild physics tweak, HUD badge. Racers are
         // named "<creature> #n" by their position within their own group, so a
@@ -187,11 +190,19 @@ namespace PoRacer.Systems
 
         public void BeginRacing()
         {
+            // Only from the menu. A second call while a session is already running
+            // used to supersede it without cancelling it, and the stale chain's
+            // Despawn() then emptied the shared racer list under the new race.
+            if (!_config.MenuVisible)
+            {
+                return;
+            }
             if (_config.TotalCount() == 0)
             {
                 Debug.LogWarning("No racers selected; staying in menu.");
                 return;
             }
+            CancelPendingWork();
             _config.MenuVisible = false;
             _config.NotifyChanged();
             _racingLoopActive = true;
@@ -213,6 +224,11 @@ namespace PoRacer.Systems
             // countdown, and run its own cleanup over it. Cancelling collapses the old
             // chain into an OperationCanceledException the guard already swallows.
             CancelPendingWork();
+            // Same clean slate RequestMenu gives: a restart landing mid-countdown
+            // otherwise left the old digit frozen on screen through the new spawn,
+            // and the camera chasing racers that were about to be destroyed.
+            _raceModel.CountdownValue = 0;
+            _cameraDirector.SetTargets(System.Array.Empty<Transform>());
             _racingLoopActive = true;
             RunRestartGuarded(++_generation, _cts.Token).Forget();
         }
@@ -387,6 +403,13 @@ namespace PoRacer.Systems
 
         private async UniTask SpawnAndStartRace(int generation, CancellationToken token)
         {
+            await UniTask.Delay(TimeSpan.FromSeconds(LOADING_PAINT_SECONDS), DelayType.Realtime,
+                cancellationToken: token);
+            if (!IsCurrent(generation))
+            {
+                return;
+            }
+
             // Warm-up first. Systems_Warmup is doing precisely the work this method
             // would otherwise do on the frame START was pressed, so letting the two
             // overlap does not avoid the stall — it just shares the frames. Measured

@@ -45,6 +45,8 @@ namespace PoRacer.Models
         private readonly Dictionary<string, RacerState> _racersById = new();
 
         public float ElapsedSeconds;
+        // This race's full-time clock, set at GO; the HUD counts down to it.
+        public float TimeLimitSeconds;
         public bool RaceActive;
         public int RaceNumber;
         // Pre-start countdown: 3, 2, 1 while the grid settles; 0 = none.

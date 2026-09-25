@@ -70,8 +70,31 @@ namespace PoRacer.Tests
                 UiTheme.FURNITURE_TITLE, UiTheme.FURNITURE_FPS, UiTheme.FURNITURE_MENU,
                 UiTheme.FURNITURE_DBG, UiTheme.FURNITURE_VERSION,
                 UiTheme.RESULTS_PANEL, UiTheme.RESULTS_LEAGUE_PAGE, UiTheme.ANNOUNCE_SLOT,
+                UiTheme.PROGRESS_RAIL, UiTheme.LEAVE_SHEET,
             };
             Assert.That(names, Is.Unique);
+        }
+
+        /// <summary>
+        /// The layout audit sizes each target handset's controls with this, so it has
+        /// to reproduce the rule: a 48 dp touch target on any width, never shrinking a
+        /// screen at or wider than the reference, capped for nonsense widths.
+        /// </summary>
+        [Test]
+        public void ControlScaleForDeviceWidth_KeepsTheTouchTargetOnNarrowPhones()
+        {
+            const float referenceWidth = 420f;
+            float[] widths = { 360f, 390f, 411f, 432f };
+            for (int widthIndex = 0; widthIndex < widths.Length; widthIndex++)
+            {
+                float width = widths[widthIndex];
+                float scale = UiTheme.ControlScaleForDeviceWidth(width);
+                float touchDp = 48f * scale * width / referenceWidth;
+                Assert.That(touchDp, Is.GreaterThanOrEqualTo(MIN_TOUCH_DP - 0.01f), $"{width} dp");
+                Assert.That(scale, Is.GreaterThanOrEqualTo(1f), $"{width} dp");
+            }
+            Assert.That(UiTheme.ControlScaleForDeviceWidth(100f), Is.EqualTo(1.25f).Within(0.001f));
+            Assert.That(UiTheme.ControlScaleForDeviceWidth(0f), Is.EqualTo(1f));
         }
     }
 }

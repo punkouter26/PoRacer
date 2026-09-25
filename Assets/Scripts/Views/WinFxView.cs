@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using MessagePipe;
 using PoRacer.Models;
 using PoRacer.Presentation;
@@ -18,19 +21,28 @@ namespace PoRacer.Views
     public sealed class WinFxView : MonoBehaviour
     {
         private const int CONFETTI_COUNT = 120;
+        private const float SPOTLIGHT_INTENSITY = 5f;
+        // How long the winner stays lit. A soft-shadowed spot costs a shadow map
+        // every frame, and it used to stay on for good after the first win: through
+        // every later race and behind the menu.
+        private const float SPOTLIGHT_SECONDS = 6f;
 
         [SerializeField] private Transform _finishLine;
 
         private ParticleSystem _confetti;
         private ParticleSystem _fireworks;
-        private System.IDisposable _subscription;
+        private IDisposable _subscription;
+        private IDisposable _startedSubscription;
         private RaceModel _raceModel;
+        private CancellationTokenSource _spotlightCts;
 
         [Inject]
-        public void Construct(ISubscriber<RacerFinishedMessage> racerFinished, RaceModel raceModel)
+        public void Construct(ISubscriber<RacerFinishedMessage> racerFinished,
+            ISubscriber<RaceStartedMessage> raceStarted, RaceModel raceModel)
         {
             _raceModel = raceModel;
             _subscription = racerFinished.Subscribe(OnRacerFinished);
+            _startedSubscription = raceStarted.Subscribe(OnRaceStarted);
         }
 
         private Light _winnerSpotlight;
@@ -52,11 +64,23 @@ namespace PoRacer.Views
             _winnerSpotlight.spotAngle = 45f;
             _winnerSpotlight.color = new Color(1f, 0.9f, 0.5f);
             _winnerSpotlight.intensity = 0f;
+            _winnerSpotlight.enabled = false;
             _winnerSpotlight.shadows = LightShadows.Soft;
             spotObj.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
         }
 
-        private void OnDestroy() => _subscription?.Dispose();
+        private void OnDestroy()
+        {
+            _subscription?.Dispose();
+            _startedSubscription?.Dispose();
+            CancelSpotlightTimer();
+        }
+
+        private void OnRaceStarted(RaceStartedMessage message)
+        {
+            CancelSpotlightTimer();
+            SetSpotlight(0f);
+        }
 
         private void OnRacerFinished(RacerFinishedMessage message)
         {
@@ -84,10 +108,11 @@ namespace PoRacer.Views
             {
                 _confetti.Emit(CONFETTI_COUNT);
                 _fireworks.Emit(90);
-                if (_winnerSpotlight != null)
-                {
-                    _winnerSpotlight.intensity = 5f;
-                }
+                SetSpotlight(SPOTLIGHT_INTENSITY);
+                CancelSpotlightTimer();
+                _spotlightCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    this.GetCancellationTokenOnDestroy());
+                DimSpotlightAfterAsync(_spotlightCts.Token).Forget();
             }
             else
             {
@@ -97,6 +122,38 @@ namespace PoRacer.Views
                     _confetti.Emit(CONFETTI_COUNT / 4);
                 }
             }
+        }
+
+        private async UniTaskVoid DimSpotlightAfterAsync(CancellationToken token)
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(SPOTLIGHT_SECONDS), DelayType.Realtime,
+                cancellationToken: token).SuppressCancellationThrow();
+            if (!token.IsCancellationRequested)
+            {
+                SetSpotlight(0f);
+            }
+        }
+
+        private void CancelSpotlightTimer()
+        {
+            if (_spotlightCts == null)
+            {
+                return;
+            }
+            _spotlightCts.Cancel();
+            _spotlightCts.Dispose();
+            _spotlightCts = null;
+        }
+
+        private void SetSpotlight(float intensity)
+        {
+            if (_winnerSpotlight == null)
+            {
+                return;
+            }
+            _winnerSpotlight.intensity = intensity;
+            // Off means off: a zero-intensity light still renders its shadow map.
+            _winnerSpotlight.enabled = intensity > 0f;
         }
 
         private ParticleSystem BuildConfetti()

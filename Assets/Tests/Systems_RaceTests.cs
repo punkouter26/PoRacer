@@ -321,6 +321,50 @@ namespace PoRacer.Tests
         }
 
         /// <summary>
+        /// Skip to results is full time called early: the field is ranked on
+        /// distance as TimedOut (no finish time), and unlike AbortRace the race is
+        /// scored, so exactly one RaceFinishedMessage goes out.
+        /// </summary>
+        [Test]
+        public void FinishEarly_RanksByDistanceAndScoresTheRace()
+        {
+            _sut.ReportProgress("worm#1", 3f);
+            _sut.ReportProgress("worm#2", 7f);
+
+            _sut.FinishEarly();
+
+            Assert.That(_model.RaceActive, Is.False);
+            Assert.That(_model.FindRacer("worm#2").Place, Is.EqualTo(1));
+            Assert.That(_model.FindRacer("worm#1").Place, Is.EqualTo(2));
+            Assert.That(_model.FindRacer("worm#2").Status, Is.EqualTo(RacerStatus.TimedOut));
+            Assert.That(_raceFinished.Published, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void FinishEarly_AfterTheRaceEnded_DoesNothing()
+        {
+            _sut.NotifyFinish("worm#1");
+            _sut.NotifyFinish("worm#2");
+            _raceFinished.Published.Clear();
+
+            _sut.FinishEarly();
+
+            Assert.That(_raceFinished.Published, Is.Empty);
+            Assert.That(_model.FindRacer("worm#1").Status, Is.EqualTo(RacerStatus.Finished));
+        }
+
+        [Test]
+        public void StartRace_PublishesTheTimeLimitForTheHudClock()
+        {
+            _sut.StartRace(new List<RacerState>
+            {
+                new() { RacerId = "a", CreatureId = "worm", Status = RacerStatus.Racing }
+            }, 240f);
+
+            Assert.That(_model.TimeLimitSeconds, Is.EqualTo(240f));
+        }
+
+        /// <summary>
         /// RACE AGAIN: the same referee runs the next race, so every per-race
         /// carry-over - places, statuses, the clock, the stall timers - has to be
         /// cleared by StartRace rather than by anything the caller remembers to do.

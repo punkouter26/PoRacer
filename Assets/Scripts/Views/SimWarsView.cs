@@ -215,7 +215,9 @@ namespace PoRacer.Views
         private static Label StatCell(string text, Color color, bool bold, float width = STAT_COLUMN_WIDTH)
         {
             Label cell = MakeLabel(UiTheme.FONT_XS, color, bold, text);
-            cell.style.width = width;
+            // Grows with the type scale: a fixed width held its numbers at the base
+            // font only, and the scale rises by up to 25% on a narrow handset.
+            cell.style.width = UiTheme.ScaleWithFont(width);
             cell.style.flexShrink = 0f;
             cell.style.unityTextAlign = TextAnchor.MiddleRight;
             return cell;

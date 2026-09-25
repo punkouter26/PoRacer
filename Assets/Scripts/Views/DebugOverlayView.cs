@@ -191,8 +191,17 @@ namespace PoRacer.Views
             // handset overlaps it outright. The FPS readout is a FIXED anchor (top
             // centre) and must not move because a diagnostic appeared next to it, so
             // it stays the only centred child and this rides out to its right.
+            //
+            // BELOW it, centred, not beside it: "16.7 ms | fix 3.2 | 250 draws" is about
+            // 240 dp, and hung off the right of a centred label it ran past a 420 dp
+            // screen's edge and under the MENU button.
             _stripLabel.style.position = Position.Absolute;
-            _stripLabel.style.left = new Length(100f, LengthUnit.Percent);
+            _stripLabel.style.top = new Length(100f, LengthUnit.Percent);
+            _stripLabel.style.left = new Length(50f, LengthUnit.Percent);
+            _stripLabel.style.translate = new Translate(new Length(-50f, LengthUnit.Percent), 0f);
+            _stripLabel.style.marginLeft = 0f;
+            _stripLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            UiTheme.AddTextShadow(_stripLabel);
             _fpsLabel.Add(_stripLabel);
             safeRoot.Add(stripRow);
             root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
@@ -213,14 +222,19 @@ namespace PoRacer.Views
             safeRoot.Add(toggle);
 
 
-            // Full width above the bottom band, and never taller than the space under
-            // the top band: a fixed 310 px column clipped its own longest lines.
+            // Full width, hung from under the top band (and the strip row below the
+            // FPS readout): a fixed 310 px column clipped its own longest lines.
+            //
+            // Top-anchored, not bottom-anchored. From the bottom band it sat exactly
+            // where the results sheet sits, drawn above it at 0.82 alpha, so RACE
+            // AGAIN and MENU were hidden behind a panel whose body lets taps through.
+            // Capped at 60% so the bottom of the screen always stays clear.
             _panel = new VisualElement { pickingMode = PickingMode.Ignore };
             _panel.style.position = Position.Absolute;
-            _panel.style.bottom = UiTheme.BottomBand;
+            _panel.style.top = UiTheme.TopBand + UiTheme.CONTROL_SM * 0.5f;
             _panel.style.left = UiTheme.SPACE_SM;
             _panel.style.right = UiTheme.SPACE_SM;
-            _panel.style.maxHeight = new Length(75f, LengthUnit.Percent);
+            _panel.style.maxHeight = new Length(60f, LengthUnit.Percent);
             _panel.style.display = DisplayStyle.None;
             UiTheme.StylePanel(_panel);
             safeRoot.Add(_panel);

@@ -21,6 +21,9 @@ namespace PoRacer.Views
     ///
     /// The top-3 chips that sat under the top band were retired: they restated the
     /// rail's leading dots, so the leaders' places now ride on the dots themselves.
+    /// One status pill heads the lane instead: "getting racers ready" while the grid
+    /// spawns, then the leader's name and the race clock. MENU mid-race raises a
+    /// leave sheet (skip to results / leave / keep watching) rather than quitting.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class RaceHudView : MonoBehaviour
@@ -45,8 +48,15 @@ namespace PoRacer.Views
         private const int TAB_PODIUM = 0;
         private const int TAB_LEAGUE = 1;
         private const int TAB_STATS = 2;
-        // Wide enough for the "TWITCH" header at FONT_XS bold, the widest cell.
+        // Wide enough for the "TWITCH" header at FONT_XS bold, the widest cell, at the
+        // base type scale; read through UiTheme.ScaleWithFont.
         private const float STAT_COLUMN_WIDTH = 58f;
+        // Racers listed by name under the podium before the rest collapse to "+N more".
+        private const int ALSO_RAN_MAX = 12;
+
+        // --- Status line (loading / leader + clock) ---
+        private const float STATUS_SWATCH = 10f;
+        private const int SECONDS_PER_MINUTE = 60;
 
         // --- Race intro card ---
         private const int INTRO_TOTAL_MS = 2500;
@@ -63,6 +73,20 @@ namespace PoRacer.Views
         private static readonly string DeltaDownHex = "#" + ColorUtility.ToHtmlStringRGB(UiTheme.TextDim);
 
         private static readonly Color[] MedalColors = { UiTheme.Gold, UiTheme.Silver, UiTheme.Bronze };
+
+        // Rest-of-field order: placed racers by place, then the unplaced by distance.
+        private static readonly System.Comparison<RacerState> AlsoRanOrder = (first, second) =>
+        {
+            bool firstPlaced = first.Place > 0;
+            bool secondPlaced = second.Place > 0;
+            if (firstPlaced != secondPlaced)
+            {
+                return firstPlaced ? -1 : 1;
+            }
+            return firstPlaced
+                ? first.Place.CompareTo(second.Place)
+                : second.Progress.CompareTo(first.Progress);
+        };
 
         /// <summary>
         /// Slide-in, hold, slide-out of the intro card baked into a single
@@ -99,6 +123,7 @@ namespace PoRacer.Views
         private EloModel _eloModel;
         private RaceConfigModel _configModel;
         private Systems_Spawn _spawn;
+        private Systems_Race _race;
         private SkyModel _skyModel;
         private SimWarsModel _league;
         private RaceTelemetryModel _telemetryModel;
@@ -137,6 +162,25 @@ namespace PoRacer.Views
         private readonly string[] _podiumSourceIds = new string[PODIUM_ROWS];
         private readonly int[] _podiumSourceDeltas = new int[PODIUM_ROWS];
         private readonly RacerState[] _medalists = new RacerState[PODIUM_ROWS];
+        private readonly VisualElement[] _podiumMedals = new VisualElement[PODIUM_ROWS];
+        private readonly VisualElement[] _statsMedals = new VisualElement[PODIUM_ROWS];
+        private Label _winnerHeadline;
+        private Label _alsoRanLabel;
+        private readonly System.Collections.Generic.List<RacerState> _alsoRan = new();
+        private readonly System.Text.StringBuilder _alsoRanText = new();
+
+        // --- Status line: "getting racers ready" before the grid, leader + clock during ---
+        private VisualElement _statusChip;
+        private VisualElement _statusSwatch;
+        private Label _statusLabel;
+        private string _statusLeaderId;
+        private int _statusWholeSeconds = -1;
+        private bool _statusShowsLoading;
+
+        // --- Leave-race sheet ---
+        private VisualElement _leaveSheet;
+        private Button _skipButton;
+        private bool _leaveSheetOpen;
 
         // --- Right-edge progress rail ---
         private VisualElement _rail;
@@ -156,6 +200,7 @@ namespace PoRacer.Views
             EloModel eloModel,
             RaceConfigModel configModel,
             Systems_Spawn spawn,
+            Systems_Race race,
             SkyModel skyModel,
             SimWarsModel league,
             RaceTelemetryModel telemetryModel)
@@ -164,6 +209,7 @@ namespace PoRacer.Views
             _eloModel = eloModel;
             _configModel = configModel;
             _spawn = spawn;
+            _race = race;
             _skyModel = skyModel;
             _league = league;
             _telemetryModel = telemetryModel;
@@ -185,8 +231,9 @@ namespace PoRacer.Views
             BuildProgressRail(safeRoot);
             BuildAnnounceSlot(safeRoot);
             BuildResultsSheet(safeRoot);
+            BuildLeaveSheet(safeRoot);
 
-            safeRoot.Add(UiTheme.MakeMenuFurniture(() => _spawn.RequestMenu()));
+            safeRoot.Add(UiTheme.MakeMenuFurniture(OnMenuPressed));
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
         }
@@ -207,6 +254,8 @@ namespace PoRacer.Views
             _announceSlot.style.alignItems = Align.Center;
             safeRoot.Add(_announceSlot);
 
+            BuildStatusChip(_announceSlot);
+
             _bannerLabel = new Label { pickingMode = PickingMode.Ignore };
             // Wraps inside the lane: the winner line at title size is wider than a
             // narrow handset, and unwrapped it ran off both edges.
@@ -226,7 +275,139 @@ namespace PoRacer.Views
         /// <summary>Right-hand inset that keeps the announcement lane off the rail and its badges.</summary>
         private static float RailClearance()
         {
-            return UiTheme.SPACE_MD + RAIL_BADGE_SIZE + UiTheme.SPACE_SM;
+            return UiTheme.RAIL_CLEARANCE;
+        }
+
+        /// <summary>
+        /// One quiet pill at the head of the lane. Before the grid exists it says the
+        /// racers are on their way (the spawn can hold the screen for seconds, and it
+        /// used to hold it blank); during the race it names the leader, in their own
+        /// legend tint, beside the race clock. The rail's dots carry positions but no
+        /// names, and the clock was only ever shown after the flag.
+        /// </summary>
+        private void BuildStatusChip(VisualElement slot)
+        {
+            _statusChip = new VisualElement { pickingMode = PickingMode.Ignore };
+            _statusChip.style.flexDirection = FlexDirection.Row;
+            _statusChip.style.alignItems = Align.Center;
+            _statusChip.style.maxWidth = new Length(100f, LengthUnit.Percent);
+            _statusChip.style.minHeight = UiTheme.SPACE_XL;
+            UiTheme.StyleChip(_statusChip);
+            _statusChip.style.display = DisplayStyle.None;
+            slot.Add(_statusChip);
+
+            _statusSwatch = UiTheme.MakeSwatch(UiTheme.TextDim, STATUS_SWATCH);
+            _statusSwatch.style.marginRight = UiTheme.SPACE_XS;
+            _statusSwatch.style.flexShrink = 0f;
+            _statusChip.Add(_statusSwatch);
+
+            _statusLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.Text, bold: true);
+            Ellipsize(_statusLabel);
+            _statusChip.Add(_statusLabel);
+        }
+
+        /// <summary>
+        /// Asked before MENU throws a race away. It used to abort on the spot, which
+        /// also meant nobody's rating moved; skipping calls full time instead, so the
+        /// race is ranked on distance and scored like any other.
+        /// </summary>
+        private void BuildLeaveSheet(VisualElement safeRoot)
+        {
+            _leaveSheet = new VisualElement { name = UiTheme.LEAVE_SHEET };
+            _leaveSheet.style.position = Position.Absolute;
+            _leaveSheet.style.top = new Length(30f, LengthUnit.Percent);
+            _leaveSheet.style.left = UiTheme.SPACE_LG;
+            _leaveSheet.style.right = UiTheme.SPACE_LG;
+            UiTheme.StyleModal(_leaveSheet);
+            _leaveSheet.pickingMode = PickingMode.Position;
+            _leaveSheet.style.display = DisplayStyle.None;
+            safeRoot.Add(_leaveSheet);
+
+            Label title = MakeLabel(UiTheme.FONT_LG, UiTheme.Text, bold: true, "Leave this race?");
+            title.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _leaveSheet.Add(title);
+            Label body = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false,
+                "Skip to results ranks everyone by distance now and counts the race. Leave throws it away.");
+            body.style.whiteSpace = WhiteSpace.Normal;
+            body.style.unityTextAlign = TextAnchor.MiddleCenter;
+            body.style.marginTop = UiTheme.SPACE_XS;
+            body.style.marginBottom = UiTheme.SPACE_SM;
+            _leaveSheet.Add(body);
+
+            _skipButton = SheetButton("SKIP TO RESULTS", accent: true, OnSkipPressed);
+            _leaveSheet.Add(_skipButton);
+            _leaveSheet.Add(SheetButton("LEAVE RACE", accent: false, OnLeavePressed));
+            _leaveSheet.Add(SheetButton("KEEP WATCHING", accent: false, CloseLeaveSheet));
+        }
+
+        private static Button SheetButton(string text, bool accent, System.Action onClick)
+        {
+            var button = new Button(onClick) { text = text };
+            button.style.height = UiTheme.CONTROL_SM;
+            button.style.fontSize = UiTheme.FONT_SM;
+            UiTheme.SetMargin(button, 0f, 0f);
+            button.style.marginTop = UiTheme.SPACE_XS;
+            UiTheme.StyleButton(button, accent);
+            UiTheme.AddHover(button, accent);
+            return button;
+        }
+
+        /// <summary>
+        /// MENU is a straight exit only when there is nothing to lose: on the results
+        /// sheet, or while the grid is still loading. Mid-race or mid-countdown it asks.
+        /// </summary>
+        private void OnMenuPressed()
+        {
+            bool raceUnderway = _raceModel.RaceActive || _raceModel.CountdownValue > 0;
+            if (!raceUnderway)
+            {
+                _spawn.RequestMenu();
+                return;
+            }
+            if (_leaveSheetOpen)
+            {
+                CloseLeaveSheet();
+                return;
+            }
+            _leaveSheetOpen = true;
+            // Skipping needs a running clock; during the countdown there is nothing to rank.
+            _skipButton.style.display = _raceModel.RaceActive ? DisplayStyle.Flex : DisplayStyle.None;
+            _leaveSheet.style.display = DisplayStyle.Flex;
+            UiTheme.PlayEnter(_leaveSheet, 0, UiTheme.PANEL_SLIDE_PX);
+        }
+
+        private void OnSkipPressed()
+        {
+            CloseLeaveSheet();
+            _race.FinishEarly();
+        }
+
+        private void OnLeavePressed()
+        {
+            CloseLeaveSheet();
+            _spawn.RequestMenu();
+        }
+
+        private void CloseLeaveSheet()
+        {
+            _leaveSheetOpen = false;
+            _leaveSheet.style.display = DisplayStyle.None;
+        }
+
+        /// <summary>
+        /// Results-sheet buttons. The sheet only hides on the next scheduled refresh,
+        /// so for up to REFRESH_INTERVAL_MS a second tap landed on a live button and
+        /// restarted the spawn it had just started. The sheet goes inert on the first
+        /// tap and is re-enabled the next time it is shown.
+        /// </summary>
+        private void OnResultsAction(System.Action action)
+        {
+            if (!_podiumPanel.enabledSelf)
+            {
+                return;
+            }
+            _podiumPanel.SetEnabled(false);
+            action();
         }
 
         /// <summary>
@@ -307,13 +488,21 @@ namespace PoRacer.Views
 
             _resultsTabs = UiTheme.BuildTabs(_podiumPanel, new[] { "PODIUM", "LEAGUE", "STATS" }, SelectResultsTab);
 
+            // The pages scroll between the fixed tab row and the fixed buttons: the
+            // sheet is capped at 78% of the screen, and a long league table or a big
+            // field's rest-of-field list used to spill past it instead.
+            var pageScroll = new ScrollView(ScrollViewMode.Vertical);
+            pageScroll.style.flexShrink = 1f;
+            UiTheme.StyleScrollView(pageScroll);
+            _podiumPanel.Add(pageScroll);
+
             _resultsPages[TAB_PODIUM] = BuildPodiumPage();
             _resultsPages[TAB_LEAGUE] = new VisualElement { name = UiTheme.RESULTS_LEAGUE_PAGE, pickingMode = PickingMode.Ignore };
             _resultsPages[TAB_STATS] = BuildStatsPage();
             for (int pageIndex = 0; pageIndex < _resultsPages.Length; pageIndex++)
             {
                 _resultsPages[pageIndex].style.marginTop = UiTheme.SPACE_XS;
-                _podiumPanel.Add(_resultsPages[pageIndex]);
+                pageScroll.Add(_resultsPages[pageIndex]);
             }
 
             // The results panel is a stop, not a pause: the player decides what
@@ -322,7 +511,8 @@ namespace PoRacer.Views
             podiumButtons.style.flexDirection = FlexDirection.Row;
             podiumButtons.style.justifyContent = Justify.Center;
             podiumButtons.style.marginTop = UiTheme.SPACE_SM;
-            var raceAgainButton = new Button(() => _spawn.RaceAgain()) { text = "RACE AGAIN" };
+            podiumButtons.style.flexShrink = 0f;
+            var raceAgainButton = new Button(() => OnResultsAction(_spawn.RaceAgain)) { text = "RACE AGAIN" };
             raceAgainButton.style.height = UiTheme.CONTROL_SM;
             raceAgainButton.style.fontSize = UiTheme.FONT_SM;
             raceAgainButton.style.flexGrow = 2f;
@@ -332,7 +522,7 @@ namespace PoRacer.Views
             UiTheme.StyleButton(raceAgainButton, accent: true);
             UiTheme.AddHover(raceAgainButton, accent: true);
             podiumButtons.Add(raceAgainButton);
-            var backToMenuButton = new Button(() => _spawn.RequestMenu()) { text = "MENU" };
+            var backToMenuButton = new Button(() => OnResultsAction(_spawn.RequestMenu)) { text = "MENU" };
             backToMenuButton.style.height = UiTheme.CONTROL_SM;
             backToMenuButton.style.fontSize = UiTheme.FONT_SM;
             backToMenuButton.style.flexGrow = 1f;
@@ -351,6 +541,15 @@ namespace PoRacer.Views
         private VisualElement BuildPodiumPage()
         {
             var page = new VisualElement { pickingMode = PickingMode.Ignore };
+
+            // Who won, always. The WINNER banner only shows while the race is still
+            // running, so a race that ends on its first crossing (one racer) or on the
+            // clock went straight to the sheet and never announced anyone.
+            _winnerHeadline = MakeLabel(UiTheme.FONT_LG, UiTheme.Gold, bold: true);
+            _winnerHeadline.style.whiteSpace = WhiteSpace.Normal;
+            _winnerHeadline.style.marginBottom = UiTheme.SPACE_XXS;
+            page.Add(_winnerHeadline);
+
             for (int podiumIndex = 0; podiumIndex < PODIUM_ROWS; podiumIndex++)
             {
                 var row = new VisualElement { pickingMode = PickingMode.Ignore };
@@ -360,6 +559,7 @@ namespace PoRacer.Views
                 row.style.minHeight = UiTheme.SPACE_XL;
                 VisualElement medal = UiTheme.MakeSwatch(MedalColors[podiumIndex], UiTheme.SPACE_MD);
                 medal.style.marginRight = UiTheme.SPACE_SM;
+                _podiumMedals[podiumIndex] = medal;
                 row.Add(medal);
                 var label = new Label { pickingMode = PickingMode.Ignore };
                 label.style.color = UiTheme.Text;
@@ -377,6 +577,15 @@ namespace PoRacer.Views
                 _podiumRows.Add(row);
                 page.Add(row);
             }
+
+            // Everyone else. Racers still running when the podium filled used to
+            // vanish from the results entirely (and read "DNF" in the logs); they are
+            // unplaced, not failed, and a viewer who picked one wants to see it.
+            _alsoRanLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false);
+            _alsoRanLabel.style.whiteSpace = WhiteSpace.Normal;
+            _alsoRanLabel.style.marginTop = UiTheme.SPACE_SM;
+            _alsoRanLabel.enableRichText = true;
+            page.Add(_alsoRanLabel);
             return page;
         }
 
@@ -401,6 +610,7 @@ namespace PoRacer.Views
                 row.style.marginTop = UiTheme.SPACE_XXS;
                 VisualElement medal = UiTheme.MakeSwatch(MedalColors[rowIndex], UiTheme.SPACE_SM);
                 medal.style.marginRight = UiTheme.SPACE_XS;
+                _statsMedals[rowIndex] = medal;
                 row.Add(medal);
                 _statsNames[rowIndex] = StatsName(string.Empty, UiTheme.Text);
                 row.Add(_statsNames[rowIndex]);
@@ -516,9 +726,18 @@ namespace PoRacer.Views
             if (_configModel != null && _configModel.MenuVisible)
             {
                 _hudRoot.style.display = DisplayStyle.None;
+                if (_leaveSheetOpen)
+                {
+                    CloseLeaveSheet();
+                }
                 return;
             }
             _hudRoot.style.display = DisplayStyle.Flex;
+            // The question is moot once the race has ended on its own.
+            if (_leaveSheetOpen && !_raceModel.RaceActive && _raceModel.CountdownValue == 0)
+            {
+                CloseLeaveSheet();
+            }
 
             // Only a racer who actually crossed, or led on distance when the clock
             // ran out, counts for the celebration banner: an all-DNF race gets no
@@ -596,7 +815,59 @@ namespace PoRacer.Views
             }
 
             RefreshPodium();
-            RefreshFieldWidgets();
+            int leaderCount = RefreshFieldWidgets();
+            RefreshStatusChip(leaderCount);
+        }
+
+        /// <summary>
+        /// Loading line before the grid exists, leader and clock while racing, nothing
+        /// otherwise. Text is only rebuilt when the leader changes or the clock ticks
+        /// over a whole second, so a race costs about one string a second.
+        /// </summary>
+        private void RefreshStatusChip(int leaderCount)
+        {
+            bool loading = !_raceModel.RaceActive && _raceModel.CountdownValue == 0
+                && _raceModel.Racers.Count == 0;
+            bool racing = _raceModel.RaceActive && leaderCount > 0;
+            if (!loading && !racing)
+            {
+                _statusChip.style.display = DisplayStyle.None;
+                _statusShowsLoading = false;
+                _statusLeaderId = null;
+                _statusWholeSeconds = -1;
+                return;
+            }
+            _statusChip.style.display = DisplayStyle.Flex;
+            if (loading)
+            {
+                if (!_statusShowsLoading)
+                {
+                    _statusShowsLoading = true;
+                    _statusLeaderId = null;
+                    _statusWholeSeconds = -1;
+                    _statusSwatch.style.display = DisplayStyle.None;
+                    _statusLabel.text = "Getting racers ready...";
+                }
+                return;
+            }
+            _statusShowsLoading = false;
+            RacerState leader = _leaders[0];
+            int wholeSeconds = Mathf.FloorToInt(_raceModel.ElapsedSeconds);
+            if (leader.RacerId == _statusLeaderId && wholeSeconds == _statusWholeSeconds)
+            {
+                return;
+            }
+            if (leader.RacerId != _statusLeaderId)
+            {
+                _statusLeaderId = leader.RacerId;
+                _statusSwatch.style.display = DisplayStyle.Flex;
+                _statusSwatch.style.backgroundColor = leader.Tint;
+            }
+            _statusWholeSeconds = wholeSeconds;
+            int limit = Mathf.CeilToInt(_raceModel.TimeLimitSeconds);
+            _statusLabel.text = limit > 0
+                ? $"LEAD  {leader.DisplayName}   {wholeSeconds / SECONDS_PER_MINUTE}:{wholeSeconds % SECONDS_PER_MINUTE:00} / {limit / SECONDS_PER_MINUTE}:{limit % SECONDS_PER_MINUTE:00}"
+                : $"LEAD  {leader.DisplayName}   {wholeSeconds / SECONDS_PER_MINUTE}:{wholeSeconds % SECONDS_PER_MINUTE:00}";
         }
 
         /// <summary>
@@ -649,6 +920,8 @@ namespace PoRacer.Views
                 _announceSlot.style.display = showPodium ? DisplayStyle.None : DisplayStyle.Flex;
                 if (showPodium)
                 {
+                    // Live again: the last RACE AGAIN / MENU tap left it inert.
+                    _podiumPanel.SetEnabled(true);
                     // Force one rebuild of every row: racer ids can repeat across
                     // races, so the change guards below must not carry over.
                     for (int rowIndex = 0; rowIndex < PODIUM_ROWS; rowIndex++)
@@ -709,6 +982,13 @@ namespace PoRacer.Views
                 _podiumSourceDeltas[podiumIndex] = delta;
                 anyRowChanged = true;
 
+                // A place the referee filled with a knocked-out racer (fewer than three
+                // crossed) wears no medal: grey, not gold, beside a "DNF" metric.
+                bool medalEarned = medalist != null && medalist.Status != RacerStatus.Dnf;
+                Color medalColor = medalEarned ? MedalColors[podiumIndex] : UiTheme.Dnf;
+                _podiumMedals[podiumIndex].style.backgroundColor = medalColor;
+                _statsMedals[podiumIndex].style.backgroundColor = medalColor;
+
                 if (medalist == null)
                 {
                     _podiumLabels[podiumIndex].text = "—";
@@ -735,7 +1015,77 @@ namespace PoRacer.Views
             if (anyRowChanged)
             {
                 RefreshStats();
+                RefreshWinnerHeadline();
+                RefreshAlsoRan();
             }
+        }
+
+        /// <summary>Gold line over the podium naming the winner, or saying nobody made it.</summary>
+        private void RefreshWinnerHeadline()
+        {
+            RacerState first = _medalists[0];
+            if (first == null || first.Status == RacerStatus.Dnf)
+            {
+                _winnerHeadline.text = "NO FINISHERS";
+                _winnerHeadline.style.color = UiTheme.TextDim;
+                return;
+            }
+            _winnerHeadline.style.color = UiTheme.Gold;
+            _winnerHeadline.text = first.Status == RacerStatus.Finished
+                ? $"{first.DisplayName} WINS  ·  {first.FinishTime:0.0}s"
+                // Ranked on distance: the clock ran out, or the race was skipped.
+                : $"{first.DisplayName} WINS  ·  led on distance";
+        }
+
+        /// <summary>
+        /// The rest of the field under the podium: anyone placed below third by
+        /// place, then the unplaced by distance. Rebuilt once per results screen.
+        /// </summary>
+        private void RefreshAlsoRan()
+        {
+            _alsoRan.Clear();
+            for (int racerIndex = 0; racerIndex < _raceModel.Racers.Count; racerIndex++)
+            {
+                RacerState racer = _raceModel.Racers[racerIndex];
+                if (racer.Place < 1 || racer.Place > PODIUM_ROWS)
+                {
+                    _alsoRan.Add(racer);
+                }
+            }
+            if (_alsoRan.Count == 0)
+            {
+                _alsoRanLabel.style.display = DisplayStyle.None;
+                return;
+            }
+            _alsoRan.Sort(AlsoRanOrder);
+            _alsoRanText.Clear();
+            _alsoRanText.Append("<b>REST OF FIELD</b>\n");
+            int listed = Mathf.Min(_alsoRan.Count, ALSO_RAN_MAX);
+            for (int listIndex = 0; listIndex < listed; listIndex++)
+            {
+                RacerState racer = _alsoRan[listIndex];
+                if (listIndex > 0)
+                {
+                    _alsoRanText.Append("  ·  ");
+                }
+                if (racer.Place > 0)
+                {
+                    _alsoRanText.Append(racer.Place).Append(". ");
+                }
+                _alsoRanText.Append(racer.DisplayName).Append(' ');
+                _alsoRanText.Append(racer.Progress.ToString("0.0")).Append(" m");
+                if (racer.Status == RacerStatus.Dnf)
+                {
+                    // Cut off by the podium is not a failure; anything else is.
+                    _alsoRanText.Append(racer.Knockout == KnockoutReason.PodiumCutoff ? " (unplaced)" : " (out)");
+                }
+            }
+            if (_alsoRan.Count > listed)
+            {
+                _alsoRanText.Append("  ·  +").Append(_alsoRan.Count - listed).Append(" more");
+            }
+            _alsoRanLabel.text = _alsoRanText.ToString();
+            _alsoRanLabel.style.display = DisplayStyle.Flex;
         }
 
         /// <summary>
@@ -752,7 +1102,8 @@ namespace PoRacer.Views
             {
                 return $"{racer.Progress:0.0}m";
             }
-            return "DNF";
+            // Distance too: it is what ranked a knocked-out racer onto the podium.
+            return $"DNF {racer.Progress:0.0}m";
         }
 
         /// <summary>
@@ -804,8 +1155,8 @@ namespace PoRacer.Views
             }
         }
 
-        /// <summary>Drives the right-edge rail and its leader badges.</summary>
-        private void RefreshFieldWidgets()
+        /// <summary>Drives the right-edge rail and its leader badges; returns how many leaders it ranked.</summary>
+        private int RefreshFieldWidgets()
         {
             int leaderCount = SelectLeaders();
             bool show = leaderCount > 0;
@@ -814,11 +1165,11 @@ namespace PoRacer.Views
                 _widgetsVisible = show;
                 _rail.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
             }
-            if (!show)
+            if (show)
             {
-                return;
+                RefreshRail(leaderCount);
             }
-            RefreshRail(leaderCount);
+            return leaderCount;
         }
 
         /// <summary>
@@ -940,7 +1291,7 @@ namespace PoRacer.Views
         private static Label StatCell(string text, Color color, bool bold)
         {
             Label cell = MakeLabel(UiTheme.FONT_XS, color, bold, text);
-            cell.style.width = STAT_COLUMN_WIDTH;
+            cell.style.width = UiTheme.ScaleWithFont(STAT_COLUMN_WIDTH);
             cell.style.flexShrink = 0f;
             cell.style.unityTextAlign = TextAnchor.MiddleRight;
             return cell;

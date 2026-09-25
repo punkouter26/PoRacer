@@ -88,7 +88,10 @@ namespace PoRacer.Views
             _card = new VisualElement();
             _card.style.position = Position.Absolute;
             _card.style.left = new Length(SIDE_MARGIN_PERCENT, LengthUnit.Percent);
-            _card.style.right = new Length(SIDE_MARGIN_PERCENT, LengthUnit.Percent);
+            // Stops short of the progress rail on the right: at 3% it ran the full
+            // width and hid the lower 70-110 dp of the rail, which is exactly where the
+            // back of the field is.
+            _card.style.right = UiTheme.RAIL_CLEARANCE;
             // Clear of the DBG button and version stamp that share the bottom band.
             _card.style.bottom = UiTheme.BottomBand;
             UiTheme.StyleGlassPanel(_card);

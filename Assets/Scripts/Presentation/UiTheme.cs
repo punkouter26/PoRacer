@@ -85,6 +85,8 @@ namespace PoRacer.Presentation
         // The race HUD's progress rail; its badges move with the race, so the layout
         // audit leaves them out of the vertical budget.
         public const string PROGRESS_RAIL = "Race.Rail";
+        // The "leave this race?" confirmation MENU raises mid-race.
+        public const string LEAVE_SHEET = "Race.LeaveSheet";
         private const string GAME_TITLE = "PoRacer";
         private const float FONT_XS_BASE = 15f;
         private const float FONT_SM_BASE = 16f;
@@ -114,6 +116,14 @@ namespace PoRacer.Presentation
         public static float FONT_TITLE => FONT_TITLE_BASE * FontScale;
         public static float FONT_BANNER => FONT_BANNER_BASE * FontScale;
         public static float FONT_COUNTDOWN => FONT_COUNTDOWN_BASE * FontScale;
+
+        /// <summary>
+        /// A width authored against the base type scale, grown with the text that has
+        /// to fit in it. A fixed column sized for "TWITCH" at the base FONT_XS no
+        /// longer held it once <see cref="FontScale"/> raised the type on a narrow
+        /// handset, and cells have no ellipsis to fall back on.
+        /// </summary>
+        public static float ScaleWithFont(float baseUnits) => baseUnits * FontScale;
 
         private static float _fontScale = 1f;
         private static int _fontScaleForWidth = -1;
@@ -235,18 +245,35 @@ namespace PoRacer.Presentation
                     return _controlScale;
                 }
 
-                float deviceDpWidth = width / (dpi / 160f);
-                float dpPerUnit = deviceDpWidth / REFERENCE_WIDTH;
-                if (dpPerUnit <= 0f)
-                {
-                    _controlScale = 1f;
-                    return _controlScale;
-                }
-                float needed = MIN_TOUCH_DP / (CONTROL_SM_BASE * dpPerUnit);
-                _controlScale = Mathf.Clamp(needed, 1f, MAX_FONT_SCALE);
+                _controlScale = ControlScaleForDeviceWidth(width / (dpi / 160f));
                 return _controlScale;
             }
         }
+
+        /// <summary>
+        /// The <see cref="ControlScale"/> a handset <paramref name="deviceDpWidth"/> dp
+        /// wide resolves to. Public so the layout audit can size controls for a phone
+        /// other than the one it is running on: the Device Simulator's own width sets
+        /// the live scale, and a narrower simulator inflated every control past what
+        /// the audited handset would really draw.
+        /// </summary>
+        public static float ControlScaleForDeviceWidth(float deviceDpWidth)
+        {
+            float dpPerUnit = deviceDpWidth / REFERENCE_WIDTH;
+            if (dpPerUnit <= 0f || float.IsNaN(dpPerUnit))
+            {
+                return 1f;
+            }
+            float needed = MIN_TOUCH_DP / (CONTROL_SM_BASE * dpPerUnit);
+            return Mathf.Clamp(needed, 1f, MAX_FONT_SCALE);
+        }
+
+        /// <summary>
+        /// Right-hand inset that keeps content off the race HUD's progress rail and
+        /// its place badges (rail margin + badge + gap). Shared by every panel that
+        /// sits beside the rail, so none of them can drift over it.
+        /// </summary>
+        public const float RAIL_CLEARANCE = SPACE_MD + 22f + SPACE_SM;
 
         // ---- Elevation ----
         // Vertical offset and opacity of the shadow plate behind a raised element.

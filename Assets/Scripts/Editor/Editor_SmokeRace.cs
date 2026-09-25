@@ -88,11 +88,15 @@ namespace PoRacer.EditorTools
         /// TALLER than the target. One size used to be checked (the 432 x 960 phone);
         /// the zero-scroll rule has to hold on the short end of the range too, where a
         /// 360 x 640 dp handset leaves only 747 units.
+        ///
+        /// 411 x 960 is the 21:9 end (a 1080 x 2520 handset at ~420 dpi), inside the
+        /// Android build's 2.4 maximum aspect ratio.
         /// </summary>
         private static readonly Vector2[] HandsetsDp =
         {
             new(360f, 640f),
             new(390f, 844f),
+            new(411f, 960f),
             new(432f, 960f),
         };
 
@@ -589,13 +593,15 @@ namespace PoRacer.EditorTools
             }
             ExpectOnScreen(when, measured, panel);
             ExpectClearOfFurniture(when, measured, found);
+            float liveControlScale = LiveControlScale();
             for (int handsetIndex = 0; handsetIndex < HandsetsDp.Length; handsetIndex++)
             {
                 Vector2 handset = HandsetsDp[handsetIndex];
                 float handsetPanel = PANEL_REFERENCE_WIDTH * handset.y / handset.x;
                 string label = $"{handset.x:0}x{handset.y:0}";
-                ExpectHandsetFit(when, label, handsetPanel, panel, contentBottom, anchoredTop);
-                ExpectNoScroll(when, label, handsetPanel, panel, scrolls);
+                float sizeRatio = UiTheme.ControlScaleForDeviceWidth(handset.x) / liveControlScale;
+                ExpectHandsetFit(when, label, handsetPanel, panel, contentBottom, anchoredTop, sizeRatio);
+                ExpectNoScroll(when, label, handsetPanel, panel, scrolls, sizeRatio);
             }
             Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, {scrolls.Count} scroll views, "
                 + $"{found.Count} furniture anchors, panel {panel.height:0} dp");
@@ -765,16 +771,25 @@ namespace PoRacer.EditorTools
         /// the panel being rendered: content must clear the furniture with the screen's
         /// surplus height subtracted. A game view already at or below handset height
         /// needs no correction and is checked as it stands.
+        ///
+        /// <paramref name="sizeRatio"/> resizes what was measured to what the handset
+        /// would draw. UiTheme grows controls on narrow phones to keep 48 dp touch
+        /// targets, keyed on the LIVE screen's width, so a layout measured on a 320 dp
+        /// simulator carried 25% taller controls than a 360 dp phone ever draws, and
+        /// the 360 x 640 check failed a menu that fits it. Both the flow content and
+        /// the bottom-anchored block scale with it.
         /// </summary>
         private static void ExpectHandsetFit(string when, string handset, float handsetPanel, Rect panel,
-            float contentBottom, float anchoredTop)
+            float contentBottom, float anchoredTop, float sizeRatio)
         {
             if (contentBottom <= 0f || float.IsPositiveInfinity(anchoredTop))
             {
                 return;
             }
             float surplus = Mathf.Max(0f, panel.height - handsetPanel);
-            float budget = anchoredTop - surplus;
+            float anchoredBlock = (panel.yMax - anchoredTop) * sizeRatio;
+            float budget = panel.yMax - surplus - anchoredBlock;
+            contentBottom = panel.y + (contentBottom - panel.y) * sizeRatio;
             if (contentBottom > budget)
             {
                 Record("error",
@@ -791,15 +806,34 @@ namespace PoRacer.EditorTools
         /// mode, so its content must fit its viewport on every handset. Scroll views in
         /// this UI flex to fill the space left over, so on a handset shorter than the
         /// panel the viewport loses exactly the surplus height, and a taller one gains it.
+        ///
+        /// The exception is a list inside a sheet sized to its content and capped at a
+        /// percentage of the screen (the results sheet's 78%). Its viewport is only as
+        /// tall as its content, so "lose the surplus" drove it negative; its real limit
+        /// is the cap, taken of the handset's height, less the sheet's own chrome.
         /// </summary>
         private static void ExpectNoScroll(string when, string handset, float handsetPanel, Rect panel,
-            List<ScrollView> scrolls)
+            List<ScrollView> scrolls, float sizeRatio)
         {
             for (int scrollIndex = 0; scrollIndex < scrolls.Count; scrollIndex++)
             {
                 ScrollView scroll = scrolls[scrollIndex];
-                float content = scroll.contentContainer.layout.height;
-                float viewport = scroll.contentViewport.layout.height + (handsetPanel - panel.height);
+                // Content and the chrome around the viewport both resize with the
+                // handset's controls (see ExpectHandsetFit); the panel height does not.
+                float content = scroll.contentContainer.layout.height * sizeRatio;
+                float viewport;
+                VisualElement cappedSheet = FindPercentCappedAncestor(scroll, out float capPercent);
+                if (cappedSheet != null && cappedSheet.parent != null)
+                {
+                    float handsetParent = cappedSheet.parent.layout.height - (panel.height - handsetPanel);
+                    float sheetChrome = cappedSheet.layout.height - scroll.contentViewport.layout.height;
+                    viewport = handsetParent * capPercent / 100f - sheetChrome * sizeRatio;
+                }
+                else
+                {
+                    float chrome = panel.height - scroll.contentViewport.layout.height;
+                    viewport = handsetPanel - chrome * sizeRatio;
+                }
                 if (content > viewport + EDGE_TOLERANCE_DP)
                 {
                     Record("error",
@@ -808,6 +842,32 @@ namespace PoRacer.EditorTools
                         string.Empty);
                 }
             }
+        }
+
+        /// <summary>The nearest ancestor whose inline max-height is a percentage, or null.</summary>
+        private static VisualElement FindPercentCappedAncestor(VisualElement element, out float capPercent)
+        {
+            for (VisualElement node = element.parent; node != null; node = node.parent)
+            {
+                StyleLength maxHeight = node.style.maxHeight;
+                if (maxHeight.keyword == StyleKeyword.Undefined && maxHeight.value.unit == LengthUnit.Percent)
+                {
+                    capPercent = maxHeight.value.value;
+                    return node;
+                }
+            }
+            capPercent = 0f;
+            return null;
+        }
+
+        /// <summary>The control scale the live screen resolved to (1 where the editor reports no DPI).</summary>
+        private static float LiveControlScale()
+        {
+            if (Screen.width <= 0 || Screen.dpi <= 0f || float.IsNaN(Screen.dpi))
+            {
+                return 1f;
+            }
+            return UiTheme.ControlScaleForDeviceWidth(Screen.width / (Screen.dpi / 160f));
         }
 
         /// <summary>Racers still on the grid, by active RacerView count.</summary>

@@ -645,10 +645,25 @@ namespace IsaacH1
             }
         }
 
+        /// <summary>True once every driven joint reports its degree of freedom.</summary>
+        bool ArticulationReady()
+        {
+            if (_joints == null) return false;
+            for (int j = 0; j < _joints.Length; j++)
+            {
+                if (_joints[j] == null || _joints[j].dofCount == 0) return false;
+            }
+            return true;
+        }
+
         // ------------------------------------------------------------------- loop --
         void FixedUpdate()
         {
             if (!_ready) return;
+            // No joint data until PhysX has built the articulation (the first physics
+            // step after spawn or re-enable). Reading it earlier threw an
+            // IndexOutOfRangeException from BuildObservations on every step.
+            if (!ArticulationReady()) return;
 
             if (_substep == 0)
             {

@@ -66,7 +66,14 @@ namespace PoRacer.Systems
 
         // Unscaled: the winner slow-mo (CameraFxView) must not stretch the race
         // clock or the DNF timers.
-        public void Tick() => Advance(UnityEngine.Time.unscaledDeltaTime);
+        //
+        // Capped at maximumDeltaTime, which is also the most simulated time physics
+        // will catch up in one frame. Unscaled time has no cap of its own, so a phone
+        // coming back from the background handed the referee the whole time it was
+        // away in a single tick: every racer "made no progress for 30 s" and was
+        // stall-DNF'd, or the clock ran out, while the bodies had not moved a step.
+        public void Tick() => Advance(UnityEngine.Mathf.Min(
+            UnityEngine.Time.unscaledDeltaTime, UnityEngine.Time.maximumDeltaTime));
 
         public void StartRace(IReadOnlyList<RacerState> racers)
         {
@@ -77,6 +84,7 @@ namespace PoRacer.Systems
         public void StartRace(IReadOnlyList<RacerState> racers, float timeLimitSeconds)
         {
             _timeLimitSeconds = timeLimitSeconds > 0f ? timeLimitSeconds : RACE_TIMEOUT_SECONDS;
+            _model.TimeLimitSeconds = _timeLimitSeconds;
             _model.SetRacers(racers);
             _lastProgress.Clear();
             _lastProgressTime.Clear();
@@ -198,6 +206,21 @@ namespace PoRacer.Systems
         public void NotifyFailure(string racerId, KnockoutReason reason = KnockoutReason.Unspecified)
         {
             MarkDnf(_model.FindRacer(racerId), reason);
+            CheckRaceEnd();
+        }
+
+        /// <summary>
+        /// Skip to results: calls full time now. Everyone still racing is ranked on
+        /// distance exactly as if the clock had run out, and the race is scored, so a
+        /// viewer who has seen enough gets a result instead of having to abandon it.
+        /// </summary>
+        public void FinishEarly()
+        {
+            if (!_model.RaceActive)
+            {
+                return;
+            }
+            RankByDistanceAtTimeout();
             CheckRaceEnd();
         }
 

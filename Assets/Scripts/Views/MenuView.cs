@@ -35,6 +35,13 @@ namespace PoRacer.Views
         private const float AVATAR_SIZE = 24f;
         // Past this many racers the frame rate on a phone starts to give.
         private const int LARGE_FIELD = 100;
+        // Avatar hues skip the two bands the racer legend owns (AGENTS.md rule D):
+        // red for heuristic bots, green for the baseline RL policy. What is left is
+        // orange-yellow [0.06, 0.20] and cyan-through-magenta [0.47, 0.92].
+        private const float HUE_WARM_START = 0.06f;
+        private const float HUE_WARM_SPAN = 0.14f;
+        private const float HUE_COOL_START = 0.47f;
+        private const float HUE_COOL_SPAN = 0.45f;
 
         /// <summary>Horizontal room a bottom corner anchor (DBG, version) takes from the band.</summary>
         private static float CornerClearance => UiTheme.CONTROL_LG + UiTheme.SPACE_LG;
@@ -347,11 +354,18 @@ namespace PoRacer.Views
                 name.style.unityFontStyleAndWeight = FontStyle.Bold;
                 name.style.overflow = Overflow.Hidden;
                 name.style.textOverflow = TextOverflow.Ellipsis;
+                // Two lines in one CONTROL_SM cell leave no room for the labels'
+                // default padding: with it the pair stood 3 dp taller than the tab and
+                // "Flat" poked out over the title (smoke run ui-audit, 2026-09-25).
+                UiTheme.SetPadding(name, 0f, 0f);
+                UiTheme.SetMargin(name, 0f, 0f);
                 UiTheme.ApplyFont(name);
                 tab.Add(name);
 
                 var length = new Label($"{map.LengthMeters:0} m") { pickingMode = PickingMode.Ignore };
                 length.style.fontSize = UiTheme.FONT_XS;
+                UiTheme.SetPadding(length, 0f, 0f);
+                UiTheme.SetMargin(length, 0f, 0f);
                 UiTheme.ApplyFont(length);
                 tab.Add(length);
 
@@ -529,7 +543,7 @@ namespace PoRacer.Views
             avatar.style.justifyContent = Justify.Center;
             avatar.style.alignItems = Align.Center;
             avatar.style.flexShrink = 0f;
-            avatar.style.backgroundColor = Color.HSVToRGB((entry.id.GetHashCode() & 255) / 255f, 0.55f, 0.75f);
+            avatar.style.backgroundColor = Color.HSVToRGB(AvatarHue(entry.id), 0.55f, 0.75f);
             UiTheme.SetRadius(avatar, AVATAR_SIZE * 0.5f);
             var initial = new Label(entry.displayName.Substring(0, 1));
             initial.style.color = Color.white;
@@ -605,6 +619,20 @@ namespace PoRacer.Views
             }
             RefreshRowButtons(countButtons, options, entry.id);
             return card;
+        }
+
+        /// <summary>
+        /// A stable per-creature hue that is never red or green. The hash spreads over
+        /// the allowed bands only, so a chip can no longer land on a legend colour and
+        /// read as "this one is a heuristic bot" or "this is the baseline policy".
+        /// </summary>
+        private static float AvatarHue(string creatureId)
+        {
+            float fraction = (creatureId.GetHashCode() & 255) / 255f;
+            float along = fraction * (HUE_WARM_SPAN + HUE_COOL_SPAN);
+            return along < HUE_WARM_SPAN
+                ? HUE_WARM_START + along
+                : HUE_COOL_START + (along - HUE_WARM_SPAN);
         }
 
         private void RefreshRowButtons(Button[] buttons, int[] options, string creatureId)
