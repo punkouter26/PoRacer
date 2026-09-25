@@ -189,7 +189,7 @@ namespace PoRacer.Views
             Material soft = FxUtil.SoftParticleMaterial();
             if (soft != null)
             {
-                renderer.material = soft;
+                renderer.sharedMaterial = soft;
                 renderer.trailMaterial = soft;
             }
             return ps;
@@ -228,7 +228,7 @@ namespace PoRacer.Views
             Material glow = FxUtil.GlowParticleMaterial();
             if (glow != null)
             {
-                fireworkRenderer.material = glow;
+                fireworkRenderer.sharedMaterial = glow;
                 fireworkRenderer.trailMaterial = glow;
             }
             fireworkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

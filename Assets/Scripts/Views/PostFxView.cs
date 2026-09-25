@@ -872,7 +872,7 @@ namespace PoRacer.Views
             colorOverLifetime.color = gradient;
 
             var ambientRenderer = ps.GetComponent<ParticleSystemRenderer>();
-            ambientRenderer.material = particleMaterial;
+            ambientRenderer.sharedMaterial = particleMaterial;
             ambientRenderer.shadowCastingMode = ShadowCastingMode.Off;
             ambientRenderer.receiveShadows = false;
             _ambientFx = ps;

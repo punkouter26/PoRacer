@@ -266,7 +266,12 @@ namespace PoRacer.Systems
         /// </summary>
         private static void ReadActions(Tracked tracked)
         {
-            IReadOnlyList<float> actions = tracked.Policy?.LastActions;
+            IPolicyReadout policy = tracked.Policy;
+            // The readout is an agent MonoBehaviour: Unity's == catches a destroyed one,
+            // which ?. on the interface would not.
+            IReadOnlyList<float> actions = policy is UnityEngine.Object unityObject && unityObject == null
+                ? null
+                : policy?.LastActions;
             RacerTelemetry telemetry = tracked.Telemetry;
             if (actions == null)
             {

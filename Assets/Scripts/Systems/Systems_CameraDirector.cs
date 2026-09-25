@@ -243,7 +243,10 @@ namespace PoRacer.Systems
             {
                 _pack.SetCourse(course);
             }
-            _orbit?.SetCourse(course);
+            if (_orbit != null)
+            {
+                _orbit.SetCourse(course);
+            }
         }
 
         /// <summary>
@@ -255,13 +258,19 @@ namespace PoRacer.Systems
         {
             _keepOut = keepOut;
             _hasKeepOut = true;
-            _orbit?.SetKeepOut(keepOut);
+            if (_orbit != null)
+            {
+                _orbit.SetKeepOut(keepOut);
+            }
         }
 
         public void ClearKeepOut()
         {
             _hasKeepOut = false;
-            _orbit?.ClearKeepOut();
+            if (_orbit != null)
+            {
+                _orbit.ClearKeepOut();
+            }
         }
 
         /// <summary>Spawn registers each racer so the director can find its transform, and back.</summary>

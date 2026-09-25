@@ -627,13 +627,12 @@ namespace PoRacer.Presentation
         }
 
         /// <summary>
-        /// Optional project font, loaded once from Resources.
+        /// Optional font override, loaded once from Resources.
         ///
-        /// The project ships no font asset, so every screen currently renders in
-        /// Unity's built-in default. Dropping a .ttf at
-        /// Assets/Resources/UI/PoRacerFont.ttf is enough to re-face the whole UI:
-        /// every helper here routes through <see cref="ApplyFont"/>, so no screen
-        /// needs to know whether a custom face is present.
+        /// The UI is already faced with Assets/UI/PoRacerFont through the panels' text
+        /// settings (PoRacerTextSettings), so this normally finds nothing and changes
+        /// nothing. Dropping a .ttf at Assets/Resources/UI/PoRacerFont.ttf overrides the
+        /// face everywhere: every helper here routes through <see cref="ApplyFont"/>.
         /// </summary>
         private static Font _uiFont;
         private static bool _uiFontLoaded;

@@ -574,9 +574,9 @@ namespace IsaacH1
             int layer = LayerMask.NameToLayer("IsaacCreature");
             if (layer < 0)
             {
-                Debug.Log($"[{name}] no 'IsaacCreature' layer is defined in this project; " +
-                          "staying on 'Default'. Adding a layer is a project-settings change " +
-                          "and is left for you to confirm (see README_UNITY.md).", this);
+                LogDiagnostics($"[{name}] no 'IsaacCreature' layer is defined in this project; " +
+                               "staying on 'Default'. Adding a layer is a project-settings change " +
+                               "and is left for you to confirm (see README_UNITY.md).");
                 return;
             }
             var all = GetComponentsInChildren<Transform>(true);
@@ -1066,8 +1066,12 @@ namespace IsaacH1
             for (int j = 0; j < rig.actDim; j++) sb.Append($" {_obs[31 + j]:F2}");
             sb.Append("\n  action           ");
             for (int j = 0; j < rig.actDim; j++) sb.Append($" {_action[j]:F2}");
-            Debug.Log(sb.ToString(), this);
+            LogDiagnostics(sb.ToString());
         }
+
+        // Diagnostics only: compiled out of player builds (performance.md, Debug).
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogDiagnostics(string message) => Debug.Log(message, this);
 
         void OnGUI()
         {

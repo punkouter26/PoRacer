@@ -49,7 +49,7 @@ namespace PoRacer.Views
             Material glowMat = FxUtil.GlowParticleMaterial();
             if (glowMat != null)
             {
-                _laser.material = glowMat;
+                _laser.sharedMaterial = glowMat;
             }
             _laser.startColor = new Color(0.1f, 0.9f, 1f, 0.85f);
             _laser.endColor = new Color(0.9f, 0.2f, 1f, 0.85f);

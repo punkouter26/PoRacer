@@ -842,8 +842,12 @@ namespace IsaacBox
             for (int j = 0; j < n; j++) sb.Append($" {_obs[12 + n + j]:F2}");
             sb.Append("\n  action           ");
             for (int j = 0; j < n; j++) sb.Append($" {_action[j]:F2}");
-            Debug.Log(sb.ToString(), this);
+            LogDiagnostics(sb.ToString());
         }
+
+        // Diagnostics only: compiled out of player builds (performance.md, Debug).
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void LogDiagnostics(string message) => Debug.Log(message, this);
 
         void OnGUI()
         {

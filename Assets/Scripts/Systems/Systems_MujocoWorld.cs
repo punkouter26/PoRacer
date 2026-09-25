@@ -345,7 +345,7 @@ namespace PoRacer.Systems
                 ApplyGroundFriction(geom);
                 built++;
             }
-            Debug.Log($"MuJoCo course road: {built} slab(s) over {path.Length:0.0} m "
+            Log($"MuJoCo course road: {built} slab(s) over {path.Length:0.0} m "
                     + $"at half-width {course.HalfWidth:0.0} m.");
         }
 
@@ -396,7 +396,7 @@ namespace PoRacer.Systems
                 ApplyGroundFriction(geom);
                 mirrored++;
             }
-            Debug.Log($"MuJoCo scenery: {mirrored} collider(s) mirrored from '{scenery.name}'.");
+            Log($"MuJoCo scenery: {mirrored} collider(s) mirrored from '{scenery.name}'.");
         }
 
         private static MjGeom AddGeom(Transform parent, string name, Transform source, Vector3 localCenter)
@@ -406,6 +406,9 @@ namespace PoRacer.Systems
             geomObject.transform.SetPositionAndRotation(source.TransformPoint(localCenter), source.rotation);
             return geomObject.AddComponent<MjGeom>();
         }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private static void Log(string message) => Debug.Log(message);
 
         private static Vector3 Abs(Vector3 value) => new(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
 

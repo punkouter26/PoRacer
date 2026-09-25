@@ -20,11 +20,6 @@
             "name": "com.unity.ai.inference",
             "expression": "2.0.0",
             "define": "ISAACPORTS_HAS_INFERENCE"
-        },
-        {
-            "name": "com.unity.robotics.urdf-importer",
-            "expression": "",
-            "define": "ISAACPORTS_HAS_URDF_IMPORTER"
         }
     ],
     "noEngineReferences": false
