@@ -10,13 +10,14 @@ namespace PoRacer.Views
 {
     /// <summary>
     /// Broadcast lower-third: says why the director cut ("DUEL  Crab #1 vs Quad #2",
-    /// "GETTING UP  Isaac H1 #1"). Built once on the HUD's document; a cut only sets one
-    /// string and restarts one fade, so it allocates only when the shot changes.
+    /// "GETTING UP  Isaac H1 #1"). Built once on the HUD's document and shown in its
+    /// announcement lane, so it stacks under the countdown or intro card instead of
+    /// being drawn over them. A cut only sets one string and restarts one fade, so it
+    /// allocates only when the shot changes.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class ShotCaptionView : MonoBehaviour
     {
-        private const float CAPTION_TOP_PERCENT = 18f;
         private const int CAPTION_SHOW_MS = 3200;
         private const int CAPTION_FADE_MS = 300;
         private const float CAPTION_SLIDE_PX = 60f;
@@ -49,6 +50,7 @@ namespace PoRacer.Views
 
         private RaceModel _raceModel;
         private IDisposable _subscription;
+        private VisualElement _root;
         private VisualElement _caption;
         private VisualElement _marker;
         private Label _kindLabel;
@@ -63,19 +65,17 @@ namespace PoRacer.Views
 
         private void Start()
         {
-            VisualElement root = GetComponent<UIDocument>().rootVisualElement;
-            VisualElement safeRoot = UiTheme.BuildSafeRoot(root);
+            _root = GetComponent<UIDocument>().rootVisualElement;
 
+            // Parked in RaceHudView's announcement lane on the first cut, since the two
+            // views start in no guaranteed order.
             _caption = new VisualElement { pickingMode = PickingMode.Ignore };
-            _caption.style.position = Position.Absolute;
-            _caption.style.top = new Length(CAPTION_TOP_PERCENT, LengthUnit.Percent);
-            _caption.style.left = UiTheme.SPACE_MD;
-            _caption.style.maxWidth = new Length(80f, LengthUnit.Percent);
+            _caption.style.maxWidth = new Length(100f, LengthUnit.Percent);
+            _caption.style.marginTop = UiTheme.SPACE_XS;
             _caption.style.flexDirection = FlexDirection.Row;
             _caption.style.alignItems = Align.Center;
             UiTheme.StyleGlassPanel(_caption);
             _caption.style.display = DisplayStyle.None;
-            safeRoot.Add(_caption);
 
             _marker = new VisualElement { pickingMode = PickingMode.Ignore };
             _marker.style.width = MARKER_WIDTH;
@@ -107,7 +107,7 @@ namespace PoRacer.Views
 
         private void OnShotChanged(CameraShotChangedMessage message)
         {
-            if (_caption == null)
+            if (_caption == null || !UiTheme.TryAttach(_root, UiTheme.ANNOUNCE_SLOT, _caption))
             {
                 return;
             }

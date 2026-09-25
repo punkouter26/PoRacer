@@ -52,5 +52,26 @@ namespace PoRacer.Tests
             };
             Assert.That(names, Is.Unique);
         }
+
+        [Test]
+        public void FurnitureBands_HoldATouchTarget()
+        {
+            // Content is laid out between the bands, so each must be at least as tall
+            // as the controls pinned inside it or a button would poke into the content.
+            Assert.That(UiTheme.TopBand, Is.GreaterThanOrEqualTo(UiTheme.CONTROL_SM));
+            Assert.That(UiTheme.BottomBand, Is.GreaterThanOrEqualTo(UiTheme.CONTROL_SM));
+        }
+
+        [Test]
+        public void SharedSlotNames_DoNotCollideWithFurniture()
+        {
+            var names = new[]
+            {
+                UiTheme.FURNITURE_TITLE, UiTheme.FURNITURE_FPS, UiTheme.FURNITURE_MENU,
+                UiTheme.FURNITURE_DBG, UiTheme.FURNITURE_VERSION,
+                UiTheme.RESULTS_PANEL, UiTheme.RESULTS_LEAGUE_PAGE, UiTheme.ANNOUNCE_SLOT,
+            };
+            Assert.That(names, Is.Unique);
+        }
     }
 }

@@ -23,20 +23,15 @@ namespace PoRacer.Views
     {
         private const long BARS_REFRESH_MS = 100;
         private const int NUMBERS_EVERY_N_REFRESHES = 3;
-        private const float GRAPH_HEIGHT = 56f;
-        private const float BARS_HEIGHT = 40f;
+        // Graph and brain column side by side, one shared height: about half the card
+        // the stacked layout needed (graph, legend, divider, header, bars, meter).
+        private const float GRAPH_HEIGHT = 64f;
+        private const float BARS_HEIGHT = 30f;
         private const float METER_HEIGHT = 6f;
-        // Mean change per decision at which the meter reads fully twitchy. A walking
-        // gait sits well under 0.1; 0.5 means outputs swinging a quarter of their range
-        // every decision.
-        private const float JITTER_FULL_SCALE = 0.5f;
         private const float SIDE_MARGIN_PERCENT = 3f;
-        // Clear of the DBG button and version stamp that share the bottom edge.
-        private const float CARD_BOTTOM = 64f;
 
         private RaceTelemetryModel _telemetryModel;
         private RaceModel _raceModel;
-        private EloModel _eloModel;
         private RaceConfigModel _configModel;
         private Systems_CameraDirector _cameraDirector;
 
@@ -44,8 +39,7 @@ namespace PoRacer.Views
         private VisualElement _swatch;
         private Label _nameLabel;
         private Label _teamLabel;
-        private Label _eloLabel;
-        private Label _energyLabel;
+        private Label _energyValue;
         private Label _speedValue;
         private Label _uprightValue;
         private Label _effortValue;
@@ -67,12 +61,11 @@ namespace PoRacer.Views
         private int _shownActionCount = -1;
 
         [Inject]
-        public void Construct(RaceTelemetryModel telemetryModel, RaceModel raceModel, EloModel eloModel,
+        public void Construct(RaceTelemetryModel telemetryModel, RaceModel raceModel,
             RaceConfigModel configModel, Systems_CameraDirector cameraDirector)
         {
             _telemetryModel = telemetryModel;
             _raceModel = raceModel;
-            _eloModel = eloModel;
             _configModel = configModel;
             _cameraDirector = cameraDirector;
         }
@@ -85,13 +78,19 @@ namespace PoRacer.Views
             root.schedule.Execute(Refresh).Every(BARS_REFRESH_MS);
         }
 
+        /// <summary>
+        /// Three rows: who (name, trainer, close), the numbers as one wrapping line, then
+        /// the 15 s graph beside the brain. The numbers are tinted in their graph line's
+        /// colour, so they double as its legend and the legend row is gone.
+        /// </summary>
         private void BuildCard(VisualElement safeRoot)
         {
             _card = new VisualElement();
             _card.style.position = Position.Absolute;
             _card.style.left = new Length(SIDE_MARGIN_PERCENT, LengthUnit.Percent);
             _card.style.right = new Length(SIDE_MARGIN_PERCENT, LengthUnit.Percent);
-            _card.style.bottom = CARD_BOTTOM;
+            // Clear of the DBG button and version stamp that share the bottom band.
+            _card.style.bottom = UiTheme.BottomBand;
             UiTheme.StyleGlassPanel(_card);
             // It carries a button, so it takes its own clicks; InputView reads that as
             // "not a camera tap".
@@ -106,77 +105,72 @@ namespace PoRacer.Views
             _nameLabel = MakeLabel(UiTheme.FONT_MD, UiTheme.Text, bold: true);
             _nameLabel.style.flexGrow = 1f;
             _nameLabel.style.flexShrink = 1f;
+            _nameLabel.style.minWidth = 0f;
+            _nameLabel.style.overflow = Overflow.Hidden;
+            _nameLabel.style.textOverflow = TextOverflow.Ellipsis;
             header.Add(_nameLabel);
-            var closeButton = new Button(OnClose) { text = "X" };
+            _teamLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.Text, bold: true);
+            UiTheme.StyleChip(_teamLabel);
+            _teamLabel.style.flexShrink = 0f;
+            _teamLabel.style.marginRight = UiTheme.SPACE_SM;
+            header.Add(_teamLabel);
+            var closeButton = new Button(OnClose) { text = "\u00D7" };
             closeButton.style.width = UiTheme.CONTROL_SM;
             closeButton.style.height = UiTheme.CONTROL_SM;
-            closeButton.style.fontSize = UiTheme.FONT_SM;
+            closeButton.style.fontSize = UiTheme.FONT_LG;
+            closeButton.style.flexShrink = 0f;
             UiTheme.SetMargin(closeButton, 0f, 0f);
             UiTheme.StyleButton(closeButton);
             UiTheme.AddHover(closeButton);
             header.Add(closeButton);
             _card.Add(header);
 
-            // Who trained it, its rating and what it has spent, on a line of their own so a
-            // long racer name never runs under them.
-            var subheader = Row();
-            subheader.style.marginTop = UiTheme.SPACE_XXS;
-            _teamLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.Text, bold: true);
-            UiTheme.StyleChip(_teamLabel);
-            _teamLabel.style.marginRight = UiTheme.SPACE_SM;
-            subheader.Add(_teamLabel);
-            _eloLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false);
-            _eloLabel.style.marginRight = UiTheme.SPACE_SM;
-            subheader.Add(_eloLabel);
-            _energyLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false);
-            subheader.Add(_energyLabel);
-            _card.Add(subheader);
-
             var stats = Row();
-            stats.style.marginTop = UiTheme.SPACE_SM;
-            stats.Add(MakeStat("M/S", out _speedValue));
-            stats.Add(MakeStat("UPRIGHT", out _uprightValue));
-            stats.Add(MakeStat("EFFORT", out _effortValue));
-            stats.Add(MakeStat("COST/M", out _costValue));
+            stats.style.flexWrap = Wrap.Wrap;
+            stats.style.marginTop = UiTheme.SPACE_XXS;
+            stats.Add(MakeStat("m/s", TelemetryGraph.SpeedColor, out _speedValue));
+            stats.Add(MakeStat("upright", TelemetryGraph.UprightColor, out _uprightValue));
+            stats.Add(MakeStat("effort", TelemetryGraph.EffortColor, out _effortValue));
+            stats.Add(MakeStat("cost/m", UiTheme.Text, out _costValue));
+            stats.Add(MakeStat("kJ", UiTheme.Text, out _energyValue));
             _card.Add(stats);
+
+            var body = Row();
+            body.style.alignItems = Align.Stretch;
+            body.style.marginTop = UiTheme.SPACE_XS;
+            _card.Add(body);
 
             _graph = new TelemetryGraph();
             _graph.style.height = GRAPH_HEIGHT;
-            _graph.style.marginTop = UiTheme.SPACE_SM;
-            _card.Add(_graph);
-            var legend = Row();
-            legend.style.justifyContent = Justify.Center;
-            legend.Add(MakeLegend("speed", TelemetryGraph.SpeedColor));
-            legend.Add(MakeLegend("upright", TelemetryGraph.UprightColor));
-            legend.Add(MakeLegend("effort", TelemetryGraph.EffortColor));
-            _card.Add(legend);
+            _graph.style.flexGrow = 3f;
+            _graph.style.flexBasis = 0f;
+            _graph.style.marginRight = UiTheme.SPACE_SM;
+            body.Add(_graph);
 
-            _card.Add(UiTheme.MakeDivider());
-            _brainHeader = UiTheme.MakeSectionHeader("BRAIN");
-            _brainHeader.pickingMode = PickingMode.Ignore;
-            _card.Add(_brainHeader);
+            var brain = new VisualElement { pickingMode = PickingMode.Ignore };
+            brain.style.flexGrow = 2f;
+            brain.style.flexBasis = 0f;
+            brain.style.justifyContent = Justify.SpaceBetween;
+            body.Add(brain);
+            _brainHeader = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: true);
+            _brainHeader.style.letterSpacing = 1f;
+            brain.Add(_brainHeader);
             _bars = new PolicyBarsGraph();
             _bars.style.height = BARS_HEIGHT;
-            _card.Add(_bars);
+            brain.Add(_bars);
 
-            var jitterRow = Row();
-            jitterRow.style.marginTop = UiTheme.SPACE_XS;
-            jitterRow.Add(MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: true, "CALM"));
+            // Calm on the left, twitchy on the right; the header names the scale.
             var track = new VisualElement { pickingMode = PickingMode.Ignore };
-            track.style.flexGrow = 1f;
             track.style.height = METER_HEIGHT;
             track.style.backgroundColor = UiTheme.TrackBg;
             UiTheme.SetRadius(track, METER_HEIGHT * 0.5f);
-            UiTheme.SetMargin(track, 0f, UiTheme.SPACE_SM);
             _jitterFill = new VisualElement { pickingMode = PickingMode.Ignore };
             _jitterFill.style.height = METER_HEIGHT;
             _jitterFill.style.width = new Length(0f, LengthUnit.Percent);
             _jitterFill.style.backgroundColor = UiTheme.AccentSoft;
             UiTheme.SetRadius(_jitterFill, METER_HEIGHT * 0.5f);
             track.Add(_jitterFill);
-            jitterRow.Add(track);
-            jitterRow.Add(MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: true, "TWITCHY"));
-            _card.Add(jitterRow);
+            brain.Add(track);
         }
 
         private void Refresh()
@@ -210,8 +204,7 @@ namespace PoRacer.Views
 
             _bars.MarkDirtyRepaint();
             _graph.RefreshIfChanged();
-            float jitter = Mathf.Clamp01(telemetry.Jitter / JITTER_FULL_SCALE);
-            _jitterFill.style.width = new Length(jitter * 100f, LengthUnit.Percent);
+            _jitterFill.style.width = new Length(telemetry.Twitchiness * 100f, LengthUnit.Percent);
 
             _refreshCount++;
             if (_refreshCount % NUMBERS_EVERY_N_REFRESHES == 0)
@@ -227,7 +220,6 @@ namespace PoRacer.Views
             _nameLabel.text = racer.DisplayName;
             _teamLabel.text = TrainerTeams.DisplayName(racer.TrainedBy);
             _teamLabel.style.color = TrainerTeams.ColorOf(racer.TrainedBy);
-            _eloLabel.text = $"ELO {_eloModel.GetRating(racer.CreatureId):0}";
             _graph.Bind(telemetry);
             _bars.Bind(telemetry);
             _shownSpeed = int.MinValue;
@@ -270,14 +262,14 @@ namespace PoRacer.Views
             if (energy != _shownEnergy)
             {
                 _shownEnergy = energy;
-                _energyLabel.text = telemetry.HasPower ? $"{energy / 10f:0.0} kJ spent" : string.Empty;
+                _energyValue.text = telemetry.HasPower ? $"{energy / 10f:0.0}" : "—";
             }
             if (telemetry.ActionCount != _shownActionCount)
             {
                 _shownActionCount = telemetry.ActionCount;
                 _brainHeader.text = telemetry.ActionCount > 0
-                    ? $"BRAIN  {telemetry.ActionCount} OUTPUTS"
-                    : "BRAIN  NOT REPORTED";
+                    ? $"BRAIN · {telemetry.ActionCount} · TWITCH"
+                    : "BRAIN · NOT REPORTED";
             }
         }
 
@@ -307,27 +299,18 @@ namespace PoRacer.Views
             return label;
         }
 
-        private static VisualElement MakeStat(string caption, out Label value)
+        /// <summary>One inline reading: the value in its graph colour, then its unit.</summary>
+        private static VisualElement MakeStat(string unit, Color color, out Label value)
         {
-            var tile = new VisualElement { pickingMode = PickingMode.Ignore };
-            tile.style.flexGrow = 1f;
-            tile.style.flexBasis = 0f;
-            tile.style.alignItems = Align.Center;
-            value = MakeLabel(UiTheme.FONT_LG, UiTheme.Text, bold: true, "—");
-            tile.Add(value);
-            tile.Add(MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: true, caption));
-            return tile;
-        }
-
-        private static VisualElement MakeLegend(string text, Color color)
-        {
-            var item = Row();
-            UiTheme.SetMargin(item, 0f, UiTheme.SPACE_SM);
-            VisualElement swatch = UiTheme.MakeSwatch(color, UiTheme.SPACE_SM);
-            swatch.style.marginRight = UiTheme.SPACE_XS;
-            item.Add(swatch);
-            item.Add(MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false, text));
-            return item;
+            var stat = Row();
+            stat.style.alignItems = Align.FlexEnd;
+            stat.style.marginRight = UiTheme.SPACE_SM;
+            value = MakeLabel(UiTheme.FONT_SM, color, bold: true, "—");
+            stat.Add(value);
+            Label unitLabel = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false, unit);
+            unitLabel.style.marginLeft = UiTheme.SPACE_XXS;
+            stat.Add(unitLabel);
+            return stat;
         }
     }
 }

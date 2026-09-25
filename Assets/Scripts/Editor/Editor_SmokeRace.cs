@@ -66,9 +66,6 @@ namespace PoRacer.EditorTools
         // panel's entrance animation to have landed, early enough to be well inside
         // the hold.
         private const float RESULTS_AUDIT_DELAY_SECONDS = 2f;
-        // Settling time after the menu's NEXT button is driven, so UI Toolkit has run
-        // a layout pass before the racer screen is measured.
-        private const float MENU_SETTLE_SECONDS = 0.5f;
         private const string FRUIT_ROOT = "FruitPour";
         // Portrait readability gate, in panel units (dp at the 420 dp reference):
         // Android's body-text and touch-target minimums, and how far into a corner
@@ -79,18 +76,31 @@ namespace PoRacer.EditorTools
         private const float RACE_AUDIT_DELAY_SECONDS = 4f;
 
         /// <summary>
-        /// Panel height, in panel units, of the phone this layout actually has to fit.
+        /// The phones this layout has to fit, as dp screen sizes. The panel matches on
+        /// width to a 420-unit reference, so each resolves to 420 x (420 * h / w) panel
+        /// units, and that height is what the vertical checks are made against.
         ///
         /// Every other assertion here is a fraction of the panel and so is aspect-proof.
         /// The vertical budget is not, and the editor hides the problem rather than
         /// showing it: a game view measured at 960 x 2658 resolves to a 420 x 1163
-        /// panel, while a 1080 x 2400 handset at ~400 dpi is 432 x 960 dp and, matched
-        /// on width to the 420 reference, resolves to 420 x 933. So the editor validates
-        /// the menu against a screen 230 units TALLER than the target — which is 25%
-        /// more room than the roster will ever have, on the one screen whose whole
-        /// design constraint is fitting without scrolling.
+        /// panel, while a 1080 x 2400 handset at ~400 dpi is 432 x 960 dp and resolves
+        /// to 420 x 933. So the editor validates the menu against a screen 230 units
+        /// TALLER than the target. One size used to be checked (the 432 x 960 phone);
+        /// the zero-scroll rule has to hold on the short end of the range too, where a
+        /// 360 x 640 dp handset leaves only 747 units.
         /// </summary>
-        private const float HANDSET_PANEL_DP = 933f;
+        private static readonly Vector2[] HandsetsDp =
+        {
+            new(360f, 640f),
+            new(390f, 844f),
+            new(432f, 960f),
+        };
+
+        /// <summary>Panel reference width; must match RaceHudPanelSettings and UiTheme.</summary>
+        private const float PANEL_REFERENCE_WIDTH = 420f;
+
+        // Slack for sub-pixel layout rounding before an edge counts as crossed.
+        private const float EDGE_TOLERANCE_DP = 1f;
 
         [Serializable]
         private sealed class Job
@@ -168,12 +178,6 @@ namespace PoRacer.EditorTools
         private enum Phase
         {
             WaitScope,
-            // The menu's second screen, reached by driving NEXT. It has to be audited
-            // separately because it is the one with the roster on it: the map screen
-            // is what WaitScope catches, and for months it was all that ever got
-            // checked — which is how eight rows of 42 dp count buttons stayed
-            // invisible to a touch-target audit.
-            MenuRacers,
             WaitRaceStart,
             Racing,
             Results,
@@ -314,28 +318,14 @@ namespace PoRacer.EditorTools
                 case Phase.WaitScope:
                     if (TryResolve())
                     {
-                        AuditUi("menu-map");
-                        // Onto the roster screen, through the button a player would
-                        // press rather than by poking MenuView's private _mapStep.
-                        if (!DriveButton("NEXT"))
-                        {
-                            Record("error", "ui-audit[menu-map]: no NEXT button to reach the roster screen",
-                                string.Empty);
-                        }
-                        _phase = Phase.MenuRacers;
-                        _phaseStart = EditorApplication.timeSinceStartup;
+                        // One menu screen now: the map tabs and the roster together.
+                        AuditUi("menu");
+                        StartRaceStep();
                     }
                     else if (elapsed > SCOPE_TIMEOUT_SECONDS)
                     {
                         Record("error", "smoke: no built LifetimeScope after " + SCOPE_TIMEOUT_SECONDS + " s", "");
                         Finish("no LifetimeScope");
-                    }
-                    break;
-                case Phase.MenuRacers:
-                    if (elapsed > MENU_SETTLE_SECONDS)
-                    {
-                        AuditUi("menu-racers");
-                        StartRaceStep();
                     }
                     break;
                 case Phase.WaitRaceStart:
@@ -438,26 +428,58 @@ namespace PoRacer.EditorTools
             return _warmup.IsComplete;
         }
 
+        /// <summary>How an element takes part in the vertical budget.</summary>
+        private enum Role
+        {
+            /// <summary>Judged by where it sits: top two thirds flow, bottom third anchored.</summary>
+            ByPosition,
+            /// <summary>Inside a bottom-anchored sheet that grows upward: moves with the panel.</summary>
+            Anchored,
+            /// <summary>Moves with the race (rail badges): no fixed place to budget for.</summary>
+            Exempt,
+        }
+
+        /// <summary>One shown label or button, as the audit measured it.</summary>
+        private readonly struct Measured
+        {
+            public readonly string Name;
+            public readonly string Text;
+            public readonly Rect Bound;
+            public readonly bool IsButton;
+            public readonly bool InScroll;
+            public readonly bool Settled;
+            public readonly Role Role;
+
+            public Measured(string name, string text, Rect bound, bool isButton, bool inScroll, bool settled, Role role)
+            {
+                Name = name;
+                Text = text;
+                Bound = bound;
+                IsButton = isButton;
+                InScroll = inScroll;
+                Settled = settled;
+                Role = role;
+            }
+        }
+
         /// <summary>
         /// Walks every visible label and button in every UI document on screen and
-        /// records a violation for text under MIN_BODY_DP, controls under
-        /// MIN_TOUCH_DP, and any of the five furniture anchors out of its corner.
-        /// Violations land in the report as errors, so a build that breaks the
-        /// HUD layout fails the smoke run the same way an exception would.
+        /// records a violation for:
+        ///   * text under MIN_BODY_DP and controls under MIN_TOUCH_DP;
+        ///   * any of the five furniture anchors out of its corner;
+        ///   * anything drawn past the edge of the screen;
+        ///   * any other element overlapping a furniture anchor;
+        ///   * a ScrollView whose content does not fit its viewport, on each handset;
+        ///   * flow content running into the bottom controls, on each handset.
+        /// Violations land in the report as errors, so a build that breaks the HUD
+        /// layout fails the smoke run the same way an exception would.
         /// </summary>
         private static void AuditUi(string when)
         {
             UIDocument[] documents = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
-            int labels = 0;
-            int buttons = 0;
-            var found = new Dictionary<string, Rect>();
+            var measured = new List<Measured>();
+            var scrolls = new List<ScrollView>();
             Rect panel = default;
-            // Split at the same fraction the corner checks use: anything whose centre
-            // sits below it is bottom-anchored furniture that moves with the panel,
-            // anything above is flow content that does not. The vertical-budget check
-            // below needs to tell the two apart.
-            float contentBottom = 0f;
-            float anchoredTop = float.PositiveInfinity;
             for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
             {
                 VisualElement root = documents[documentIndex].rootVisualElement;
@@ -471,60 +493,23 @@ namespace PoRacer.EditorTools
                 }
                 root.Query<Label>().ForEach(label =>
                 {
-                    if (!IsShown(label) || string.IsNullOrEmpty(label.text))
+                    if (IsShown(label) && !string.IsNullOrEmpty(label.text))
                     {
-                        return;
-                    }
-                    labels++;
-                    float size = label.resolvedStyle.fontSize;
-                    if (size < MIN_BODY_DP - 0.01f)
-                    {
-                        Record("error", $"ui-audit[{when}]: label '{Trim(label.text)}' is {size:0.0} dp, under {MIN_BODY_DP}", string.Empty);
-                    }
-                    if (!string.IsNullOrEmpty(label.name) && label.name.StartsWith("Furniture."))
-                    {
-                        found[label.name] = label.worldBound;
-                    }
-                    Rect labelBound = label.worldBound;
-                    if (IsFlowContent(labelBound, panel) && labelBound.yMax > contentBottom)
-                    {
-                        contentBottom = labelBound.yMax;
+                        measured.Add(Measure(label, label.text, isButton: false));
                     }
                 });
                 root.Query<Button>().ForEach(button =>
                 {
-                    if (!IsShown(button))
+                    if (IsShown(button))
                     {
-                        return;
+                        measured.Add(Measure(button, button.text, isButton: true));
                     }
-                    buttons++;
-                    Rect bound = button.worldBound;
-                    if (bound.height < MIN_TOUCH_DP - 0.5f)
+                });
+                root.Query<ScrollView>().ForEach(scroll =>
+                {
+                    if (IsShown(scroll))
                     {
-                        Record("error", $"ui-audit[{when}]: button '{Trim(button.text)}' is {bound.height:0} dp tall, under {MIN_TOUCH_DP}", string.Empty);
-                    }
-                    // Width as well as height, because height alone let the real defect
-                    // through: the roster's count cells were 42 x 60 dp and passed this
-                    // audit for months. In a horizontal segmented control width is the
-                    // axis a finger misses on, and it is the axis nothing was checking.
-                    if (bound.width < MIN_TOUCH_DP - 0.5f)
-                    {
-                        Record("error", $"ui-audit[{when}]: button '{Trim(button.text)}' is {bound.width:0} dp wide, under {MIN_TOUCH_DP}", string.Empty);
-                    }
-                    if (!string.IsNullOrEmpty(button.name) && button.name.StartsWith("Furniture."))
-                    {
-                        found[button.name] = bound;
-                    }
-                    if (IsFlowContent(bound, panel))
-                    {
-                        if (bound.yMax > contentBottom)
-                        {
-                            contentBottom = bound.yMax;
-                        }
-                    }
-                    else if (bound.y < anchoredTop)
-                    {
-                        anchoredTop = bound.y;
+                        scrolls.Add(scroll);
                     }
                 });
             }
@@ -537,27 +522,226 @@ namespace PoRacer.EditorTools
             {
                 _step.panelHeightDp = panel.height;
             }
-            // The five anchors. The menu screens have no MENU button of their own by
-            // design; DebugOverlay owns the FPS readout on every screen.
+
+            // Split at the same fraction the corner checks use: anything whose centre
+            // sits below it is bottom-anchored furniture that moves with the panel,
+            // anything above is flow content that does not. The vertical-budget check
+            // needs to tell the two apart.
+            var found = new Dictionary<string, Rect>();
+            float contentBottom = 0f;
+            float anchoredTop = float.PositiveInfinity;
+            int labels = 0;
+            int buttons = 0;
+            for (int index = 0; index < measured.Count; index++)
+            {
+                Measured item = measured[index];
+                if (IsFurniture(item.Name))
+                {
+                    found[item.Name] = item.Bound;
+                }
+                if (!item.IsButton)
+                {
+                    labels++;
+                    if (IsFlowContent(item, panel) && item.Bound.yMax > contentBottom)
+                    {
+                        contentBottom = item.Bound.yMax;
+                    }
+                    continue;
+                }
+                buttons++;
+                Rect bound = item.Bound;
+                if (bound.height < MIN_TOUCH_DP - 0.5f)
+                {
+                    Record("error", $"ui-audit[{when}]: button '{Trim(item.Text)}' is {bound.height:0} dp tall, under {MIN_TOUCH_DP}", string.Empty);
+                }
+                // Width as well as height, because height alone let the real defect
+                // through: the roster's count cells were 42 x 60 dp and passed this
+                // audit for months. In a horizontal segmented control width is the
+                // axis a finger misses on, and it is the axis nothing was checking.
+                if (bound.width < MIN_TOUCH_DP - 0.5f)
+                {
+                    Record("error", $"ui-audit[{when}]: button '{Trim(item.Text)}' is {bound.width:0} dp wide, under {MIN_TOUCH_DP}", string.Empty);
+                }
+                if (IsFlowContent(item, panel))
+                {
+                    if (bound.yMax > contentBottom)
+                    {
+                        contentBottom = bound.yMax;
+                    }
+                }
+                else if (item.Role != Role.Exempt && bound.y < anchoredTop)
+                {
+                    anchoredTop = bound.y;
+                }
+            }
+            ExpectReadableText(when, documents);
+
+            // The five anchors. The menu screen has no MENU button of its own on a
+            // device that cannot vibrate, but wherever one is drawn it must sit in its
+            // corner; DebugOverlay owns the FPS readout everywhere.
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_TITLE, left: true, top: true);
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_VERSION, left: false, top: false);
             ExpectCorner(when, found, panel, UiTheme.FURNITURE_DBG, left: true, top: false);
             ExpectCentreTop(when, found, panel, UiTheme.FURNITURE_FPS);
-            if (when == "race" || when == "results")
+            if (when == "race" || when == "results" || found.ContainsKey(UiTheme.FURNITURE_MENU))
             {
                 ExpectCorner(when, found, panel, UiTheme.FURNITURE_MENU, left: false, top: true);
             }
-            ExpectHandsetFit(when, panel, contentBottom, anchoredTop);
-            Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, "
+            ExpectOnScreen(when, measured, panel);
+            ExpectClearOfFurniture(when, measured, found);
+            for (int handsetIndex = 0; handsetIndex < HandsetsDp.Length; handsetIndex++)
+            {
+                Vector2 handset = HandsetsDp[handsetIndex];
+                float handsetPanel = PANEL_REFERENCE_WIDTH * handset.y / handset.x;
+                string label = $"{handset.x:0}x{handset.y:0}";
+                ExpectHandsetFit(when, label, handsetPanel, panel, contentBottom, anchoredTop);
+                ExpectNoScroll(when, label, handsetPanel, panel, scrolls);
+            }
+            Debug.Log($"[SmokeRace] ui-audit[{when}]: {labels} labels, {buttons} buttons, {scrolls.Count} scroll views, "
                 + $"{found.Count} furniture anchors, panel {panel.height:0} dp");
+        }
+
+        private static Measured Measure(VisualElement element, string text, bool isButton)
+        {
+            bool inScroll = false;
+            bool settled = true;
+            Role role = Role.ByPosition;
+            for (VisualElement node = element; node != null; node = node.parent)
+            {
+                if (node is ScrollView)
+                {
+                    inScroll = true;
+                }
+                // By container, not by where it happens to be on screen: a rail badge
+                // crosses the one-third line as the race runs, and a results sheet
+                // grown upward from the bottom band straddles it.
+                if (node.name == UiTheme.PROGRESS_RAIL)
+                {
+                    role = Role.Exempt;
+                }
+                else if (node.name == UiTheme.RESULTS_PANEL && role == Role.ByPosition)
+                {
+                    role = Role.Anchored;
+                }
+                // Mid-animation (fading or sliding in) an element is not where it will
+                // rest, so edge and overlap checks skip it rather than report a frame.
+                if (node.resolvedStyle.opacity < 0.99f)
+                {
+                    settled = false;
+                }
+                Translate translate = node.resolvedStyle.translate;
+                if (Mathf.Abs(translate.x.value) > 0.5f || Mathf.Abs(translate.y.value) > 0.5f)
+                {
+                    settled = false;
+                }
+                // The banner pops in from 1.6x scale.
+                Vector3 scale = node.resolvedStyle.scale.value;
+                if (Mathf.Abs(scale.x - 1f) > 0.01f || Mathf.Abs(scale.y - 1f) > 0.01f)
+                {
+                    settled = false;
+                }
+            }
+            return new Measured(element.name, text, element.worldBound, isButton, inScroll, settled, role);
+        }
+
+        private static bool IsFurniture(string name)
+        {
+            return !string.IsNullOrEmpty(name) && name.StartsWith("Furniture.", StringComparison.Ordinal);
+        }
+
+        /// <summary>Body-text floor: no shown label renders under Android's 14 sp.</summary>
+        private static void ExpectReadableText(string when, UIDocument[] documents)
+        {
+            for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
+            {
+                VisualElement root = documents[documentIndex].rootVisualElement;
+                if (root == null || root.resolvedStyle.display == DisplayStyle.None)
+                {
+                    continue;
+                }
+                root.Query<Label>().ForEach(label =>
+                {
+                    if (!IsShown(label) || string.IsNullOrEmpty(label.text))
+                    {
+                        return;
+                    }
+                    float size = label.resolvedStyle.fontSize;
+                    if (size < MIN_BODY_DP - 0.01f)
+                    {
+                        Record("error", $"ui-audit[{when}]: label '{Trim(label.text)}' is {size:0.0} dp, under {MIN_BODY_DP}", string.Empty);
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Nothing may be drawn past the screen edge. Scroll content is left to
+        /// <see cref="ExpectNoScroll"/>, which reports the cause rather than each row.
+        /// </summary>
+        private static void ExpectOnScreen(string when, List<Measured> measured, Rect panel)
+        {
+            for (int index = 0; index < measured.Count; index++)
+            {
+                Measured item = measured[index];
+                if (item.InScroll || !item.Settled)
+                {
+                    continue;
+                }
+                Rect bound = item.Bound;
+                bool off = bound.xMin < panel.xMin - EDGE_TOLERANCE_DP
+                    || bound.xMax > panel.xMax + EDGE_TOLERANCE_DP
+                    || bound.yMin < panel.yMin - EDGE_TOLERANCE_DP
+                    || bound.yMax > panel.yMax + EDGE_TOLERANCE_DP;
+                if (off)
+                {
+                    Record("error", $"ui-audit[{when}]: '{Trim(item.Text)}' runs off screen "
+                        + $"({bound.xMin:0},{bound.yMin:0})-({bound.xMax:0},{bound.yMax:0}) "
+                        + $"in a {panel.width:0}x{panel.height:0} panel", string.Empty);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The five anchors own their corners: no other label or button may be drawn
+        /// over one of them.
+        /// </summary>
+        private static void ExpectClearOfFurniture(string when, List<Measured> measured, Dictionary<string, Rect> found)
+        {
+            foreach (KeyValuePair<string, Rect> anchor in found)
+            {
+                for (int index = 0; index < measured.Count; index++)
+                {
+                    Measured item = measured[index];
+                    if (IsFurniture(item.Name) || !item.Settled)
+                    {
+                        continue;
+                    }
+                    Rect overlap = Rect.MinMaxRect(
+                        Mathf.Max(item.Bound.xMin, anchor.Value.xMin),
+                        Mathf.Max(item.Bound.yMin, anchor.Value.yMin),
+                        Mathf.Min(item.Bound.xMax, anchor.Value.xMax),
+                        Mathf.Min(item.Bound.yMax, anchor.Value.yMax));
+                    if (overlap.width > EDGE_TOLERANCE_DP && overlap.height > EDGE_TOLERANCE_DP)
+                    {
+                        Record("error", $"ui-audit[{when}]: '{Trim(item.Text)}' overlaps {anchor.Key}", string.Empty);
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// True for an element that scrolls or flows with the layout, false for the
-        /// bottom-anchored furniture. Split on the same fraction the corner checks use.
+        /// bottom-anchored furniture. Elements whose container settles it are classed
+        /// by that (see <see cref="Measure"/>); the rest split on the same fraction the
+        /// corner checks use.
         /// </summary>
-        private static bool IsFlowContent(Rect bound, Rect panel)
+        private static bool IsFlowContent(Measured item, Rect panel)
         {
+            if (item.Role != Role.ByPosition)
+            {
+                return false;
+            }
+            Rect bound = item.Bound;
             if (panel.height <= 0f || bound.height <= 0f || float.IsNaN(bound.y))
             {
                 return false;
@@ -577,68 +761,53 @@ namespace PoRacer.EditorTools
         /// scrolling" budget could be 44 units from overflowing into the START button
         /// and look comfortable in the editor.
         ///
-        /// So the assertion is made against <see cref="HANDSET_PANEL_DP"/>, not against
+        /// So the assertion is made against each handset's panel height, not against
         /// the panel being rendered: content must clear the furniture with the screen's
         /// surplus height subtracted. A game view already at or below handset height
         /// needs no correction and is checked as it stands.
         /// </summary>
-        private static void ExpectHandsetFit(string when, Rect panel, float contentBottom, float anchoredTop)
+        private static void ExpectHandsetFit(string when, string handset, float handsetPanel, Rect panel,
+            float contentBottom, float anchoredTop)
         {
             if (contentBottom <= 0f || float.IsPositiveInfinity(anchoredTop))
             {
                 return;
             }
-            float surplus = Mathf.Max(0f, panel.height - HANDSET_PANEL_DP);
+            float surplus = Mathf.Max(0f, panel.height - handsetPanel);
             float budget = anchoredTop - surplus;
             if (contentBottom > budget)
             {
                 Record("error",
-                    $"ui-audit[{when}]: content reaches {contentBottom:0} dp but on a {HANDSET_PANEL_DP:0} dp "
-                    + $"handset the bottom controls start at {budget:0} dp "
-                    + $"(panel is {panel.height:0} dp, {surplus:0} dp taller than the target)",
+                    $"ui-audit[{when}] {handset}: content reaches {contentBottom:0} dp but the bottom controls "
+                    + $"start at {budget:0} dp (panel is {panel.height:0} dp, {surplus:0} dp taller than this handset)",
                     string.Empty);
                 return;
             }
-            Debug.Log($"[SmokeRace] ui-audit[{when}]: vertical budget OK — {budget - contentBottom:0} dp "
-                + $"spare against a {HANDSET_PANEL_DP:0} dp handset");
+            Debug.Log($"[SmokeRace] ui-audit[{when}] {handset}: vertical budget OK — {budget - contentBottom:0} dp spare");
         }
 
         /// <summary>
-        /// Presses the first visible button whose text starts with
-        /// <paramref name="textPrefix"/>, through the same submit event a real press
-        /// raises — so the audit drives the menu the way a player does rather than
-        /// reaching into MenuView's private screen state.
+        /// The zero-scroll rule. A ScrollView here is a safety net, never the reading
+        /// mode, so its content must fit its viewport on every handset. Scroll views in
+        /// this UI flex to fill the space left over, so on a handset shorter than the
+        /// panel the viewport loses exactly the surplus height, and a taller one gains it.
         /// </summary>
-        private static bool DriveButton(string textPrefix)
+        private static void ExpectNoScroll(string when, string handset, float handsetPanel, Rect panel,
+            List<ScrollView> scrolls)
         {
-            UIDocument[] documents = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
-            for (int documentIndex = 0; documentIndex < documents.Length; documentIndex++)
+            for (int scrollIndex = 0; scrollIndex < scrolls.Count; scrollIndex++)
             {
-                VisualElement root = documents[documentIndex].rootVisualElement;
-                if (root == null || root.resolvedStyle.display == DisplayStyle.None)
+                ScrollView scroll = scrolls[scrollIndex];
+                float content = scroll.contentContainer.layout.height;
+                float viewport = scroll.contentViewport.layout.height + (handsetPanel - panel.height);
+                if (content > viewport + EDGE_TOLERANCE_DP)
                 {
-                    continue;
-                }
-                Button match = null;
-                root.Query<Button>().ForEach(button =>
-                {
-                    if (match == null && IsShown(button) && !string.IsNullOrEmpty(button.text)
-                        && button.text.StartsWith(textPrefix, StringComparison.Ordinal))
-                    {
-                        match = button;
-                    }
-                });
-                if (match != null)
-                {
-                    using (NavigationSubmitEvent submit = NavigationSubmitEvent.GetPooled())
-                    {
-                        submit.target = match;
-                        match.SendEvent(submit);
-                    }
-                    return true;
+                    Record("error",
+                        $"ui-audit[{when}] {handset}: a list scrolls — {content:0} dp of content in a "
+                        + $"{viewport:0} dp viewport ({content - viewport:0} dp hidden)",
+                        string.Empty);
                 }
             }
-            return false;
         }
 
         /// <summary>Racers still on the grid, by active RacerView count.</summary>

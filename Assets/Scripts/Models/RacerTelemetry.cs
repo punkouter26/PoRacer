@@ -85,6 +85,16 @@ namespace PoRacer.Models
         /// <summary>Mean |change| of the outputs per decision, smoothed. 0 = calm, 2 = flipping end to end.</summary>
         public float Jitter { get; set; }
 
+        /// <summary>
+        /// <see cref="Jitter"/> at which a calm-to-twitchy readout reads fully twitchy. A
+        /// walking gait sits well under 0.1; 0.5 means outputs swinging a quarter of their
+        /// range every decision.
+        /// </summary>
+        public const float JITTER_FULL_SCALE = 0.5f;
+
+        /// <summary>Jitter as 0 (calm) .. 1 (twitchy), for meters and tables.</summary>
+        public float Twitchiness => Jitter <= 0f ? 0f : (Jitter >= JITTER_FULL_SCALE ? 1f : Jitter / JITTER_FULL_SCALE);
+
         public float[] SpeedHistory { get; } = new float[HISTORY_LENGTH];
         public float[] UprightHistory { get; } = new float[HISTORY_LENGTH];
         public float[] EffortHistory { get; } = new float[HISTORY_LENGTH];

@@ -14,6 +14,13 @@ namespace PoRacer.CreatureRace
     /// speed, state), a centre banner for 3-2-1-GO, and a results panel with times and the
     /// series tally. Refreshed on a 100 ms schedule by reading the model (DOCS/Plan-P1-Worm.md
     /// D5), and text is only rebuilt when the value it shows actually changed.
+    ///
+    /// Layout follows the game's portrait corner rules (UiTheme in PoRacer.Runtime, which this
+    /// standalone assembly does not reference): title top-left, fps top-centre, version
+    /// bottom-right, inside the device safe area. The status card spans the width under the
+    /// top band and the results sit above the bottom band, both capped at CARD_MAX_WIDTH so a
+    /// landscape window keeps the old card size. The harness has no menu to return to and no
+    /// debug sheet, so the MENU and DBG corners stay empty rather than hold a dead button.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     [DisallowMultipleComponent]
@@ -24,13 +31,20 @@ namespace PoRacer.CreatureRace
         private const float BASE_FONT_SIZE = 18f;
         private const float SMALL_FONT_SIZE = 14f;
         private const float BANNER_FONT_SIZE = 120f;
-        private const float EDGE_MARGIN = 16f;
-        private const float CARD_PADDING = 12f;
+        private const float EDGE_MARGIN = 8f;
+        private const float CARD_PADDING = 8f;
         private const float CARD_RADIUS = 8f;
         private const float SWATCH_SIZE = 16f;
-        private const float CARD_WIDTH = 560f;
+        private const float CARD_MAX_WIDTH = 560f;
+        // One furniture band, matching the game's 48 dp touch-height bands.
+        private const float BAND_HEIGHT = 48f;
         private const float BANNER_TOP_PERCENT = 30f;
+        private const float FPS_WINDOW_SECONDS = 0.5f;
         private const string GO_TEXT = "GO!";
+        // Same element names as UiTheme's furniture, so one audit can find both HUDs' anchors.
+        private const string FURNITURE_TITLE = "Furniture.Title";
+        private const string FURNITURE_FPS = "Furniture.Fps";
+        private const string FURNITURE_VERSION = "Furniture.Version";
 
         private static readonly Color PanelColor = new(0.05f, 0.06f, 0.08f, 0.78f);
         private static readonly Color TextColor = new(0.96f, 0.96f, 0.96f, 1f);
@@ -50,6 +64,10 @@ namespace PoRacer.CreatureRace
 
         private Label _headerLabel;
         private Label _messageLabel;
+        private Label _fpsLabel;
+        private int _fpsFrames;
+        private float _fpsSeconds;
+        private int _shownFps = -1;
         private Label _bannerLabel;
         private VisualElement _resultsPanel;
         private Label _resultsLabel;
@@ -99,6 +117,12 @@ namespace PoRacer.CreatureRace
             Refresh();
         }
 
+        private void Update()
+        {
+            _fpsFrames++;
+            _fpsSeconds += Time.unscaledDeltaTime;
+        }
+
         private void OnDestroy()
         {
             _countdownSubscription?.Dispose();
@@ -111,13 +135,16 @@ namespace PoRacer.CreatureRace
         private void Build(VisualElement root)
         {
             root.pickingMode = PickingMode.Ignore;
+            VisualElement safe = BuildSafeRoot(root);
+            BuildFurniture(safe);
 
             VisualElement card = Panel();
             card.style.position = Position.Absolute;
             card.style.left = EDGE_MARGIN;
-            card.style.top = EDGE_MARGIN;
-            card.style.width = CARD_WIDTH;
-            root.Add(card);
+            card.style.right = EDGE_MARGIN;
+            card.style.top = BAND_HEIGHT + EDGE_MARGIN;
+            card.style.maxWidth = CARD_MAX_WIDTH;
+            safe.Add(card);
 
             _headerLabel = Text(string.Empty, BASE_FONT_SIZE, TextColor, true);
             card.Add(_headerLabel);
@@ -137,17 +164,96 @@ namespace PoRacer.CreatureRace
             _bannerLabel.style.top = Length.Percent(BANNER_TOP_PERCENT);
             _bannerLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             _bannerLabel.style.display = DisplayStyle.None;
-            root.Add(_bannerLabel);
+            safe.Add(_bannerLabel);
 
             _resultsPanel = Panel();
             _resultsPanel.style.position = Position.Absolute;
+            _resultsPanel.style.left = EDGE_MARGIN;
             _resultsPanel.style.right = EDGE_MARGIN;
-            _resultsPanel.style.bottom = EDGE_MARGIN;
+            _resultsPanel.style.bottom = BAND_HEIGHT + EDGE_MARGIN;
+            _resultsPanel.style.maxWidth = CARD_MAX_WIDTH;
             _resultsPanel.style.display = DisplayStyle.None;
-            _resultsLabel = Text(string.Empty, BASE_FONT_SIZE, TextColor, false);
+            _resultsLabel = Text(string.Empty, SMALL_FONT_SIZE, TextColor, false);
             _resultsLabel.style.whiteSpace = WhiteSpace.Normal;
             _resultsPanel.Add(_resultsLabel);
-            root.Add(_resultsPanel);
+            safe.Add(_resultsPanel);
+        }
+
+        /// <summary>Title top-left, fps top-centre, version bottom-right, one band tall each.</summary>
+        private void BuildFurniture(VisualElement safe)
+        {
+            Label title = Text(_config.Title, BASE_FONT_SIZE, BannerColor, true);
+            title.name = FURNITURE_TITLE;
+            Pin(title, left: EDGE_MARGIN, right: -1f, top: true);
+            title.style.unityTextAlign = TextAnchor.MiddleLeft;
+            safe.Add(title);
+
+            _fpsLabel = Text(string.Empty, SMALL_FONT_SIZE, TextColor, true);
+            _fpsLabel.name = FURNITURE_FPS;
+            Pin(_fpsLabel, left: 0f, right: 0f, top: true);
+            _fpsLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            safe.Add(_fpsLabel);
+
+            Label version = Text($"v{Application.version}", SMALL_FONT_SIZE, DimTextColor, false);
+            version.name = FURNITURE_VERSION;
+            Pin(version, left: -1f, right: EDGE_MARGIN, top: false);
+            version.style.unityTextAlign = TextAnchor.MiddleRight;
+            safe.Add(version);
+        }
+
+        /// <summary>Pins a label into a furniture band; a negative inset leaves that side free.</summary>
+        private static void Pin(VisualElement element, float left, float right, bool top)
+        {
+            element.style.position = Position.Absolute;
+            element.style.height = BAND_HEIGHT;
+            if (left >= 0f)
+            {
+                element.style.left = left;
+            }
+            if (right >= 0f)
+            {
+                element.style.right = right;
+            }
+            if (top)
+            {
+                element.style.top = 0f;
+            }
+            else
+            {
+                element.style.bottom = 0f;
+            }
+        }
+
+        /// <summary>
+        /// Full-screen layer inset by the device safe area (notches, rounded corners, home
+        /// bars), the same rule as UiTheme.BuildSafeRoot in the game assembly.
+        /// </summary>
+        private static VisualElement BuildSafeRoot(VisualElement root)
+        {
+            var safe = new VisualElement { pickingMode = PickingMode.Ignore };
+            safe.style.position = Position.Absolute;
+            safe.style.left = 0f;
+            safe.style.top = 0f;
+            safe.style.right = 0f;
+            safe.style.bottom = 0f;
+            root.Add(safe);
+            safe.RegisterCallback<GeometryChangedEvent>(_ => ApplySafeInsets(root, safe));
+            return safe;
+        }
+
+        private static void ApplySafeInsets(VisualElement root, VisualElement safe)
+        {
+            float rootWidth = root.resolvedStyle.width;
+            if (Screen.width <= 0 || rootWidth <= 0f || float.IsNaN(rootWidth))
+            {
+                return;
+            }
+            Rect area = Screen.safeArea;
+            float scale = rootWidth / Screen.width;
+            safe.style.left = Mathf.Max(0f, area.xMin * scale);
+            safe.style.right = Mathf.Max(0f, (Screen.width - area.xMax) * scale);
+            safe.style.top = Mathf.Max(0f, (Screen.height - area.yMax) * scale);
+            safe.style.bottom = Mathf.Max(0f, area.yMin * scale);
         }
 
         private static VisualElement Panel()
@@ -178,12 +284,30 @@ namespace PoRacer.CreatureRace
 
         private void Refresh()
         {
+            RefreshFps();
             RefreshHeader();
             for (int lane = 0; lane < _rows.Length; lane++)
             {
                 _rows[lane].Refresh(_model.Racers[lane], _text);
             }
             RefreshResults();
+        }
+
+        private void RefreshFps()
+        {
+            if (_fpsSeconds < FPS_WINDOW_SECONDS)
+            {
+                return;
+            }
+            int fps = Mathf.RoundToInt(_fpsFrames / _fpsSeconds);
+            _fpsFrames = 0;
+            _fpsSeconds = 0f;
+            if (fps == _shownFps)
+            {
+                return;
+            }
+            _shownFps = fps;
+            _fpsLabel.text = fps + " FPS";
         }
 
         private void RefreshHeader()
@@ -202,7 +326,6 @@ namespace PoRacer.CreatureRace
             _shownPhase = _model.Phase;
 
             _text.Clear();
-            _text.Append(_config.Title).Append("  ");
             if (_model.IsRaceMode)
             {
                 _text.Append("race ").Append(Mathf.Max(1, _model.RaceNumber)).Append(" / ")
@@ -375,15 +498,28 @@ namespace PoRacer.CreatureRace
 
                 var column = new VisualElement { pickingMode = PickingMode.Ignore };
                 column.style.flexGrow = 1f;
+                column.style.flexShrink = 1f;
+                column.style.minWidth = 0f;
                 row.Add(column);
+                // Name and numbers share the first line; the name gives way first.
+                var line = new VisualElement { pickingMode = PickingMode.Ignore };
+                line.style.flexDirection = FlexDirection.Row;
+                line.style.justifyContent = Justify.SpaceBetween;
+                column.Add(line);
                 _name = Text(string.Empty, BASE_FONT_SIZE, TextColor, true);
-                column.Add(_name);
+                _name.style.flexShrink = 1f;
+                _name.style.minWidth = 0f;
+                _name.style.overflow = Overflow.Hidden;
+                _name.style.textOverflow = TextOverflow.Ellipsis;
+                _name.style.marginRight = CARD_PADDING;
+                line.Add(_name);
+                _numbers = Text(string.Empty, SMALL_FONT_SIZE, TextColor, false);
+                _numbers.style.flexShrink = 0f;
+                line.Add(_numbers);
                 _detail = Text(string.Empty, SMALL_FONT_SIZE, DimTextColor, false);
                 // Method | physics | NO BRAIN can outgrow the card; wrap rather than clip.
                 _detail.style.whiteSpace = WhiteSpace.Normal;
                 column.Add(_detail);
-                _numbers = Text(string.Empty, BASE_FONT_SIZE, TextColor, false);
-                column.Add(_numbers);
             }
 
             public void Refresh(CreatureRacerModel racer, StringBuilder text)
@@ -421,12 +557,12 @@ namespace PoRacer.CreatureRace
                 _shownDown = racer.IsDown;
 
                 text.Clear();
-                text.Append((centimetres / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" m    ")
-                    .Append((centiSpeed / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" m/s    ");
+                text.Append((centimetres / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" m  ")
+                    .Append((centiSpeed / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" m/s  ");
                 switch (racer.Status)
                 {
                     case CreatureRacerStatus.Finished:
-                        text.Append("FINISHED ").Append((centiSeconds / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" s");
+                        text.Append("FIN ").Append((centiSeconds / 100f).ToString("0.00", CultureInfo.InvariantCulture)).Append(" s");
                         break;
                     case CreatureRacerStatus.TimedOut:
                         text.Append("TIME LIMIT");
@@ -436,10 +572,10 @@ namespace PoRacer.CreatureRace
                         break;
                     case CreatureRacerStatus.Racing:
                         // Fallen: it lies until its own policy gets it up (rule H).
-                        text.Append(racer.IsDown ? "RACING (DOWN)" : "RACING");
+                        text.Append(racer.IsDown ? "DOWN" : "RACING");
                         break;
                     default:
-                        text.Append("ON THE LINE");
+                        text.Append("READY");
                         break;
                 }
                 _numbers.text = text.ToString();

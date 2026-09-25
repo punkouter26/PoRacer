@@ -8,11 +8,11 @@ namespace PoRacer.Views
 {
     /// <summary>
     /// The Sim Wars scoreboard on the HUD's document. During the countdown a slim pill
-    /// shows the MuJoCo vs Isaac Lab head-to-head; between races the league joins the
-    /// results panel, under the podium and above its buttons: the head-to-head, what each
-    /// team scored in the race just run, and the season table.
+    /// in the HUD's announcement lane shows the MuJoCo vs Isaac Lab head-to-head;
+    /// between races the league fills the results sheet's LEAGUE tab: the head-to-head,
+    /// what each team scored in the race just run, and the season table.
     ///
-    /// It lives inside the results panel rather than beside it because a second card
+    /// It lives inside the results sheet rather than beside it because a second card
     /// anchored on its own cannot know how tall the podium grew, and on a short screen
     /// the two overlapped the RACE AGAIN button. The block carries its own caveat,
     /// because the numbers invite one: the teams race different bodies, so this is a
@@ -22,7 +22,6 @@ namespace PoRacer.Views
     public sealed class SimWarsView : MonoBehaviour
     {
         private const long REFRESH_INTERVAL_MS = 250;
-        private const float PILL_TOP_PERCENT = 22f;
         private const float TEAM_SWATCH = 8f;
         // Four of these plus the team name must fit the results card on a narrow
         // handset; at 60 the last column (+5) hung past the card's right edge.
@@ -30,8 +29,6 @@ namespace PoRacer.Views
         // The last-race column only ever holds "+N", so it takes less room and
         // leaves it to the team name.
         private const float DELTA_COLUMN_WIDTH = 34f;
-        // The results panel ends with a divider and the button row; the league goes above both.
-        private const int RESULTS_TRAILING_CHILDREN = 2;
 
         private static readonly string MuJoCoHex = ColorUtility.ToHtmlStringRGB(TrainerTeams.MuJoCo);
         private static readonly string IsaacLabHex = ColorUtility.ToHtmlStringRGB(TrainerTeams.IsaacLab);
@@ -66,22 +63,17 @@ namespace PoRacer.Views
         private void Start()
         {
             _root = GetComponent<UIDocument>().rootVisualElement;
-            VisualElement safeRoot = UiTheme.BuildSafeRoot(_root);
-            BuildPill(safeRoot);
+            BuildPill();
             BuildBlock();
             _root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
         }
 
-        private void BuildPill(VisualElement safeRoot)
+        private void BuildPill()
         {
             _pill = new VisualElement { pickingMode = PickingMode.Ignore };
-            _pill.style.position = Position.Absolute;
-            _pill.style.top = new Length(PILL_TOP_PERCENT, LengthUnit.Percent);
-            _pill.style.left = 0f;
-            _pill.style.right = 0f;
             _pill.style.alignItems = Align.Center;
+            _pill.style.marginTop = UiTheme.SPACE_XS;
             _pill.style.display = DisplayStyle.None;
-            safeRoot.Add(_pill);
 
             _pillLabel = MakeLabel(UiTheme.FONT_SM, UiTheme.Text, bold: true);
             _pillLabel.enableRichText = true;
@@ -91,14 +83,9 @@ namespace PoRacer.Views
 
         private void BuildBlock()
         {
+            // No title or divider of its own: the sheet's LEAGUE tab is the header.
             _block = new VisualElement { pickingMode = PickingMode.Ignore };
             _block.style.display = DisplayStyle.None;
-            _block.Add(UiTheme.MakeDivider());
-
-            Label title = UiTheme.MakeSectionHeader("SIM WARS  TRAINER LEAGUE");
-            title.pickingMode = PickingMode.Ignore;
-            title.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _block.Add(title);
 
             _headToHeadLabel = MakeLabel(UiTheme.FONT_MD, UiTheme.Text, bold: true);
             _headToHeadLabel.enableRichText = true;
@@ -147,7 +134,7 @@ namespace PoRacer.Views
             }
 
             Label footnote = MakeLabel(UiTheme.FONT_XS, UiTheme.TextDim, bold: false,
-                "Different bodies: for fun. The fair test is the Walking Standard.");
+                "Different bodies, so just for fun. Fair test: the Walking Standard.");
             footnote.style.whiteSpace = WhiteSpace.Normal;
             footnote.style.marginTop = UiTheme.SPACE_XS;
             footnote.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -160,7 +147,8 @@ namespace PoRacer.Views
             {
                 return;
             }
-            AttachToResults();
+            UiTheme.TryAttach(_root, UiTheme.RESULTS_LEAGUE_PAGE, _block);
+            UiTheme.TryAttach(_root, UiTheme.ANNOUNCE_SLOT, _pill);
             bool menu = _configModel != null && _configModel.MenuVisible;
             bool anyHeadToHead = _league.MuJoCoAhead + _league.IsaacLabAhead + _league.HeadToHeadDraws > 0;
             bool showPill = !menu && _raceModel.CountdownValue > 0 && anyHeadToHead;
@@ -183,26 +171,6 @@ namespace PoRacer.Views
             }
         }
 
-        /// <summary>
-        /// Moves the league block into RaceHudView's results panel once that panel exists.
-        /// The two views start in no guaranteed order, so this is retried on each refresh
-        /// rather than done once in Start; after it lands it is a single parent check.
-        /// </summary>
-        private void AttachToResults()
-        {
-            if (_block.parent != null)
-            {
-                return;
-            }
-            VisualElement results = _root.Q(UiTheme.RESULTS_PANEL);
-            if (results == null)
-            {
-                return;
-            }
-            int index = Mathf.Max(0, results.childCount - RESULTS_TRAILING_CHILDREN);
-            results.Insert(index, _block);
-        }
-
         private void Rebuild()
         {
             string headToHead = $"<color=#{MuJoCoHex}>MuJoCo {_league.MuJoCoAhead}</color>"
@@ -210,8 +178,8 @@ namespace PoRacer.Views
             _headToHeadLabel.text = headToHead;
             _pillLabel.text = "SIM WARS   " + headToHead;
             _headToHeadCaption.text = _league.HeadToHeadDraws > 0
-                ? $"best finisher, races both ran; {_league.HeadToHeadDraws} with neither home"
-                : "best finisher, races both ran";
+                ? $"best finisher, shared races; {_league.HeadToHeadDraws} with neither home"
+                : "best finisher, shared races";
 
             for (int rowIndex = 0; rowIndex < TrainerTeams.LeagueOrder.Length; rowIndex++)
             {

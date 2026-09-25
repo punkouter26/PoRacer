@@ -9,38 +9,35 @@ using VContainer;
 namespace PoRacer.Views
 {
     /// <summary>
-    /// Start menu, UI Toolkit hierarchy built in C#. Portrait-first layout: a title
-    /// row carrying the brain-source toggle, a swipeable row of map cards, the
-    /// count presets, then one line per catalog slot with the counts
-    /// (0/1/10/50/100) as a segmented control. Slots without a trained brain are
-    /// omitted and counted in the footer as "coming soon". Start hands off to
-    /// Systems_Spawn.
+    /// Start menu, UI Toolkit hierarchy built in C#. One portrait screen, no second
+    /// step: the maps as a row of tabs, the count presets, then one line per catalog
+    /// slot with the counts (0/1/10/50/100) as a segmented control, and RACE pinned
+    /// above the bottom furniture. Slots without a trained brain are omitted and
+    /// counted in the footer as "soon". Start hands off to Systems_Spawn.
+    ///
+    /// The map picker used to be a screen of its own with a NEXT button, and the
+    /// roster screen carried a back button to it. With three maps a tab row says the
+    /// same thing in one control height, and removes a page, a button and a round trip.
     ///
     /// Density. The whole roster is meant to be visible at once on a phone - the
     /// list keeps its ScrollView as a safety net for short screens and future
-    /// creatures, but on a normal handset nothing should need scrolling. That
-    /// budget is what every fixed number below is protecting, so before adding a
-    /// block here, check what it costs against <see cref="UiTheme.CONTROL_SM"/>
-    /// times the roster size. The standings table that used to sit above the list
-    /// was removed on 2026-09-03 for exactly this reason: it cost 150 px to
-    /// restate ELO numbers that every roster row already carries. The ranking it
-    /// conveyed is preserved by sorting the rows by rating instead.
+    /// creatures, but on a normal handset nothing should need scrolling (the smoke
+    /// run's ui-audit flags it if anything does). That budget is what every fixed
+    /// number below is protecting, so before adding a block here, check what it
+    /// costs against <see cref="UiTheme.CONTROL_SM"/> times the roster size. The
+    /// standings table that used to sit above the list was removed on 2026-09-03 for
+    /// exactly this reason; the ranking it conveyed is carried by sorting the rows by
+    /// rating instead.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class MenuView : MonoBehaviour
     {
-        // Height of the reserved bottom strip: the DBG button is CONTROL_SM tall
-        // and sits SPACE_SM off the bottom edge, and the version stamp shares that
-        // line. Screen content stops above it - a START button drawn into this
-        // band puts two live touch targets on the same pixels.
-        // A property, not a const - see the note on RaceHudView.TopFurniture. CONTROL_SM
-        // now scales with screen width to hold the touch target at 48 dp, so it reads
-        // Screen.dpi, which Unity forbids from a static field initializer on a
-        // MonoBehaviour and which is not a compile-time constant either way.
-        private static float BottomFurniture => UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
-
-        private const float MAP_CARD_HEIGHT = 64f;
         private const float AVATAR_SIZE = 24f;
+        // Past this many racers the frame rate on a phone starts to give.
+        private const int LARGE_FIELD = 100;
+
+        /// <summary>Horizontal room a bottom corner anchor (DBG, version) takes from the band.</summary>
+        private static float CornerClearance => UiTheme.CONTROL_LG + UiTheme.SPACE_LG;
 
         private CreatureCatalog _catalog;
         private RaceConfigModel _config;
@@ -49,12 +46,15 @@ namespace PoRacer.Views
         private HapticsModel _haptics;
         private Systems_Haptics _hapticsSystem;
         private Button _hapticsButton;
+        private VisualElement _optionsSheet;
+        private bool _optionsOpen;
         private VisualElement _root;
         private VisualElement _content;
         private Label _totalLabel;
         private Button _startButton;
-        private VisualElement[] _mapCards;
-        private Label[] _mapCardNames;
+        private Button[] _mapTabs;
+        private Label[] _mapTabNames;
+        private Label[] _mapTabLengths;
         private VisualElement _creatureList;
         private int _comingSoonCount;
         // Per-row ELO labels, refreshed when the menu re-shows after a race.
@@ -63,11 +63,8 @@ namespace PoRacer.Views
         private readonly List<VisualElement> _rowElements = new();
         private readonly List<CreatureCatalog.CreatureEntry> _ranked = new();
         private bool _wasVisible;
-        // Two screens: pick the map, then pick the racers. The menu always comes
-        // back to the map screen after a race.
-        private bool _mapStep = true;
-        // Entrance stagger plays once; menu rebuilds (preset / brain toggle) must
-        // not re-animate the whole screen under the user's finger.
+        // Entrance stagger plays once; menu rebuilds (preset) must not re-animate
+        // the whole screen under the user's finger.
         private bool _playEntrance = true;
 
         [Inject]
@@ -117,12 +114,6 @@ namespace PoRacer.Views
                 // Ratings moved while the race ran; re-read them on the way back in
                 // instead of polling them every frame.
                 RefreshRatings();
-                if (!_mapStep)
-                {
-                    _mapStep = true;
-                    _root.Clear();
-                    BuildMenu();
-                }
             }
             _wasVisible = _config.MenuVisible;
             RefreshTotals();
@@ -131,13 +122,13 @@ namespace PoRacer.Views
                 // A disabled start button explains itself; a silent no-op does not.
                 bool hasRacers = _config.TotalCount() > 0;
                 _startButton.SetEnabled(hasRacers);
-                _startButton.text = hasRacers ? "START RACING" : "PICK A CREATURE TO RACE";
+                _startButton.text = hasRacers ? "RACE" : "PICK RACERS";
             }
         }
 
         /// <summary>
-        /// Footer counter. Carries the "coming soon" tally too: it is one short
-        /// clause here, against a whole line of its own under the roster.
+        /// Footer counter, on the furniture line. Carries the "soon" tally and the
+        /// large-field warning as short clauses rather than lines of their own.
         /// </summary>
         private void RefreshTotals()
         {
@@ -145,63 +136,46 @@ namespace PoRacer.Views
             {
                 return;
             }
-            if (_totalLabel == null)
-            {
-                return;
-            }
             int total = _config.TotalCount();
-            string text = $"Total racers: {total}";
+            string text = $"{total} racers";
             if (_comingSoonCount > 0)
             {
-                text += $"  -  +{_comingSoonCount} coming soon";
+                text += $" · +{_comingSoonCount} soon";
             }
-            if (total > 100)
+            if (total > LARGE_FIELD)
             {
-                text += "  -  large field, frame rate may drop";
+                text += " · may lag";
             }
             _totalLabel.text = text;
         }
 
         private void BuildMenu()
         {
-            // The whole hierarchy is rebuilt on preset / brain-toggle, so the
-            // element caches must not keep pointing at discarded elements.
+            // The whole hierarchy is rebuilt on a preset, so the element caches must
+            // not keep pointing at discarded elements.
             _ratingLabels.Clear();
             _ratingCreatureIds.Clear();
             _rowElements.Clear();
             _root.style.backgroundColor = UiTheme.ScreenBg;
-            _content = UiTheme.BuildSafeRoot(_root);
-            _content.pickingMode = PickingMode.Position;
-            _content.style.paddingTop = UiTheme.SPACE_SM;
+            VisualElement safe = UiTheme.BuildSafeRoot(_root);
+
+            // Screen content lives in its own padded layer between the two furniture
+            // bands; the furniture is pinned to the unpadded safe root beside it, so
+            // no anchor depends on how absolute children treat a parent's padding.
+            _content = new VisualElement { pickingMode = PickingMode.Position };
+            _content.style.position = Position.Absolute;
+            _content.style.left = 0f;
+            _content.style.top = 0f;
+            _content.style.right = 0f;
+            _content.style.bottom = 0f;
+            _content.style.paddingTop = UiTheme.TopBand;
             _content.style.paddingLeft = UiTheme.SPACE_MD;
             _content.style.paddingRight = UiTheme.SPACE_MD;
-            _content.style.paddingBottom = UiTheme.SPACE_XS;
+            _content.style.paddingBottom = UiTheme.BottomBand;
+            safe.Add(_content);
 
-            // Bottom-right, matching the race HUD. This sat top-left until 2026-08-29,
-            // which is where the game name belongs - the two were stacked on the same
-            // corner and the version won the top line.
-            var versionLabel = new Label($"v{Application.version}") { pickingMode = PickingMode.Ignore };
-            versionLabel.style.position = Position.Absolute;
-            versionLabel.style.bottom = UiTheme.SPACE_XL;
-            versionLabel.style.right = UiTheme.SPACE_XS;
-            versionLabel.style.fontSize = UiTheme.FONT_XS;
-            versionLabel.style.color = UiTheme.TextDim;
-            versionLabel.name = UiTheme.FURNITURE_VERSION;
-            _content.Add(versionLabel);
-
-            BuildHeader();
-            if (_mapStep)
-            {
-                BuildMapList();
-                BuildMapFooter();
-                if (_playEntrance)
-                {
-                    PlayEntrance();
-                    _playEntrance = false;
-                }
-                return;
-            }
-            BuildRosterHeader();
+            BuildFurniture(safe);
+            BuildMapTabs();
             BuildPresetRow();
 
             // The roster is sized to fit without scrolling on a phone; the
@@ -249,55 +223,79 @@ namespace PoRacer.Views
         }
 
         /// <summary>
-        /// Title block with the brain-source toggle on the same line. The toggle
-        /// used to sit on its own row under the wordmark, which cost a full
-        /// 48 px control height for one button.
+        /// The corner anchors every screen shares, plus the racer count centred on the
+        /// bottom band. That strip is reserved for DBG and the version anyway, so a
+        /// line of text between them costs the roster nothing.
         /// </summary>
-        private void BuildHeader()
+        private void BuildFurniture(VisualElement safe)
         {
-            var header = new VisualElement();
-            header.style.marginBottom = UiTheme.SPACE_XXS;
-            _content.Add(header);
+            safe.Add(UiTheme.MakeTitleFurniture());
+            safe.Add(UiTheme.MakeVersionFurniture());
 
-            var titleRow = new VisualElement();
-            titleRow.style.flexDirection = FlexDirection.Row;
-            titleRow.style.alignItems = Align.Center;
-            header.Add(titleRow);
+            _totalLabel = new Label { pickingMode = PickingMode.Ignore };
+            _totalLabel.style.position = Position.Absolute;
+            // Clear of DBG on the left and the version on the right. Symmetric, so the
+            // text stays centred; sized for the wider of the two (the version text).
+            _totalLabel.style.left = CornerClearance;
+            _totalLabel.style.right = CornerClearance;
+            _totalLabel.style.bottom = UiTheme.SPACE_SM;
+            _totalLabel.style.height = UiTheme.CONTROL_SM;
+            _totalLabel.style.color = UiTheme.AccentSoft;
+            _totalLabel.style.fontSize = UiTheme.FONT_XS;
+            _totalLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _totalLabel.style.overflow = Overflow.Hidden;
+            _totalLabel.style.textOverflow = TextOverflow.Ellipsis;
+            safe.Add(_totalLabel);
 
-            var title = new Label("PoRacer") { name = UiTheme.FURNITURE_TITLE };
-            title.style.fontSize = UiTheme.FONT_TITLE;
-            title.style.color = UiTheme.Accent;
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            title.style.flexShrink = 0f;
-            titleRow.Add(title);
-
-            // Top-centre is a reserved anchor - the FPS readout owns it on every
-            // screen. Top-right carries the vibration toggle, on the platforms that
-            // can vibrate. It is positioned absolutely and centred on the title, so
-            // its 48 dp touch height does not make the row, and with it the whole
-            // menu, any taller.
+            // MENU opens the options sheet. The only option is vibration, so the
+            // button exists only where the device can vibrate.
             if (Application.platform == RuntimePlatform.Android || Application.isEditor)
             {
-                _hapticsButton = new Button(_hapticsSystem.Toggle);
-                _hapticsButton.style.position = Position.Absolute;
-                _hapticsButton.style.right = 0f;
-                _hapticsButton.style.top = new Length(50f, LengthUnit.Percent);
-                _hapticsButton.style.translate = new Translate(0f, new Length(-50f, LengthUnit.Percent));
-                _hapticsButton.style.height = UiTheme.CONTROL_SM;
-                _hapticsButton.style.minWidth = UiTheme.CONTROL_SM;
-                _hapticsButton.style.fontSize = UiTheme.FONT_XS;
-                UiTheme.StyleButton(_hapticsButton);
-                UiTheme.AddHover(_hapticsButton);
-                titleRow.Add(_hapticsButton);
-                RefreshHapticsButton();
+                safe.Add(UiTheme.MakeMenuFurniture(ToggleOptions));
+                BuildOptionsSheet(safe);
             }
-            // Accent underline gives the title a logo feel.
-            var titleBar = new VisualElement { pickingMode = PickingMode.Ignore };
-            titleBar.style.height = 3;
-            titleBar.style.width = 60;
-            titleBar.style.backgroundColor = UiTheme.Accent;
-            UiTheme.SetRadius(titleBar, 2f);
-            header.Add(titleBar);
+        }
+
+        /// <summary>Small sheet under MENU holding the settings that used to crowd the title row.</summary>
+        private void BuildOptionsSheet(VisualElement safe)
+        {
+            _optionsSheet = new VisualElement();
+            _optionsSheet.style.position = Position.Absolute;
+            _optionsSheet.style.top = UiTheme.TopBand;
+            _optionsSheet.style.right = UiTheme.SPACE_SM;
+            _optionsSheet.style.flexDirection = FlexDirection.Row;
+            _optionsSheet.style.alignItems = Align.Center;
+            UiTheme.StyleModal(_optionsSheet);
+            _optionsSheet.style.display = DisplayStyle.None;
+            _optionsOpen = false;
+            safe.Add(_optionsSheet);
+
+            var caption = new Label("Vibration") { pickingMode = PickingMode.Ignore };
+            caption.style.color = UiTheme.Text;
+            caption.style.fontSize = UiTheme.FONT_SM;
+            caption.style.marginRight = UiTheme.SPACE_SM;
+            UiTheme.ApplyFont(caption);
+            _optionsSheet.Add(caption);
+
+            _hapticsButton = new Button(_hapticsSystem.Toggle);
+            _hapticsButton.style.height = UiTheme.CONTROL_SM;
+            _hapticsButton.style.minWidth = UiTheme.CONTROL_SM;
+            _hapticsButton.style.fontSize = UiTheme.FONT_SM;
+            UiTheme.SetMargin(_hapticsButton, 0f, 0f);
+            UiTheme.StyleButton(_hapticsButton);
+            UiTheme.AddHover(_hapticsButton);
+            _optionsSheet.Add(_hapticsButton);
+            RefreshHapticsButton();
+        }
+
+        private void ToggleOptions()
+        {
+            _optionsOpen = !_optionsOpen;
+            _optionsSheet.style.display = _optionsOpen ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_optionsOpen)
+            {
+                UiTheme.PlayEnter(_optionsSheet, 0);
+            }
         }
 
         private void RefreshHapticsButton()
@@ -306,30 +304,26 @@ namespace PoRacer.Views
             {
                 return;
             }
-            // Short on purpose: the button's left edge must stay clear of the FPS
-            // readout centred on the same band, down to a 360 dp handset.
-            _hapticsButton.text = _haptics.Enabled ? "BUZZ ON" : "BUZZ OFF";
+            _hapticsButton.text = _haptics.Enabled ? "ON" : "OFF";
             _hapticsButton.style.color = _haptics.Enabled ? UiTheme.Text : UiTheme.TextDim;
         }
 
         /// <summary>
-        /// Screen one: every playable map as a full-width card, name and length on
-        /// the first line, the blurb under it. Tapping selects; NEXT moves on.
+        /// Every playable map as one tab: name over length. Tapping selects; there is
+        /// no separate confirm, RACE uses whichever tab is lit.
         /// </summary>
-        private void BuildMapList()
+        private void BuildMapTabs()
         {
-            Label mapLabel = UiTheme.MakeSectionHeader("PICK A MAP");
-            _content.Add(mapLabel);
-
             int mapCount = Systems_MapCatalog.Entries.Count;
-            _mapCards = new VisualElement[mapCount];
-            _mapCardNames = new Label[mapCount];
+            _mapTabs = new Button[mapCount];
+            _mapTabNames = new Label[mapCount];
+            _mapTabLengths = new Label[mapCount];
 
-            var list = new ScrollView(ScrollViewMode.Vertical);
-            list.style.flexGrow = 1f;
-            list.style.flexShrink = 1f;
-            UiTheme.StyleScrollView(list);
-            _content.Add(list);
+            var strip = new VisualElement();
+            UiTheme.StyleSegmentGroup(strip);
+            strip.style.flexShrink = 0f;
+            strip.style.marginBottom = UiTheme.SPACE_XS;
+            _content.Add(strip);
 
             for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
             {
@@ -339,152 +333,49 @@ namespace PoRacer.Views
                     continue;
                 }
                 int capturedIndex = mapIndex;
-                var card = new Button(() =>
+                var tab = new Button(() =>
                 {
                     _config.SetMap(capturedIndex);
-                    RefreshMapButtons();
+                    RefreshMapTabs();
                 });
-                card.style.height = MAP_CARD_HEIGHT;
-                card.style.flexShrink = 0f;
-                card.style.flexDirection = FlexDirection.Column;
-                card.style.alignItems = Align.Stretch;
-                card.style.justifyContent = Justify.Center;
-                UiTheme.SetMargin(card, UiTheme.SPACE_XXS, 0f);
-                UiTheme.StyleCard(card, mapIndex == _config.SelectedMapIndex);
-                UiTheme.SetPadding(card, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
-
-                var titleRow = new VisualElement { pickingMode = PickingMode.Ignore };
-                titleRow.style.flexDirection = FlexDirection.Row;
-                titleRow.style.justifyContent = Justify.SpaceBetween;
-                titleRow.style.alignItems = Align.Center;
-                card.Add(titleRow);
+                tab.style.flexDirection = FlexDirection.Column;
+                tab.style.justifyContent = Justify.Center;
+                tab.style.alignItems = Align.Center;
 
                 var name = new Label(map.DisplayName) { pickingMode = PickingMode.Ignore };
-                name.style.fontSize = UiTheme.FONT_MD;
+                name.style.fontSize = UiTheme.FONT_SM;
                 name.style.unityFontStyleAndWeight = FontStyle.Bold;
-                name.style.unityTextAlign = TextAnchor.MiddleLeft;
-                name.style.color = UiTheme.Text;
-                titleRow.Add(name);
+                name.style.overflow = Overflow.Hidden;
+                name.style.textOverflow = TextOverflow.Ellipsis;
+                UiTheme.ApplyFont(name);
+                tab.Add(name);
 
-                var lengthLabel = new Label($"{map.LengthMeters:0} m") { pickingMode = PickingMode.Ignore };
-                lengthLabel.style.fontSize = UiTheme.FONT_XS;
-                lengthLabel.style.color = UiTheme.AccentSoft;
-                lengthLabel.style.unityTextAlign = TextAnchor.MiddleRight;
-                titleRow.Add(lengthLabel);
+                var length = new Label($"{map.LengthMeters:0} m") { pickingMode = PickingMode.Ignore };
+                length.style.fontSize = UiTheme.FONT_XS;
+                UiTheme.ApplyFont(length);
+                tab.Add(length);
 
-                var blurb = new Label(map.Blurb) { pickingMode = PickingMode.Ignore };
-                blurb.style.fontSize = UiTheme.FONT_XS;
-                blurb.style.color = UiTheme.TextDim;
-                blurb.style.unityTextAlign = TextAnchor.MiddleLeft;
-                blurb.style.whiteSpace = WhiteSpace.NoWrap;
-                blurb.style.overflow = Overflow.Hidden;
-                blurb.style.textOverflow = TextOverflow.Ellipsis;
-                card.Add(blurb);
-
-                _mapCards[mapIndex] = card;
-                _mapCardNames[mapIndex] = name;
-                list.Add(card);
+                _mapTabs[mapIndex] = tab;
+                _mapTabNames[mapIndex] = name;
+                _mapTabLengths[mapIndex] = length;
+                strip.Add(tab);
             }
 
-            RefreshMapButtons();
+            RefreshMapTabs();
         }
 
-        /// <summary>Screen one's footer: the only way forward is to the roster.</summary>
-        private void BuildMapFooter()
+        private void RefreshMapTabs()
         {
-            var footer = new VisualElement();
-            footer.style.flexShrink = 0f;
-            footer.style.marginTop = UiTheme.SPACE_XXS;
-            UiTheme.StyleGlassPanel(footer, glowing: true);
-            UiTheme.SetPadding(footer, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
-            footer.style.marginBottom = BottomFurniture;
-            _content.Add(footer);
-
-            var nextButton = new Button(() =>
+            for (int mapIndex = 0; mapIndex < _mapTabs.Length; mapIndex++)
             {
-                _mapStep = false;
-                Rebuild();
-            }) { text = "NEXT: PICK RACERS" };
-            nextButton.style.height = UiTheme.CONTROL_MD;
-            nextButton.style.fontSize = UiTheme.FONT_LG;
-            UiTheme.SetMargin(nextButton, 0f, 0f);
-            UiTheme.StyleButton(nextButton, accent: true);
-            UiTheme.SetRadius(nextButton, UiTheme.RADIUS_LG);
-            UiTheme.AddHover(nextButton, accent: true);
-            footer.Add(nextButton);
-        }
-
-        /// <summary>
-        /// Screen two's first line: the chosen map, as a button that goes back to
-        /// screen one, beside the roster's section header.
-        /// </summary>
-        private void BuildRosterHeader()
-        {
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.alignItems = Align.Center;
-            row.style.justifyContent = Justify.SpaceBetween;
-            row.style.flexShrink = 0f;
-            _content.Add(row);
-
-            Label rosterLabel = UiTheme.MakeSectionHeader("PICK YOUR RACERS");
-            // Shrink into an ellipsis rather than run under the map button: on a
-            // narrow handset the two do not both fit, and flexShrink alone does
-            // nothing in UI Toolkit while minWidth is left at its content size.
-            rosterLabel.style.flexShrink = 1f;
-            rosterLabel.style.minWidth = 0f;
-            rosterLabel.style.marginRight = UiTheme.SPACE_SM;
-            rosterLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            rosterLabel.style.overflow = Overflow.Hidden;
-            rosterLabel.style.textOverflow = TextOverflow.Ellipsis;
-            row.Add(rosterLabel);
-
-            Systems_MapCatalog.MapEntry selected = Systems_MapCatalog.Get(_config.SelectedMapIndex);
-            if (selected.Kind.IsCourse())
-            {
-                // MuJoCo steps its own world and cannot see Unity colliders, so
-                // Fido and MojucuBoy fall through an authored course; Systems_Spawn
-                // leaves them on the grid, and the roster should say so up front.
-                var note = new Label("MojucuBoy sits this course out") { pickingMode = PickingMode.Ignore };
-                note.style.fontSize = UiTheme.FONT_XS;
-                note.style.color = UiTheme.TextDim;
-                note.style.flexShrink = 0f;
-                _content.Add(note);
-            }
-            var mapButton = new Button(() =>
-            {
-                _mapStep = true;
-                Rebuild();
-            }) { text = "< MAP: " + selected.DisplayName.ToUpperInvariant() };
-            mapButton.style.height = UiTheme.CONTROL_SM;
-            mapButton.style.fontSize = UiTheme.FONT_SM;
-            mapButton.style.flexShrink = 0f;
-            UiTheme.SetMargin(mapButton, 0f, 0f);
-            UiTheme.StyleButton(mapButton);
-            UiTheme.AddHover(mapButton);
-            row.Add(mapButton);
-        }
-
-        /// <summary>Tears the screen down and builds the current step again.</summary>
-        private void Rebuild()
-        {
-            _root.Clear();
-            BuildMenu();
-            _config.NotifyChanged();
-        }
-
-        private void RefreshMapButtons()
-        {
-            for (int mapIndex = 0; mapIndex < _mapCards.Length; mapIndex++)
-            {
-                if (_mapCards[mapIndex] == null)
+                if (_mapTabs[mapIndex] == null)
                 {
                     continue;
                 }
                 bool isSelected = mapIndex == _config.SelectedMapIndex;
-                UiTheme.StyleCard(_mapCards[mapIndex], isSelected);
-                UiTheme.SetPadding(_mapCards[mapIndex], UiTheme.SPACE_XXS, UiTheme.SPACE_SM);
-                _mapCardNames[mapIndex].style.color = isSelected ? UiTheme.AccentSoft : UiTheme.Text;
+                UiTheme.StyleSegment(_mapTabs[mapIndex], isSelected);
+                _mapTabNames[mapIndex].style.color = isSelected ? Color.white : UiTheme.Text;
+                _mapTabLengths[mapIndex].style.color = isSelected ? Color.white : UiTheme.TextDim;
             }
         }
 
@@ -534,8 +425,7 @@ namespace PoRacer.Views
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.flexShrink = 0f;
-            row.style.marginTop = UiTheme.SPACE_XS;
-            row.style.marginBottom = UiTheme.SPACE_XXS;
+            row.style.marginBottom = UiTheme.SPACE_XS;
             string[] labels = { "All x1", "All x10", "Clear" };
             int[] counts = { 1, 10, 0 };
             for (int presetIndex = 0; presetIndex < labels.Length; presetIndex++)
@@ -563,25 +453,13 @@ namespace PoRacer.Views
             // The padding baked into the glass helper is sized for a content panel;
             // the footer holds a single button and does not need that inset.
             UiTheme.SetPadding(footer, UiTheme.SPACE_XS, UiTheme.SPACE_SM);
-            footer.style.marginBottom = BottomFurniture;
             _content.Add(footer);
 
-            // The counter lives on the furniture line, centred between the DBG
-            // button and the version stamp. That strip is reserved anyway, so a
-            // line of text there is free - inside the footer it cost 30 px of the
-            // budget the roster needs.
-            _totalLabel = new Label { pickingMode = PickingMode.Ignore };
-            _totalLabel.style.position = Position.Absolute;
-            _totalLabel.style.left = 0f;
-            _totalLabel.style.right = 0f;
-            _totalLabel.style.bottom = UiTheme.SPACE_XL;
-            _totalLabel.style.color = UiTheme.AccentSoft;
-            _totalLabel.style.fontSize = UiTheme.FONT_XS;
-            _totalLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _content.Add(_totalLabel);
-
-            _startButton = new Button(() => _spawn.BeginRacing()) { text = "START RACING" };
-            _startButton.style.height = UiTheme.CONTROL_MD;
+            _startButton = new Button(() => _spawn.BeginRacing()) { text = "RACE" };
+            // The touch minimum, not CONTROL_MD: the 8 dp difference is a roster row's
+            // worth of breathing room over ten rows, and the accent fill already makes
+            // this the loudest thing on the screen.
+            _startButton.style.height = UiTheme.CONTROL_SM;
             _startButton.style.fontSize = UiTheme.FONT_LG;
             UiTheme.SetMargin(_startButton, 0f, 0f);
             UiTheme.StyleButton(_startButton, accent: true);
@@ -597,12 +475,7 @@ namespace PoRacer.Views
             int delay = 0;
             for (int childIndex = 0; childIndex < childCount; childIndex++)
             {
-                VisualElement child = _content[childIndex];
-                if (child.style.position.value == Position.Absolute)
-                {
-                    continue;
-                }
-                UiTheme.PlayEnter(child, delay);
+                UiTheme.PlayEnter(_content[childIndex], delay);
                 delay += 40;
             }
         }

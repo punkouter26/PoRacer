@@ -15,10 +15,16 @@ namespace PoRacer.Presentation
     /// background tiers (screen / panel / glass) into layers the eye can order,
     /// instead of three flat rectangles of slightly different grey.
     ///
-    /// Density. The panel is set to scale with screen width against a 540x960
+    /// Density. The panel is set to scale with screen width against a 420x933
     /// reference, so a fixed value here means the same fraction of the screen on
     /// any handset. <see cref="DensityFor"/> exists for the cases where scaling is
     /// not enough and a layout genuinely needs to drop a column.
+    ///
+    /// Furniture. Every screen carries the same five anchors, built here so no two
+    /// screens can drift apart: title top-left, fps top-centre, MENU top-right, DBG
+    /// bottom-left, version bottom-right. Each sits in a band <see cref="CONTROL_SM"/>
+    /// tall; screen content stays between <see cref="TopBand"/> and
+    /// <see cref="BottomBand"/>.
     /// </summary>
     public static class UiTheme
     {
@@ -69,8 +75,17 @@ namespace PoRacer.Presentation
         public const string FURNITURE_MENU = "Furniture.Menu";
         public const string FURNITURE_DBG = "Furniture.Dbg";
         public const string FURNITURE_VERSION = "Furniture.Version";
-        // The between-races results modal; SimWarsView adds its league table inside it.
+        // The between-races results modal, and the page of it SimWarsView fills.
         public const string RESULTS_PANEL = "Results.Panel";
+        public const string RESULTS_LEAGUE_PAGE = "Results.League";
+        // The one lane every transient race message shares (intro card, countdown /
+        // GO / winner banner, Sim Wars pill, director caption). They stack in flow
+        // inside it, so two messages can never be drawn over each other.
+        public const string ANNOUNCE_SLOT = "Announce.Slot";
+        // The race HUD's progress rail; its badges move with the race, so the layout
+        // audit leaves them out of the vertical budget.
+        public const string PROGRESS_RAIL = "Race.Rail";
+        private const string GAME_TITLE = "PoRacer";
         private const float FONT_XS_BASE = 15f;
         private const float FONT_SM_BASE = 16f;
         private const float FONT_MD_BASE = 18f;
@@ -179,6 +194,12 @@ namespace PoRacer.Presentation
         public static float CONTROL_SM => CONTROL_SM_BASE * ControlScale;
         public static float CONTROL_MD => CONTROL_MD_BASE * ControlScale;
         public static float CONTROL_LG => CONTROL_LG_BASE * ControlScale;
+
+        /// <summary>Height of the top furniture band (title, fps, MENU); content starts under it.</summary>
+        public static float TopBand => SPACE_XS + CONTROL_SM + SPACE_XS;
+
+        /// <summary>Height of the bottom furniture band (DBG, version); content stops above it.</summary>
+        public static float BottomBand => SPACE_SM + CONTROL_SM + SPACE_SM;
 
         /// <summary>Android's minimum touch target, in dp.</summary>
         private const float MIN_TOUCH_DP = 48f;
@@ -331,9 +352,11 @@ namespace PoRacer.Presentation
             SetBorder(panel, glowing ? AccentGlow : GlassBorder, 1f);
             panel.style.borderTopColor = GlassHighlight;
             panel.style.borderTopWidth = 1.5f;
-            SetPadding(panel, SPACE_MD, SPACE_LG);
+            // One step tighter than a content panel's old 12/16 inset: on a portrait
+            // phone that inset was paid on every card, sheet and caption at once.
+            SetPadding(panel, SPACE_SM, SPACE_MD);
             // Glass sits highest: it is the layer the player is meant to act on.
-            AddElevation(panel, ELEVATION_HIGH);
+            AddElevation(panel, ELEVATION_MID);
         }
 
         /// <summary>
@@ -345,8 +368,8 @@ namespace PoRacer.Presentation
             panel.style.backgroundColor = ModalBg;
             SetRadius(panel, RADIUS_LG);
             SetBorder(panel, ModalBorder, 1f);
-            SetPadding(panel, SPACE_MD, SPACE_LG);
-            AddElevation(panel, ELEVATION_HIGH);
+            SetPadding(panel, SPACE_SM, SPACE_MD);
+            AddElevation(panel, ELEVATION_MID);
         }
 
         /// <summary>Hairline rule used to separate a dialog header from its body.</summary>
@@ -678,6 +701,124 @@ namespace PoRacer.Presentation
             root.Add(safe);
             safe.RegisterCallback<GeometryChangedEvent>(_ => ApplySafeInsets(root, safe));
             return safe;
+        }
+
+        /// <summary>Game name, top-left. Sits on the scene bare, so it carries a text shadow.</summary>
+        public static Label MakeTitleFurniture()
+        {
+            var title = new Label(GAME_TITLE) { name = FURNITURE_TITLE, pickingMode = PickingMode.Ignore };
+            Pin(title, left: true, top: true);
+            title.style.unityTextAlign = TextAnchor.MiddleLeft;
+            title.style.color = Accent;
+            title.style.fontSize = FONT_MD;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            AddTextShadow(title);
+            ApplyFont(title);
+            return title;
+        }
+
+        /// <summary>Build version, bottom-right, centred on the DBG button's line.</summary>
+        public static Label MakeVersionFurniture()
+        {
+            var version = new Label($"v{Application.version}") { name = FURNITURE_VERSION, pickingMode = PickingMode.Ignore };
+            Pin(version, left: false, top: false);
+            version.style.unityTextAlign = TextAnchor.MiddleRight;
+            version.style.color = TextDim;
+            version.style.fontSize = FONT_XS;
+            AddTextShadow(version);
+            ApplyFont(version);
+            return version;
+        }
+
+        /// <summary>The MENU button, top-right, on every screen that has somewhere to go.</summary>
+        public static Button MakeMenuFurniture(System.Action onClick)
+        {
+            var button = new Button(onClick) { text = "MENU", name = FURNITURE_MENU };
+            Pin(button, left: false, top: true);
+            button.style.minWidth = CONTROL_SM;
+            button.style.fontSize = FONT_SM;
+            SetMargin(button, 0f, 0f);
+            StyleButton(button);
+            AddHover(button);
+            return button;
+        }
+
+        /// <summary>
+        /// Pins <paramref name="element"/> into one of the four corner anchors: one
+        /// <see cref="CONTROL_SM"/> tall, so a bare label and a button in the same band
+        /// share a centre line.
+        /// </summary>
+        public static void Pin(VisualElement element, bool left, bool top)
+        {
+            element.style.position = Position.Absolute;
+            element.style.height = CONTROL_SM;
+            if (left)
+            {
+                element.style.left = SPACE_SM;
+            }
+            else
+            {
+                element.style.right = SPACE_SM;
+            }
+            if (top)
+            {
+                element.style.top = SPACE_XS;
+            }
+            else
+            {
+                element.style.bottom = SPACE_SM;
+            }
+        }
+
+        /// <summary>
+        /// A row of tabs drawn as a segmented control. Returns the buttons so the caller
+        /// can restyle them with <see cref="SelectTab"/> when the page changes.
+        /// </summary>
+        public static Button[] BuildTabs(VisualElement parent, string[] labels, System.Action<int> onSelect)
+        {
+            var strip = new VisualElement();
+            StyleSegmentGroup(strip);
+            strip.style.flexShrink = 0f;
+            parent.Add(strip);
+            var tabs = new Button[labels.Length];
+            for (int tabIndex = 0; tabIndex < labels.Length; tabIndex++)
+            {
+                int captured = tabIndex;
+                var tab = new Button(() => onSelect(captured)) { text = labels[tabIndex] };
+                ApplyFont(tab);
+                tabs[tabIndex] = tab;
+                strip.Add(tab);
+            }
+            SelectTab(tabs, 0);
+            return tabs;
+        }
+
+        public static void SelectTab(Button[] tabs, int selected)
+        {
+            for (int tabIndex = 0; tabIndex < tabs.Length; tabIndex++)
+            {
+                StyleSegment(tabs[tabIndex], tabIndex == selected);
+            }
+        }
+
+        /// <summary>
+        /// Moves <paramref name="child"/> into the element named <paramref name="slotName"/>
+        /// under <paramref name="root"/>, if that element exists yet. Views sharing a
+        /// document start in no guaranteed order, so callers retry until this is true.
+        /// </summary>
+        public static bool TryAttach(VisualElement root, string slotName, VisualElement child)
+        {
+            if (child.parent != null && child.parent.name == slotName)
+            {
+                return true;
+            }
+            VisualElement slot = root.Q(slotName);
+            if (slot == null)
+            {
+                return false;
+            }
+            slot.Add(child);
+            return true;
         }
 
         private static void ApplySafeInsets(VisualElement root, VisualElement safe)

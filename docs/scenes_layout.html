@@ -195,8 +195,8 @@ area names encode both creature and terrain.</p>
 <span class="br">│</span>                        <span class="an">— the trigger that calls Systems_Race.NotifyFinish, with overshoot for tie-breaks.</span>
 <span class="br">├─</span> <span class="go">FinishBar</span>          <span class="cm">MeshRenderer ×2</span>  <span class="an">— the visible gantry. Purely decorative.</span>
 <span class="br">├─</span> <span class="go">WinFx</span>              <span class="cm">WinFxView</span>  <span class="an">— confetti / flash on the winner crossing.</span>
-<span class="br">├─</span> <span class="go">Menu</span>               <span class="cm">UIDocument · MenuView</span>  <span class="an">— map picker, racer counts, RACE / MENU.</span>
-<span class="br">├─</span> <span class="go">RaceHud</span>            <span class="cm">UIDocument · RaceHudView</span>  <span class="an">— live standings, clock, commentary, results panel.</span>
+<span class="br">├─</span> <span class="go">Menu</span>               <span class="cm">UIDocument · MenuView</span>  <span class="an">— one screen: map tabs, racer counts, RACE; MENU opens options.</span>
+<span class="br">├─</span> <span class="go">RaceHud</span>            <span class="cm">UIDocument · RaceHudView</span>  <span class="an">— progress rail with top-3 badges, announcement lane, tabbed results (podium / league / stats).</span>
 <span class="br">├─</span> <span class="go">DebugOverlay</span>       <span class="cm">UIDocument · DebugOverlayView</span>
 <span class="br">│</span>                        <span class="an">— ships in release. Owns the top-centre FPS readout. Costs a frame counter until DBG is pressed.</span>
 <span class="br">└─</span> <span class="go">Input</span>              <span class="cm">InputView</span>  <span class="an">— the only object that touches PlayerControls.</span>
@@ -213,7 +213,13 @@ game name <b>upper-left</b>, FPS <b>top-centre</b>, MENU <b>upper-right</b>,
 <code>Application.version</code> <b>lower-right</b>, DBG <b>lower-left</b>. All on the inset safe
 layer, non-pickable where they are not controls, and outside any ScrollView.
 <code>DebugOverlayView</code> owns the FPS readout — <b>do not add a second one to
-<code>RaceHudView</code></b>; they share an anchor and draw over each other.</div>
+<code>RaceHudView</code></b>; they share an anchor and draw over each other. The anchors are built
+by <code>UiTheme</code> (<code>MakeTitleFurniture</code>, <code>MakeMenuFurniture</code>,
+<code>MakeVersionFurniture</code>, <code>Pin</code>), and screen content stays between
+<code>UiTheme.TopBand</code> and <code>UiTheme.BottomBand</code>. Transient race messages (intro card,
+countdown / GO / winner, Sim Wars pill, director caption) all stack in one announcement lane under the
+top band. The smoke run's ui-audit checks every screen at 360x640, 390x844 and 432x960 dp for
+scrolling, off-screen elements and anything drawn over an anchor.</div>
 
 <h3>What gets built at runtime</h3>
 <div class="grid g2">

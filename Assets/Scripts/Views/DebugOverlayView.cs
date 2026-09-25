@@ -9,16 +9,18 @@ using VContainer;
 namespace PoRacer.Views
 {
     /// <summary>
-    /// Toggleable diagnostic overlay (DBG button, bottom-left), grouped into
-    /// colored sections: PERF (fps, memory, GC), RENDER (draws, batches, tris),
-    /// PHYSICS (fixed-loop cost, step count, body and contact counts), SCENE
-    /// (live object counts, sampled every 2 s), and RACE (state, leader, field).
-    /// Text refresh runs on a 250 ms schedule, not per frame; Update only counts
-    /// frames. Rich-text colors flag values that blow their budget.
+    /// Toggleable diagnostic overlay (DBG button, bottom-left), one tab at a time:
+    /// WHY (the verdict), PERF (frame, GC, memory, render, fixed loop and the frame
+    /// graph), SIM (solver, gravity, bodies, contacts, audio) and RACE (state, field,
+    /// leader, brains). Tabs rather than one long column because the column grew to
+    /// ~35 lines, ran up past the top band on a phone and cut its longest lines off.
+    /// Text refresh runs on a 250 ms schedule, not per frame, and builds only the
+    /// open tab; Update only counts frames. Rich-text colors flag values that blow
+    /// their budget, and no value is printed on two tabs.
     ///
-    /// The sheet opens with WHAT'S WRONG: the findings in plain English, worst
-    /// cause first, each with the action it implies. The coloured sections under it
-    /// are the evidence for that verdict.
+    /// WHY is the first tab: the findings in short plain English, worst cause first,
+    /// each tagged with how many times over budget it is and the action it implies.
+    /// The other tabs are the evidence for that verdict.
     ///
     /// A compact always-on strip (fps / frame ms / draws) sits top-center in every
     /// build, and so does the DBG button — the panel ships in release too, and pays
@@ -37,8 +39,11 @@ namespace PoRacer.Views
         private const float FRAME_BUDGET_MS = 1000f / 60f;
         // Object counting walks the scene; do it on a slower beat than the text.
         private const int SCENE_SAMPLE_EVERY_N_REFRESHES = 8;
-        private const float PANEL_WIDTH = 310f;
         private const float GRAPH_HEIGHT = 48f;
+        private const int TAB_WHY = 0;
+        private const int TAB_PERF = 1;
+        private const int TAB_SIM = 2;
+        private const int TAB_RACE = 3;
         // The fixed loop gets one Time.fixedDeltaTime of wall clock before it starts
         // stealing from the frame. READ THE LIVE VALUE — this was a hardcoded 20f
         // carrying a comment that said "0.02 s is locked by the project rules", but
@@ -73,9 +78,11 @@ namespace PoRacer.Views
         private Label _stripLabel;
         private string _lastStripText = string.Empty;
         private Label _text;
-        /// <summary>Prose half of the panel: the WHAT'S WRONG verdict, wrapped.</summary>
+        /// <summary>Prose half of the panel: the WHY verdict, wrapped.</summary>
         private Label _verdictText;
         private VisualElement _graph;
+        private Button[] _tabs;
+        private int _tab = TAB_WHY;
         private readonly StringBuilder _builder = new();
         private readonly float[] _frameMs = new float[FRAME_SAMPLES];
         // Fixed-loop cost per frame, same cursor and length as _frameMs so the two
@@ -150,7 +157,9 @@ namespace PoRacer.Views
             // Telemetry strip, top center.
             var stripRow = new VisualElement { pickingMode = PickingMode.Ignore };
             stripRow.style.position = Position.Absolute;
+            // Same band as the title and MENU, so all three share one centre line.
             stripRow.style.top = UiTheme.SPACE_XS;
+            stripRow.style.height = UiTheme.CONTROL_SM;
             stripRow.style.left = 0;
             stripRow.style.right = 0;
             stripRow.style.flexDirection = FlexDirection.Row;
@@ -189,16 +198,14 @@ namespace PoRacer.Views
             root.schedule.Execute(RefreshStrip).Every(REFRESH_INTERVAL_MS);
 
             var toggle = new Button(TogglePanel) { text = "DBG", name = UiTheme.FURNITURE_DBG };
-            toggle.style.position = Position.Absolute;
-            toggle.style.bottom = UiTheme.SPACE_SM;
-            toggle.style.left = UiTheme.SPACE_SM;
+            UiTheme.Pin(toggle, left: true, top: false);
+            UiTheme.SetMargin(toggle, 0f, 0f);
             // CONTROL_SM is Android's 48 dp minimum touch target: the panel now
             // references a 420 dp-wide screen, so one UI unit is ~1 dp on a phone
             // and the token is the dp figure directly. This used to hard-code 62 to
             // work around the old 540 dp reference, which made every other button
             // in the app 30 dp.
             toggle.style.width = UiTheme.CONTROL_SM;
-            toggle.style.height = UiTheme.CONTROL_SM;
             toggle.style.fontSize = UiTheme.FONT_XS;
             toggle.style.opacity = 0.75f;
             UiTheme.StyleButton(toggle);
@@ -206,14 +213,20 @@ namespace PoRacer.Views
             safeRoot.Add(toggle);
 
 
+            // Full width above the bottom band, and never taller than the space under
+            // the top band: a fixed 310 px column clipped its own longest lines.
             _panel = new VisualElement { pickingMode = PickingMode.Ignore };
             _panel.style.position = Position.Absolute;
-            _panel.style.bottom = UiTheme.SPACE_SM + UiTheme.CONTROL_SM + UiTheme.SPACE_SM;
+            _panel.style.bottom = UiTheme.BottomBand;
             _panel.style.left = UiTheme.SPACE_SM;
-            _panel.style.width = PANEL_WIDTH;
+            _panel.style.right = UiTheme.SPACE_SM;
+            _panel.style.maxHeight = new Length(75f, LengthUnit.Percent);
             _panel.style.display = DisplayStyle.None;
             UiTheme.StylePanel(_panel);
             safeRoot.Add(_panel);
+
+            // The tabs take clicks; the rest of the sheet still lets taps through.
+            _tabs = UiTheme.BuildTabs(_panel, new[] { "WHY", "PERF", "SIM", "RACE" }, SelectTab);
 
             // TWO labels, because the two halves of this panel want opposite wrapping.
             //
@@ -228,17 +241,14 @@ namespace PoRacer.Views
             _verdictText.style.color = UiTheme.Text;
             _verdictText.style.fontSize = UiTheme.FONT_SM;
             _verdictText.style.whiteSpace = WhiteSpace.Normal;
+            _verdictText.style.marginTop = UiTheme.SPACE_XS;
             _panel.Add(_verdictText);
 
             _text = new Label { pickingMode = PickingMode.Ignore };
             _text.style.color = UiTheme.Text;
-            _text.style.fontSize = UiTheme.FONT_SM;
+            _text.style.fontSize = UiTheme.FONT_XS;
             _text.style.whiteSpace = WhiteSpace.Pre;
-            // The blank line that used to separate the verdict from PERF came from
-            // AppendHeader seeing a non-empty builder. Now that the two live in
-            // separate labels the builder is empty at PERF, so the gap has to be real
-            // spacing instead.
-            _text.style.marginTop = UiTheme.SPACE_SM;
+            _text.style.marginTop = UiTheme.SPACE_XS;
             _panel.Add(_text);
 
             // Frame-time history strip: one polyline, redrawn on the refresh
@@ -250,6 +260,7 @@ namespace PoRacer.Views
             UiTheme.SetRadius(_graph, UiTheme.RADIUS_SM);
             _graph.generateVisualContent += DrawFrameGraph;
             _panel.Add(_graph);
+            SelectTab(TAB_WHY);
 
             root.schedule.Execute(Refresh).Every(REFRESH_INTERVAL_MS);
         }
@@ -366,6 +377,17 @@ namespace PoRacer.Views
             _panel.style.display = _visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
+        private void SelectTab(int tab)
+        {
+            _tab = tab;
+            UiTheme.SelectTab(_tabs, tab);
+            _verdictText.style.display = tab == TAB_WHY ? DisplayStyle.Flex : DisplayStyle.None;
+            _text.style.display = tab == TAB_WHY ? DisplayStyle.None : DisplayStyle.Flex;
+            _graph.style.display = tab == TAB_PERF ? DisplayStyle.Flex : DisplayStyle.None;
+            // Fill the new page now rather than leave it blank until the next tick.
+            Refresh();
+        }
+
         private void Refresh()
         {
             // With the panel closed nothing here is
@@ -387,23 +409,30 @@ namespace PoRacer.Views
                 return;
             }
 
-            // The verdict is built first and handed to its own wrapping label, then the
-            // builder is cleared and reused for the column-aligned instrumentation.
+            // Only the open tab is built. WHY goes to its own wrapping label; the
+            // others are column-aligned and share the Pre label.
             _builder.Clear();
-            AppendVerdict();
-            _verdictText.text = _builder.ToString();
-
-            _builder.Clear();
-            AppendPerf();
-            AppendRender();
-            AppendPhysics();
-            AppendAudio();
-            AppendBiomechanics();
-            AppendScene();
-            AppendBrains();
-            AppendRace();
+            switch (_tab)
+            {
+                case TAB_WHY:
+                    AppendVerdict();
+                    _verdictText.text = _builder.ToString();
+                    return;
+                case TAB_PERF:
+                    AppendPerf();
+                    AppendRender();
+                    AppendPhysics();
+                    _graph.MarkDirtyRepaint();
+                    break;
+                case TAB_SIM:
+                    AppendSimulation();
+                    break;
+                default:
+                    AppendRace();
+                    AppendBrains();
+                    break;
+            }
             _text.text = _builder.ToString();
-            _graph.MarkDirtyRepaint();
         }
 
         private void AppendHeader(string title)
@@ -475,8 +504,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     frameMs / FRAME_BUDGET_MS,
-                    $"Running at {_fps:0} FPS, under the 60 target.",
-                    "Check which line below is over budget — physics or draws."));
+                    $"{_fps:0} FPS, target 60",
+                    "PERF tab: is it physics or draws?"));
             }
 
             // A stutter is a separate complaint from a low average: the average can sit
@@ -485,8 +514,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     worstMs / FRAME_BUDGET_MS,
-                    $"Worst frame in the last 2 s took {worstMs:0} ms — a visible stutter.",
-                    "If it was the first race, the warm-up missed a prefab."));
+                    $"{worstMs:0} ms stutter in the last 2 s",
+                    "First race? The warm-up missed a prefab."));
             }
 
             // --- Fixed loop ---
@@ -496,8 +525,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     fixedMs / Mathf.Max(FixedBudgetMs, 0.01f),
-                    $"Physics is taking {fixedMs:0.0} ms a frame against a {FixedBudgetMs:0.0} ms budget.",
-                    "Too many racers, or a rig with too many bodies. Cut the field size."));
+                    $"Physics {fixedMs:0.0} ms of a {FixedBudgetMs:0.0} ms budget",
+                    "Too many racers or bodies. Cut the field."));
             }
 
             // --- Allocation ---
@@ -506,8 +535,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     gcKb / 1f,
-                    $"Allocating {gcKb:0.0} KB every frame — this causes GC hitches.",
-                    "Something in an Update loop is allocating; the rule is zero."));
+                    $"GC {gcKb:0.0} KB/frame (hitches)",
+                    "An Update loop allocates; the rule is zero."));
             }
 
             // --- Draws ---
@@ -515,8 +544,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     _drawCalls.LastValue / 300f,
-                    $"{_drawCalls.LastValue} draw calls — over the 300 mobile budget.",
-                    "Materials are not batching. Check for per-instance material clones."));
+                    $"{_drawCalls.LastValue} draws, budget 300",
+                    "Not batching: per-instance material clones?"));
             }
 
             // --- Brains ---
@@ -526,8 +555,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     2f,
-                    $"{_brainsWithoutModel} racer(s) have NO brain loaded and will not move.",
-                    "The .onnx is missing from the catalog entry, or inference was compiled out."));
+                    $"{_brainsWithoutModel} racer(s) with NO brain",
+                    "Missing .onnx, or inference compiled out."));
             }
 
             // --- Audio ---
@@ -536,8 +565,8 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     Mathf.Abs(reductionDb) / 12f,
-                    $"Audio limiter is pulling {reductionDb:0.0} dB — the mix is clipping.",
-                    "Design volumes are summing too hot; trim the layers, not the limiter."));
+                    $"Limiter at {reductionDb:0.0} dB: mix clipping",
+                    "Trim the layers, not the limiter."));
             }
 
             // --- Time scale ---
@@ -545,15 +574,14 @@ namespace PoRacer.Views
             {
                 count = Add(count, new Finding(
                     3f,
-                    $"Time scale is {Time.timeScale:0.00}, not 1 — the race is not running at real speed.",
-                    "Something left a training or slow-motion scale set."));
+                    $"Time scale {Time.timeScale:0.00}, not 1",
+                    "A training or slow-mo scale was left set."));
             }
 
-            AppendHeader("WHAT'S WRONG");
             if (count == 0)
             {
                 _builder.Append("<color=").Append(GOOD_COLOR)
-                    .Append(">All clear — nothing is over budget.</color>\n");
+                    .Append(">All clear: nothing over budget.</color>\n");
                 return;
             }
 
@@ -563,16 +591,18 @@ namespace PoRacer.Views
                 Finding finding = _findings[findingIndex];
                 // The worst one is the cause; the rest are usually its symptoms, so
                 // only the top line gets the alarm colour.
+                // Tagged with how far over budget it is, so the ranking shows.
                 string color = findingIndex == 0 ? BAD_COLOR : WARN_COLOR;
-                _builder.Append("<color=").Append(color).Append('>')
-                    .Append(findingIndex + 1).Append(". ").Append(finding.Cause).Append("</color>\n");
-                _builder.Append("   <color=").Append(DIM_COLOR).Append('>')
+                _builder.Append("<color=").Append(color).Append("><b>\u00D7")
+                    .Append(finding.Severity.ToString("0.0")).Append("</b> ")
+                    .Append(finding.Cause).Append("</color>\n");
+                _builder.Append("<color=").Append(DIM_COLOR).Append('>')
                     .Append(finding.Action).Append("</color>\n");
             }
             if (count > shown)
             {
                 _builder.Append("<color=").Append(DIM_COLOR).Append(">+")
-                    .Append(count - shown).Append(" more below</color>\n");
+                    .Append(count - shown).Append(" more</color>\n");
             }
         }
 
@@ -614,10 +644,11 @@ namespace PoRacer.Views
             float gcKb = _gcPerFrame.Valid ? _gcPerFrame.LastValue / 1024f : 0f;
             string gcColor = gcKb < 1f ? GOOD_COLOR : gcKb < 16f ? WARN_COLOR : BAD_COLOR;
 
+            // FPS itself is on the always-on strip; this line carries what the strip
+            // does not: the frame it averages and the worst one it hides.
             AppendHeader("PERF");
-            _builder.Append("FPS     <color=").Append(fpsColor).Append('>')
-                .Append(_fps.ToString("0")).Append("</color> (")
-                .Append(frameMs.ToString("0.0")).Append(" ms)  worst <color=").Append(worstColor).Append('>')
+            _builder.Append("Frame   <color=").Append(fpsColor).Append('>')
+                .Append(frameMs.ToString("0.0")).Append(" ms</color>  worst <color=").Append(worstColor).Append('>')
                 .Append(worstMs.ToString("0")).Append(" ms</color>\n");
             _builder.Append("GC      <color=").Append(gcColor).Append('>')
                 .Append(gcKb.ToString("0.0")).Append(" KB/frame</color>  runs ")
@@ -698,48 +729,38 @@ namespace PoRacer.Views
             }
         }
 
-        private void AppendBiomechanics()
-        {
-            AppendHeader("BIOMECHANICS & SOLVER");
-            _builder.Append("Solver  PhysX Iterations: ").Append(Physics.defaultSolverIterations)
-                .Append("  Fixed Δt: ").Append(Time.fixedDeltaTime.ToString("0.000")).Append("s\n");
-            _builder.Append("Gravity [").Append(Physics.gravity.x.ToString("0.0")).Append(", ")
-                .Append(Physics.gravity.y.ToString("0.0")).Append(", ")
-                .Append(Physics.gravity.z.ToString("0.0")).Append("] m/s² (1G)\n");
-            _builder.Append("Joints  Articulations: ").Append(_bodyCount)
-                .Append("  Ground Contacts: ").Append(_limbContactCount).Append('\n');
-        }
-
         /// <summary>
-        /// Mix health. Gain reduction is the limiter telling you the synthesized
-        /// layers are summing past the ceiling; a number pinned well below zero
-        /// means the design volumes need trimming, not that the limiter is broken.
+        /// What the simulation is running on: solver, gravity, what is in the scene and
+        /// the mix. This used to be three sections (BIOMECHANICS, SCENE, AUDIO) that
+        /// printed the body count, the fixed step and the audio source count twice each.
+        ///
+        /// Mix health: gain reduction is the limiter telling you the synthesized layers
+        /// are summing past the ceiling; a number pinned well below zero means the
+        /// design volumes need trimming, not that the limiter is broken.
         /// </summary>
-        private void AppendAudio()
+        private void AppendSimulation()
         {
+            string scaleColor = Mathf.Approximately(Time.timeScale, 1f) ? DIM_COLOR : WARN_COLOR;
+            AppendHeader("SOLVER");
+            _builder.Append("PhysX   ").Append(Physics.defaultSolverIterations).Append(" iters  dt ")
+                .Append(Time.fixedDeltaTime.ToString("0.000")).Append(" s  <color=").Append(scaleColor)
+                .Append(">scale ").Append(Time.timeScale.ToString("0.00")).Append("</color>\n");
+            _builder.Append("Gravity ").Append(Physics.gravity.y.ToString("0.00")).Append(" m/s\u00B2\n");
+
+            AppendHeader("SCENE");
+            _builder.Append("Bodies  ").Append(_bodyCount)
+                .Append("  contacts ").Append(_limbContactCount)
+                .Append("  fx ").Append(_particleSystemCount).Append('\n');
+
             float reductionDb = MasterLimiterView.GainReductionDb;
             string reductionColor = reductionDb > -1f ? DIM_COLOR
                 : reductionDb > -6f ? GOOD_COLOR
                 : reductionDb > -12f ? WARN_COLOR : BAD_COLOR;
-
             AppendHeader("AUDIO");
             _builder.Append("Sources ").Append(_audioSourceCount)
-                .Append("  real-voice cap ").Append(AudioSettings.GetConfiguration().numRealVoices)
-                .Append('\n');
+                .Append(" / ").Append(AudioSettings.GetConfiguration().numRealVoices).Append(" voices\n");
             _builder.Append("Limiter <color=").Append(reductionColor).Append('>')
-                .Append(reductionDb.ToString("0.0")).Append(" dB</color> reduction\n");
-        }
-
-        private void AppendScene()
-        {
-            AppendHeader("SCENE");
-            _builder.Append("Bodies  ").Append(_bodyCount)
-                .Append("  particles ").Append(_particleSystemCount)
-                .Append("  audio ").Append(_audioSourceCount).Append('\n');
-            string scaleColor = Mathf.Approximately(Time.timeScale, 1f) ? DIM_COLOR : WARN_COLOR;
-            _builder.Append("Time    dt ").Append(Time.fixedDeltaTime.ToString("0.000"))
-                .Append("  <color=").Append(scaleColor).Append(">scale ")
-                .Append(Time.timeScale.ToString("0.00")).Append("</color>\n");
+                .Append(reductionDb.ToString("0.0")).Append(" dB</color>\n");
         }
 
         private void AppendRace()
@@ -808,7 +829,7 @@ namespace PoRacer.Views
             {
                 return;
             }
-            AppendHeader("BRAINS");
+            AppendHeader("BRAINS  (obs/act)");
             _builder.Append("Loaded  <color=").Append(_brainsWithModel > 0 ? GOOD_COLOR : DIM_COLOR)
                 .Append('>').Append(_brainsWithModel).Append(" with a policy</color>");
             if (_brainsWithoutModel > 0)
@@ -873,7 +894,7 @@ namespace PoRacer.Views
             for (int index = 0; index < order.Count; index++)
             {
                 string[] parts = order[index].Split(KEY_SEP);
-                _brainLines.Add(string.Format("{0,-9} {1}  obs {2} act {3}  x{4}",
+                _brainLines.Add(string.Format("{0,-9} {1} {2}/{3} x{4}",
                     Trim(parts[0], 9), parts[1], parts[2], parts[3], counts[order[index]]));
             }
         }

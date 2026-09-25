@@ -33,6 +33,19 @@ namespace PoRacer.Tests
         }
 
         [Test]
+        public void Twitchiness_ScalesJitterAndClampsToTheMeter()
+        {
+            var sut = new RacerTelemetry("worm#1");
+
+            sut.Jitter = 0f;
+            Assert.That(sut.Twitchiness, Is.EqualTo(0f));
+            sut.Jitter = RacerTelemetry.JITTER_FULL_SCALE * 0.5f;
+            Assert.That(sut.Twitchiness, Is.EqualTo(0.5f).Within(1e-5f));
+            sut.Jitter = RacerTelemetry.JITTER_FULL_SCALE * 4f;
+            Assert.That(sut.Twitchiness, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void CostOfTransport_IsUnknownUntilTheRacerHasCoveredGround()
         {
             var sut = new RacerTelemetry("worm#1") { HasPower = true, MassKg = 10f, EnergyJoules = 98.1f };
