@@ -181,7 +181,7 @@ namespace CreatureEditor
                 {
                     // One policy evaluation per outer step; the DECIMATION physics
                     // steps below make that outer step 0.02 s, the trained rate.
-                    MojucuBoyObservation.Build(data, rootBody, qposAddr, dofAddr,
+                    MojucuBoyObservation.Build(data, rootBody, model->jnt_dofadr[model->body_jntadr[rootBody]], qposAddr, dofAddr,
                                          commandHeading, 1.5f, action, obs);
                     input.Upload(obs);
                     worker.Schedule(input);

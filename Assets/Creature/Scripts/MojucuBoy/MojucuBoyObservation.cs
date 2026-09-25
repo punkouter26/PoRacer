@@ -34,6 +34,9 @@ namespace Creature.MojucuBoy
     {
         public const int JOINT_COUNT = 21;
         public const int OBS_SIZE = 9 + 3 + 3 * JOINT_COUNT;   // 75
+        /// <summary>The joystick layout: command vx/vy/wz, then cos/sin of the gait clock.
+        /// Contract with training/mojucuboy/mojucuboy_joystick_env.py.</summary>
+        public const int JOYSTICK_OBS_SIZE = 9 + 3 + 2 + 3 * JOINT_COUNT;   // 77
         public const int ACTION_SIZE = JOINT_COUNT;
 
         /// <summary>Index of the body-local forward axis. +Y, see the class remarks.</summary>
@@ -44,6 +47,7 @@ namespace Creature.MojucuBoy
         /// </summary>
         /// <param name="data">MuJoCo data for the stepped scene.</param>
         /// <param name="rootBodyId">MuJoCo body id of the free-joint root.</param>
+        /// <param name="rootDofAddr">qvel address of THIS racer's free joint.</param>
         /// <param name="qposAddr">qpos address of each actuated joint, in actuator order.</param>
         /// <param name="dofAddr">qvel address of each actuated joint, in actuator order.</param>
         /// <param name="commandHeading">Commanded world heading, radians, measured the
@@ -54,6 +58,7 @@ namespace Creature.MojucuBoy
         public static unsafe void Build(
             MujocoLib.mjData_* data,
             int rootBodyId,
+            int rootDofAddr,
             int[] qposAddr,
             int[] dofAddr,
             float commandHeading,
@@ -66,10 +71,60 @@ namespace Creature.MojucuBoy
                 throw new ArgumentException($"obs must be length {OBS_SIZE}", nameof(obs));
             }
 
-            // xmat is row-major 3x3 per body: R[r][c] = xmat[3*r + c], body -> world.
             double* xmat = data->xmat + 9 * rootBodyId;
-            double* qpos = data->qpos;
-            double* qvel = data->qvel;
+            BuildBody(data, xmat, rootDofAddr, obs);
+
+            // command: heading error expressed as a unit vector so the policy never sees
+            // the +pi/-pi discontinuity, plus the requested speed.
+            float error = HeadingError(xmat, commandHeading);
+            obs[9] = Mathf.Cos(error);
+            obs[10] = Mathf.Sin(error);
+            obs[11] = commandSpeed;
+
+            BuildJoints(data, qposAddr, dofAddr, lastAction, obs, 12);
+        }
+
+        /// <summary>
+        /// Fill <paramref name="obs"/> in the joystick layout (<see cref="JOYSTICK_OBS_SIZE"/>):
+        /// the body block, then the body-frame velocity command (forward vx, left vy, yaw rate
+        /// wz), then cos/sin of the LEFT foot's gait phase, then the joint block.
+        /// </summary>
+        public static unsafe void BuildJoystick(
+            MujocoLib.mjData_* data,
+            int rootBodyId,
+            int rootDofAddr,
+            int[] qposAddr,
+            int[] dofAddr,
+            Vector3 command,
+            float phase,
+            float[] lastAction,
+            float[] obs)
+        {
+            if (obs == null || obs.Length != JOYSTICK_OBS_SIZE)
+            {
+                throw new ArgumentException($"obs must be length {JOYSTICK_OBS_SIZE}", nameof(obs));
+            }
+            BuildBody(data, data->xmat + 9 * rootBodyId, rootDofAddr, obs);
+            obs[9] = command.x;
+            obs[10] = command.y;
+            obs[11] = command.z;
+            obs[12] = Mathf.Cos(phase);
+            obs[13] = Mathf.Sin(phase);
+            BuildJoints(data, qposAddr, dofAddr, lastAction, obs, 14);
+        }
+
+        /// <summary>
+        /// Gravity, linear and angular velocity in the body frame, into obs[0..8].
+        ///
+        /// Velocities are read at THIS racer's free-joint address. They were read from
+        /// qvel[0..5], which is the free joint of whichever racer compiled first: with one
+        /// MojucuBoy that is him, but with five on the grid, four of them balanced and
+        /// steered on the first one's motion.
+        /// </summary>
+        private static unsafe void BuildBody(MujocoLib.mjData_* data, double* xmat, int rootDofAddr, float[] obs)
+        {
+            // xmat is row-major 3x3 per body: R[r][c] = xmat[3*r + c], body -> world.
+            double* qvel = data->qvel + rootDofAddr;
 
             // gravity_local = R^T * (0,0,-1)  ->  -R[2][c]
             obs[0] = (float)(-xmat[6]);
@@ -86,20 +141,19 @@ namespace Creature.MojucuBoy
             obs[6] = (float)qvel[3];
             obs[7] = (float)qvel[4];
             obs[8] = (float)qvel[5];
+        }
 
-            // command: heading error expressed as a unit vector so the policy never sees
-            // the +pi/-pi discontinuity, plus the requested speed.
-            float error = HeadingError(xmat, commandHeading);
-            obs[9] = Mathf.Cos(error);
-            obs[10] = Mathf.Sin(error);
-            obs[11] = commandSpeed;
-
+        private static unsafe void BuildJoints(MujocoLib.mjData_* data, int[] qposAddr, int[] dofAddr,
+                                               float[] lastAction, float[] obs, int start)
+        {
+            double* qpos = data->qpos;
+            double* qvel = data->qvel;
             for (int i = 0; i < JOINT_COUNT; i++)
             {
-                obs[12 + i] = (float)qpos[qposAddr[i]];
-                obs[12 + JOINT_COUNT + i] = (float)qvel[dofAddr[i]];
+                obs[start + i] = (float)qpos[qposAddr[i]];
+                obs[start + JOINT_COUNT + i] = (float)qvel[dofAddr[i]];
             }
-            Array.Copy(lastAction, 0, obs, 12 + 2 * JOINT_COUNT, JOINT_COUNT);
+            Array.Copy(lastAction, 0, obs, start + 2 * JOINT_COUNT, JOINT_COUNT);
         }
 
         /// <summary>

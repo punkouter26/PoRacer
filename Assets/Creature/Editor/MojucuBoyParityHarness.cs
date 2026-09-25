@@ -105,7 +105,7 @@ namespace CreatureEditor
             }
 
             var obs = new float[MojucuBoyObservation.OBS_SIZE];
-            MojucuBoyObservation.Build(data, rootBodyId, qposAddr, dofAddr,
+            MojucuBoyObservation.Build(data, rootBodyId, model->jnt_dofadr[model->body_jntadr[rootBodyId]], qposAddr, dofAddr,
                                  state.CommandHeading, state.CommandSpeed, state.LastAction, obs);
 
             var sb = new StringBuilder();

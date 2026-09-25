@@ -70,6 +70,11 @@ namespace PoRacer.Agents
         // A goal that has moved further than this since SetGoal is a course carrot, not
         // a fixed lane point, and is aimed at directly.
         private const float STATIC_GOAL_TOLERANCE = 0.05f;
+
+        // Joystick brains: the lane turned into a velocity command each tick.
+        private const float RACE_SPEED = 1.5f;       // m/s forward, the speed he races at
+        private const float YAW_GAIN = 1.5f;         // rad/s of turn per radian off the aim point
+        private const float SIDESTEP_GAIN = 0.5f;    // m/s of sidestep per metre the aim point is sideways
         private readonly RaycastHit[] _probeHits = new RaycastHit[8];
 
 
@@ -222,7 +227,7 @@ namespace PoRacer.Agents
             // moved. Cheap -- it is an atan2.
             if (_goal != null)
             {
-                _controller.SetGoal(AimPoint(), _hips.position);
+                Steer(AimPoint());
             }
 
             // Being on the floor is NOT a failure. He is trained to get back up and
@@ -258,8 +263,41 @@ namespace PoRacer.Agents
             // his opening strides correcting a course error he was never trained for.
             if (_controller != null)
             {
-                _controller.SetGoal(AimPoint(), Body.position);
+                Steer(AimPoint());
             }
+        }
+
+        /// <summary>
+        /// Points him at <paramref name="aim"/>. A heading brain is given the direction; a
+        /// joystick brain is given a body-frame velocity: turn toward the aim point,
+        /// sidestep by how far it lies to his side, and walk at race speed, easing off
+        /// while the turn is large.
+        /// </summary>
+        private void Steer(Vector3 aim)
+        {
+            if (!_controller.IsJoystick)
+            {
+                _controller.SetGoal(aim, Body.position);
+                return;
+            }
+            Vector3 toAim = aim - Body.position;
+            toAim.y = 0f;
+            Vector3 facing = Body.forward;
+            facing.y = 0f;
+            if (toAim.sqrMagnitude < 0.0001f || facing.sqrMagnitude < 0.0001f)
+            {
+                _controller.SetJoystick(RACE_SPEED, 0f, 0f);
+                return;
+            }
+            facing.Normalize();
+            // Unity is left-handed: a positive angle about +Y turns him RIGHT, while the
+            // command's yaw rate is positive to the LEFT (MuJoCo's +Z up).
+            float error = Vector3.SignedAngle(facing, toAim, Vector3.up) * Mathf.Deg2Rad;
+            Vector3 left = Vector3.Cross(facing, Vector3.up);
+            float sideways = Vector3.Dot(toAim, left);
+            _controller.SetJoystick(RACE_SPEED * Mathf.Clamp01(Mathf.Cos(error)),
+                                    SIDESTEP_GAIN * sideways,
+                                    -YAW_GAIN * error);
         }
 
         /// <summary>

@@ -32,6 +32,13 @@ namespace Creature.MojucuBoy
         public const int DECIMATION = 4;
         // Largest heading correction handed to the policy, inside its +/-34 degree training envelope.
         private const float MAX_TURN_DEGREES = 30f;
+        // Joystick brains: gait clock rate, full cycles per second. Inside the 0.9-1.4 band
+        // GAIT_FREQUENCY in training/mojucuboy/mojucuboy_joystick_env.py samples from.
+        private const float GAIT_FREQUENCY = 1.15f;
+        // Joystick command limits, the ranges he was trained on (COMMAND_VX/VY/WZ).
+        private const float MAX_FORWARD = 2.0f;
+        private const float MAX_SIDEWAYS = 0.5f;
+        private const float MAX_YAW_RATE = 1.0f;
 
         /// <summary>Fraction of each joint's half-range a saturated action spans,
         /// measured from the standing stance. Must match ACTION_SCALE in
@@ -59,12 +66,18 @@ namespace Creature.MojucuBoy
         private float[] _obs;
         private float[] _action;
         private int _rootBodyId = -1;
+        private int _rootDofAddr;
         private int _stepCounter;
         private bool _bound;
         private bool _failed;
 
         private float _commandHeading;
         private float _commandSpeed = 1.5f;
+        // Joystick brains (77 inputs) take a body-frame velocity command and a gait clock
+        // instead of a heading; chosen from the loaded model's input size.
+        private bool _joystick;
+        private Vector3 _joystickCommand = new(1.5f, 0f, 0f);
+        private float _phase;
 
         // Telemetry: MuJoCo actuator ids and force limits, resolved at bind time so the
         // per-step effort read is a flat loop over mjData.
@@ -90,6 +103,21 @@ namespace Creature.MojucuBoy
 
         /// <summary>Total mass of this racer's MuJoCo bodies, in kilograms, from the compiled model.</summary>
         public float TotalMassKg { get; private set; }
+
+        /// <summary>True when the loaded brain is a joystick brain: steer it with
+        /// <see cref="SetJoystick"/>, not <see cref="SetGoal"/>.</summary>
+        public bool IsJoystick => _joystick;
+
+        /// <summary>
+        /// Body-frame velocity command for a joystick brain: forward m/s, LEFT m/s, yaw rate
+        /// rad/s (positive turns left). Clamped to the ranges it was trained on.
+        /// </summary>
+        public void SetJoystick(float forward, float left, float yawRate)
+        {
+            _joystickCommand = new Vector3(Mathf.Clamp(forward, 0f, MAX_FORWARD),
+                                           Mathf.Clamp(left, -MAX_SIDEWAYS, MAX_SIDEWAYS),
+                                           Mathf.Clamp(yawRate, -MAX_YAW_RATE, MAX_YAW_RATE));
+        }
 
         /// <summary>Steer the racer from <paramref name="worldFrom"/> toward a world-space
         /// point. Unlike Fido, whose 33 observations describe only his own body, Boy
@@ -163,8 +191,19 @@ namespace Creature.MojucuBoy
 
             if (_stepCounter % DECIMATION == 0)
             {
-                MojucuBoyObservation.Build(e.data, _rootBodyId, _qposAddr, _dofAddr,
-                                     CommandWithinTrainedTurn(e.data), _commandSpeed, _action, _obs);
+                if (_joystick)
+                {
+                    MojucuBoyObservation.BuildJoystick(e.data, _rootBodyId, _rootDofAddr, _qposAddr, _dofAddr,
+                                                       _joystickCommand, _phase, _action, _obs);
+                    // Advanced after the observation, as the trainer does after each step.
+                    _phase = Mathf.Repeat(_phase + 2f * Mathf.PI * GAIT_FREQUENCY * DECIMATION * Time.fixedDeltaTime,
+                                          2f * Mathf.PI);
+                }
+                else
+                {
+                    MojucuBoyObservation.Build(e.data, _rootBodyId, _rootDofAddr, _qposAddr, _dofAddr,
+                                               CommandWithinTrainedTurn(e.data), _commandSpeed, _action, _obs);
+                }
                 Evaluate();
             }
             _stepCounter++;
@@ -267,6 +306,7 @@ namespace Creature.MojucuBoy
                 return false;
             }
             _rootBodyId = rootBody.MujocoId;
+            _rootDofAddr = model->jnt_dofadr[model->body_jntadr[_rootBodyId]];
 
             var actuators = GetComponentsInChildren<MjActuator>(true);
             var joints = GetComponentsInChildren<MjHingeJoint>(true);
@@ -319,7 +359,6 @@ namespace Creature.MojucuBoy
             _stance = rig.Stance;
             _rangeLo = rig.RangeLo;
             _rangeHi = rig.RangeHi;
-            _obs = new float[MojucuBoyObservation.OBS_SIZE];
             _action = new float[MojucuBoyObservation.ACTION_SIZE];
 
             // Start the heading command pointing where he ALREADY faces.
@@ -336,9 +375,19 @@ namespace Creature.MojucuBoy
             if (_modelAsset != null)
             {
                 Model runtimeModel = ModelLoader.Load(_modelAsset);
+                int inputs = runtimeModel.inputs[0].shape.Get(1);
+                _joystick = inputs == MojucuBoyObservation.JOYSTICK_OBS_SIZE;
+                if (!_joystick && inputs != MojucuBoyObservation.OBS_SIZE)
+                {
+                    Debug.LogError($"[{name}] brain takes {inputs} inputs; expected "
+                                 + $"{MojucuBoyObservation.OBS_SIZE} (heading) or "
+                                 + $"{MojucuBoyObservation.JOYSTICK_OBS_SIZE} (joystick).", this);
+                    return false;
+                }
+                _obs = new float[inputs];
                 // CPU backend deliberately, matching the other racers in this project.
                 _worker = new Worker(runtimeModel, BackendType.CPU);
-                _input = new Tensor<float>(new TensorShape(1, MojucuBoyObservation.OBS_SIZE));
+                _input = new Tensor<float>(new TensorShape(1, inputs));
             }
             else
             {
